@@ -373,8 +373,23 @@ const PostListOverlay = ({
     }
   }, [authUserId, posts]);
 
-  // 2~3개 포스팅마다 광고를 삽입하는 헬퍼 함수
-  const getAdInterval = () => Math.floor(Math.random() * 2) + 2; // 2 또는 3
+  // 2~3개 포스팅마다 광고를 삽입할 인덱스를 미리 계산 (posts가 바뀔 때만 재계산)
+  const adIndices = useMemo(() => {
+    const indices = new Set<number>();
+    let postCount = 0;
+    let nextAdAt = Math.floor(Math.random() * 2) + 2; // 2 또는 3
+    posts.forEach((post, index) => {
+      if (!post.isAd) {
+        postCount++;
+        if (postCount >= nextAdAt) {
+          indices.add(index);
+          postCount = 0;
+          nextAdAt = Math.floor(Math.random() * 2) + 2;
+        }
+      }
+    });
+    return indices;
+  }, [posts]);
 
   if (!isOpen) return null;
 
@@ -421,8 +436,6 @@ const PostListOverlay = ({
           <div className="flex flex-col">
             {(() => {
               const items: React.ReactNode[] = [];
-              let nextAdAt = getAdInterval();
-              let postCount = 0;
               let adCount = 0;
 
               posts.forEach((post, index) => {
@@ -455,16 +468,12 @@ const PostListOverlay = ({
                   />
                 );
 
-                postCount++;
-
-                // 광고 삽입 조건: 일반 포스팅(isAd 아닌 것)만 카운트
-                if (!post.isAd && postCount >= nextAdAt) {
+                // 미리 계산된 인덱스에 해당하면 광고 삽입
+                if (adIndices.has(index)) {
                   adCount++;
                   items.push(
                     <AdMobBanner key={`ad-${adCount}-${index}`} />
                   );
-                  postCount = 0;
-                  nextAdAt = getAdInterval();
                 }
               });
 
