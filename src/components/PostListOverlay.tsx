@@ -362,7 +362,7 @@ const PostListOverlay = ({
 
     try {
       if (!isLiked) {
-        await supabase.from('likes').insert({ post_id: postId, user_id: authUserId });
+        await supabase.from('likes').upsert({ post_id: postId, user_id: authUserId }, { onConflict: 'post_id,user_id', ignoreDuplicates: true });
         await supabase.rpc('increment_likes', { post_id: postId });
       } else {
         await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', authUserId);
