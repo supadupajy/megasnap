@@ -33,7 +33,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const deg = { top: 0, right: 90, bottom: 180, left: 270 }[dir];
     return (
       <svg
-        width="12" height="12"
+        width="10" height="10"
         viewBox="0 0 24 24"
         fill="none"
         stroke="white"
@@ -55,7 +55,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
-      posStyle.top = `${topOffset + 12}px`;
+      // safe-area 아래 고정 (트렌딩 패널과 무관하게 항상 같은 위치)
+      posStyle.top = 'calc(env(safe-area-inset-top, 0px) + 74px)';
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'bottom') {
@@ -63,11 +64,11 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'left') {
-      posStyle.left = '12px';
+      posStyle.left = '16px';
       posStyle.top = '50%';
       posStyle.transform = 'translateY(-50%)';
     } else {
-      posStyle.right = '12px';
+      posStyle.right = '16px';
       posStyle.top = '50%';
       posStyle.transform = 'translateY(-50%)';
     }
@@ -81,17 +82,18 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           flexDirection: isVertical ? 'column' : 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '1px',
-          width: '44px',
-          height: '44px',
-          background: 'rgba(79, 70, 229, 0.92)',
+          gap: '2px',
+          minWidth: '48px',
+          height: '48px',
+          paddingLeft: '10px',
+          paddingRight: '10px',
+          background: 'rgb(79, 70, 229)',
           color: 'white',
-          borderRadius: '50%',
-          border: '2px solid white',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+          borderRadius: '16px',
+          border: '1.5px solid rgb(99, 91, 255)',
+          boxShadow: '0 4px 14px rgba(79,70,229,0.35)',
           cursor: 'pointer',
           zIndex: 9000,
-          padding: 0,
           lineHeight: 1,
           pointerEvents: 'auto',
           ...posStyle,
