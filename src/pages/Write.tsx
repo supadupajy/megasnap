@@ -64,9 +64,29 @@ const Write = () => {
       return;
     }
     const { lat, lng } = initialLocation;
-    // 로컬 폴리곤 데이터로 API 호출 없이 구 판별
-    const district = getSeoulDistrict(lat, lng);
-    setAddress(district ?? resolveOfflineLocationName(lat, lng));
+
+    // 카카오맵 역지오코딩 API로 정확한 주소 조회
+    const kakao = (window as any).kakao;
+    if (kakao?.maps?.services) {
+      const geocoder = new kakao.maps.services.Geocoder();
+      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+        if (status === kakao.maps.services.Status.OK && result[0]) {
+          const addr = result[0].address;
+          const city = addr.region_1depth_name || '';
+          const gu = addr.region_2depth_name || '';
+          const dong = addr.region_3depth_name || '';
+          setAddress([city, gu, dong].filter(Boolean).join(' '));
+        } else {
+          // API 실패 시 폴리곤 → 오프라인 순으로 fallback
+          const district = getSeoulDistrict(lat, lng);
+          setAddress(district ?? resolveOfflineLocationName(lat, lng));
+        }
+      });
+    } else {
+      // 카카오맵 미로드 시 폴리곤 → 오프라인 순으로 fallback
+      const district = getSeoulDistrict(lat, lng);
+      setAddress(district ?? resolveOfflineLocationName(lat, lng));
+    }
   }, [initialLocation]);
 
   useEffect(() => {

@@ -177,6 +177,8 @@ const Index = () => {
   const isSelectingLocationRef = useRef(false);
   const isSelectingAdLocationRef = useRef(false);
   const tempAdLocationRef = useRef<{ lat: number; lng: number } | null>(mapCache.lastCenter || null);
+  // 위치 선택 모드에서 throttle 없이 즉시 최신 center를 추적 (stale closure 방지)
+  const tempSelectedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
@@ -550,7 +552,10 @@ const Index = () => {
     if (data.center) {
       mapCache.lastCenter = data.center;
     }
-    // 위치 선택 모드일 때 즉시 ref 업데이트
+    // 위치 선택 모드일 때 즉시 ref 업데이트 (throttle 전에도 최신 좌표 보장)
+    if (isSelectingLocationRef.current && data.center) {
+      tempSelectedLocationRef.current = data.center;
+    }
     if (isSelectingAdLocationRef.current && data.center) {
       tempAdLocationRef.current = data.center;
     }
@@ -901,7 +906,9 @@ const Index = () => {
     }
     if (routeState.startSelection) {
       setIsPostListOpen(false);
-      setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(mapCenter || mapData?.center || mapCache.lastCenter); }, 500);
+      const initialLoc = mapCache.lastCenter;
+      tempSelectedLocationRef.current = initialLoc;
+      setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(initialLoc); }, 500);
     }
     if (routeState.startAdLocationSelection) {
       setIsPostListOpen(false);
@@ -997,10 +1004,10 @@ const Index = () => {
                       <p className="text-sm font-black text-gray-900">지도를 움직여 위치를 맞추세요</p>
                     </div>
                     <div className="flex w-full gap-3">
-                      <Button onClick={() => { setIsSelectingLocation(false); setTempSelectedLocation(null); setTimeout(() => navigate('/write', { state: { fromLocationSelection: true } }), 100); }} variant="secondary" className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600">
+                      <Button onClick={() => { setIsSelectingLocation(false); setTempSelectedLocation(null); tempSelectedLocationRef.current = null; setTimeout(() => navigate('/write', { state: { fromLocationSelection: true } }), 100); }} variant="secondary" className="flex-1 h-12 rounded-2xl font-bold bg-gray-100 text-gray-600">
                         <X className="w-4 h-4 mr-2" /> 취소
                       </Button>
-                      <Button onClick={() => { const loc = tempSelectedLocation || mapCenter || mapDataRef.current?.center || mapCache.lastCenter; setIsSelectingLocation(false); setTimeout(() => navigate('/write', { state: { location: loc, fromLocationSelection: true } }), 100); }} className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100">
+                      <Button onClick={() => { const loc = tempSelectedLocationRef.current || mapDataRef.current?.center || mapCache.lastCenter; setIsSelectingLocation(false); setTimeout(() => navigate('/write', { state: { location: loc, fromLocationSelection: true } }), 100); }} className="flex-1 h-12 rounded-2xl font-bold bg-indigo-600 text-white shadow-lg shadow-indigo-100">
                         <Check className="w-4 h-4 mr-2" /> 이 위치로 선택
                       </Button>
                     </div>
