@@ -130,6 +130,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .upsert([
             {
               id: userId,
+              email: userEmail ?? null,
               nickname: defaultNickname,
               avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
               bio: "지도를 여행하는 탐험가 📍",
