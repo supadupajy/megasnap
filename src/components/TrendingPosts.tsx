@@ -93,11 +93,6 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
             <Heart className="w-3 h-3 fill-rose-500" />
             <span className="text-[10px] font-black">{post.likes}</span>
           </div>
-          {(post.likes_per_hour ?? 0) > 0 && (
-            <div className="flex items-center gap-0.5 text-orange-500 shrink-0">
-              <span className="text-[10px] font-black">+{post.likes_per_hour}/h</span>
-            </div>
-          )}
         </div>
       </div>
 
