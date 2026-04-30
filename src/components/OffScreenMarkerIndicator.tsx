@@ -119,7 +119,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       <button
         onClick={() => group.nearest && onNavigate(group.nearest)}
         style={{
-          position: 'absolute',
+          position: 'fixed',
           display: 'flex',
           flexDirection: isVertical ? 'column' : 'row',
           alignItems: 'center',
@@ -135,9 +135,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           cursor: 'pointer',
           whiteSpace: 'nowrap',
           letterSpacing: '-0.02em',
-          zIndex: 30,
+          zIndex: 9000,
           padding: isVertical ? '5px 14px' : '6px 12px',
           minWidth: isVertical ? '44px' : undefined,
+          pointerEvents: 'auto',
           ...style,
         }}
         onMouseDown={e => e.stopPropagation()}
@@ -159,13 +160,13 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       <Btn
         dir="top"
         group={groups.top}
-        style={{ top: 16, left: '50%', transform: 'translateX(-50%)' }}
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 16px)', left: '50%', transform: 'translateX(-50%)' }}
       />
       {/* 하단 - 화면 중앙 하단 */}
       <Btn
         dir="bottom"
         group={groups.bottom}
-        style={{ bottom: 16, left: '50%', transform: 'translateX(-50%)' }}
+        style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)', left: '50%', transform: 'translateX(-50%)' }}
       />
       {/* 좌측 - 화면 중앙 좌측 */}
       <Btn

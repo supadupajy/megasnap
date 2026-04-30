@@ -965,6 +965,18 @@ const Index = () => {
           paddingBottom: isSelectingLocation ? '0px' : 'env(safe-area-inset-bottom)'
         }}
       >
+        {/* 화면 밖 마커 방향 표시 - overflow-hidden 밖에 fixed로 배치 */}
+        {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
+          <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
+            <OffScreenMarkerIndicator
+              posts={displayedMarkers}
+              bounds={mapData?.bounds || null}
+              mapCenter={mapData?.center || mapCenter || null}
+              onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
+            />
+          </div>
+        )}
+
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
           <ShutterOverlay ref={shutterRef} />
@@ -981,17 +993,6 @@ const Index = () => {
             />
           </div>
 
-          {/* 화면 밖 마커 방향 표시 - z-0 밖에 배치해야 클릭 가능 */}
-          {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
-            <div className="absolute inset-0 z-10 pointer-events-none">
-              <OffScreenMarkerIndicator
-                posts={displayedMarkers}
-                bounds={mapData?.bounds || null}
-                mapCenter={mapData?.center || mapCenter || null}
-                onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
-              />
-            </div>
-          )}
 
           <AnimatePresence>
             {isSelectingLocation && (
