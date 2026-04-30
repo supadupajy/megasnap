@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.example.chorasnap"
+    namespace "com.chorasnap.chorasnap"
     compileSdk rootProject.ext.compileSdkVersion
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
@@ -13,7 +13,7 @@ android {
         }
     }
     defaultConfig {
-        applicationId "com.example.chorasnap"
+        applicationId "com.chorasnap.chorasnap"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
