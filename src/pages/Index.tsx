@@ -228,14 +228,10 @@ const Index = () => {
       return; // 60초 이내 호출이면 스킵
     }
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('id, content, image_url, location_name, likes, category, youtube_url, video_url, latitude, longitude, created_at, user_id, display_user_id, user_name, user_avatar, hot_since, is_seed_data')
-        .order('likes', { ascending: false })
-        .limit(20);
+      const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 20 });
       if (!error && data) {
-        const mapped = data.map(p => mapRawToPost(p));
-        const trending = mapped.slice(0, 20).map((p, i) => ({ ...p, rank: i + 1 }));
+        const mapped = data.map((p: any) => ({ ...mapRawToPost(p), likes_per_hour: Number(p.likes_per_hour ?? 0) }));
+        const trending = mapped.slice(0, 20).map((p: any, i: number) => ({ ...p, rank: i + 1 }));
         setGlobalTrendingPosts(trending);
         trendingFetchedAtRef.current = now;
       }

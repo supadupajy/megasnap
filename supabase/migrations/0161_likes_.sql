@@ -1,0 +1,1 @@
+SELECT trigger_name, event_manipulation, action_statement FROM information_schema.triggers WHERE trigger_schema = 'public' AND event_object_table = 'likes' ORDER BY trigger_name;
