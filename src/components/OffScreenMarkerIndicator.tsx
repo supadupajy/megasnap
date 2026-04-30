@@ -65,7 +65,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'bottom') {
-      posStyle.bottom = `calc(${bottomOffset}px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)`;
+      posStyle.bottom = `calc(${bottomOffset}px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)`;
       posStyle.left = '50%';
       posStyle.transform = 'translateX(-50%)';
     } else if (dir === 'left') {
