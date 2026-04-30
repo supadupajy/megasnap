@@ -103,7 +103,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         strokeWidth="3.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        style={{ transform: `rotate(${deg}deg)`, flexShrink: 0 }}
+        style={{ transform: `rotate(${deg}deg)`, flexShrink: 0, display: 'block' }}
       >
         <polyline points="18 15 12 9 6 15" />
       </svg>
@@ -155,7 +155,9 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           cursor: 'pointer',
           letterSpacing: '-0.02em',
           zIndex: 9000,
-          padding: isVertical ? '5px 12px' : '6px 10px',
+          // 상하좌우 모두 동일한 패딩/크기
+          padding: '5px 12px',
+          lineHeight: 1,
           pointerEvents: 'auto',
           ...posStyle,
         }}
@@ -163,7 +165,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       >
         {dir === 'top' && <Arrow dir="top" />}
         {dir === 'left' && <Arrow dir="left" />}
-        <span style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.3 }}>
+        <span style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1, verticalAlign: 'middle' }}>
           {group.count}
         </span>
         {dir === 'bottom' && <Arrow dir="bottom" />}
