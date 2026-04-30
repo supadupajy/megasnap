@@ -1,0 +1,1 @@
+SELECT id, content, likes, hot_since, "borderType" FROM posts WHERE "borderType" = 'popular' OR hot_since IS NOT NULL LIMIT 10;

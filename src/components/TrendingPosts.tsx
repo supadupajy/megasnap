@@ -280,7 +280,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           <>
             <span className={cn(
               "text-indigo-600 font-black text-sm italic shrink-0",
-              currentPost?.rank >= 10 ? "w-6" : "w-4"
+              isExpanded ? "w-auto mr-1" : (currentPost?.rank >= 10 ? "w-6" : "w-4")
             )}>
               {isExpanded ? "HOT" : currentPost?.rank}
             </span>
@@ -311,8 +311,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex items-center gap-1.5 overflow-hidden">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
+              <div className="flex-1 flex items-center gap-1.5 min-w-0 overflow-hidden ml-2">
+                <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0 fill-orange-500" />
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight truncate">
                   Real-time HOT (Top 20)
                 </span>
               </div>
