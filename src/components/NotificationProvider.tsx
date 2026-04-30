@@ -119,11 +119,12 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         (payload) => {
           fetchCounts(userId);
           if (payload.eventType === 'INSERT') {
-            window.dispatchEvent(new CustomEvent('refresh-messages-list'));
+            const senderId = (payload.new as any)?.sender_id;
+            // sender_id를 detail에 포함시켜 Chat.tsx가 자신이 보낸 메시지인지 판별 가능하게 함
+            window.dispatchEvent(new CustomEvent('refresh-messages-list', { detail: { sender_id: senderId } }));
 
             // 현재 해당 발신자와의 채팅방 안에 있지 않을 때만 소리 재생
             const activeChatId = localStorage.getItem('activeChatId');
-            const senderId = (payload.new as any)?.sender_id;
             if (!activeChatId || activeChatId !== senderId) {
               playOutChatSound();
             }

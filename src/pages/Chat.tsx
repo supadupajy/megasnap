@@ -123,6 +123,14 @@ const Chat = () => {
         .eq('sender_id', chatId)
         .eq('is_read', false);
       chatStore.markAsRead(chatId);
+      // 로컬 메시지 상태도 즉시 is_read: true로 업데이트 (화면 반영)
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.receiver_id === authUser.id && msg.sender_id === chatId && !msg.is_read
+            ? { ...msg, is_read: true }
+            : msg
+        )
+      );
       // NotificationProvider가 이 이벤트를 받아 카운트를 갱신함
       window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
     } catch (err) {}
@@ -222,17 +230,26 @@ const Chat = () => {
      *    별도 Realtime 채널 없이 동일한 실시간 효과 달성.
      *    WAL 폴링 채널 수: 3개 → 1개
      */
-    const handleNewMessage = async () => {
+    const handleNewMessage = async (e: Event) => {
       const { data } = await supabase
         .from('messages')
         .select('id, content, sender_id, receiver_id, created_at, is_read')
         .or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${chatId}),and(sender_id.eq.${chatId},receiver_id.eq.${authUser.id})`)
         .order('created_at', { ascending: true });
       if (!data) return;
-      setMessages(data);
-      // Chat 창 안에 있을 때는 항상 in-chat 소리 재생
-      // (out-chat 소리는 NotificationProvider에서 activeChatId 확인 후 재생)
-      playNotificationSound(true);
+      // 읽음 처리 후 로컬 상태에 반영 (markAsRead가 setMessages를 업데이트하므로 순서 중요)
+      setMessages(data.map(msg =>
+        msg.receiver_id === authUser.id && msg.sender_id === chatId
+          ? { ...msg, is_read: true }
+          : msg
+      ));
+      // 상대방이 보낸 새 메시지일 때만 in-chat 소리 재생
+      // (내가 보낸 메시지 INSERT 이벤트에는 소리 재생 안 함)
+      const customEvent = e as CustomEvent;
+      const senderId = customEvent.detail?.sender_id;
+      if (senderId && senderId !== authUser.id) {
+        playNotificationSound(true);
+      }
       markAsRead();
       setTimeout(scrollToBottom, 10);
     };

@@ -119,12 +119,6 @@ const Messages = () => {
     };
     window.addEventListener('refresh-messages-list', handleRefreshEvent);
 
-    // [Fixed] Header.tsx가 이미 messages INSERT를 구독 중 → 중복 채널 제거
-    // Header의 구독이 fetchUnreadCount를 호출하고, 그 시점에 'refresh-messages-list' 이벤트를 발생시키는 방식으로 연동
-    // 대신 'refresh-messages-list' 커스텀 이벤트로 대화 목록 갱신
-    const handleNewMessage = () => fetchConversations();
-    window.addEventListener('refresh-messages-list', handleNewMessage);
-
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
     
     // [Fixed] profiles UPDATE 실시간 구독 → polling으로 대체.
@@ -158,7 +152,6 @@ const Messages = () => {
       clearInterval(onlineStatusInterval);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('refresh-messages-list', handleRefreshEvent);
-      window.removeEventListener('refresh-messages-list', handleNewMessage);
       unsubscribeChatStore();
     };
   }, [authUser]);
