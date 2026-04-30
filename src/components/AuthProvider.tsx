@@ -4,6 +4,7 @@ import { Session, User } from "@supabase/supabase-js";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
 import { blockedStore } from "@/utils/blocked-store";
+import { generateUniqueNickname } from "@/utils/nickname-generator";
 
 interface AuthContextType {
   session: Session | null;
@@ -124,14 +125,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .maybeSingle();
 
       if (!data && !error) {
-        const defaultNickname = userEmail ? userEmail.split("@")[0] : "탐험가";
+        const uniqueNickname = await generateUniqueNickname();
         const { data: newProfile, error: insertError } = await supabase
           .from("profiles")
           .upsert([
             {
               id: userId,
               email: userEmail ?? null,
-              nickname: defaultNickname,
+              nickname: uniqueNickname,
               avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
               bio: "지도를 여행하는 탐험가 📍",
               updated_at: new Date().toISOString(),
