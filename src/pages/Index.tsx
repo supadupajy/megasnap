@@ -165,6 +165,9 @@ const Index = () => {
   const shutterRef = useRef<ShutterOverlayHandle>(null);
   const viewAllBtnRef = useRef<HTMLButtonElement>(null);
   const mapAreaRef = useRef<HTMLDivElement>(null);
+  const trendingDivRef = useRef<HTMLDivElement>(null);
+  const [trendingBottom, setTrendingBottom] = useState(160);
+  const bottomNavHeight = 64; // BottomNav 높이(px)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
   const handleCategorySelect = useCallback((cats: string[]) => {
     setSelectedCategories(cats);
@@ -517,6 +520,21 @@ const Index = () => {
   useEffect(() => {
     currentZoomRef.current = currentZoom;
   }, [currentZoom]);
+
+  // 트렌딩 포스트 div의 실제 bottom 위치 측정 (ResizeObserver)
+  useEffect(() => {
+    const measure = () => {
+      if (trendingDivRef.current) {
+        const rect = trendingDivRef.current.getBoundingClientRect();
+        setTrendingBottom(rect.bottom);
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (trendingDivRef.current) ro.observe(trendingDivRef.current);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [isPostListOpen, isSearchOpen]);
 
   // ── visibleMarkers: displayedMarkers 그대로 사용 (분산 없음) ──────
   // 카카오맵 CustomOverlay는 화면 밖 마커를 자동으로 렌더링하지 않으므로
@@ -973,6 +991,8 @@ const Index = () => {
               bounds={mapData?.bounds || null}
               mapCenter={mapData?.center || mapCenter || null}
               onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
+              topOffset={trendingBottom}
+              bottomOffset={bottomNavHeight}
             />
           </div>
         )}
@@ -1193,6 +1213,7 @@ const Index = () => {
 
       {!isPostListOpen && !isSearchOpen && (
         <div
+          ref={trendingDivRef}
           className={cn(
             "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
             isCategoryOpen && "opacity-50 blur-[1px]",

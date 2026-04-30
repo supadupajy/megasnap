@@ -11,6 +11,8 @@ interface OffScreenMarkerIndicatorProps {
   bounds: Bounds | null;
   mapCenter: { lat: number; lng: number } | null;
   onNavigate: (post: Post) => void;
+  topOffset: number;   // 상단 인디케이터 top 픽셀 (트렌딩 포스트 하단)
+  bottomOffset: number; // 하단 인디케이터 bottom 픽셀 (하단 네비 상단)
 }
 
 type Direction = 'top' | 'bottom' | 'left' | 'right';
@@ -27,6 +29,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bounds,
   mapCenter,
   onNavigate,
+  topOffset,
+  bottomOffset,
 }) => {
   const groups = useMemo<Record<Direction, DirectionGroup>>(() => {
     const empty = (): DirectionGroup => ({ count: 0, nearest: null, edgeRatio: 0.5 });
@@ -153,11 +157,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     // 위치 계산
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
-      // 트렌딩 포스트 시작(74px) + 트렌딩 높이(56px) + 여백(16px) = 146px
-      posStyle.top = 'calc(env(safe-area-inset-top, 0px) + 146px)';
+      posStyle.top = `${topOffset + 12}px`;
       posStyle.left = `calc(${ratio * 100}% - 28px)`;
     } else if (dir === 'bottom') {
-      posStyle.bottom = 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 90px)';
+      posStyle.bottom = `${bottomOffset + 12}px`;
       posStyle.left = `calc(${ratio * 100}% - 28px)`;
     } else if (dir === 'left') {
       posStyle.left = '12px';
