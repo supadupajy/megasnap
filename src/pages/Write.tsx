@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, Loader2, PenLine, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,7 +44,6 @@ const Write = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [address, setAddress] = useState<string>('');
-  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   // ✅ 이미지 로드 완료 여부를 state로 관리
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -57,42 +56,13 @@ const Write = () => {
   const cropPixelRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
 
-  const reverseGeocode = useCallback((lat: number, lng: number) => {
-    return new Promise<string>((resolve) => {
-      const kakao = (window as any).kakao;
-      if (!kakao || !kakao.maps || !kakao.maps.services) {
-        resolve(resolveOfflineLocationName(lat, lng));
-        return;
-      }
-      const geocoder = new kakao.maps.services.Geocoder();
-      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
-        if (status === kakao.maps.services.Status.OK) {
-          const addr = result[0].address;
-          const city = addr.region_1depth_name || '';
-          const gu = addr.region_2depth_name || '';
-          const dong = addr.region_3depth_name || '';
-          const parts = [city, gu, dong].filter(Boolean);
-          resolve(parts.join(' '));
-        } else {
-          resolve(resolveOfflineLocationName(lat, lng));
-        }
-      });
-    });
-  }, []);
-
   useEffect(() => {
-    const updateAddress = async () => {
-      if (initialLocation) {
-        setIsLoadingAddress(true);
-        const resolvedAddress = await reverseGeocode(initialLocation.lat, initialLocation.lng);
-        setAddress(resolvedAddress);
-        setIsLoadingAddress(false);
-      } else {
-        setAddress('위치 미지정');
-      }
-    };
-    updateAddress();
-  }, [initialLocation, reverseGeocode]);
+    if (initialLocation) {
+      setAddress(resolveOfflineLocationName(initialLocation.lat, initialLocation.lng));
+    } else {
+      setAddress('위치 미지정');
+    }
+  }, [initialLocation]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
