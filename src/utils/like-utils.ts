@@ -21,11 +21,12 @@ export const toggleLikeInDb = async (
         .eq("user_id", userId);
       if (error) throw error;
     } else {
-      // 좋아요: likes 테이블에 삽입 (중복 방지: upsert)
+      // 좋아요: likes 테이블에 삽입 (중복 시 무시)
       const { error } = await supabase
         .from("likes")
-        .upsert({ post_id: postId, user_id: userId }, { onConflict: "user_id,post_id" });
-      if (error) throw error;
+        .insert({ post_id: postId, user_id: userId });
+      // 중복 키 에러(23505)는 이미 좋아요된 상태이므로 무시
+      if (error && error.code !== "23505") throw error;
     }
     return true;
   } catch (err) {
