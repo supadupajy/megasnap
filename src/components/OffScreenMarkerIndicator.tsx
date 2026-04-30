@@ -9,189 +9,176 @@ interface Bounds {
 interface OffScreenMarkerIndicatorProps {
   posts: Post[];
   bounds: Bounds | null;
+  mapCenter: { lat: number; lng: number } | null;
+  onNavigate: (post: Post) => void;
 }
 
-interface DirectionCounts {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
+type Direction = 'top' | 'bottom' | 'left' | 'right';
+
+interface DirectionGroup {
+  count: number;
+  nearest: Post | null;
 }
 
-const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({ posts, bounds }) => {
-  const counts = useMemo<DirectionCounts>(() => {
-    if (!bounds) return { top: 0, bottom: 0, left: 0, right: 0 };
+const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
+  posts,
+  bounds,
+  mapCenter,
+  onNavigate,
+}) => {
+  const groups = useMemo<Record<Direction, DirectionGroup>>(() => {
+    const empty = (): DirectionGroup => ({ count: 0, nearest: null });
+    const result: Record<Direction, DirectionGroup> = {
+      top: empty(), bottom: empty(), left: empty(), right: empty(),
+    };
+
+    if (!bounds || !mapCenter) return result;
 
     const { sw, ne } = bounds;
-    const result = { top: 0, bottom: 0, left: 0, right: 0 };
+    const cx = mapCenter.lng;
+    const cy = mapCenter.lat;
+
+    const dist = (p: Post) =>
+      Math.sqrt(Math.pow((p.lat ?? 0) - cy, 2) + Math.pow((p.lng ?? 0) - cx, 2));
+
+    const addToDir = (dir: Direction, post: Post) => {
+      result[dir].count++;
+      const d = dist(post);
+      const nearestDist = result[dir].nearest ? dist(result[dir].nearest!) : Infinity;
+      if (d < nearestDist) result[dir].nearest = post;
+    };
 
     posts.forEach(post => {
       if (post.lat == null || post.lng == null) return;
 
       const inLat = post.lat >= sw.lat && post.lat <= ne.lat;
       const inLng = post.lng >= sw.lng && post.lng <= ne.lng;
+      if (inLat && inLng) return; // 화면 안
 
-      // 화면 안에 있으면 스킵
-      if (inLat && inLng) return;
-
-      // 위/아래 판별 (위도: ne.lat = 북쪽 상단, sw.lat = 남쪽 하단)
       const isAbove = post.lat > ne.lat;
       const isBelow = post.lat < sw.lat;
-      // 좌/우 판별 (경도: sw.lng = 서쪽 왼쪽, ne.lng = 동쪽 오른쪽)
-      const isLeft = post.lng < sw.lng;
+      const isLeft  = post.lng < sw.lng;
       const isRight = post.lng > ne.lng;
 
-      // 대각선 마커는 가장 벗어난 방향으로 분류
-      if (isAbove && !isLeft && !isRight) {
-        result.top++;
-      } else if (isBelow && !isLeft && !isRight) {
-        result.bottom++;
-      } else if (isLeft && !isAbove && !isBelow) {
-        result.left++;
-      } else if (isRight && !isAbove && !isBelow) {
-        result.right++;
-      } else if (isAbove && isLeft) {
-        // 위-왼쪽 대각선: 위도 차이 vs 경도 차이로 주방향 결정
-        const latDiff = post.lat - ne.lat;
-        const lngDiff = sw.lng - post.lng;
-        if (latDiff >= lngDiff) result.top++;
-        else result.left++;
+      if (isAbove && !isLeft && !isRight) { addToDir('top', post); return; }
+      if (isBelow && !isLeft && !isRight) { addToDir('bottom', post); return; }
+      if (isLeft  && !isAbove && !isBelow) { addToDir('left', post); return; }
+      if (isRight && !isAbove && !isBelow) { addToDir('right', post); return; }
+
+      // 대각선: 위도/경도 차이 비교로 주방향 결정
+      if (isAbove && isLeft) {
+        (post.lat - ne.lat) >= (sw.lng - post.lng) ? addToDir('top', post) : addToDir('left', post);
       } else if (isAbove && isRight) {
-        const latDiff = post.lat - ne.lat;
-        const lngDiff = post.lng - ne.lng;
-        if (latDiff >= lngDiff) result.top++;
-        else result.right++;
+        (post.lat - ne.lat) >= (post.lng - ne.lng) ? addToDir('top', post) : addToDir('right', post);
       } else if (isBelow && isLeft) {
-        const latDiff = sw.lat - post.lat;
-        const lngDiff = sw.lng - post.lng;
-        if (latDiff >= lngDiff) result.bottom++;
-        else result.left++;
+        (sw.lat - post.lat) >= (sw.lng - post.lng) ? addToDir('bottom', post) : addToDir('left', post);
       } else if (isBelow && isRight) {
-        const latDiff = sw.lat - post.lat;
-        const lngDiff = post.lng - ne.lng;
-        if (latDiff >= lngDiff) result.bottom++;
-        else result.right++;
+        (sw.lat - post.lat) >= (post.lng - ne.lng) ? addToDir('bottom', post) : addToDir('right', post);
       }
     });
 
     return result;
-  }, [posts, bounds]);
+  }, [posts, bounds, mapCenter]);
 
-  const hasAny = counts.top > 0 || counts.bottom > 0 || counts.left > 0 || counts.right > 0;
+  const hasAny = (Object.values(groups) as DirectionGroup[]).some(g => g.count > 0);
   if (!hasAny) return null;
 
-  const btnBase: React.CSSProperties = {
-    position: 'absolute',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '3px',
-    background: 'rgba(79, 70, 229, 0.88)',
-    backdropFilter: 'blur(6px)',
-    color: 'white',
-    borderRadius: '20px',
-    padding: '5px 10px',
-    fontSize: '12px',
-    fontWeight: 800,
-    boxShadow: '0 2px 12px rgba(79,70,229,0.35)',
-    border: '1.5px solid rgba(255,255,255,0.25)',
-    pointerEvents: 'none',
-    whiteSpace: 'nowrap',
-    letterSpacing: '-0.02em',
-    zIndex: 100,
-  };
-
-  // 화살표 SVG
-  const Arrow = ({ dir }: { dir: 'up' | 'down' | 'left' | 'right' }) => {
-    const rotations = { up: 0, right: 90, down: 180, left: 270 };
+  // 화살표 SVG (위쪽 기준, rotate로 방향 전환)
+  const Arrow = ({ dir }: { dir: Direction }) => {
+    const deg = { top: 0, right: 90, bottom: 180, left: 270 }[dir];
     return (
       <svg
-        width="13"
-        height="13"
+        width="14" height="14"
         viewBox="0 0 24 24"
         fill="none"
         stroke="white"
         strokeWidth="3"
         strokeLinecap="round"
         strokeLinejoin="round"
-        style={{ transform: `rotate(${rotations[dir]}deg)`, flexShrink: 0 }}
+        style={{ transform: `rotate(${deg}deg)`, flexShrink: 0 }}
       >
         <polyline points="18 15 12 9 6 15" />
       </svg>
     );
   };
 
+  const Btn = ({
+    dir,
+    group,
+    style,
+  }: {
+    dir: Direction;
+    group: DirectionGroup;
+    style: React.CSSProperties;
+  }) => {
+    if (group.count === 0) return null;
+
+    const isVertical = dir === 'top' || dir === 'bottom';
+
+    return (
+      <button
+        onClick={() => group.nearest && onNavigate(group.nearest)}
+        style={{
+          position: 'absolute',
+          display: 'flex',
+          flexDirection: isVertical ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '2px',
+          background: 'rgba(79, 70, 229, 0.90)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          color: 'white',
+          borderRadius: '20px',
+          border: '1.5px solid rgba(255,255,255,0.3)',
+          boxShadow: '0 4px 16px rgba(79,70,229,0.4)',
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          letterSpacing: '-0.02em',
+          zIndex: 30,
+          padding: isVertical ? '5px 14px' : '6px 12px',
+          minWidth: isVertical ? '44px' : undefined,
+          ...style,
+        }}
+        onMouseDown={e => e.stopPropagation()}
+      >
+        {dir === 'top' && <Arrow dir="top" />}
+        {dir === 'left' && <Arrow dir="left" />}
+        <span style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.2 }}>
+          {group.count}
+        </span>
+        {dir === 'bottom' && <Arrow dir="bottom" />}
+        {dir === 'right' && <Arrow dir="right" />}
+      </button>
+    );
+  };
+
   return (
     <>
-      {/* 상단 */}
-      {counts.top > 0 && (
-        <div
-          style={{
-            ...btnBase,
-            top: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            flexDirection: 'column',
-            gap: '1px',
-            padding: '6px 12px 4px',
-          }}
-        >
-          <Arrow dir="up" />
-          <span>{counts.top}</span>
-        </div>
-      )}
-
-      {/* 하단 */}
-      {counts.bottom > 0 && (
-        <div
-          style={{
-            ...btnBase,
-            bottom: 12,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            flexDirection: 'column',
-            gap: '1px',
-            padding: '4px 12px 6px',
-          }}
-        >
-          <span>{counts.bottom}</span>
-          <Arrow dir="down" />
-        </div>
-      )}
-
-      {/* 좌측 */}
-      {counts.left > 0 && (
-        <div
-          style={{
-            ...btnBase,
-            left: 12,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            flexDirection: 'row',
-            padding: '5px 10px 5px 7px',
-          }}
-        >
-          <Arrow dir="left" />
-          <span>{counts.left}</span>
-        </div>
-      )}
-
-      {/* 우측 */}
-      {counts.right > 0 && (
-        <div
-          style={{
-            ...btnBase,
-            right: 12,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            flexDirection: 'row',
-            padding: '5px 7px 5px 10px',
-          }}
-        >
-          <span>{counts.right}</span>
-          <Arrow dir="right" />
-        </div>
-      )}
+      {/* 상단 - 화면 중앙 상단 */}
+      <Btn
+        dir="top"
+        group={groups.top}
+        style={{ top: 16, left: '50%', transform: 'translateX(-50%)' }}
+      />
+      {/* 하단 - 화면 중앙 하단 */}
+      <Btn
+        dir="bottom"
+        group={groups.bottom}
+        style={{ bottom: 16, left: '50%', transform: 'translateX(-50%)' }}
+      />
+      {/* 좌측 - 화면 중앙 좌측 */}
+      <Btn
+        dir="left"
+        group={groups.left}
+        style={{ left: 16, top: '50%', transform: 'translateY(-50%)' }}
+      />
+      {/* 우측 - 화면 중앙 우측 */}
+      <Btn
+        dir="right"
+        group={groups.right}
+        style={{ right: 16, top: '50%', transform: 'translateY(-50%)' }}
+      />
     </>
   );
 };

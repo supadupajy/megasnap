@@ -979,14 +979,19 @@ const Index = () => {
               searchResultLocation={searchResultLocation}
               onMapClick={() => setSearchResultLocation(null)}
             />
-            {/* 화면 밖 마커 방향 표시 */}
-            {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
+          </div>
+
+          {/* 화면 밖 마커 방향 표시 - z-0 밖에 배치해야 클릭 가능 */}
+          {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
+            <div className="absolute inset-0 z-10 pointer-events-none">
               <OffScreenMarkerIndicator
                 posts={displayedMarkers}
                 bounds={mapData?.bounds || null}
+                mapCenter={mapData?.center || mapCenter || null}
+                onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
               />
-            )}
-          </div>
+            </div>
+          )}
 
           <AnimatePresence>
             {isSelectingLocation && (
