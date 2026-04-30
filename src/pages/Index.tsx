@@ -140,7 +140,17 @@ const Index = () => {
   // displayedMarkers: MapContainer에 실제로 전달되는 마커 목록
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
 
-  const [mapData, setMapData] = useState<any>(null);
+  const [mapData, setMapData] = useState<any>(() => {
+    // localStorage에 저장된 이전 bounds로 초기화 → 앱 로딩 시 인디케이터 즉시 표시
+    try {
+      const saved = localStorage.getItem('map_bounds');
+      if (saved) {
+        const bounds = JSON.parse(saved);
+        return { bounds, center: mapCache.lastCenter, level: mapCache.lastZoom || 6 };
+      }
+    } catch {}
+    return null;
+  });
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
   // routeState로 위치가 지정된 경우 focusPostOnMap에서 setMapCenter를 호출 → 부드러운 smoothMoveTo
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
