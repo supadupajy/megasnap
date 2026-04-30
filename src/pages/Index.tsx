@@ -532,6 +532,9 @@ const Index = () => {
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
     if (post.lat == null || post.lng == null) return;
 
+    // setAllPosts 전에 미리 보호 시작 - React 리렌더 시 innerHTML 교체 방지
+    window.dispatchEvent(new CustomEvent('pre-highlight-marker', { detail: { id: post.id } }));
+
     setAllPosts(prev => {
       if (prev.some(p => p.id === post.id)) return prev;
       const combined = [post, ...prev];

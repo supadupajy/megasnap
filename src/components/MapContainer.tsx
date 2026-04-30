@@ -638,6 +638,17 @@ const MapContainer = ({
     });
   }, [viewedPostIds, internalViewedIds, isMapReady]);
 
+  // 'pre-highlight-marker' 이벤트: focusPostOnMap에서 setAllPosts 직후 즉시 보호 시작
+  // (smoothMoveTo 완료 전에 React 리렌더가 일어나도 innerHTML 교체 방지)
+  useEffect(() => {
+    const handlePreHighlight = (e: any) => {
+      const postId = e.detail?.id;
+      if (postId) highlightingIdsRef.current.add(postId);
+    };
+    window.addEventListener('pre-highlight-marker', handlePreHighlight);
+    return () => window.removeEventListener('pre-highlight-marker', handlePreHighlight);
+  }, []);
+
   useEffect(() => {
     const handleHighlight = (e: any) => {
       const postId = e.detail?.id;
