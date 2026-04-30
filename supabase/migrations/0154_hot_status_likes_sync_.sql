@@ -1,0 +1,1 @@
+SELECT routine_name, routine_definition FROM information_schema.routines WHERE routine_schema = 'public' AND routine_name IN ('update_post_hot_status', 'sync_post_likes_count');

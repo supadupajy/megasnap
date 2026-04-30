@@ -96,7 +96,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
         </div>
       </div>
 
-      {(post.rank === 1 || post.rank === 4) && (
+      {post.hot_since && new Date().getTime() - new Date(post.hot_since).getTime() < 60 * 60 * 1000 && (
         <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
           <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
         </div>
