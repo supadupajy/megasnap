@@ -340,8 +340,8 @@ const Chat = () => {
               />
             </div>
             <div className="flex flex-col min-w-0">
-              <h2 className="text-sm font-black text-gray-900 truncate leading-none">{otherUser?.nickname || '사용자'}</h2>
-              <div className="flex items-center gap-1 mt-1">
+                              <h2 className="text-sm font-black text-gray-900 truncate leading-normal">{otherUser?.nickname || '사용자'}</h2>
+                              <div className="flex items-center gap-1 mt-0.5">
                 <div className={cn("w-1.5 h-1.5 rounded-full", isOnline ? "bg-green-500 animate-pulse" : "bg-gray-300")} />
                 <span className={cn("text-[9px] font-black uppercase tracking-tight", isOnline ? "text-green-500" : "text-gray-400")}>
                   {isOnline ? 'Online' : 'Offline'}
