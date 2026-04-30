@@ -115,11 +115,19 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       .channel(`global-badge-${userId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${userId}` },
+        { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
+          const row = (payload.new as any) ?? (payload.old as any);
+          // 나와 관련된 메시지(수신자 또는 발신자)만 처리
+          if (row?.receiver_id !== userId && row?.sender_id !== userId) return;
+
           fetchCounts(userId);
+
           if (payload.eventType === 'INSERT') {
-            const senderId = (payload.new as any)?.sender_id;
+            // 내가 받는 메시지일 때만 알림 처리
+            if (row?.receiver_id !== userId) return;
+
+            const senderId = row?.sender_id;
             // sender_id를 detail에 포함시켜 Chat.tsx가 자신이 보낸 메시지인지 판별 가능하게 함
             window.dispatchEvent(new CustomEvent('refresh-messages-list', { detail: { sender_id: senderId } }));
 
@@ -134,8 +142,10 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       // 알림 (변경 시 카운트 갱신 + Notifications 페이지에 이벤트 전달)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        () => {
+        { event: '*', schema: 'public', table: 'notifications' },
+        (payload) => {
+          const row = (payload.new as any) ?? (payload.old as any);
+          if (row?.user_id !== userId) return;
           fetchCounts(userId);
           window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
         }
