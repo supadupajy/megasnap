@@ -1,4 +1,4 @@
-package com.example.chorasnap;
+package com.chorasnap.chorasnap;
 
 import android.os.Bundle;
 import android.webkit.WebSettings;
