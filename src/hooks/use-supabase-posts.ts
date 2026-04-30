@@ -49,3 +49,60 @@ export const fetchPostsInBounds = async (
     return [];
   }
 };
+
+export interface DirectionCounts {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+}
+
+/**
+ * 현재 화면 bounds 밖의 포스트 수를 방향별로 COUNT 쿼리로 가져옵니다.
+ * 데이터는 가져오지 않고 숫자만 가져오므로 매우 가볍습니다.
+ */
+export const fetchOffScreenCounts = async (
+  bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } }
+): Promise<DirectionCounts> => {
+  const { sw, ne } = bounds;
+
+  try {
+    // 4방향 COUNT 쿼리를 병렬로 실행
+    const [topRes, bottomRes, leftRes, rightRes] = await Promise.all([
+      // 위: lat > ne.lat
+      supabase
+        .from('posts')
+        .select('id', { count: 'exact', head: true })
+        .gt('latitude', ne.lat),
+      // 아래: lat < sw.lat
+      supabase
+        .from('posts')
+        .select('id', { count: 'exact', head: true })
+        .lt('latitude', sw.lat),
+      // 왼쪽: lng < sw.lng AND lat between sw.lat and ne.lat
+      supabase
+        .from('posts')
+        .select('id', { count: 'exact', head: true })
+        .lt('longitude', sw.lng)
+        .gte('latitude', sw.lat)
+        .lte('latitude', ne.lat),
+      // 오른쪽: lng > ne.lng AND lat between sw.lat and ne.lat
+      supabase
+        .from('posts')
+        .select('id', { count: 'exact', head: true })
+        .gt('longitude', ne.lng)
+        .gte('latitude', sw.lat)
+        .lte('latitude', ne.lat),
+    ]);
+
+    return {
+      top: topRes.count ?? 0,
+      bottom: bottomRes.count ?? 0,
+      left: leftRes.count ?? 0,
+      right: rightRes.count ?? 0,
+    };
+  } catch (err) {
+    console.error('[SupabasePosts] fetchOffScreenCounts error:', err);
+    return { top: 0, bottom: 0, left: 0, right: 0 };
+  }
+};

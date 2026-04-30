@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Post } from '@/types';
+import { DirectionCounts } from '@/hooks/use-supabase-posts';
 
 interface Bounds {
   sw: { lat: number; lng: number };
@@ -13,6 +14,8 @@ interface OffScreenMarkerIndicatorProps {
   onNavigate: (post: Post) => void;
   topOffset: number;
   bottomOffset: number;
+  // DB에서 가져온 방향별 카운트 (없으면 로컬 posts로 계산)
+  dbCounts?: DirectionCounts | null;
 }
 
 type Direction = 'top' | 'bottom' | 'left' | 'right';
@@ -29,11 +32,12 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   onNavigate,
   topOffset,
   bottomOffset,
+  dbCounts,
 }) => {
-  const groups = useMemo<Record<Direction, DirectionGroup>>(() => {
-    const empty = (): DirectionGroup => ({ count: 0, nearest: null });
-    const result: Record<Direction, DirectionGroup> = {
-      top: empty(), bottom: empty(), left: empty(), right: empty(),
+  // 로컬 posts에서 방향별 nearest 포스트 계산 (클릭 시 이동 대상)
+  const nearestByDir = useMemo<Record<Direction, Post | null>>(() => {
+    const result: Record<Direction, Post | null> = {
+      top: null, bottom: null, left: null, right: null,
     };
 
     if (!bounds || !mapCenter) return result;
@@ -45,11 +49,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const dist = (p: Post) =>
       Math.sqrt(Math.pow((p.lat ?? 0) - cy, 2) + Math.pow((p.lng ?? 0) - cx, 2));
 
-    const addToDir = (dir: Direction, post: Post) => {
-      result[dir].count++;
+    const updateNearest = (dir: Direction, post: Post) => {
       const d = dist(post);
-      const nearestDist = result[dir].nearest ? dist(result[dir].nearest!) : Infinity;
-      if (d < nearestDist) result[dir].nearest = post;
+      const nearestDist = result[dir] ? dist(result[dir]!) : Infinity;
+      if (d < nearestDist) result[dir] = post;
     };
 
     posts.forEach(post => {
@@ -57,24 +60,54 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
       const inLat = post.lat >= sw.lat && post.lat <= ne.lat;
       const inLng = post.lng >= sw.lng && post.lng <= ne.lng;
-      if (inLat && inLng) return; // 화면 안 → 스킵
+      if (inLat && inLng) return;
 
       const isAbove = post.lat > ne.lat;
       const isBelow = post.lat < sw.lat;
       const isLeft  = post.lng < sw.lng;
       const isRight = post.lng > ne.lng;
 
-      // 코너에 있는 포스트는 두 방향 모두에 카운트
-      if (isAbove) addToDir('top', post);
-      if (isBelow) addToDir('bottom', post);
-      if (isLeft)  addToDir('left', post);
-      if (isRight) addToDir('right', post);
+      if (isAbove) updateNearest('top', post);
+      if (isBelow) updateNearest('bottom', post);
+      if (isLeft)  updateNearest('left', post);
+      if (isRight) updateNearest('right', post);
     });
 
     return result;
   }, [posts, bounds, mapCenter]);
 
-  const hasAny = (Object.values(groups) as DirectionGroup[]).some(g => g.count > 0);
+  // 표시할 카운트: DB 카운트 우선, 없으면 로컬 posts로 계산
+  const counts = useMemo<Record<Direction, number>>(() => {
+    if (dbCounts) {
+      return {
+        top: dbCounts.top,
+        bottom: dbCounts.bottom,
+        left: dbCounts.left,
+        right: dbCounts.right,
+      };
+    }
+
+    // fallback: 로컬 posts 기반 카운트
+    if (!bounds) return { top: 0, bottom: 0, left: 0, right: 0 };
+    const { sw, ne } = bounds;
+    const result = { top: 0, bottom: 0, left: 0, right: 0 };
+
+    posts.forEach(post => {
+      if (post.lat == null || post.lng == null) return;
+      const inLat = post.lat >= sw.lat && post.lat <= ne.lat;
+      const inLng = post.lng >= sw.lng && post.lng <= ne.lng;
+      if (inLat && inLng) return;
+
+      if (post.lat > ne.lat) result.top++;
+      if (post.lat < sw.lat) result.bottom++;
+      if (post.lng < sw.lng && post.lat >= sw.lat && post.lat <= ne.lat) result.left++;
+      if (post.lng > ne.lng && post.lat >= sw.lat && post.lat <= ne.lat) result.right++;
+    });
+
+    return result;
+  }, [dbCounts, posts, bounds]);
+
+  const hasAny = Object.values(counts).some(c => c > 0);
   if (!hasAny) return null;
 
   const Arrow = ({ dir }: { dir: Direction }) => {
@@ -95,9 +128,11 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     );
   };
 
-  const Btn = ({ dir, group }: { dir: Direction; group: DirectionGroup }) => {
-    if (group.count === 0) return null;
+  const Btn = ({ dir }: { dir: Direction }) => {
+    const count = counts[dir];
+    if (count === 0) return null;
 
+    const nearest = nearestByDir[dir];
     const isVertical = dir === 'top' || dir === 'bottom';
 
     const posStyle: React.CSSProperties = {};
@@ -121,7 +156,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     return (
       <button
-        onClick={() => group.nearest && onNavigate(group.nearest)}
+        onClick={() => nearest && onNavigate(nearest)}
         style={{
           position: 'fixed',
           display: 'flex',
@@ -136,7 +171,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           borderRadius: '50%',
           border: '2px solid white',
           boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-          cursor: 'pointer',
+          cursor: nearest ? 'pointer' : 'default',
           zIndex: 9000,
           padding: 0,
           lineHeight: 1,
@@ -148,7 +183,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         {dir === 'top' && <Arrow dir="top" />}
         {dir === 'left' && <Arrow dir="left" />}
         <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: 'white' }}>
-          {group.count}
+          {count > 999 ? '999+' : count}
         </span>
         {dir === 'bottom' && <Arrow dir="bottom" />}
         {dir === 'right' && <Arrow dir="right" />}
@@ -158,10 +193,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
   return (
     <>
-      <Btn dir="top"    group={groups.top} />
-      <Btn dir="bottom" group={groups.bottom} />
-      <Btn dir="left"   group={groups.left} />
-      <Btn dir="right"  group={groups.right} />
+      <Btn dir="top" />
+      <Btn dir="bottom" />
+      <Btn dir="left" />
+      <Btn dir="right" />
     </>
   );
 };

@@ -17,7 +17,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, fetchOffScreenCounts, DirectionCounts } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { getDiverseUnsplashUrl } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
@@ -139,6 +139,8 @@ const Index = () => {
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   // displayedMarkers: MapContainer에 실제로 전달되는 마커 목록
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
+
+  const [offScreenCounts, setOffScreenCounts] = useState<DirectionCounts | null>(null);
 
   const [mapData, setMapData] = useState<any>(() => {
     // localStorage에 저장된 이전 bounds로 초기화 → 앱 로딩 시 인디케이터 즉시 표시
@@ -364,6 +366,16 @@ const Index = () => {
 
     doFetch();
 
+    return () => { cancelled = true; };
+  }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
+
+  // ── 화면 밖 방향별 포스트 수 (DB COUNT 쿼리) ──────────────────
+  useEffect(() => {
+    if (!mapData?.bounds || currentZoom >= 7) return;
+    let cancelled = false;
+    fetchOffScreenCounts(mapData.bounds).then(counts => {
+      if (!cancelled) setOffScreenCounts(counts);
+    });
     return () => { cancelled = true; };
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
 
@@ -1008,6 +1020,7 @@ const Index = () => {
               onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
               topOffset={trendingBottom}
               bottomOffset={bottomNavHeight}
+              dbCounts={offScreenCounts}
             />
           </div>
         )}
