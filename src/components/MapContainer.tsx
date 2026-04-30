@@ -432,6 +432,9 @@ const MapContainer = ({
       };
 
       const updateMapData = () => {
+        // smoothMoveTo 진행 중에는 idle/zoom_changed 이벤트 무시
+        // (이동 중 onMapChange 호출 → React 리렌더 → center useEffect 재실행 → smoothMoveTo 재시작 → 순간이동)
+        if (animationFrameRef.current) return;
         try {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
@@ -662,8 +665,15 @@ const MapContainer = ({
               }
             });
 
-            // highlighted 클래스 추가 - CSS가 animation을 무력화하고 opacity:1 강제 적용
-            // (.marker-container.highlighted .marker-content-wrapper { animation: none !important; opacity: 1 !important })
+            // 1단계: marker-appear-animation 제거 전에 opacity:1 인라인 고정
+            // (클래스 제거 순간 CSS animation forwards fill이 사라져 opacity:0으로 복귀하는 현상 방지)
+            const wrapperEl = content.querySelector('.marker-content-wrapper') as HTMLElement | null;
+            if (wrapperEl) {
+              wrapperEl.style.cssText = 'opacity:1!important;transform:scale(1) translateY(0)!important;animation:none!important;';
+            }
+            // 2단계: marker-appear-animation 제거 (이미 opacity:1 인라인이 고정되어 있으므로 안전)
+            content.classList.remove('marker-appear-animation');
+            // 3단계: highlighted 추가
             content.classList.remove('highlighted');
             content.classList.add('highlighted');
             highlightingIdsRef.current.add(postId);
@@ -851,6 +861,24 @@ const MapContainer = ({
         if (pendingLevelRef.current !== null) {
           applyLevel(pendingLevelRef.current);
         }
+        // 이동 완료 후 최종 위치를 onMapChange로 알림 (이동 중 억제했던 idle 이벤트 대체)
+        try {
+          const finalMap = mapInstance.current;
+          if (finalMap) {
+            const bounds = finalMap.getBounds();
+            const finalCenter = finalMap.getCenter();
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            onMapChangeRef.current({
+              bounds: {
+                sw: { lat: sw.getLat(), lng: sw.getLng() },
+                ne: { lat: ne.getLat(), lng: ne.getLng() }
+              },
+              center: { lat: finalCenter.getLat(), lng: finalCenter.getLng() },
+              level: finalMap.getLevel(),
+            });
+          }
+        } catch (e) {}
         onComplete?.();
       }
     };
