@@ -1,0 +1,1 @@
+SELECT id, content, likes, hot_since FROM posts ORDER BY likes DESC LIMIT 5;

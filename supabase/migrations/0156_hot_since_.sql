@@ -1,0 +1,1 @@
+SELECT id, content, likes, hot_since, NOW() - hot_since AS elapsed FROM posts WHERE hot_since IS NOT NULL ORDER BY hot_since DESC LIMIT 20;
