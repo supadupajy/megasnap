@@ -699,12 +699,33 @@ const MapContainer = ({
                 highlightingIdsRef.current.delete(postId);
                 return;
               }
-              // highlighted 클래스만 제거 - innerHTML 교체 절대 금지
+              // highlighted 제거 전에 올바른 innerHTML로 먼저 교체
+              // (highlightingIdsRef 보호 해제 후 React 리렌더가 잘못된 isMine으로 교체하는 것 방지)
+              const p2 = postsRef.current.find(item => item.id === postId);
+              if (p2) {
+                const combinedViewed = new Set([
+                  ...Array.from(viewedPostIdsRef.current),
+                  ...Array.from(internalViewedIdsRef.current),
+                ]);
+                const isViewed2 = combinedViewed.has(postId);
+                const isSeed2 = p2.is_seed_data === true || p2.is_seed_data === 'true' || p2.is_seed_data === 1;
+                let isMineKey2 = false;
+                if (authUserRef.current) {
+                  if (!isSeed2) {
+                    const ownerId2 = (p2 as any).owner_id || (p2 as any).user_id;
+                    isMineKey2 = !!(ownerId2 && String(ownerId2) === String(authUserRef.current.id));
+                  } else {
+                    const displayId2 = (p2 as any).display_user_id;
+                    isMineKey2 = !!(displayId2 && String(displayId2) === String(authUserRef.current.id));
+                  }
+                }
+                const isAdPendingKey2 = !!(p2 as any).isAdPending;
+                const finalStateKey = `${isViewed2}-${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isSeed2}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}`;
+                content.innerHTML = getMarkerInnerHtmlRef.current(p2, isViewed2);
+                content.setAttribute('data-content-state', finalStateKey);
+              }
               content.classList.remove('highlighted');
               highlightingIdsRef.current.delete(postId);
-              // 인라인 스타일 유지 (제거하면 다시 opacity:0으로 돌아갈 수 있음)
-
-              const p2 = postsRef.current.find(item => item.id === postId);
               overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);
             }, duration);
             return;
