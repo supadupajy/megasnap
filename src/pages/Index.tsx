@@ -1018,6 +1018,16 @@ const Index = () => {
               bounds={mapData?.bounds || null}
               mapCenter={mapData?.center || mapCenter || null}
               onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
+              onPanToDirection={(dir) => {
+                const b = mapData?.bounds;
+                const c = mapData?.center || mapCenter;
+                if (!b || !c) return;
+                const latSpan = b.ne.lat - b.sw.lat;
+                const lngSpan = b.ne.lng - b.sw.lng;
+                const panLat = { top: latSpan * 0.8, bottom: -latSpan * 0.8, left: 0, right: 0 }[dir];
+                const panLng = { top: 0, bottom: 0, left: -lngSpan * 0.8, right: lngSpan * 0.8 }[dir];
+                setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
+              }}
               topOffset={trendingBottom}
               bottomOffset={bottomNavHeight}
               dbCounts={offScreenCounts}

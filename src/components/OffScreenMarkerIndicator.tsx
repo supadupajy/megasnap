@@ -12,6 +12,7 @@ interface OffScreenMarkerIndicatorProps {
   bounds: Bounds | null;
   mapCenter: { lat: number; lng: number } | null;
   onNavigate: (post: Post) => void;
+  onPanToDirection: (dir: Direction) => void;
   topOffset: number;
   bottomOffset: number;
   // DB에서 가져온 방향별 카운트 (없으면 로컬 posts로 계산)
@@ -30,6 +31,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bounds,
   mapCenter,
   onNavigate,
+  onPanToDirection,
   topOffset,
   bottomOffset,
   dbCounts,
@@ -135,6 +137,14 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const nearest = nearestByDir[dir];
     const isVertical = dir === 'top' || dir === 'bottom';
 
+    const handleClick = () => {
+      if (nearest) {
+        onNavigate(nearest);
+      } else {
+        onPanToDirection(dir);
+      }
+    };
+
     const posStyle: React.CSSProperties = {};
     if (dir === 'top') {
       posStyle.top = `${topOffset + 12}px`;
@@ -156,7 +166,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     return (
       <button
-        onClick={() => nearest && onNavigate(nearest)}
+        onClick={handleClick}
         style={{
           position: 'fixed',
           display: 'flex',
@@ -171,7 +181,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           borderRadius: '50%',
           border: '2px solid white',
           boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-          cursor: nearest ? 'pointer' : 'default',
+          cursor: 'pointer',
           zIndex: 9000,
           padding: 0,
           lineHeight: 1,
