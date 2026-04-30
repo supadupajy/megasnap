@@ -371,7 +371,12 @@ const Index = () => {
 
   // ── 화면 밖 방향별 포스트 수 (DB COUNT 쿼리) ──────────────────
   useEffect(() => {
-    if (!mapData?.bounds || currentZoom >= 7) return;
+    if (!mapData?.bounds || currentZoom >= 7) {
+      setOffScreenCounts(null);
+      return;
+    }
+    // bounds 바뀌면 즉시 초기화 → 이전 값이 잠깐 보이는 현상 방지
+    setOffScreenCounts(null);
     let cancelled = false;
     fetchOffScreenCounts(mapData.bounds).then(counts => {
       if (!cancelled) setOffScreenCounts(counts);

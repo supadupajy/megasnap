@@ -70,8 +70,8 @@ export const fetchOffScreenCounts = async (
   const lngRange = ne.lng - sw.lng;
 
   // 카카오맵 getBounds()는 실제 화면 픽셀과 정확히 일치하지 않을 수 있으므로
-  // 화면 안쪽으로 5% 여유를 두어 화면 가장자리 포스팅이 잘못 카운트되는 것을 방지
-  const pad = 0.05;
+  // 화면 안쪽으로 10% 여유를 두어 화면 가장자리 포스팅이 잘못 카운트되는 것을 방지
+  const pad = 0.10;
   const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
   const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
 
