@@ -41,8 +41,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const { sw, ne } = bounds;
     const cx = mapCenter.lng;
     const cy = mapCenter.lat;
-    const latRange = ne.lat - sw.lat;
-    const lngRange = ne.lng - sw.lng;
 
     const dist = (p: Post) =>
       Math.sqrt(Math.pow((p.lat ?? 0) - cy, 2) + Math.pow((p.lng ?? 0) - cx, 2));
@@ -59,31 +57,19 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
       const inLat = post.lat >= sw.lat && post.lat <= ne.lat;
       const inLng = post.lng >= sw.lng && post.lng <= ne.lng;
-      if (inLat && inLng) return;
+      if (inLat && inLng) return; // 화면 안 → 스킵
 
       const isAbove = post.lat > ne.lat;
       const isBelow = post.lat < sw.lat;
       const isLeft  = post.lng < sw.lng;
       const isRight = post.lng > ne.lng;
 
-      if (isAbove && !isLeft && !isRight) { addToDir('top', post); return; }
-      if (isBelow && !isLeft && !isRight) { addToDir('bottom', post); return; }
-      if (isLeft  && !isAbove && !isBelow) { addToDir('left', post); return; }
-      if (isRight && !isAbove && !isBelow) { addToDir('right', post); return; }
-
-      if (isAbove && isLeft) {
-        (post.lat - ne.lat) / latRange >= (sw.lng - post.lng) / lngRange
-          ? addToDir('top', post) : addToDir('left', post);
-      } else if (isAbove && isRight) {
-        (post.lat - ne.lat) / latRange >= (post.lng - ne.lng) / lngRange
-          ? addToDir('top', post) : addToDir('right', post);
-      } else if (isBelow && isLeft) {
-        (sw.lat - post.lat) / latRange >= (sw.lng - post.lng) / lngRange
-          ? addToDir('bottom', post) : addToDir('left', post);
-      } else if (isBelow && isRight) {
-        (sw.lat - post.lat) / latRange >= (post.lng - ne.lng) / lngRange
-          ? addToDir('bottom', post) : addToDir('right', post);
-      }
+      // 코너에 있는 포스트는 두 방향 모두에 카운트
+      // (예: 오른쪽 위 코너 → top과 right 둘 다 +1)
+      if (isAbove) addToDir('top', post);
+      if (isBelow) addToDir('bottom', post);
+      if (isLeft)  addToDir('left', post);
+      if (isRight) addToDir('right', post);
     });
 
     return result;
@@ -99,7 +85,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         width="12" height="12"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="#4338ca"
+        stroke="white"
         strokeWidth="3.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -146,11 +132,11 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           gap: '1px',
           width: '44px',
           height: '44px',
-          background: 'white',
-          color: '#4338ca',
+          background: 'rgba(79, 70, 229, 0.92)',
+          color: 'white',
           borderRadius: '50%',
-          border: '2px solid #4338ca',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+          border: '2px solid white',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
           cursor: 'pointer',
           zIndex: 9000,
           padding: 0,
@@ -162,7 +148,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       >
         {dir === 'top' && <Arrow dir="top" />}
         {dir === 'left' && <Arrow dir="left" />}
-        <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: '#4338ca' }}>
+        <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: 'white' }}>
           {group.count}
         </span>
         {dir === 'bottom' && <Arrow dir="bottom" />}
