@@ -419,7 +419,7 @@ const UserProfile = () => {
                         post={post}
                         disablePulse={true}
                         onLikeToggle={() => handleLikeToggle(post.id)}
-                        onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng } } })}
+                        onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 4 } })}
                       />
                     </div>
                   ))}

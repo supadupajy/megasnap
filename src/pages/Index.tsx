@@ -798,9 +798,18 @@ const Index = () => {
       if (routeState.post) focusPostOnMap(routeState.post, { lat: routeState.post.lat, lng: routeState.post.lng });
       else handleCurrentLocation();
     } else if (routeState.post) {
+      // zoom이 지정된 경우 먼저 줌 레벨 설정 후 이동 (순간이동 방지)
+      if (routeState.zoom != null) {
+        setCurrentZoom(routeState.zoom);
+        currentZoomRef.current = routeState.zoom;
+      }
       focusPostOnMap(routeState.post, routeState.center);
     } else if (routeState.center) {
       setSelectedPostId(null);
+      if (routeState.zoom != null) {
+        setCurrentZoom(routeState.zoom);
+        currentZoomRef.current = routeState.zoom;
+      }
       setMapCenter(routeState.center);
     }
     if (routeState.startSelection) {

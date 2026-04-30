@@ -691,8 +691,10 @@ const MapContainer = ({
               }
             });
 
+            // marker-appear-animation 제거: highlighted의 animation:none이 forwards fill을
+            // 날려버려 opacity:0으로 순간 복귀하는 깜빡임 방지
+            content.classList.remove('marker-appear-animation');
             content.classList.remove('highlighted');
-            void content.offsetWidth;
             content.classList.add('highlighted');
             highlightingIdsRef.current.add(postId);
             overlay.setZIndex(99999);
@@ -870,7 +872,8 @@ const MapContainer = ({
     const startLat = startCenter.getLat();
     const startLng = startCenter.getLng();
     const dist = Math.sqrt(Math.pow(targetLat - startLat, 2) + Math.pow(targetLng - startLng, 2));
-    const duration = Math.min(Math.max(dist * 500, 400), 800);
+    // 거리에 비례한 duration: 가까우면 빠르게, 멀면 최대 1200ms로 부드럽게
+    const duration = Math.min(Math.max(dist * 800, 400), 1200);
     const startTime = performance.now();
 
     const animate = (currentTime: number) => {

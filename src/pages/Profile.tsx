@@ -284,7 +284,7 @@ const Profile = () => {
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number, post: Post) => {
     e.stopPropagation();
-    navigate('/', { state: { post, center: { lat, lng }, zoom: 16 } });
+    navigate('/', { state: { post, center: { lat, lng }, zoom: 4 } });
   }, [navigate]);
 
   const handleViewOnMap = () => {
