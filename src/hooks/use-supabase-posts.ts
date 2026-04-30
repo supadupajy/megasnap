@@ -176,3 +176,52 @@ export const fetchOffScreenCounts = async (
     return { top: 0, bottom: 0, left: 0, right: 0 };
   }
 };
+
+/**
+ * 특정 방향(화면 밖)에서 현재 지도 중심에 가장 가까운 포스팅 좌표를 가져옵니다.
+ * nearest가 없을 때 버튼 클릭 시 호출됩니다.
+ */
+export const fetchNearestInDirection = async (
+  bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
+  center: { lat: number; lng: number },
+  dir: 'top' | 'bottom' | 'left' | 'right'
+): Promise<{ lat: number; lng: number } | null> => {
+  const { sw, ne } = bounds;
+
+  try {
+    let query = supabase
+      .from('posts')
+      .select('latitude, longitude');
+
+    if (dir === 'top') {
+      query = query.gt('latitude', ne.lat).gte('longitude', sw.lng).lte('longitude', ne.lng);
+    } else if (dir === 'bottom') {
+      query = query.lt('latitude', sw.lat).gte('longitude', sw.lng).lte('longitude', ne.lng);
+    } else if (dir === 'left') {
+      query = query.lt('longitude', sw.lng).gte('latitude', sw.lat).lte('latitude', ne.lat);
+    } else {
+      query = query.gt('longitude', ne.lng).gte('latitude', sw.lat).lte('latitude', ne.lat);
+    }
+
+    const { data, error } = await query.limit(100);
+    if (error || !data || data.length === 0) return null;
+
+    // 중심에서 가장 가까운 포스팅 찾기
+    let nearest = data[0];
+    let minDist = Infinity;
+    for (const p of data) {
+      if (p.latitude == null || p.longitude == null) continue;
+      const d = Math.sqrt(
+        Math.pow(p.latitude - center.lat, 2) + Math.pow(p.longitude - center.lng, 2)
+      );
+      if (d < minDist) { minDist = d; nearest = p; }
+    }
+
+    return nearest?.latitude != null
+      ? { lat: nearest.latitude, lng: nearest.longitude }
+      : null;
+  } catch (err) {
+    console.error('[SupabasePosts] fetchNearestInDirection error:', err);
+    return null;
+  }
+};

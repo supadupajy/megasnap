@@ -17,7 +17,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds, fetchOffScreenCounts, DirectionCounts } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, fetchOffScreenCounts, fetchNearestInDirection, DirectionCounts } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { getDiverseUnsplashUrl } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
@@ -1018,15 +1018,21 @@ const Index = () => {
               bounds={mapData?.bounds || null}
               mapCenter={mapData?.center || mapCenter || null}
               onNavigate={(post) => focusPostOnMap(post, { lat: post.lat!, lng: post.lng! })}
-              onPanToDirection={(dir) => {
-                const b = mapData?.bounds;
-                const c = mapData?.center || mapCenter;
+              onPanToDirection={async (dir) => {
+                const b = mapDataRef.current?.bounds || mapData?.bounds;
+                const c = mapDataRef.current?.center || mapCenter;
                 if (!b || !c) return;
-                const latSpan = b.ne.lat - b.sw.lat;
-                const lngSpan = b.ne.lng - b.sw.lng;
-                const panLat = { top: latSpan * 0.8, bottom: -latSpan * 0.8, left: 0, right: 0 }[dir];
-                const panLng = { top: 0, bottom: 0, left: -lngSpan * 0.8, right: lngSpan * 0.8 }[dir];
-                setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
+                const pos = await fetchNearestInDirection(b, c, dir);
+                if (pos) {
+                  setMapCenter(pos);
+                } else {
+                  // fallback: 해당 방향으로 80% 패닝
+                  const latSpan = b.ne.lat - b.sw.lat;
+                  const lngSpan = b.ne.lng - b.sw.lng;
+                  const panLat = { top: latSpan * 0.8, bottom: -latSpan * 0.8, left: 0, right: 0 }[dir];
+                  const panLng = { top: 0, bottom: 0, left: -lngSpan * 0.8, right: lngSpan * 0.8 }[dir];
+                  setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
+                }
               }}
               topOffset={trendingBottom}
               bottomOffset={bottomNavHeight}
