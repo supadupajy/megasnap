@@ -460,21 +460,32 @@ const MapContainer = ({
       setTimeout(() => {
         if (mapInstance.current) {
           mapInstance.current.relayout();
-          const currentCenter = mapInstance.current.getCenter();
-          mapInstance.current.setCenter(currentCenter);
           updateZoomClass();
+
+          // centerRef.current가 있고 현재 지도 center와 다르면 setCenter 하지 않음
+          // (smoothMoveTo가 이미 이동 중일 수 있으므로 덮어쓰지 않음)
+          const targetCenter = centerRef.current;
+          const mapCenter = mapInstance.current.getCenter();
+          const shouldOverrideCenter = !targetCenter ||
+            (Math.abs(mapCenter.getLat() - targetCenter.lat) < 0.0001 &&
+             Math.abs(mapCenter.getLng() - targetCenter.lng) < 0.0001);
+
+          if (shouldOverrideCenter) {
+            mapInstance.current.setCenter(mapCenter);
+          }
 
           const bounds = mapInstance.current.getBounds();
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
           const mapLevel = mapInstance.current.getLevel();
+          const reportCenter = mapInstance.current.getCenter();
 
           onMapChangeRef.current({
             bounds: {
               sw: { lat: sw.getLat(), lng: sw.getLng() },
               ne: { lat: ne.getLat(), lng: ne.getLng() }
             },
-            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+            center: { lat: reportCenter.getLat(), lng: reportCenter.getLng() },
             level: mapLevel,
           });
         }
@@ -840,18 +851,25 @@ const MapContainer = ({
   };
 
   // center prop 변경 또는 isMapReady 변경 시 부드럽게 이동
+  // 핵심: isMapReady가 true가 되는 시점에 center가 이미 설정되어 있으면
+  // useEffect([center])는 재실행되지 않으므로 [center, isMapReady] 둘 다 의존성에 포함
   useEffect(() => {
-    if (isMapReady && mapInstance.current && center) {
-      const currentCenter = mapInstance.current.getCenter();
-      const latDiff = Math.abs(currentCenter.getLat() - center.lat);
-      const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
-      if (latDiff > 0.00001 || lngDiff > 0.00001) {
-        smoothMoveTo(center.lat, center.lng, () => {
-          window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
-        });
-      } else {
+    if (!isMapReady || !mapInstance.current || !center) return;
+
+    // 지도가 막 초기화된 경우: initMap()에서 mapCache.lastCenter로 지도를 만들었지만
+    // center prop이 다른 위치를 가리키면 smoothMoveTo로 이동해야 함
+    const currentCenter = mapInstance.current.getCenter();
+    const latDiff = Math.abs(currentCenter.getLat() - center.lat);
+    const lngDiff = Math.abs(currentCenter.getLng() - center.lng);
+
+    if (latDiff > 0.0001 || lngDiff > 0.0001) {
+      // 충분한 거리 차이가 있으면 부드럽게 이동
+      smoothMoveTo(center.lat, center.lng, () => {
         window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
-      }
+      });
+    } else {
+      // 이미 목적지에 있으면 즉시 완료 이벤트 발생
+      window.dispatchEvent(new CustomEvent('map-move-complete', { detail: { lat: center.lat, lng: center.lng } }));
     }
   }, [center, isMapReady]);
 

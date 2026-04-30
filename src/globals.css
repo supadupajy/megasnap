@@ -144,19 +144,23 @@
   transform-origin: 50% 100%;
 }
 
-/* 하이라이트 시 z-index만 올림 - animation: none 제거 (MY 마커 깜빡임 원인) */
+/* 하이라이트 상태: z-index 올리고 마커 내용은 완전히 보이게 고정 */
 .marker-container.highlighted {
   z-index: 99999 !important;
 }
 
-/* marker-appear 애니메이션만 중단 (forwards fill 날아가는 것 방지를 위해 opacity 명시) */
+/* highlighted 상태에서 marker-appear 애니메이션 완전 중단 + 최종 상태 고정 */
 .marker-container.highlighted .marker-content-wrapper {
+  animation: none !important;
   opacity: 1 !important;
   transform: scale(1) translateY(0) !important;
+  visibility: visible !important;
 }
 
 .marker-container.highlighted .marker-scaling-target {
+  animation: none !important;
   opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* 마커 등장: 아래서 튀어오르며 스르륵 나타남 (내부 wrapper에 적용) */
