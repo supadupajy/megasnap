@@ -669,9 +669,20 @@ const MapContainer = ({
                 highlightingIdsRef.current.delete(id);
                 const p = postsRef.current.find(item => item.id === id);
                 if (p) {
-                  const stateKey = c.getAttribute('data-content-state') || '';
-                  const isViewed = stateKey.startsWith('true');
-                  c.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+                  // [FIX] 동영상 마커는 innerHTML 교체 시 <video>가 재로드되어 깜빡임 발생.
+                  // 동영상 마커는 innerHTML 교체를 생략하고 클래스 제거만 수행.
+                  const isVideoMarker = !!(p as any).videoUrl || (
+                    !p.isAd && typeof (p as any).image === 'string' &&
+                    (() => {
+                      const lower = ((p as any).image as string).toLowerCase().split('?')[0];
+                      return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.m4v');
+                    })()
+                  );
+                  if (!isVideoMarker) {
+                    const stateKey = c.getAttribute('data-content-state') || '';
+                    const isViewed = stateKey.startsWith('true');
+                    c.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+                  }
                 }
                 o.setZIndex(
                   postsRef.current.find(item => item.id === id)?.isAd ? 500 :
@@ -703,7 +714,6 @@ const MapContainer = ({
                 const isViewed = combinedViewed.has(postId);
                 const isSeed = p.is_seed_data === true || (p.is_seed_data as any) === 'true' || (p.is_seed_data as any) === 1;
                 const currentAuthUser = authUserRef.current;
-                // [FIX] isMineKey: 시드 데이터는 display_user_id 기준, 일반 포스팅은 owner_id/user_id 기준
                 let isMineKey = false;
                 if (currentAuthUser) {
                   if (!isSeed) {
@@ -716,8 +726,30 @@ const MapContainer = ({
                 }
                 const isAdPendingKey = !!(p as any).isAdPending;
                 const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
-                content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
-                content.setAttribute('data-content-state', newStateKey);
+
+                // [FIX] 동영상 마커는 innerHTML 교체 시 <video>가 재로드되어 깜빡임 발생.
+                // 상태 변경이 없으면 innerHTML 교체를 완전히 생략하고 data-content-state만 갱신.
+                // 상태 변경이 있더라도 동영상 마커는 <video> 요소를 재사용하고 나머지만 교체.
+                const prevStateKey = content.getAttribute('data-content-state') || '';
+                const isVideoMarker = !!(p as any).videoUrl || (
+                  !p.isAd && typeof (p as any).image === 'string' &&
+                  (() => {
+                    const lower = ((p as any).image as string).toLowerCase().split('?')[0];
+                    return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.m4v');
+                  })()
+                );
+
+                if (prevStateKey !== newStateKey) {
+                  if (isVideoMarker) {
+                    // 동영상 마커: <video> 요소를 보존하고 상태만 업데이트
+                    // innerHTML 교체 없이 data-content-state만 갱신 (깜빡임 방지)
+                    content.setAttribute('data-content-state', newStateKey);
+                  } else {
+                    content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
+                    content.setAttribute('data-content-state', newStateKey);
+                  }
+                }
+                // 상태 변경 없으면 아무것도 하지 않음 (innerHTML 교체 생략)
               }
               highlightingIdsRef.current.delete(postId);
 
