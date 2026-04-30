@@ -332,8 +332,7 @@ const Login = () => {
             </p>
           </div>
         </div>
-      </motion.div>
-      <p className="mt-1 text-[10px] text-gray-300 font-medium tracking-widest">ver.1.0.13</p>
+      </motion.div>      
       </div>
     </div>
   );
