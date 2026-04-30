@@ -1,0 +1,1 @@
+SELECT COUNT(*) as total_agreements FROM user_agreements;
