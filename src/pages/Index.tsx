@@ -653,8 +653,8 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   // ── 현재 위치 ────────────────────────────────────────────────
-  const handleCurrentLocation = async () => {
-    const toastId = showLoading('현재 위치를 확인 중입니다...');
+  const moveToCurrentLocation = useCallback(async (showToast = true) => {
+    const toastId = showToast ? showLoading('현재 위치를 확인 중입니다...') : null;
 
     const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
 
@@ -663,16 +663,16 @@ const Index = () => {
       try {
         const permStatus = await Geolocation.checkPermissions();
         if (permStatus.location === 'denied') {
-          dismissToast(toastId);
-          showError('위치 권한이 거부되었습니다. 기기 설정에서 위치 권한을 허용해주세요.');
+          if (toastId) dismissToast(toastId);
+          if (showToast) showError('위치 권한이 거부되었습니다. 기기 설정에서 위치 권한을 허용해주세요.');
           if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
           return;
         }
         if (permStatus.location === 'prompt' || permStatus.location === 'prompt-with-rationale') {
           const requested = await Geolocation.requestPermissions();
           if (requested.location === 'denied') {
-            dismissToast(toastId);
-            showError('위치 권한이 거부되었습니다. 기기 설정에서 위치 권한을 허용해주세요.');
+            if (toastId) dismissToast(toastId);
+            if (showToast) showError('위치 권한이 거부되었습니다. 기기 설정에서 위치 권한을 허용해주세요.');
             if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
             return;
           }
@@ -684,49 +684,60 @@ const Index = () => {
         });
         if (pos?.coords) {
           setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          dismissToast(toastId);
-          showSuccess('현재 위치로 이동했습니다.');
+          if (toastId) dismissToast(toastId);
+          if (showToast) showSuccess('현재 위치로 이동했습니다.');
         }
       } catch (err: any) {
-        dismissToast(toastId);
+        if (toastId) dismissToast(toastId);
         const code = err?.code ?? err?.message ?? '';
-        if (String(code).includes('1') || String(code).toLowerCase().includes('denied') || String(code).toLowerCase().includes('permission')) {
-          showError('위치 권한이 없습니다. 기기 설정에서 위치 권한을 허용해주세요.');
-        } else if (String(code).includes('3') || String(code).toLowerCase().includes('timeout')) {
-          showError('위치 확인 시간이 초과되었습니다. GPS를 켜고 다시 시도해주세요.');
-        } else {
-          showError('위치 정보를 가져올 수 없습니다. GPS 및 위치 권한을 확인해주세요.');
+        if (showToast) {
+          if (String(code).includes('1') || String(code).toLowerCase().includes('denied') || String(code).toLowerCase().includes('permission')) {
+            showError('위치 권한이 없습니다. 기기 설정에서 위치 권한을 허용해주세요.');
+          } else if (String(code).includes('3') || String(code).toLowerCase().includes('timeout')) {
+            showError('위치 확인 시간이 초과되었습니다. GPS를 켜고 다시 시도해주세요.');
+          } else {
+            showError('위치 정보를 가져올 수 없습니다. GPS 및 위치 권한을 확인해주세요.');
+          }
         }
         if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
       }
     } else {
       // 웹 브라우저: navigator.geolocation 직접 사용
       if (!navigator.geolocation) {
-        dismissToast(toastId);
-        showError('이 브라우저는 위치 정보를 지원하지 않습니다.');
+        if (toastId) dismissToast(toastId);
+        if (showToast) showError('이 브라우저는 위치 정보를 지원하지 않습니다.');
         return;
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          dismissToast(toastId);
-          showSuccess('현재 위치로 이동했습니다.');
+          if (toastId) dismissToast(toastId);
+          if (showToast) showSuccess('현재 위치로 이동했습니다.');
         },
         (err) => {
-          dismissToast(toastId);
-          if (err.code === 1) {
-            showError('위치 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘을 눌러 위치 권한을 허용해주세요.');
-          } else if (err.code === 3) {
-            showError('위치 확인 시간이 초과되었습니다. 다시 시도해주세요.');
-          } else {
-            showError('위치 정보를 가져올 수 없습니다. GPS 및 위치 권한을 확인해주세요.');
+          if (toastId) dismissToast(toastId);
+          if (showToast) {
+            if (err.code === 1) {
+              showError('위치 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘을 눌러 위치 권한을 허용해주세요.');
+            } else if (err.code === 3) {
+              showError('위치 확인 시간이 초과되었습니다. 다시 시도해주세요.');
+            } else {
+              showError('위치 정보를 가져올 수 없습니다. GPS 및 위치 권한을 확인해주세요.');
+            }
           }
           if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
       );
     }
-  };
+  }, []);
+
+  const handleCurrentLocation = () => moveToCurrentLocation(true);
+
+  // ── 앱 시작 시 현재 위치로 자동 이동 ────────────────────────
+  useEffect(() => {
+    moveToCurrentLocation(false);
+  }, []);
 
   // ── 좋아요 토글 ──────────────────────────────────────────────
   const handleLikeToggle = useCallback((postId: string) => {
