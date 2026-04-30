@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, Loader2, PenLine, Send } from 'lucide-react';
+import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -464,8 +464,29 @@ const Write = () => {
                     {/* 슬라이드 전환 + 인디케이터 */}
                     {mediaFiles.length > 1 && (
                       <>
-                        <button className="absolute left-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.max(0, prev - 1))} />
-                        <button className="absolute right-0 top-0 bottom-0 w-1/4 z-20 opacity-0" onClick={() => setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1))} />
+                        {/* 왼쪽 화살표 버튼 */}
+                        {currentSlide > 0 && (
+                          <button
+                            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
+                            onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => Math.max(0, prev - 1)); }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+                        )}
+                        {/* 오른쪽 화살표 버튼 */}
+                        {currentSlide < mediaFiles.length - 1 && (
+                          <button
+                            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
+                            onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1)); }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        )}
+                        {/* 인디케이터 */}
                         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
                           {mediaFiles.map((_, i) => (
                             <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
