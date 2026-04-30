@@ -312,7 +312,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               </div>
             ) : (
               <div className="flex-1 flex items-center gap-1.5 overflow-hidden">
-                <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0 fill-orange-500" />
                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight whitespace-nowrap">
                   Real-time HOT (Top 20)
                 </span>
