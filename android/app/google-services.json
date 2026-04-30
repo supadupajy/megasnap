@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:573401371329:android:6f5c2f556cd95f1820ba40",
+        "mobilesdk_app_id": "1:573401371329:android:d84649299af9e8cc20ba40",
         "android_client_info": {
-          "package_name": "com.example.chorasnap"
+          "package_name": "com.chorasnap.chorasnap"
         }
       },
       "oauth_client": [],
