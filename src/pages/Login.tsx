@@ -100,6 +100,9 @@ const Login = () => {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: 'com.chorasnap.chorasnap://login-callback',
+          },
         });
         if (error) throw error;
 
