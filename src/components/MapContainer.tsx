@@ -1129,7 +1129,6 @@ const MapContainer = ({
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
     return `${adStyleTag}<div class="marker-content-wrapper">
-      <div class="marker-highlight-ping"></div>
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
         ${isAd ? adGlowLayer : ''}
         ${isAd ? adFlipWrapperStart : ''}

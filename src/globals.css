@@ -85,12 +85,14 @@
   cursor: pointer;
   will-change: transform, opacity;
   display: block;
+  position: relative;
   z-index: 10;
   width: 60px;
   height: 60px;
   transition: none;
   transform: translate(-50%, -100%) scale(1) !important;
   transform-origin: 50% 100%;
+  overflow: visible;
 }
 
 /* 줌 레벨에 따른 스케일 조정 */
@@ -271,27 +273,29 @@
 }
 
 @keyframes marker-ping {
-  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }
-  100% { transform: translate(-50%, -50%) scale(6); opacity: 0; }
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0.85; }
+  100% { transform: translate(-50%, -50%) scale(5);   opacity: 0; }
 }
 
-.marker-highlight-ping {
+/* ping은 marker-container의 ::after pseudo-element로 구현
+   → innerHTML과 완전히 분리되어 마커 내용에 영향 없음 */
+.marker-container.highlighted::after {
+  content: '';
   position: absolute;
-  top: 30px;
-  left: 30px;
-  width: 60px;
-  height: 60px;
-  background: rgba(79, 70, 229, 0.7);
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  background: rgba(79, 70, 229, 0.55);
   border-radius: 50%;
-  transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: -1;
-  display: none;
+  animation: marker-ping 0.9s ease-out 3;
 }
 
-.marker-container.highlighted .marker-highlight-ping {
-  display: block;
-  animation: marker-ping 0.8s ease-out 3;
+/* 기존 .marker-highlight-ping은 숨김 (하위 호환) */
+.marker-highlight-ping {
+  display: none !important;
 }
 
 @keyframes rotate-border {
