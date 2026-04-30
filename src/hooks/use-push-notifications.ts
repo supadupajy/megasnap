@@ -41,16 +41,19 @@ export const usePushNotifications = () => {
         }
 
         let permStatus = await PushNotifications.checkPermissions();
+        console.log('[Push] Permission status:', permStatus.receive);
 
         if (permStatus.receive === 'prompt') {
           permStatus = await PushNotifications.requestPermissions();
+          console.log('[Push] After request, permission status:', permStatus.receive);
         }
 
         if (permStatus.receive !== 'granted') {
-          // console.warn('Push notification permission denied.');
+          console.warn('[Push] Permission not granted:', permStatus.receive);
           return;
         }
 
+        console.log('[Push] Calling PushNotifications.register()...');
         await PushNotifications.register();
       } catch (error) {
         console.error('Error registering push notifications:', error);
@@ -95,7 +98,8 @@ export const usePushNotifications = () => {
       });
 
       PushNotifications.addListener('registrationError', (error) => {
-        console.error('Error on registration: ' + JSON.stringify(error));
+        console.error('[Push] Registration error: ' + JSON.stringify(error));
+        console.error('[Push] Error detail:', error);
       });
 
       PushNotifications.addListener('pushNotificationReceived', (notification) => {
