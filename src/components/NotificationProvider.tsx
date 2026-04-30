@@ -137,6 +137,16 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
               playOutChatSound();
             }
           }
+
+          if (payload.eventType === 'UPDATE') {
+            // 내가 보낸 메시지가 상대방에게 읽혔을 때 → A의 Chat.tsx에 읽음 표시 실시간 반영
+            // sender_id === userId: 내가 보낸 메시지, is_read가 true로 바뀐 경우
+            if (row?.sender_id === userId && row?.is_read === true) {
+              window.dispatchEvent(new CustomEvent('refresh-read-status', {
+                detail: { receiver_id: row?.receiver_id }
+              }));
+            }
+          }
         }
       )
       // 알림 (변경 시 카운트 갱신 + Notifications 페이지에 이벤트 전달)

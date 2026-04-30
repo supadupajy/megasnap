@@ -254,9 +254,26 @@ const Chat = () => {
       setTimeout(scrollToBottom, 10);
     };
 
+    // 상대방이 내 메시지를 읽었을 때 → is_read 상태 실시간 반영
+    const handleReadStatus = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const receiverId = customEvent.detail?.receiver_id;
+      // 현재 채팅 상대방이 읽은 경우만 처리
+      if (receiverId !== chatId) return;
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.sender_id === authUser.id && msg.receiver_id === chatId && !msg.is_read
+            ? { ...msg, is_read: true }
+            : msg
+        )
+      );
+    };
+
     window.addEventListener('refresh-messages-list', handleNewMessage);
+    window.addEventListener('refresh-read-status', handleReadStatus);
     return () => {
       window.removeEventListener('refresh-messages-list', handleNewMessage);
+      window.removeEventListener('refresh-read-status', handleReadStatus);
     };
   }, [authUser?.id, chatId, markAsRead, playNotificationSound, scrollToBottom]);
 
