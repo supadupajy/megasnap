@@ -101,7 +101,7 @@ const Login = () => {
           email,
           password,
           options: {
-            emailRedirectTo: 'com.chorasnap.chorasnap://login-callback',
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         });
         if (error) throw error;

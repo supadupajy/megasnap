@@ -50,6 +50,7 @@ import CompanyInfo from "./pages/CompanyInfo";
 import AppearanceSettings from "./pages/AppearanceSettings";
 import StorageSettings from "./pages/StorageSettings";
 import DeleteAccount from "./pages/DeleteAccount";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -183,6 +184,7 @@ const AnimatedRoutes = () => {
           >
             <Routes location={location}>
               <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/terms" element={<TermsOfService />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
