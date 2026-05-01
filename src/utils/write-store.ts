@@ -5,6 +5,7 @@ interface MediaFile {
   url: string;
   type: 'image' | 'video';
   thumbnail?: string;
+  thumbnailBlob?: Blob;
   crop?: { x: number; y: number };
   zoom?: number;
   orientation?: 'landscape' | 'portrait';

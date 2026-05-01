@@ -20,6 +20,7 @@ interface MediaFile {
   url: string;
   type: 'image' | 'video';
   thumbnail?: string;
+  thumbnailBlob?: Blob; // 동영상 썸네일 미리 생성해둔 Blob
   crop?: { x: number; y: number };
   orientation?: 'landscape' | 'portrait';
 }
@@ -198,6 +199,7 @@ const Write = () => {
       const type = file.type.startsWith('video/') ? 'video' : 'image';
       const url = URL.createObjectURL(file);
       let orientation: 'landscape' | 'portrait' = 'landscape';
+      let thumbnailBlob: Blob | undefined;
 
       if (type === 'image') {
         await new Promise<void>((resolve) => {
@@ -209,8 +211,16 @@ const Write = () => {
           img.onerror = () => resolve();
           img.src = url;
         });
+      } else if (type === 'video') {
+        // 파일 선택 시점에 미리 썸네일 생성 (업로드 시 재사용)
+        try {
+          thumbnailBlob = await createVideoThumbnail(file);
+        } catch (err) {
+          console.warn('[Write] 썸네일 미리 생성 실패, 업로드 시 재시도:', err);
+        }
       }
-      return { file, url, type, crop: { x: 50, y: 50 }, orientation } as MediaFile;
+
+      return { file, url, type, crop: { x: 50, y: 50 }, orientation, thumbnailBlob } as MediaFile;
     }));
 
     setMediaFiles([...mediaFiles, ...newItems]);
@@ -249,25 +259,42 @@ const Write = () => {
         const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(filePath);
 
         if (media.type === 'video') {
-          const thumbnailBlob = await createVideoThumbnail(media.file);
-          const thumbnailFileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}-thumb.jpg`;
-          const thumbnailPath = `${authUser.id}/${thumbnailFileName}`;
+          // 미리 생성된 thumbnailBlob 우선 사용, 없으면 재시도
+          let thumbnailBlob = media.thumbnailBlob;
+          if (!thumbnailBlob) {
+            try {
+              thumbnailBlob = await createVideoThumbnail(media.file);
+            } catch (err) {
+              console.error('[Write] 썸네일 생성 실패:', err);
+            }
+          }
 
-          const { error: thumbnailUploadError } = await supabase.storage
-            .from('post-images')
-            .upload(thumbnailPath, thumbnailBlob, {
-              cacheControl: '3600',
-              upsert: false,
-              contentType: 'image/jpeg',
-            });
+          if (thumbnailBlob) {
+            const thumbnailFileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}-thumb.jpg`;
+            const thumbnailPath = `${authUser.id}/${thumbnailFileName}`;
 
-          if (thumbnailUploadError) throw thumbnailUploadError;
+            const { error: thumbnailUploadError } = await supabase.storage
+              .from('post-images')
+              .upload(thumbnailPath, thumbnailBlob, {
+                cacheControl: '3600',
+                upsert: false,
+                contentType: 'image/jpeg',
+              });
 
-          const { data: { publicUrl: thumbnailUrl } } = supabase.storage
-            .from('post-images')
-            .getPublicUrl(thumbnailPath);
-
-          uploadedMedia.push({ url: publicUrl, type: media.type, previewUrl: thumbnailUrl });
+            if (thumbnailUploadError) {
+              console.error('[Write] 썸네일 업로드 실패:', thumbnailUploadError);
+              // 썸네일 업로드 실패 시 비디오 URL 대신 빈 문자열로 fallback (마커에서 기본 이미지 표시)
+              uploadedMedia.push({ url: publicUrl, type: media.type, previewUrl: '' });
+            } else {
+              const { data: { publicUrl: thumbnailUrl } } = supabase.storage
+                .from('post-images')
+                .getPublicUrl(thumbnailPath);
+              uploadedMedia.push({ url: publicUrl, type: media.type, previewUrl: thumbnailUrl });
+            }
+          } else {
+            // 썸네일 생성 자체가 실패한 경우 - 비디오 URL 대신 빈 문자열
+            uploadedMedia.push({ url: publicUrl, type: media.type, previewUrl: '' });
+          }
         } else {
           uploadedMedia.push({ url: publicUrl, type: media.type, previewUrl: publicUrl });
         }

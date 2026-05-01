@@ -1175,9 +1175,16 @@ const MapContainer = ({
       return false;
     };
 
+    const isVideoUrl = (url: string) => {
+      if (!url) return false;
+      const lower = url.toLowerCase().split('?')[0];
+      return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
+    };
+
     let displayImage = post.image_url || post.image;
 
-    if (isBrokenUrl(displayImage)) {
+    // image_url이 비디오 URL이면 썸네일로 사용 불가 → fallback
+    if (isBrokenUrl(displayImage) || isVideoUrl(displayImage)) {
       displayImage = getFallbackImage(String(post.id));
     }
 
