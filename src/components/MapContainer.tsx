@@ -435,10 +435,11 @@ const MapContainer = ({
         el.classList.add(`zoom-${lvl}`);
       };
 
-      const updateMapData = () => {
+      const updateMapData = (forceInitial = false) => {
         // smoothMoveTo 진행 중에는 idle/zoom_changed 이벤트 무시
         // (이동 중 onMapChange 호출 → React 리렌더 → center useEffect 재실행 → smoothMoveTo 재시작 → 순간이동)
-        if (animationFrameRef.current) return;
+        // 단, 초기 강제 호출(forceInitial=true)은 animationFrame 체크를 건너뜀
+        if (!forceInitial && animationFrameRef.current) return;
         try {
           const bounds = map.getBounds();
           const currentCenter = map.getCenter();
@@ -466,14 +467,30 @@ const MapContainer = ({
       updateZoomClass();
 
       // 카카오맵은 최초 생성 시 idle 이벤트를 발생시키지 않으므로
-      // 지도 초기화 직후 수동으로 onMapChange를 호출해 초기 bounds fetch를 트리거
-      setTimeout(() => {
-        if (mapInstance.current) {
+      // 지도 초기화 직후 수동으로 onMapChange를 호출해 초기 bounds fetch를 트리거.
+      // 지도 렌더링이 완전히 끝나지 않으면 getBounds()가 올바른 값을 반환하지 않을 수 있으므로
+      // 여러 번 재시도하여 안정적으로 초기 bounds를 전달한다.
+      const tryInitialUpdate = (attempts: number) => {
+        if (!mapInstance.current) return;
+        try {
           mapInstance.current.relayout();
           updateZoomClass();
-          updateMapData(); // 초기 bounds 즉시 전달
+          const bounds = mapInstance.current.getBounds();
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          // getBounds()가 유효한 값을 반환했는지 확인
+          if (sw && ne && sw.getLat() !== ne.getLat()) {
+            updateMapData(true); // forceInitial=true: animationFrame 체크 건너뜀
+            return; // 성공
+          }
+        } catch (e) {}
+        // 아직 준비 안 됐으면 재시도
+        if (attempts > 0) {
+          setTimeout(() => tryInitialUpdate(attempts - 1), 300);
         }
-      }, 200);
+      };
+      // 첫 시도는 150ms 후, 이후 300ms 간격으로 최대 10회 재시도 (총 최대 3.15초)
+      setTimeout(() => tryInitialUpdate(10), 150);
 
       kakao.maps.event.addListener(map, 'idle', updateMapData);
 
