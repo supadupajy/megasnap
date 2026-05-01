@@ -1024,6 +1024,11 @@ const Index = () => {
   // PostDetail 내부 useEffect가 cleanup→re-run 되면서 history.back()이 호출되어
   // popstate 이벤트로 인해 모달이 즉시 닫히는 버그를 방지함
   const handleClosePostDetail = useCallback(() => {
+    // X버튼으로 닫을 때 PostDetail이 pushState한 더미 히스토리 항목을 무력화
+    // replaceState로 postDetailOpen 플래그를 제거하면 다음 뒤로가기 시 일반 페이지로 이동
+    if (history.state?.postDetailOpen) {
+      history.replaceState({}, '');
+    }
     setSelectedPostId(null);
   }, []);
 
