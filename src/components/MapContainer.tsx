@@ -1175,9 +1175,12 @@ const MapContainer = ({
     if (videoThumbCacheRef.current.has(postId)) return; // 이미 캐시됨
     if (videoThumbPendingRef.current.has(postId)) return; // 이미 추출 중
     videoThumbPendingRef.current.add(postId);
+    console.log('[MapContainer] 비디오 썸네일 추출 시작:', postId);
 
     const video = document.createElement('video');
-    video.crossOrigin = 'anonymous';
+    // crossOrigin을 설정하면 Supabase storage에서 CORS preflight가 필요해 실패할 수 있음
+    // → 설정하지 않으면 canvas.toDataURL()이 tainted canvas 오류를 낼 수 있지만
+    //   같은 origin(supabase.co)이면 문제없음. 외부 URL은 어차피 실패 처리됨.
     video.muted = true;
     video.playsInline = true;
     video.preload = 'metadata';
@@ -1199,20 +1202,27 @@ const MapContainer = ({
         cleanup();
         videoThumbCacheRef.current.set(postId, dataUrl);
         videoThumbPendingRef.current.delete(postId);
+        console.log('[MapContainer] 비디오 썸네일 추출 완료, 마커 교체:', postId);
 
-        // 마커 DOM에서 img 태그를 찾아 직접 교체
+        // 마커 DOM을 썸네일로 즉시 완전 교체
         const overlay = overlaysRef.current.get(postId);
         if (overlay) {
           const content = overlay.getContent() as HTMLElement;
           if (content) {
-            const img = content.querySelector('img') as HTMLImageElement | null;
-            if (img) {
-              img.src = dataUrl;
+            // postsRef에서 해당 포스트를 찾아 최신 HTML로 교체 (캐시가 이미 set된 상태)
+            const post = postsRef.current.find(p => p.id === postId);
+            if (post) {
+              const combinedViewedIds = new Set([
+                ...Array.from(viewedPostIdsRef.current),
+                ...Array.from(internalViewedIdsRef.current),
+              ]);
+              const isViewed = combinedViewedIds.has(postId);
+              const isMineKey = !!(authUserRef.current && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUserRef.current.id));
+              const isAdPendingKey = !!(post as any).isAdPending;
+              const newStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${!!post.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${post.likes}-1`;
+              content.innerHTML = getMarkerInnerHtmlRef.current(post, isViewed);
+              content.setAttribute('data-content-state', newStateKey);
             }
-            // data-content-state를 무효화해서 다음 React 렌더 시 마커 HTML이 갱신되도록 함
-            // (썸네일 캐시 key '0' → '1' 변경으로 contentStateKey가 달라짐)
-            const currentState = content.getAttribute('data-content-state') || '';
-            content.setAttribute('data-content-state', currentState + '-thumb');
           }
         }
       } catch {
