@@ -18,7 +18,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds, fetchOffScreenCounts, fetchNearestInDirection, DirectionCounts } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, fetchNearestInDirection, DirectionCounts } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
@@ -139,8 +139,6 @@ const Index = () => {
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   // displayedMarkers: MapContainer에 실제로 전달되는 마커 목록
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
-
-  const [offScreenCounts, setOffScreenCounts] = useState<DirectionCounts | null>(null);
 
   const [mapData, setMapData] = useState<any>(() => {
     // localStorage에 저장된 이전 bounds로 초기화 → 앱 로딩 시 인디케이터 즉시 표시
@@ -382,19 +380,51 @@ const Index = () => {
     return () => { cancelled = true; };
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
 
-  // ── 화면 밖 방향별 포스트 수 (DB COUNT 쿼리) ──────────────────
-  useEffect(() => {
-    if (!mapData?.bounds || currentZoom >= 7) {
-      setOffScreenCounts(null);
-      return;
-    }
-    // 이전 값을 유지한 채로 fetch → 깜빡임 없이 새 값으로 교체
-    let cancelled = false;
-    fetchOffScreenCounts(mapData.bounds).then(counts => {
-      if (!cancelled) setOffScreenCounts(counts);
+  // ── 화면 밖 방향별 포스트 수 (displayedMarkers 기반 클라이언트 계산) ──────────────────
+  const offScreenCounts = useMemo((): DirectionCounts | null => {
+    if (!mapData?.bounds || currentZoom >= 7) return null;
+
+    const { sw, ne } = mapData.bounds;
+    const latRange = ne.lat - sw.lat;
+    const lngRange = ne.lng - sw.lng;
+    const pad = 0.10;
+    const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
+    const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
+
+    let top = 0, bottom = 0, left = 0, right = 0;
+
+    displayedMarkers.forEach(post => {
+      if (post.lat == null || post.lng == null) return;
+      const lat = post.lat;
+      const lng = post.lng;
+
+      // 화면 안이면 스킵
+      if (lat >= qSw.lat && lat <= qNe.lat && lng >= qSw.lng && lng <= qNe.lng) return;
+
+      const isAbove = lat > qNe.lat;
+      const isBelow = lat < qSw.lat;
+      const isLeft  = lng < qSw.lng;
+      const isRight = lng > qNe.lng;
+
+      // 순수 방향 (코너 아님)
+      if (isAbove && !isLeft && !isRight) { top++; return; }
+      if (isBelow && !isLeft && !isRight) { bottom++; return; }
+      if (isLeft  && !isAbove && !isBelow) { left++; return; }
+      if (isRight && !isAbove && !isBelow) { right++; return; }
+
+      // 코너: 비율로 분류
+      const latExcess = isAbove ? (lat - qNe.lat) / latRange : isBelow ? (qSw.lat - lat) / latRange : 0;
+      const lngExcess = isLeft  ? (qSw.lng - lng) / lngRange : isRight ? (lng - qNe.lng) / lngRange : 0;
+
+      if (latExcess >= lngExcess) {
+        if (isAbove) top++; else bottom++;
+      } else {
+        if (isLeft) left++; else right++;
+      }
     });
-    return () => { cancelled = true; };
-  }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
+
+    return { top, bottom, left, right };
+  }, [displayedMarkers, mapData?.bounds, currentZoom]);
 
   // ── map_marker 광고들을 allPosts에 주입 ──────────────────────
   // ads 테이블의 ad_type='map_marker' 광고들을 모두 지도 마커로 표시.
