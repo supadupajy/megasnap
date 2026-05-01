@@ -1067,7 +1067,7 @@ const Index = () => {
             {isSelectingLocation && (
               <div className="fixed inset-0 z-[3000] pointer-events-none">
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative mb-12">
+                  <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative" style={{ marginBottom: '58px' }}>
                     <div className="relative w-12 h-12">
                       <div className="absolute top-0 left-0 w-12 h-12 bg-rose-500 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl" />
                       <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
@@ -1105,7 +1105,7 @@ const Index = () => {
             {isSelectingAdLocation && (
               <div className="fixed inset-0 z-[3000] pointer-events-none">
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                  <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative mb-12">
+                  <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative" style={{ marginBottom: '58px' }}>
                     <div className="relative w-12 h-12">
                       <div className="absolute top-0 left-0 w-12 h-12 bg-violet-600 rounded-full rounded-br-none rotate-45 border-4 border-white shadow-2xl" />
                       <div className="absolute top-3 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full z-10" />
