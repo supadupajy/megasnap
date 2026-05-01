@@ -758,7 +758,6 @@ const Index = () => {
 
   // ── 마커 클릭 ────────────────────────────────────────────────
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
-    console.log('[handleMarkerClick] called with id:', lightPost.id, 'isAd:', lightPost.isAd);
     setSelectedPostId(lightPost.id);
     // 광고 마커는 posts 테이블에 없으므로 DB fetch 스킵
     if (lightPost.isAd) return;
@@ -973,6 +972,23 @@ const Index = () => {
       setAllPosts(prev => { const f = prev.filter(p => p.id !== id); mapCache.posts = f; return f; });
     }, 400);
   }, []);
+
+  // ── PostDetail 핸들러 (useCallback으로 stable reference 보장) ──
+  // 인라인 화살표 함수로 넘기면 매 렌더마다 새 reference가 생성되어
+  // PostDetail 내부 useEffect가 cleanup→re-run 되면서 history.back()이 호출되어
+  // popstate 이벤트로 인해 모달이 즉시 닫히는 버그를 방지함
+  const handleClosePostDetail = useCallback(() => {
+    setSelectedPostId(null);
+  }, []);
+
+  const handlePostLocationClick = useCallback((lat: number, lng: number) => {
+    setSelectedPostId(currentId => {
+      const post = allPosts.find(p => p.id === currentId) || allPosts.find(p => p.lat === lat && p.lng === lng);
+      if (post) focusPostOnMap(post, { lat: post.lat, lng: post.lng });
+      else setMapCenter({ lat, lng });
+      return null;
+    });
+  }, [allPosts, focusPostOnMap]);
 
   // ── posts 실시간 구독은 제거되었습니다 ─────────────────────────
   // 이유: 4,559+ row 테이블의 INSERT/DELETE 이벤트를 모든 클라이언트에
@@ -1426,29 +1442,17 @@ const Index = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {selectedPostId && (() => {
-          const idx = allPosts.findIndex(p => p.id === selectedPostId);
-          console.log('[PostDetail render] selectedPostId:', selectedPostId, 'initialIndex:', idx, 'allPosts.length:', allPosts.length);
-          return null;
-        })()}
         {selectedPostId && (
           <PostDetail
             key="post-detail-modal"
             posts={allPosts}
             initialIndex={allPosts.findIndex(p => p.id === selectedPostId)}
             isOpen={true}
-            onClose={() => setSelectedPostId(null)}
+            onClose={handleClosePostDetail}
             onDelete={handlePostDeleted}
             onViewPost={markAsViewed}
             onLikeToggle={handleLikeToggle}
-            onLocationClick={(lat, lng) => {
-              // lat/lng로 찾으면 spreadMarkers 분산 좌표와 불일치할 수 있으므로
-              // 현재 열린 포스트(selectedPostId)를 우선 사용
-              const post = allPosts.find(p => p.id === selectedPostId) || allPosts.find(p => p.lat === lat && p.lng === lng);
-              if (post) focusPostOnMap(post, { lat: post.lat, lng: post.lng });
-              else setMapCenter({ lat, lng });
-              setSelectedPostId(null);
-            }}
+            onLocationClick={handlePostLocationClick}
           />
         )}
       </AnimatePresence>
