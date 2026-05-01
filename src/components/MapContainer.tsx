@@ -476,33 +476,30 @@ const MapContainer = ({
       // 카카오맵은 최초 생성 시 idle 이벤트를 발생시키지 않으므로
       // 지도 초기화 직후 수동으로 onMapChange를 호출해 초기 bounds fetch를 트리거.
       // relayout() 후 getBounds()가 유효한 값을 반환할 때까지 재시도한다.
+      // tilesloaded: 지도 타일이 완전히 로드된 후 발생 → getBounds()가 항상 유효
+      // 최초 1회만 실행 (이후 idle 이벤트가 담당)
       let initialUpdateDone = false;
-      const tryInitialUpdate = (attempts: number) => {
-        if (initialUpdateDone || !mapInstance.current) return;
-        try {
-          // 첫 시도에서만 relayout() 호출 (이후엔 불필요하고 깜빡임 유발 가능)
-          if (attempts === 15) mapInstance.current.relayout();
-          updateZoomClass();
-          const bounds = mapInstance.current.getBounds();
-          const sw = bounds.getSouthWest();
-          const ne = bounds.getNorthEast();
-          const swLat = sw.getLat();
-          const neLat = ne.getLat();
-          const swLng = sw.getLng();
-          const neLng = ne.getLng();
-          // 유효한 bounds인지 확인 (lat 또는 lng 중 하나라도 다르면 유효)
-          if (swLat !== neLat || swLng !== neLng) {
-            initialUpdateDone = true;
-            updateMapData(true); // forceInitial=true: animationFrame 체크 건너뜀
-            return;
-          }
-        } catch (e) {}
-        if (attempts > 0) {
-          setTimeout(() => tryInitialUpdate(attempts - 1), 200);
-        }
+      const handleTilesLoaded = () => {
+        if (initialUpdateDone) return;
+        initialUpdateDone = true;
+        updateMapData(true);
       };
-      // 100ms 후 첫 시도, 이후 200ms 간격으로 최대 15회 재시도 (총 최대 3.1초)
-      setTimeout(() => tryInitialUpdate(15), 100);
+      kakao.maps.event.addListener(map, 'tilesloaded', handleTilesLoaded);
+
+      // tilesloaded가 이미 발생했을 경우를 대비한 폴백 (500ms 후 시도)
+      setTimeout(() => {
+        if (!initialUpdateDone && mapInstance.current) {
+          try {
+            const bounds = mapInstance.current.getBounds();
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            if (sw.getLat() !== ne.getLat() || sw.getLng() !== ne.getLng()) {
+              initialUpdateDone = true;
+              updateMapData(true);
+            }
+          } catch (e) {}
+        }
+      }, 500);
 
       kakao.maps.event.addListener(map, 'idle', updateMapData);
 
@@ -1372,7 +1369,7 @@ const MapContainer = ({
 
     const adGlowLayer = '';
 
-    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:white;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:visible;`;
+    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:#e5e7eb;box-sizing:border-box;overflow:hidden;`;
 
     // AD 마커: 라벨+이미지 박스를 하나의 wrapper로 감싸서 함께 회전
     const adFlipWrapperStart = isAd
@@ -1380,12 +1377,12 @@ const MapContainer = ({
       : '';
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
-    // 이미지가 없는 비디오 마커: 썸네일 추출 중 로딩 상태 표시 (깜빡임 방지)
+    // 이미지가 없는 비디오 마커: 썸네일 추출 중 로딩 상태 표시
     const imgContent = optimizedDisplayImage
-      ? `<img src="${optimizedDisplayImage}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" />`
+      ? `<img src="${optimizedDisplayImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
       : (hasVideo
-        ? `<div style="width:100%;height:100%;background:#1e1b4b;display:flex;align-items:center;justify-content:center;position:absolute;inset:0;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#a5b4fc'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
-        : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" />`);
+        ? `<div style="width:100%;height:100%;background:#1e1b4b;display:flex;align-items:center;justify-content:center;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#a5b4fc'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
+        : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`);
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
@@ -1394,7 +1391,7 @@ const MapContainer = ({
         ${isAd ? adLabelHtml : labelHtml}
         <div class="${influencerClass}" style="${innerBoxStyle}">
           ${isAd ? adSparklesHtml : ''}
-          <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '15px' : '16px'};" class="${shineClass}">
+          <div style="width:100%;height:100%;position:relative;border-radius:${isAd ? '15px' : '16px'};overflow:hidden;" class="${shineClass}">
             ${imgContent}
             <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-filter:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);line-height:1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
