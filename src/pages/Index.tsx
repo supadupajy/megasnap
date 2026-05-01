@@ -161,6 +161,25 @@ const Index = () => {
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
 
+  // ── 팔로잉 목록 (내 친구 포스팅 필터용) ─────────────────────
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!authUser?.id) {
+      setFollowingIds(new Set());
+      return;
+    }
+    supabase
+      .from('follows')
+      .select('following_id')
+      .eq('follower_id', authUser.id)
+      .then(({ data }) => {
+        if (data) {
+          setFollowingIds(new Set(data.map((r: any) => r.following_id)));
+        }
+      });
+  }, [authUser?.id]);
+
   // map_marker 광고 데이터 구독 (여러 개 지원, now: 시간 전환 시 리렌더 트리거)
   const { ads: mapMarkerAds, now: mapMarkerNow } = useMapMarkerAds();
 
@@ -514,6 +533,9 @@ const Index = () => {
       // 광고 마커는 카테고리 필터 무관하게 항상 표시
       if (post.isAd) return true;
 
+      if (selectedCategories.includes('friends')) {
+        return !!(post.user?.id && followingIds.has(post.user.id));
+      }
       if (selectedCategories.includes('mine')) {
         return !!(authUser && post.user?.id === authUser.id);
       }
@@ -529,7 +551,7 @@ const Index = () => {
     // 중복 제거
     const unique = Array.from(new Map(filtered.map(p => [p.id, p])).values());
     setDisplayedMarkers(unique);
-  }, [allPosts, selectedCategories, blockedIds, authUser]);
+  }, [allPosts, selectedCategories, blockedIds, authUser, followingIds]);
 
   // spreadMarkersRef를 displayedMarkers로 동기화 (focusPostOnMap에서 참조용)
   useEffect(() => {

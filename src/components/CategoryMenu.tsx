@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Utensils, Car, TreePine, Sparkles, X, PawPrint, Flame, Star, Check, User } from 'lucide-react';
+import { Utensils, Car, TreePine, Sparkles, X, PawPrint, Flame, Star, Check, User, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,6 +26,7 @@ const SPECIAL_FILTERS = [
   { id: 'hot', label: 'HOT 포스팅', icon: Flame, color: 'bg-red-500' },
   { id: 'influencer', label: 'Influencer', icon: Star, color: 'bg-yellow-400' },
   { id: 'mine', label: '내 포스팅만 보기', icon: User, color: 'bg-blue-600' },
+  { id: 'friends', label: '내 친구 포스팅만 보기', icon: Users, color: 'bg-emerald-500' },
 ];
 
 const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUserId }: CategoryMenuProps) => {
