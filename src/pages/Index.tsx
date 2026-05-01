@@ -1107,14 +1107,56 @@ const Index = () => {
           <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
             <OffScreenMarkerIndicator
               bounds={mapData?.bounds || null}
-              onClickDirection={async (dir) => {
+              onClickDirection={(dir) => {
                 const b = mapDataRef.current?.bounds || mapData?.bounds;
                 const c = mapDataRef.current?.center || mapCenter;
                 if (!b || !c) return;
-                // 항상 DB에서 해당 방향의 가장 가까운 포스팅 좌표를 가져와 이동
-                const pos = await fetchNearestInDirection(b, c, dir);
-                if (pos) {
-                  setMapCenter(pos);
+
+                const { sw, ne } = b;
+                const latRange = ne.lat - sw.lat;
+                const lngRange = ne.lng - sw.lng;
+                const pad = 0.10;
+                const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
+                const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
+
+                // displayedMarkers에서 해당 방향의 화면 밖 포스팅 필터링
+                const candidates = spreadMarkersRef.current.filter(post => {
+                  if (post.lat == null || post.lng == null) return false;
+                  const lat = post.lat;
+                  const lng = post.lng;
+                  // 화면 안이면 제외
+                  if (lat >= qSw.lat && lat <= qNe.lat && lng >= qSw.lng && lng <= qNe.lng) return false;
+
+                  const isAbove = lat > qNe.lat;
+                  const isBelow = lat < qSw.lat;
+                  const isLeft  = lng < qSw.lng;
+                  const isRight = lng > qNe.lng;
+
+                  // 순수 방향
+                  if (dir === 'top'    && isAbove && !isLeft && !isRight) return true;
+                  if (dir === 'bottom' && isBelow && !isLeft && !isRight) return true;
+                  if (dir === 'left'   && isLeft  && !isAbove && !isBelow) return true;
+                  if (dir === 'right'  && isRight && !isAbove && !isBelow) return true;
+
+                  // 코너: 비율로 분류
+                  const latExcess = isAbove ? (lat - qNe.lat) / latRange : isBelow ? (qSw.lat - lat) / latRange : 0;
+                  const lngExcess = isLeft  ? (qSw.lng - lng) / lngRange : isRight ? (lng - qNe.lng) / lngRange : 0;
+                  if (latExcess >= lngExcess) {
+                    return (dir === 'top' && isAbove) || (dir === 'bottom' && isBelow);
+                  } else {
+                    return (dir === 'left' && isLeft) || (dir === 'right' && isRight);
+                  }
+                });
+
+                if (candidates.length > 0) {
+                  // 현재 중심에서 가장 가까운 포스팅으로 바로 이동
+                  let nearest = candidates[0];
+                  let minDist = Infinity;
+                  for (const p of candidates) {
+                    const d = Math.pow(p.lat! - c.lat, 2) + Math.pow(p.lng! - c.lng, 2);
+                    if (d < minDist) { minDist = d; nearest = p; }
+                  }
+                  setMapCenter({ lat: nearest.lat!, lng: nearest.lng! });
                 } else {
                   // fallback: 해당 방향으로 80% 패닝
                   const latSpan = b.ne.lat - b.sw.lat;
