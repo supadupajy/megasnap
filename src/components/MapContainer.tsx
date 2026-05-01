@@ -65,6 +65,13 @@ const MapContainer = ({
   const internalViewedIdsRef = useRef<Set<string>>(new Set());
   const overlapBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 비디오 썸네일 캐시: postId → dataURL
+  const videoThumbCacheRef = useRef<Map<string, string>>(new Map());
+  // 현재 추출 중인 postId 집합 (중복 추출 방지)
+  const videoThumbPendingRef = useRef<Set<string>>(new Set());
+  // extractVideoThumbnailForMarker를 ref로 감싸서 마커 생성 useEffect에서 stale closure 없이 참조
+  const extractVideoThumbRef = useRef<(postId: string, videoUrl: string) => void>(() => {});
+
   const pinchStartDistRef = useRef<number | null>(null);
 
   const centerRef = useRef(center);
@@ -600,6 +607,18 @@ const MapContainer = ({
         });
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
+
+        // 비디오 포스트이고 썸네일이 없으면 비동기로 추출
+        if (!post.isAd && post.videoUrl) {
+          const cachedThumb = videoThumbCacheRef.current.get(post.id);
+          if (cachedThumb) {
+            // 이미 캐시된 썸네일이 있으면 즉시 적용
+            const img = content.querySelector('img') as HTMLImageElement | null;
+            if (img) img.src = cachedThumb;
+          } else {
+            extractVideoThumbRef.current(post.id, post.videoUrl);
+          }
+        }
       } else {
         const content = existingOverlay.getContent() as HTMLElement;
         if (existingOverlay.getMap() === null) {
@@ -1142,6 +1161,83 @@ const MapContainer = ({
     if (!isMapReady) return;
     scheduleOverlapBadgeUpdate();
   }, [posts, isMapReady, scheduleOverlapBadgeUpdate]);
+
+  // ── 비디오 마커 썸네일 비동기 추출 및 마커 img 교체 ──────────
+  // ref에 함수를 저장해서 마커 생성 useEffect에서 항상 최신 함수를 참조할 수 있게 함
+  extractVideoThumbRef.current = (postId: string, videoUrl: string) => {
+    if (videoThumbCacheRef.current.has(postId)) return; // 이미 캐시됨
+    if (videoThumbPendingRef.current.has(postId)) return; // 이미 추출 중
+    videoThumbPendingRef.current.add(postId);
+
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'metadata';
+
+    const cleanup = () => {
+      video.src = '';
+      video.load();
+    };
+
+    const capture = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 120;
+        canvas.height = 120;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { cleanup(); videoThumbPendingRef.current.delete(postId); return; }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        cleanup();
+        videoThumbCacheRef.current.set(postId, dataUrl);
+        videoThumbPendingRef.current.delete(postId);
+
+        // 마커 DOM에서 img 태그를 찾아 직접 교체
+        const overlay = overlaysRef.current.get(postId);
+        if (overlay) {
+          const content = overlay.getContent() as HTMLElement;
+          if (content) {
+            const img = content.querySelector('img') as HTMLImageElement | null;
+            if (img) {
+              img.src = dataUrl;
+            }
+          }
+        }
+      } catch {
+        cleanup();
+        videoThumbPendingRef.current.delete(postId);
+      }
+    };
+
+    const onMetadata = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      if (duration <= 0.2) {
+        capture();
+        return;
+      }
+      const seekTime = Math.min(Math.max(duration * 0.15, 0.1), duration - 0.1);
+      try { video.currentTime = seekTime; } catch { capture(); }
+    };
+
+    video.addEventListener('loadedmetadata', onMetadata, { once: true });
+    video.addEventListener('seeked', capture, { once: true });
+    video.addEventListener('error', () => {
+      cleanup();
+      videoThumbPendingRef.current.delete(postId);
+    }, { once: true });
+
+    // 8초 타임아웃
+    setTimeout(() => {
+      if (videoThumbPendingRef.current.has(postId)) {
+        cleanup();
+        videoThumbPendingRef.current.delete(postId);
+      }
+    }, 8000);
+
+    video.src = videoUrl;
+    video.load();
+  };
 
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
