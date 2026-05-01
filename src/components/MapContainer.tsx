@@ -1145,11 +1145,11 @@ const MapContainer = ({
       </div>`;
     }
 
-    let isMine = false;
     const currentUser = authUserRef.current;
     const isMine = !!(currentUser && String((post.owner_id || post.user_id || '')) === String(currentUser.id));
-                   
+
     // 광고가 아니고 videoUrl이 있으면 재생 아이콘만 표시
+
     const hasVideo = !isAd && !!post.videoUrl;
 
     const isBrokenUrl = (url: string) => {
