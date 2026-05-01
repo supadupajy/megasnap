@@ -1471,7 +1471,12 @@ const Index = () => {
           <PostListOverlay
             key="post-list-overlay"
             isOpen={isPostListOpen}
-            onClose={() => setIsPostListOpen(false)}
+            onClose={() => {
+              if (history.state?.postListOverlayOpen) {
+                history.replaceState({}, '');
+              }
+              setIsPostListOpen(false);
+            }}
             initialPosts={postListInitialPosts}
             mapCenter={mapCenter || { lat: 37.5665, lng: 126.9780 }}
             currentBounds={mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } }}

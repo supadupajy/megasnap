@@ -186,20 +186,23 @@ const PostListOverlay = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // ── 뒤로가기 버튼으로 닫기 (Android/브라우저 back 버튼) ──────
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
     if (!isOpen) return;
     history.pushState({ postListOverlayOpen: true }, '');
     const handlePopState = () => {
-      onClose();
+      onCloseRef.current();
     };
     window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      if (history.state?.postListOverlayOpen) {
-        history.back();
-      }
+      // cleanup에서 history.back() 호출 금지 — popstate 이벤트가 다시 발생해
+      // onClose가 중복 호출되는 순환 버그를 유발함
+      // X버튼으로 닫을 때는 Index.tsx의 onClose에서 replaceState로 처리
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
