@@ -485,4 +485,4 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   );
 };
 
-export default TrendingPosts;ts;
+export default TrendingPosts;
