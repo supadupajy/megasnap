@@ -1244,8 +1244,7 @@ const MapContainer = ({
 
     let borderType = post.borderType || 'none';
     let labelText = ''; let labelBg = ''; let labelColor = 'white';
-    if (isMine) { labelText = 'MY'; labelBg = '#4f46e5'; }
-    else if (isAd) { labelText = 'AD'; labelBg = 'ad-rainbow'; }
+    if (isAd) { labelText = 'AD'; labelBg = 'ad-rainbow'; }
     else if (borderType === 'popular') { labelText = 'HOT'; labelBg = '#ef4444'; }
     else if (borderType === 'diamond') { labelText = 'DIAMOND'; labelBg = '#22d3ee'; labelColor = 'black'; }
     else if (borderType === 'gold') { labelText = 'GOLD'; labelBg = '#fbbf24'; labelColor = 'black'; }
