@@ -475,29 +475,33 @@ const MapContainer = ({
 
       // 카카오맵은 최초 생성 시 idle 이벤트를 발생시키지 않으므로
       // 지도 초기화 직후 수동으로 onMapChange를 호출해 초기 bounds fetch를 트리거.
-      // 지도 렌더링이 완전히 끝나지 않으면 getBounds()가 올바른 값을 반환하지 않을 수 있으므로
-      // 여러 번 재시도하여 안정적으로 초기 bounds를 전달한다.
+      // relayout() 후 getBounds()가 유효한 값을 반환할 때까지 재시도한다.
+      let initialUpdateDone = false;
       const tryInitialUpdate = (attempts: number) => {
-        if (!mapInstance.current) return;
+        if (initialUpdateDone || !mapInstance.current) return;
         try {
           mapInstance.current.relayout();
           updateZoomClass();
           const bounds = mapInstance.current.getBounds();
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
-          // getBounds()가 유효한 값을 반환했는지 확인
-          if (sw && ne && sw.getLat() !== ne.getLat()) {
+          const swLat = sw.getLat();
+          const neLat = ne.getLat();
+          const swLng = sw.getLng();
+          const neLng = ne.getLng();
+          // 유효한 bounds인지 확인 (lat 또는 lng 중 하나라도 다르면 유효)
+          if (swLat !== neLat || swLng !== neLng) {
+            initialUpdateDone = true;
             updateMapData(true); // forceInitial=true: animationFrame 체크 건너뜀
-            return; // 성공
+            return;
           }
         } catch (e) {}
-        // 아직 준비 안 됐으면 재시도
         if (attempts > 0) {
-          setTimeout(() => tryInitialUpdate(attempts - 1), 300);
+          setTimeout(() => tryInitialUpdate(attempts - 1), 200);
         }
       };
-      // 첫 시도는 150ms 후, 이후 300ms 간격으로 최대 10회 재시도 (총 최대 3.15초)
-      setTimeout(() => tryInitialUpdate(10), 150);
+      // 100ms 후 첫 시도, 이후 200ms 간격으로 최대 15회 재시도 (총 최대 3.1초)
+      setTimeout(() => tryInitialUpdate(15), 100);
 
       kakao.maps.event.addListener(map, 'idle', updateMapData);
 
@@ -1277,14 +1281,27 @@ const MapContainer = ({
       return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
     };
 
+    const isMockUrl = (url: string) => {
+      if (!url) return false;
+      return url.includes('pexels.com') || url.includes('unsplash.com') || url.includes('picsum.photos') || url.includes('loremflickr') || url.includes('youtube.com') || url.includes('youtu.be');
+    };
+
     let displayImage = post.image_url || post.image;
 
-    // image_url이 비디오 URL이면 썸네일로 사용 불가 → fallback
-    if (isBrokenUrl(displayImage) || isVideoUrl(displayImage)) {
-      displayImage = getFallbackImage(String(post.id));
+    // image_url이 비디오 URL이거나 목업 URL이면 썸네일로 사용 불가
+    if (isBrokenUrl(displayImage) || isVideoUrl(displayImage) || isMockUrl(displayImage)) {
+      displayImage = '';
     }
 
-    const optimizedDisplayImage = getOptimizedMarkerImage(displayImage, String(post.id));
+    // 비디오 포스트이고 캐시된 썸네일이 있으면 즉시 사용 (깜빡임 방지)
+    if (hasVideo && !displayImage) {
+      const cached = videoThumbCacheRef.current.get(post.id);
+      if (cached) displayImage = cached;
+    }
+
+    const optimizedDisplayImage = displayImage
+      ? getOptimizedMarkerImage(displayImage, String(post.id))
+      : '';
 
     let borderType = post.borderType || 'none';
     let labelText = ''; let labelBg = ''; let labelColor = 'white';
@@ -1346,6 +1363,13 @@ const MapContainer = ({
       : '';
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
+    // 이미지가 없는 비디오 마커: 썸네일 추출 중 로딩 상태 표시 (깜빡임 방지)
+    const imgContent = optimizedDisplayImage
+      ? `<img src="${optimizedDisplayImage}" onerror="this.style.display='none'" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" />`
+      : (hasVideo
+        ? `<div style="width:100%;height:100%;background:#1e1b4b;display:flex;align-items:center;justify-content:center;position:absolute;inset:0;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#a5b4fc'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
+        : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" />`);
+
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
         ${isAd ? adGlowLayer : ''}
@@ -1354,7 +1378,7 @@ const MapContainer = ({
         <div class="${influencerClass}" style="${innerBoxStyle}">
           ${isAd ? adSparklesHtml : ''}
           <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '15px' : '16px'};" class="${shineClass}">
-            <img src="${optimizedDisplayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />
+            ${imgContent}
             <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-filter:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);line-height:1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
             </div>

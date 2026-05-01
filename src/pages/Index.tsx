@@ -297,52 +297,6 @@ const Index = () => {
 
   useEffect(() => { fetchGlobalTrending(); }, []);
 
-  // ── 앱 최초 실행 시 mapData가 없으면 localStorage bounds로 즉시 fetch 시도 ──
-  // MapContainer의 onMapChange가 늦게 도착하는 경우를 대비한 안전장치
-  useEffect(() => {
-    // mapData가 이미 있으면 스킵
-    if (mapData?.bounds) return;
-
-    try {
-      const saved = localStorage.getItem('map_bounds');
-      if (!saved) return;
-      const bounds = JSON.parse(saved);
-      if (!bounds?.sw || !bounds?.ne) return;
-
-      const center = mapCache.lastCenter;
-      const zoom = mapCache.lastZoom || 6;
-
-      const boundsKey = `${bounds.sw.lat.toFixed(4)}|${bounds.sw.lng.toFixed(4)}|${bounds.ne.lat.toFixed(4)}|${bounds.ne.lng.toFixed(4)}|${zoom}`;
-      if (boundsKey === lastBoundsKeyRef.current) return;
-      lastBoundsKeyRef.current = boundsKey;
-
-      const doFetch = async () => {
-        try {
-          const latPad = (bounds.ne.lat - bounds.sw.lat) * 0.8;
-          const lngPad = (bounds.ne.lng - bounds.sw.lng) * 0.8;
-          const expandedSw = { lat: bounds.sw.lat - latPad, lng: bounds.sw.lng - lngPad };
-          const expandedNe = { lat: bounds.ne.lat + latPad, lng: bounds.ne.lng + lngPad };
-          const raw = await fetchPostsInBounds(expandedSw, expandedNe, zoom, center);
-          setAllPosts(prev => {
-            const existingMap = new Map(prev.map(p => [p.id, p]));
-            raw.forEach((r: any) => {
-              if (String(r.id).startsWith('ad-map-marker-')) return;
-              const prevPost = existingMap.get(r.id) || null;
-              existingMap.set(r.id, mapRawToPost(r, prevPost));
-            });
-            const combined = Array.from(existingMap.values()).slice(0, 5000);
-            mapCache.posts = combined;
-            return combined;
-          });
-        } catch (err) {
-          console.error('[Index] initial bounds fetch error:', err);
-        }
-      };
-
-      doFetch();
-    } catch (e) {}
-  }, []); // 최초 마운트 1회만
-
   // ── 핵심: bounds가 바뀔 때마다 해당 영역 포스트 fetch ──────
   useEffect(() => {
     if (!mapData?.bounds) return;
