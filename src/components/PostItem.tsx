@@ -341,7 +341,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           {displayImages.map((img, index) => (
             <div
               key={index}
-              className="w-full h-full shrink-0 snap-center relative"
+              className="w-full h-full shrink-0 snap-center snap-always relative"
             >
               <img
                 src={img}
