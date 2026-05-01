@@ -758,11 +758,7 @@ const Index = () => {
 
   // ── 마커 클릭 ────────────────────────────────────────────────
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
-    // allPosts에 없는 포스트라면 먼저 추가해서 initialIndex가 -1이 되지 않도록 보장
-    setAllPosts(prev => {
-      if (prev.some(p => p.id === lightPost.id)) return prev;
-      return [lightPost, ...prev];
-    });
+    console.log('[handleMarkerClick] called with id:', lightPost.id, 'isAd:', lightPost.isAd);
     setSelectedPostId(lightPost.id);
     // 광고 마커는 posts 테이블에 없으므로 DB fetch 스킵
     if (lightPost.isAd) return;
@@ -1430,6 +1426,11 @@ const Index = () => {
       </AnimatePresence>
 
       <AnimatePresence>
+        {selectedPostId && (() => {
+          const idx = allPosts.findIndex(p => p.id === selectedPostId);
+          console.log('[PostDetail render] selectedPostId:', selectedPostId, 'initialIndex:', idx, 'allPosts.length:', allPosts.length);
+          return null;
+        })()}
         {selectedPostId && (
           <PostDetail
             key="post-detail-modal"
