@@ -1170,12 +1170,56 @@ const Index = () => {
                 const c = mapDataRef.current?.center || mapCenter;
                 if (!b || !c) return;
 
-                // DB에서 해당 방향의 가장 가까운 포스팅 좌표를 직접 조회
-                const nearest = await fetchNearestInDirection(b, c, dir);
-                if (nearest) {
-                  setMapCenter({ lat: nearest.lat, lng: nearest.lng });
+                const { sw, ne } = b;
+                const latRange = ne.lat - sw.lat;
+                const lngRange = ne.lng - sw.lng;
+                const pad = 0.10;
+                const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
+                const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
+
+                // 현재 필터가 적용된 마커 목록(spreadMarkersRef)에서 해당 방향 화면 밖 후보 찾기
+                // friends/mine/카테고리 필터 시 DB 쿼리 대신 이미 필터링된 목록 사용
+                const isFiltered = !selectedCategories.includes('all');
+                const clientCandidates = spreadMarkersRef.current.filter(post => {
+                  if (post.lat == null || post.lng == null || post.isAd) return false;
+                  const lat = post.lat, lng = post.lng;
+                  // 화면 안이면 제외
+                  if (lat >= qSw.lat && lat <= qNe.lat && lng >= qSw.lng && lng <= qNe.lng) return false;
+                  const isAbove = lat > qNe.lat, isBelow = lat < qSw.lat;
+                  const isLeft = lng < qSw.lng, isRight = lng > qNe.lng;
+                  if (dir === 'top'    && isAbove && !isLeft && !isRight) return true;
+                  if (dir === 'bottom' && isBelow && !isLeft && !isRight) return true;
+                  if (dir === 'left'   && isLeft  && !isAbove && !isBelow) return true;
+                  if (dir === 'right'  && isRight && !isAbove && !isBelow) return true;
+                  const latExcess = isAbove ? (lat - qNe.lat) / latRange : isBelow ? (qSw.lat - lat) / latRange : 0;
+                  const lngExcess = isLeft  ? (qSw.lng - lng) / lngRange : isRight ? (lng - qNe.lng) / lngRange : 0;
+                  if (latExcess >= lngExcess) return (dir === 'top' && isAbove) || (dir === 'bottom' && isBelow);
+                  return (dir === 'left' && isLeft) || (dir === 'right' && isRight);
+                });
+
+                if (clientCandidates.length > 0) {
+                  // 클라이언트 목록에서 가장 가까운 포스팅으로 이동
+                  let nearest = clientCandidates[0];
+                  let minDist = Infinity;
+                  for (const p of clientCandidates) {
+                    const d = Math.pow(p.lat! - c.lat, 2) + Math.pow(p.lng! - c.lng, 2);
+                    if (d < minDist) { minDist = d; nearest = p; }
+                  }
+                  setMapCenter({ lat: nearest.lat!, lng: nearest.lng! });
+                } else if (!isFiltered) {
+                  // 'all' 필터이고 클라이언트에 없으면 DB에서 조회 (화면 밖 멀리 있는 포스팅)
+                  const nearest = await fetchNearestInDirection(b, c, dir);
+                  if (nearest) {
+                    setMapCenter({ lat: nearest.lat, lng: nearest.lng });
+                  } else {
+                    const latSpan = b.ne.lat - b.sw.lat;
+                    const lngSpan = b.ne.lng - b.sw.lng;
+                    const panLat = { top: latSpan * 0.8, bottom: -latSpan * 0.8, left: 0, right: 0 }[dir];
+                    const panLng = { top: 0, bottom: 0, left: -lngSpan * 0.8, right: lngSpan * 0.8 }[dir];
+                    setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
+                  }
                 } else {
-                  // fallback: 해당 방향으로 한 화면 패닝
+                  // 필터 적용 중인데 해당 방향에 친구/카테고리 포스팅 없음 → 패닝
                   const latSpan = b.ne.lat - b.sw.lat;
                   const lngSpan = b.ne.lng - b.sw.lng;
                   const panLat = { top: latSpan * 0.8, bottom: -latSpan * 0.8, left: 0, right: 0 }[dir];
