@@ -1198,7 +1198,7 @@ const Index = () => {
                 });
 
                 if (clientCandidates.length > 0) {
-                  // 가장 가까운 포스팅으로 이동
+                  // 클라이언트 목록에서 가장 가까운 포스팅으로 이동
                   let nearest = clientCandidates[0];
                   let minDist = Infinity;
                   for (const p of clientCandidates) {
@@ -1206,21 +1206,22 @@ const Index = () => {
                     if (d < minDist) { minDist = d; nearest = p; }
                   }
                   setMapCenter({ lat: nearest.lat!, lng: nearest.lng! });
-                } else if (!isFiltered) {
-                  // 'all' 필터이고 클라이언트에 없으면 DB에서 조회 (화면 밖 멀리 있는 포스팅)
-                  const nearest = await fetchNearestInDirection(b, c, dir);
+                } else {
+                  // 클라이언트 목록에 없으면 항상 DB에서 조회
+                  // (필터 여부 무관 — 카테고리/friends/mine 필터도 DB 쿼리에 적용)
+                  const nearest = await fetchNearestInDirection(b, c, dir, {
+                    categories: selectedCategories,
+                    userId: authUser?.id || null,
+                    followingIds: Array.from(followingIds),
+                  });
                   if (nearest) {
                     setMapCenter({ lat: nearest.lat, lng: nearest.lng });
                   } else {
+                    // 해당 방향에 포스팅이 정말 없으면 패닝
                     const panLat = { top: latRange * 0.8, bottom: -latRange * 0.8, left: 0, right: 0 }[dir];
                     const panLng = { top: 0, bottom: 0, left: -lngRange * 0.8, right: lngRange * 0.8 }[dir];
                     setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
                   }
-                } else {
-                  // 필터 적용 중인데 해당 방향에 포스팅 없음 → 패닝
-                  const panLat = { top: latRange * 0.8, bottom: -latRange * 0.8, left: 0, right: 0 }[dir];
-                  const panLng = { top: 0, bottom: 0, left: -lngRange * 0.8, right: lngRange * 0.8 }[dir];
-                  setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
                 }
               }}
               bottomOffset={bottomNavHeight}

@@ -178,7 +178,8 @@ export const fetchOffScreenCounts = async (
 export const fetchNearestInDirection = async (
   bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
   center: { lat: number; lng: number },
-  dir: 'top' | 'bottom' | 'left' | 'right'
+  dir: 'top' | 'bottom' | 'left' | 'right',
+  options?: { categories?: string[]; userId?: string | null; followingIds?: string[] }
 ): Promise<{ lat: number; lng: number } | null> => {
   const { sw, ne } = bounds;
 
@@ -187,14 +188,10 @@ export const fetchNearestInDirection = async (
       .from('posts')
       .select('latitude, longitude');
 
-    // 코너 포스팅도 포함하기 위해 lng/lat 범위 제한 없이 방향만으로 필터링
-    // 단, 코너 포스팅은 fetchOffScreenCounts와 동일한 비율 분류 기준으로 필터링
     const latRange = ne.lat - sw.lat;
     const lngRange = ne.lng - sw.lng;
 
     if (dir === 'top') {
-      // lat > ne.lat인 포스팅 중 lat 초과 비율 >= lng 초과 비율인 것
-      // (순수 상단 + 상단 코너 중 lat 방향이 더 큰 것)
       query = query.gt('latitude', ne.lat);
     } else if (dir === 'bottom') {
       query = query.lt('latitude', sw.lat);
@@ -204,28 +201,38 @@ export const fetchNearestInDirection = async (
       query = query.gt('longitude', ne.lng);
     }
 
-    const { data, error } = await query.limit(200);
+    // 카테고리/사용자 필터 적용
+    const cats = options?.categories || [];
+    if (cats.includes('mine') && options?.userId) {
+      query = query.eq('user_id', options.userId);
+    } else if (cats.includes('friends') && options?.followingIds && options.followingIds.length > 0) {
+      query = query.in('user_id', options.followingIds);
+    } else if (!cats.includes('all') && cats.length > 0 && !cats.includes('friends') && !cats.includes('mine')) {
+      const dbCats = cats.filter(c => ['food', 'accident', 'place', 'animal'].includes(c));
+      if (dbCats.length > 0) {
+        query = query.in('category', dbCats);
+      }
+    }
+
+    const { data, error } = await query.limit(500);
     if (error || !data || data.length === 0) return null;
 
-    // fetchOffScreenCounts와 동일한 비율 분류로 해당 방향에 속하는 포스팅만 필터링
+    // 해당 방향에 속하는 포스팅만 필터링 (코너 비율 분류)
     const filtered = data.filter(p => {
       if (p.latitude == null || p.longitude == null) return false;
-      const inLat = p.latitude >= sw.lat && p.latitude <= ne.lat;
-      const inLng = p.longitude >= sw.lng && p.longitude <= ne.lng;
-      if (inLat && inLng) return false; // 화면 안
+      const inBounds = p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng;
+      if (inBounds) return false;
 
       const isAbove = p.latitude > ne.lat;
       const isBelow = p.latitude < sw.lat;
       const isLeft  = p.longitude < sw.lng;
       const isRight = p.longitude > ne.lng;
 
-      // 순수 방향
       if (dir === 'top'    && isAbove && !isLeft && !isRight) return true;
       if (dir === 'bottom' && isBelow && !isLeft && !isRight) return true;
       if (dir === 'left'   && isLeft  && !isAbove && !isBelow) return true;
       if (dir === 'right'  && isRight && !isAbove && !isBelow) return true;
 
-      // 코너: 비율로 분류
       const latExcess = isAbove ? (p.latitude - ne.lat) / latRange : isBelow ? (sw.lat - p.latitude) / latRange : 0;
       const lngExcess = isLeft  ? (sw.lng - p.longitude) / lngRange : isRight ? (p.longitude - ne.lng) / lngRange : 0;
 
@@ -242,9 +249,7 @@ export const fetchNearestInDirection = async (
     let nearest = filtered[0];
     let minDist = Infinity;
     for (const p of filtered) {
-      const d = Math.sqrt(
-        Math.pow(p.latitude - center.lat, 2) + Math.pow(p.longitude - center.lng, 2)
-      );
+      const d = Math.pow(p.latitude - center.lat, 2) + Math.pow(p.longitude - center.lng, 2);
       if (d < minDist) { minDist = d; nearest = p; }
     }
 
