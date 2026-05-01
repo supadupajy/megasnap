@@ -42,7 +42,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         width="10" height="10"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="white"
+        stroke="rgb(79, 70, 229)"
         strokeWidth="3.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -92,11 +92,11 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           height: '48px',
           paddingLeft: '10px',
           paddingRight: '10px',
-          background: 'rgb(79, 70, 229)',
-          color: 'white',
+          background: 'white',
+          color: 'rgb(79, 70, 229)',
           borderRadius: '16px',
-          border: '2px solid white',
-          boxShadow: '0 4px 14px rgba(79,70,229,0.4)',
+          border: '2px solid rgb(79, 70, 229)',
+          boxShadow: '0 4px 14px rgba(79,70,229,0.25)',
           cursor: 'pointer',
           zIndex: 9000,
           lineHeight: 1,
@@ -107,7 +107,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       >
         {dir === 'top' && <Arrow dir="top" />}
         {dir === 'left' && <Arrow dir="left" />}
-        <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: 'white' }}>
+        <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: 'rgb(79, 70, 229)' }}>
           {count > 999 ? '999+' : count}
         </span>
         {dir === 'bottom' && <Arrow dir="bottom" />}
