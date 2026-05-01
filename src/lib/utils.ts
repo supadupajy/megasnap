@@ -86,29 +86,31 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
   try {
     return await new Promise<Blob>((resolve, reject) => {
       const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.muted = true;
-      video.playsInline = true;
-      video.src = objectUrl;
+      let settled = false;
+      let timeoutId: number | undefined;
 
       const cleanup = () => {
+        if (timeoutId) window.clearTimeout(timeoutId);
         video.pause();
         video.removeAttribute('src');
         video.load();
         URL.revokeObjectURL(objectUrl);
       };
 
-      const fail = () => {
+      const finish = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
         cleanup();
-        reject(new Error('비디오 썸네일을 생성할 수 없습니다.'));
+        callback();
       };
 
-      video.onloadeddata = () => {
-        const seekTime = Math.min(Math.max(video.duration * 0.15, 0.1), Math.max(video.duration - 0.1, 0.1));
-        video.currentTime = Number.isFinite(seekTime) ? seekTime : 0.1;
+      const fail = (error?: unknown) => {
+        finish(() => {
+          reject(error instanceof Error ? error : new Error('비디오 썸네일을 생성할 수 없습니다.'));
+        });
       };
 
-      video.onseeked = () => {
+      const capture = () => {
         try {
           const canvas = document.createElement('canvas');
           const width = video.videoWidth || 320;
@@ -123,20 +125,48 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
 
           context.drawImage(video, 0, 0, width, height);
           canvas.toBlob((blob) => {
-            cleanup();
             if (!blob) {
-              reject(new Error('비디오 썸네일을 생성할 수 없습니다.'));
+              fail();
               return;
             }
-            resolve(blob);
+
+            finish(() => resolve(blob));
           }, 'image/jpeg', 0.82);
         } catch (error) {
-          cleanup();
-          reject(error instanceof Error ? error : new Error('비디오 썸네일을 생성할 수 없습니다.'));
+          fail(error);
         }
       };
 
-      video.onerror = fail;
+      const moveToCaptureFrame = () => {
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+
+        if (duration <= 0.2) {
+          capture();
+          return;
+        }
+
+        const seekTime = Math.min(Math.max(duration * 0.15, 0.1), duration - 0.1);
+
+        try {
+          video.currentTime = seekTime;
+        } catch {
+          capture();
+        }
+      };
+
+      timeoutId = window.setTimeout(() => {
+        fail(new Error('비디오 썸네일 생성 시간이 초과되었습니다.'));
+      }, 10000);
+
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+      video.src = objectUrl;
+
+      video.addEventListener('loadedmetadata', moveToCaptureFrame, { once: true });
+      video.addEventListener('seeked', capture, { once: true });
+      video.addEventListener('error', () => fail(), { once: true });
+      video.load();
     });
   } catch (error) {
     URL.revokeObjectURL(objectUrl);

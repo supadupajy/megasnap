@@ -17,56 +17,87 @@ const isVideoUrl = (url: string | undefined | null): boolean => {
 
 // 동영상 썸네일을 canvas로 추출하는 컴포넌트
 const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ videoUrl, className }) => {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
   const [failed, setFailed] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
     const video = document.createElement('video');
+    let timeoutId: number | undefined;
+
+    const cleanup = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      video.src = '';
+      video.load();
+    };
+
+    const capture = () => {
+      if (cancelled) return;
+
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 120;
+        canvas.height = 120;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          setFailed(true);
+          cleanup();
+          return;
+        }
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const url = canvas.toDataURL('image/jpeg', 0.8);
+        setThumbUrl(url);
+      } catch {
+        setFailed(true);
+      }
+
+      cleanup();
+    };
+
+    const moveToCaptureFrame = () => {
+      if (cancelled) return;
+
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      if (duration <= 0.2) {
+        capture();
+        return;
+      }
+
+      const seekTime = Math.min(Math.max(duration * 0.15, 0.1), duration - 0.1);
+      try {
+        video.currentTime = seekTime;
+      } catch {
+        capture();
+      }
+    };
+
     video.crossOrigin = 'anonymous';
     video.muted = true;
     video.playsInline = true;
     video.preload = 'metadata';
     video.src = videoUrl;
 
-    const cleanup = () => {
-      video.src = '';
-      video.load();
-    };
-
-    video.addEventListener('loadeddata', () => {
-      if (cancelled) return;
-      video.currentTime = 0.5;
-    });
-
-    video.addEventListener('seeked', () => {
-      if (cancelled) return;
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 120;
-        canvas.height = 120;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const url = canvas.toDataURL('image/jpeg', 0.8);
-          setThumbUrl(url);
-        }
-      } catch {
-        setFailed(true);
-      }
-      cleanup();
-    });
-
+    video.addEventListener('loadedmetadata', moveToCaptureFrame);
+    video.addEventListener('seeked', capture);
     video.addEventListener('error', () => {
       if (!cancelled) setFailed(true);
       cleanup();
     });
 
+    timeoutId = window.setTimeout(() => {
+      if (!cancelled && !thumbUrl) {
+        setFailed(true);
+        cleanup();
+      }
+    }, 8000);
+
     video.load();
 
     return () => {
       cancelled = true;
+      video.removeEventListener('loadedmetadata', moveToCaptureFrame);
+      video.removeEventListener('seeked', capture);
       cleanup();
     };
   }, [videoUrl]);
@@ -92,7 +123,6 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
     );
   }
 
-  // 로딩 중
   return (
     <div className={cn("w-full h-full bg-gray-200 animate-pulse flex items-center justify-center", className)}>
       <svg className="w-4 h-4 text-gray-400 fill-gray-400 ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -103,9 +133,20 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
 // 포스트 썸네일 컴포넌트 (이미지/동영상 자동 판별)
 const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: string; onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void }> = ({ post, className, imgClassName, onImgError }) => {
   const videoUrl = post.videoUrl;
-  const imageUrl = post.image;
+  const imageUrl = post.image_url || post.image;
+  const hasStoredThumbnail = !!imageUrl && !isVideoUrl(imageUrl) && imageUrl !== '/placeholder.svg';
 
-  // videoUrl이 있거나 image_url이 동영상 URL인 경우
+  if (hasStoredThumbnail) {
+    return (
+      <img
+        src={imageUrl}
+        alt=""
+        className={cn("w-full h-full object-cover", imgClassName, className)}
+        onError={onImgError}
+      />
+    );
+  }
+
   const effectiveVideoUrl = videoUrl || (isVideoUrl(imageUrl) ? imageUrl : null);
 
   if (effectiveVideoUrl) {
