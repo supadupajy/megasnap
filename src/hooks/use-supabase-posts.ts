@@ -94,9 +94,8 @@ export const fetchOffScreenCounts = async (
   const { sw, ne } = bounds;
   const latRange = ne.lat - sw.lat;
   const lngRange = ne.lng - sw.lng;
-
-  // pad 없이 실제 bounds 기준으로 화면 밖 포스팅 카운트
-  // (onClickDirection의 isOutsideInDir 로직과 동일한 기준)
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
 
   // 카테고리/사용자 필터 적용 헬퍼
   const applyFilters = <T>(q: T): T => {
@@ -114,54 +113,30 @@ export const fetchOffScreenCounts = async (
   };
 
   try {
-    const [
-      topOnlyRes,
-      bottomOnlyRes,
-      leftOnlyRes,
-      rightOnlyRes,
-      cornerRes,
-    ] = await Promise.all([
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('latitude', ne.lat)
-        .gte('longitude', sw.lng).lte('longitude', ne.lng)),
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('latitude', sw.lat)
-        .gte('longitude', sw.lng).lte('longitude', ne.lng)),
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('longitude', sw.lng)
-        .gte('latitude', sw.lat).lte('latitude', ne.lat)),
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('longitude', ne.lng)
-        .gte('latitude', sw.lat).lte('latitude', ne.lat)),
-      applyFilters(supabase.from('posts').select('id, latitude, longitude')
-        .or(`and(latitude.gt.${ne.lat},longitude.lt.${sw.lng}),and(latitude.gt.${ne.lat},longitude.gt.${ne.lng}),and(latitude.lt.${sw.lat},longitude.lt.${sw.lng}),and(latitude.lt.${sw.lat},longitude.gt.${ne.lng})`)),
-    ]);
+    // 화면 밖 전체 포스팅을 가져와서 클라이언트에서 45도 섹터로 분류
+    // (DB COUNT 쿼리로는 섹터 분류가 불가능하므로 좌표 데이터를 가져옴)
+    const res = await applyFilters(
+      supabase.from('posts').select('latitude, longitude')
+        .or(
+          `latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`
+        )
+    );
 
-    if (topOnlyRes.error) throw topOnlyRes.error;
-    if (bottomOnlyRes.error) throw bottomOnlyRes.error;
-    if (leftOnlyRes.error) throw leftOnlyRes.error;
-    if (rightOnlyRes.error) throw rightOnlyRes.error;
-    if (cornerRes.error) throw cornerRes.error;
+    if (res.error) throw res.error;
 
-    let top = topOnlyRes.count || 0;
-    let bottom = bottomOnlyRes.count || 0;
-    let left = leftOnlyRes.count || 0;
-    let right = rightOnlyRes.count || 0;
+    let top = 0, bottom = 0, left = 0, right = 0;
 
-    (cornerRes.data || []).forEach((p: any) => {
-      const latExcessTop    = p.latitude  > ne.lat ? (p.latitude  - ne.lat)  / latRange : 0;
-      const latExcessBottom = p.latitude  < sw.lat ? (sw.lat  - p.latitude)  / latRange : 0;
-      const lngExcessLeft   = p.longitude < sw.lng ? (sw.lng  - p.longitude) / lngRange : 0;
-      const lngExcessRight  = p.longitude > ne.lng ? (p.longitude - ne.lng)  / lngRange : 0;
-
-      const vertical   = Math.max(latExcessTop, latExcessBottom);
-      const horizontal = Math.max(lngExcessLeft, lngExcessRight);
-
-      if (vertical >= horizontal) {
-        if (latExcessTop > 0) top++; else bottom++;
-      } else {
-        if (lngExcessLeft > 0) left++; else right++;
-      }
+    (res.data || []).forEach((p: any) => {
+      if (p.latitude == null || p.longitude == null) return;
+      // 화면 안이면 제외
+      if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
+      // 화면 중심 기준 45도 섹터 분류
+      const dLat = (p.latitude  - centerLat) / latRange;
+      const dLng = (p.longitude - centerLng) / lngRange;
+      if      (dLat > 0 && dLat >= Math.abs(dLng))          top++;
+      else if (dLat < 0 && Math.abs(dLat) >= Math.abs(dLng)) bottom++;
+      else if (dLng < 0 && Math.abs(dLng) > Math.abs(dLat))  left++;
+      else if (dLng > 0 && dLng > Math.abs(dLat))            right++;
     });
 
     return { top, bottom, left, right };
@@ -182,24 +157,20 @@ export const fetchNearestInDirection = async (
   options?: { categories?: string[]; userId?: string | null; followingIds?: string[] }
 ): Promise<{ lat: number; lng: number } | null> => {
   const { sw, ne } = bounds;
+  const latRange = ne.lat - sw.lat;
+  const lngRange = ne.lng - sw.lng;
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
 
   try {
-    let query = supabase
-      .from('posts')
-      .select('latitude, longitude');
+    // DB 쿼리: 해당 방향 축 기준으로 화면 밖인 것을 넓게 가져옴
+    // (코너 포스팅도 포함하기 위해 한 축만 필터링)
+    let query = supabase.from('posts').select('latitude, longitude');
 
-    const latRange = ne.lat - sw.lat;
-    const lngRange = ne.lng - sw.lng;
-
-    if (dir === 'top') {
-      query = query.gt('latitude', ne.lat);
-    } else if (dir === 'bottom') {
-      query = query.lt('latitude', sw.lat);
-    } else if (dir === 'left') {
-      query = query.lt('longitude', sw.lng);
-    } else {
-      query = query.gt('longitude', ne.lng);
-    }
+    if (dir === 'top')    query = query.gt('latitude', sw.lat);   // 화면 아래쪽 제외
+    if (dir === 'bottom') query = query.lt('latitude', ne.lat);   // 화면 위쪽 제외
+    if (dir === 'left')   query = query.lt('longitude', ne.lng);  // 화면 오른쪽 제외
+    if (dir === 'right')  query = query.gt('longitude', sw.lng);  // 화면 왼쪽 제외
 
     // 카테고리/사용자 필터 적용
     const cats = options?.categories || [];
@@ -217,35 +188,24 @@ export const fetchNearestInDirection = async (
     const { data, error } = await query.limit(500);
     if (error || !data || data.length === 0) return null;
 
-    // 해당 방향에 속하는 포스팅만 필터링 (코너 비율 분류)
+    // 클라이언트에서 45도 섹터 + 화면 밖 필터링
     const filtered = data.filter(p => {
       if (p.latitude == null || p.longitude == null) return false;
-      const inBounds = p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng;
-      if (inBounds) return false;
-
-      const isAbove = p.latitude > ne.lat;
-      const isBelow = p.latitude < sw.lat;
-      const isLeft  = p.longitude < sw.lng;
-      const isRight = p.longitude > ne.lng;
-
-      if (dir === 'top'    && isAbove && !isLeft && !isRight) return true;
-      if (dir === 'bottom' && isBelow && !isLeft && !isRight) return true;
-      if (dir === 'left'   && isLeft  && !isAbove && !isBelow) return true;
-      if (dir === 'right'  && isRight && !isAbove && !isBelow) return true;
-
-      const latExcess = isAbove ? (p.latitude - ne.lat) / latRange : isBelow ? (sw.lat - p.latitude) / latRange : 0;
-      const lngExcess = isLeft  ? (sw.lng - p.longitude) / lngRange : isRight ? (p.longitude - ne.lng) / lngRange : 0;
-
-      if (latExcess >= lngExcess) {
-        return (dir === 'top' && isAbove) || (dir === 'bottom' && isBelow);
-      } else {
-        return (dir === 'left' && isLeft) || (dir === 'right' && isRight);
-      }
+      // 화면 안이면 제외
+      if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return false;
+      // 화면 중심 기준 상대 벡터 (위도/경도 스케일 보정)
+      const dLat = (p.latitude  - centerLat) / latRange;
+      const dLng = (p.longitude - centerLng) / lngRange;
+      if (dir === 'top')    return dLat > 0 && dLat >= Math.abs(dLng);
+      if (dir === 'bottom') return dLat < 0 && Math.abs(dLat) >= Math.abs(dLng);
+      if (dir === 'left')   return dLng < 0 && Math.abs(dLng) > Math.abs(dLat);
+      if (dir === 'right')  return dLng > 0 && dLng > Math.abs(dLat);
+      return false;
     });
 
     if (filtered.length === 0) return null;
 
-    // 중심에서 가장 가까운 포스팅 찾기
+    // 중심에서 유클리드 거리가 가장 가까운 포스팅
     let nearest = filtered[0];
     let minDist = Infinity;
     for (const p of filtered) {

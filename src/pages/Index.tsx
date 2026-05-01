@@ -414,7 +414,7 @@ const Index = () => {
            selectedCategories.includes('influencer');
   }, [selectedCategories]);
 
-  // 클라이언트 계산: displayedMarkers 기반 (pad 없이 실제 bounds 기준)
+  // 클라이언트 계산: displayedMarkers 기반 (화면 중심 기준 45도 섹터 분류)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
     if (!mapData?.bounds || currentZoom >= 7) return null;
     if (!useClientSideCounts) return null;
@@ -422,6 +422,8 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const latRange = ne.lat - sw.lat;
     const lngRange = ne.lng - sw.lng;
+    const centerLat = (sw.lat + ne.lat) / 2;
+    const centerLng = (sw.lng + ne.lng) / 2;
 
     let top = 0, bottom = 0, left = 0, right = 0;
 
@@ -434,24 +436,13 @@ const Index = () => {
       // 화면 안이면 제외
       if (lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng) return;
 
-      const isAbove = lat > ne.lat;
-      const isBelow = lat < sw.lat;
-      const isLeft  = lng < sw.lng;
-      const isRight = lng > ne.lng;
-
-      if (isAbove && !isLeft && !isRight) { top++; return; }
-      if (isBelow && !isLeft && !isRight) { bottom++; return; }
-      if (isLeft  && !isAbove && !isBelow) { left++; return; }
-      if (isRight && !isAbove && !isBelow) { right++; return; }
-
-      const latExcess = isAbove ? (lat - ne.lat) / latRange : isBelow ? (sw.lat - lat) / latRange : 0;
-      const lngExcess = isLeft  ? (sw.lng - lng) / lngRange : isRight ? (lng - ne.lng) / lngRange : 0;
-
-      if (latExcess >= lngExcess) {
-        if (isAbove) top++; else bottom++;
-      } else {
-        if (isLeft) left++; else right++;
-      }
+      // 화면 중심 기준 45도 섹터 분류
+      const dLat = (lat - centerLat) / latRange;
+      const dLng = (lng - centerLng) / lngRange;
+      if      (dLat > 0 && dLat >= Math.abs(dLng))           top++;
+      else if (dLat < 0 && Math.abs(dLat) >= Math.abs(dLng)) bottom++;
+      else if (dLng < 0 && Math.abs(dLng) > Math.abs(dLat))  left++;
+      else if (dLng > 0 && dLng > Math.abs(dLat))            right++;
     });
 
     return { top, bottom, left, right };
@@ -1175,20 +1166,22 @@ const Index = () => {
                 // pad 없이 실제 화면 bounds 기준으로 화면 밖 포스팅 판별
                 const isFiltered = !selectedCategories.includes('all');
 
+                // 화면 밖 포스팅을 "화면 중심 기준 각도(45도 섹터)"로 방향 분류
+                // 오른쪽: 중심 대비 lng 차이가 lat 차이보다 크고 오른쪽
+                // 이렇게 하면 오른쪽 위 코너 포스팅도 오른쪽 뱃지 후보에 포함됨
+                const centerLat = (sw.lat + ne.lat) / 2;
+                const centerLng = (sw.lng + ne.lng) / 2;
                 const isOutsideInDir = (lat: number, lng: number): boolean => {
                   const inBounds = lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng;
                   if (inBounds) return false;
-                  const isAbove = lat > ne.lat, isBelow = lat < sw.lat;
-                  const isLeft = lng < sw.lng, isRight = lng > ne.lng;
-                  if (dir === 'top'    && isAbove && !isLeft && !isRight) return true;
-                  if (dir === 'bottom' && isBelow && !isLeft && !isRight) return true;
-                  if (dir === 'left'   && isLeft  && !isAbove && !isBelow) return true;
-                  if (dir === 'right'  && isRight && !isAbove && !isBelow) return true;
-                  // 코너: 비율로 분류
-                  const latExcess = isAbove ? (lat - ne.lat) / latRange : isBelow ? (sw.lat - lat) / latRange : 0;
-                  const lngExcess = isLeft  ? (sw.lng - lng) / lngRange : isRight ? (lng - ne.lng) / lngRange : 0;
-                  if (latExcess >= lngExcess) return (dir === 'top' && isAbove) || (dir === 'bottom' && isBelow);
-                  return (dir === 'left' && isLeft) || (dir === 'right' && isRight);
+                  // 화면 중심 기준 상대 벡터 (위도/경도 스케일 보정)
+                  const dLat = (lat - centerLat) / latRange;
+                  const dLng = (lng - centerLng) / lngRange;
+                  if (dir === 'top')    return dLat > 0 && dLat >= Math.abs(dLng);
+                  if (dir === 'bottom') return dLat < 0 && Math.abs(dLat) >= Math.abs(dLng);
+                  if (dir === 'left')   return dLng < 0 && Math.abs(dLng) > Math.abs(dLat);
+                  if (dir === 'right')  return dLng > 0 && dLng > Math.abs(dLat);
+                  return false;
                 };
 
                 // 현재 필터가 적용된 마커 목록(spreadMarkersRef)에서 해당 방향 화면 밖 후보 찾기
