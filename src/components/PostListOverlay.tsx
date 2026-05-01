@@ -185,6 +185,22 @@ const PostListOverlay = ({
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // ── 뒤로가기 버튼으로 닫기 (Android/브라우저 back 버튼) ──────
+  useEffect(() => {
+    if (!isOpen) return;
+    history.pushState({ postListOverlayOpen: true }, '');
+    const handlePopState = () => {
+      onClose();
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (history.state?.postListOverlayOpen) {
+        history.back();
+      }
+    };
+  }, [isOpen, onClose]);
+
   // ✅ 읽은 포스트들의 ID를 Set으로 관리하여 지도 마커 색상을 제어합니다.
   useEffect(() => {
     if (viewedIds.size > 0) {

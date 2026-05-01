@@ -50,6 +50,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
 
+  // ── 뒤로가기 버튼으로 닫기 (Android/브라우저 back 버튼) ──────
+  useEffect(() => {
+    if (!isOpen) return;
+    // 더미 히스토리 항목 추가 (뒤로가기 시 이 항목이 pop됨)
+    history.pushState({ postDetailOpen: true }, '');
+    const handlePopState = (e: PopStateEvent) => {
+      onClose();
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // 컴포넌트가 언마운트될 때 더미 히스토리가 남아있으면 제거
+      if (history.state?.postDetailOpen) {
+        history.back();
+      }
+    };
+  }, [isOpen, onClose]);
+
   const [hasInitialized, setHasInitialized] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
