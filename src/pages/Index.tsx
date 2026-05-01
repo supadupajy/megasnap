@@ -18,7 +18,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds, fetchNearestInDirection, DirectionCounts } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, DirectionCounts } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
@@ -412,9 +412,22 @@ const Index = () => {
     return () => { cancelled = true; };
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
 
-  // ── 화면 밖 방향별 포스트 수 (displayedMarkers 기반 클라이언트 계산) ──────────────────
-  const offScreenCounts = useMemo((): DirectionCounts | null => {
+  // ── 화면 밖 방향별 포스트 수 ──────────────────────────────────
+  // friends/hot/influencer 필터는 클라이언트 계산(displayedMarkers 기반)
+  // all/카테고리/mine 필터는 DB 쿼리(정확한 카운트, 화면 밖 데이터 fetch 불필요)
+  const [offScreenCounts, setOffScreenCounts] = useState<DirectionCounts | null>(null);
+
+  // 클라이언트 계산이 필요한 카테고리인지 판단
+  const useClientSideCounts = useMemo(() => {
+    return selectedCategories.includes('friends') ||
+           selectedCategories.includes('hot') ||
+           selectedCategories.includes('influencer');
+  }, [selectedCategories]);
+
+  // 클라이언트 계산: displayedMarkers 기반
+  const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
     if (!mapData?.bounds || currentZoom >= 7) return null;
+    if (!useClientSideCounts) return null;
 
     const { sw, ne } = mapData.bounds;
     const latRange = ne.lat - sw.lat;
@@ -427,10 +440,10 @@ const Index = () => {
 
     displayedMarkers.forEach(post => {
       if (post.lat == null || post.lng == null) return;
+      if (post.isAd) return; // 광고는 화면 밖 카운트에서 제외
       const lat = post.lat;
       const lng = post.lng;
 
-      // 화면 안이면 스킵
       if (lat >= qSw.lat && lat <= qNe.lat && lng >= qSw.lng && lng <= qNe.lng) return;
 
       const isAbove = lat > qNe.lat;
@@ -438,13 +451,11 @@ const Index = () => {
       const isLeft  = lng < qSw.lng;
       const isRight = lng > qNe.lng;
 
-      // 순수 방향 (코너 아님)
       if (isAbove && !isLeft && !isRight) { top++; return; }
       if (isBelow && !isLeft && !isRight) { bottom++; return; }
       if (isLeft  && !isAbove && !isBelow) { left++; return; }
       if (isRight && !isAbove && !isBelow) { right++; return; }
 
-      // 코너: 비율로 분류
       const latExcess = isAbove ? (lat - qNe.lat) / latRange : isBelow ? (qSw.lat - lat) / latRange : 0;
       const lngExcess = isLeft  ? (qSw.lng - lng) / lngRange : isRight ? (lng - qNe.lng) / lngRange : 0;
 
@@ -456,7 +467,42 @@ const Index = () => {
     });
 
     return { top, bottom, left, right };
-  }, [displayedMarkers, mapData?.bounds, currentZoom]);
+  }, [displayedMarkers, mapData?.bounds, currentZoom, useClientSideCounts]);
+
+  // DB 쿼리 기반 카운트 (all/카테고리/mine)
+  useEffect(() => {
+    if (useClientSideCounts) return; // 클라이언트 계산 사용 시 스킵
+    if (!mapData?.bounds || currentZoom >= 7) {
+      setOffScreenCounts(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchCounts = async () => {
+      const counts = await fetchOffScreenCounts(mapData.bounds, {
+        categories: selectedCategories,
+        userId: authUser?.id || null,
+      });
+      if (!cancelled) setOffScreenCounts(counts);
+    };
+    fetchCounts();
+    return () => { cancelled = true; };
+  }, [
+    mapData?.bounds?.sw?.lat,
+    mapData?.bounds?.sw?.lng,
+    mapData?.bounds?.ne?.lat,
+    mapData?.bounds?.ne?.lng,
+    currentZoom,
+    selectedCategories,
+    authUser?.id,
+    useClientSideCounts,
+  ]);
+
+  // 클라이언트 계산 카운트는 별도 effect로 setOffScreenCounts에 반영
+  useEffect(() => {
+    if (!useClientSideCounts) return;
+    setOffScreenCounts(clientOffScreenCounts);
+  }, [useClientSideCounts, clientOffScreenCounts]);
 
   // ── map_marker 광고들을 allPosts에 주입 ──────────────────────
   // ads 테이블의 ad_type='map_marker' 광고들을 모두 지도 마커로 표시.

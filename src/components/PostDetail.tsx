@@ -51,12 +51,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
 
   // ── 뒤로가기 버튼으로 닫기 (Android/브라우저 back 버튼) ──────
+  // onClose는 ref에 담아 의존성에서 제외 → 부모 리렌더로 onClose가 새 reference여도
+  // effect가 cleanup→re-run되지 않음 (cleanup의 history.back()이 popstate를 트리거해
+  // 모달이 즉시 닫히는 버그 방지)
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
   useEffect(() => {
     if (!isOpen) return;
     // 더미 히스토리 항목 추가 (뒤로가기 시 이 항목이 pop됨)
     history.pushState({ postDetailOpen: true }, '');
-    const handlePopState = (e: PopStateEvent) => {
-      onClose();
+    const handlePopState = (_e: PopStateEvent) => {
+      onCloseRef.current?.();
     };
     window.addEventListener('popstate', handlePopState);
     return () => {
@@ -66,7 +72,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         history.back();
       }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);

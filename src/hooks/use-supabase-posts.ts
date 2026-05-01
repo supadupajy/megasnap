@@ -88,7 +88,8 @@ export interface DirectionCounts {
  * 8방향 쿼리를 병렬로 실행 후 클라이언트에서 합산합니다.
  */
 export const fetchOffScreenCounts = async (
-  bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } }
+  bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
+  options?: { categories?: string[]; userId?: string | null }
 ): Promise<DirectionCounts> => {
   const { sw, ne } = bounds;
   const latRange = ne.lat - sw.lat;
@@ -119,6 +120,22 @@ export const fetchOffScreenCounts = async (
   // 코너를 "정확히 45도 경계"로 나누는 대신
   // 각 코너를 lat/lng 범위 비율로 분할하는 경계 lat를 계산해서 필터링합니다.
 
+  // 카테고리/사용자 필터 적용 헬퍼
+  const applyFilters = <T>(q: T): T => {
+    let qq: any = q;
+    const cats = options?.categories || [];
+    if (cats.includes('mine') && options?.userId) {
+      qq = qq.eq('user_id', options.userId);
+    } else if (!cats.includes('all') && cats.length > 0 && !cats.includes('friends') && !cats.includes('mine')) {
+      // 일반 카테고리 필터: food/accident/place/animal/hot/influencer
+      const dbCats = cats.filter(c => ['food', 'accident', 'place', 'animal'].includes(c));
+      if (dbCats.length > 0) {
+        qq = qq.in('category', dbCats);
+      }
+    }
+    return qq as T;
+  };
+
   try {
     const [
       topOnlyRes,
@@ -127,20 +144,20 @@ export const fetchOffScreenCounts = async (
       rightOnlyRes,
       cornerRes,
     ] = await Promise.all([
-      supabase.from('posts').select('id', { count: 'exact', head: true })
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
         .gt('latitude', qNe.lat)
-        .gte('longitude', qSw.lng).lte('longitude', qNe.lng),
-      supabase.from('posts').select('id', { count: 'exact', head: true })
+        .gte('longitude', qSw.lng).lte('longitude', qNe.lng)),
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
         .lt('latitude', qSw.lat)
-        .gte('longitude', qSw.lng).lte('longitude', qNe.lng),
-      supabase.from('posts').select('id', { count: 'exact', head: true })
+        .gte('longitude', qSw.lng).lte('longitude', qNe.lng)),
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
         .lt('longitude', qSw.lng)
-        .gte('latitude', qSw.lat).lte('latitude', qNe.lat),
-      supabase.from('posts').select('id', { count: 'exact', head: true })
+        .gte('latitude', qSw.lat).lte('latitude', qNe.lat)),
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
         .gt('longitude', qNe.lng)
-        .gte('latitude', qSw.lat).lte('latitude', qNe.lat),
-      supabase.from('posts').select('id, latitude, longitude')
-        .or(`and(latitude.gt.${qNe.lat},longitude.lt.${qSw.lng}),and(latitude.gt.${qNe.lat},longitude.gt.${qNe.lng}),and(latitude.lt.${qSw.lat},longitude.lt.${qSw.lng}),and(latitude.lt.${qSw.lat},longitude.gt.${qNe.lng})`),
+        .gte('latitude', qSw.lat).lte('latitude', qNe.lat)),
+      applyFilters(supabase.from('posts').select('id, latitude, longitude')
+        .or(`and(latitude.gt.${qNe.lat},longitude.lt.${qSw.lng}),and(latitude.gt.${qNe.lat},longitude.gt.${qNe.lng}),and(latitude.lt.${qSw.lat},longitude.lt.${qSw.lng}),and(latitude.lt.${qSw.lat},longitude.gt.${qNe.lng})`)),
     ]);
 
     if (topOnlyRes.error) throw topOnlyRes.error;
