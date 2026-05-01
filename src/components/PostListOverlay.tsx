@@ -64,9 +64,10 @@ const ObservedPostItem = React.memo(({
         if (p && !error) {
           const profile = (p as any).profiles;
           const userName = profile?.nickname || p.user_name || '탐험가';
-          const userAvatar = profile?.avatar_url || p.user_avatar || `https://i.pravatar.cc/150?u=${p.user_id}`;
+          const userAvatar = profile?.avatar_url || p.user_avatar || '/placeholder.svg';
 
           setFullPost(prev => ({
+
             ...prev,
             user: { ...prev.user, name: userName, avatar: userAvatar },
             content: p.content?.replace(/^\[AD\]\s*/, '') || '',
@@ -222,7 +223,7 @@ const PostListOverlay = ({
 
       let { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers)')
         .gte('latitude', latMin)
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
@@ -265,16 +266,14 @@ const PostListOverlay = ({
           borderType = getTierFromFollowers(Number(p.profiles?.followers ?? 0));
         }
 
-        let finalImage = p.image_url;
-        if (finalImage?.includes('unsplash.com')) {
-          finalImage = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
-        }
-        const finalImages = p.images || [finalImage];
+        let finalImage = p.image_url || '/placeholder.svg';
+        const finalImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
 
         return {
           id: p.id,
-          user: { id: p.user_id, name: userName, avatar: userAvatar || `https://i.pravatar.cc/150?u=${p.user_id}` },
+          user: { id: p.user_id, name: userName, avatar: userAvatar || '/placeholder.svg' },
           content: p.content || '',
+
           location: p.location_name || '알 수 없는 장소',
           lat: p.latitude, lng: p.longitude,
           latitude: p.latitude, longitude: p.longitude,
@@ -283,7 +282,6 @@ const PostListOverlay = ({
           image_url: finalImage,
           images: finalImages,
           videoUrl: p.video_url,
-          youtubeUrl: p.youtube_url,
           createdAt: new Date(p.created_at),
           category: p.category || 'none',
           commentsCount: 0, comments: [],

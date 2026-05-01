@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               id: userId,
               email: userEmail ?? null,
               nickname: uniqueNickname,
-              avatar_url: `https://i.pravatar.cc/150?u=${userId}`,
+              avatar_url: '/placeholder.svg',
               bio: "지도를 여행하는 탐험가 📍",
               updated_at: new Date().toISOString(),
             },

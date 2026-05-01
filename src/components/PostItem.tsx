@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Post } from '@/types';
-import { getFallbackImage } from '@/lib/utils';
-import { handleBrokenImage } from '@/lib/mock-data';
-import { 
+import {
+
   Heart, 
   MessageCircle, 
   Share2, 
@@ -24,7 +23,8 @@ import {
   TreePine,
   PawPrint
 } from 'lucide-react';
-import { cn, getYoutubeId } from '@/lib/utils';
+import { cn, getFallbackImage, formatRelativeTime } from '@/lib/utils';
+
 import { useNavigate } from 'react-router-dom';
 import { 
   DropdownMenu, 
@@ -43,7 +43,6 @@ import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { handleShare } from '@/utils/share';
-import { formatRelativeTime } from '@/lib/utils';
 
 interface PostItemProps {
   post: Post;
@@ -59,7 +58,7 @@ interface PostItemProps {
 
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
-  const { user: authUser, session, profile: authProfile, isAdmin } = useAuth();
+  const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const { blockUser } = useBlockedUsers();
   const [profile, setProfile] = useState<any>(null);
   
@@ -80,8 +79,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [showComments, setShowComments] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
@@ -94,8 +93,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const { user, content, isAd } = post;
   
-  // [FIX] isMine 판별: owner_id(실제 DB user_id) 또는 post.user_id 기준으로만 판별
-  // user.id는 display_user_id(표시용)이므로 isMine 판별에 사용하면 안 됨
+  // owner_id(실제 DB user_id) 또는 post.user_id 기준으로만 내 게시물 여부를 판별합니다.
+
   const isMine = useMemo(() => {
     if (!authUser?.id) return false;
     // owner_id: mapRawToPost에서 p.user_id로 설정된 실제 소유자 ID
@@ -204,7 +203,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       ([entry]) => {
         setIsVisible(entry.isIntersecting);
         
-        // Native video element control
         if (videoRef.current) {
           if (entry.isIntersecting && isReadyToPlay) {
             videoRef.current.play().catch(e => console.error("[PostItem] Video play error:", e));
@@ -213,15 +211,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           }
         }
 
-        // YouTube iframe control via postMessage API
-        if (iframeRef.current && iframeRef.current.contentWindow) {
-          const command = entry.isIntersecting && isReadyToPlay ? 'playVideo' : 'pauseVideo';
-          iframeRef.current.contentWindow.postMessage(JSON.stringify({
-            event: 'command',
-            func: command,
-            args: []
-          }), '*');
-        }
       },
       {
         threshold: 0.6,
@@ -240,19 +229,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     };
   }, [autoPlayVideo, isReadyToPlay]);
 
-  // Handle manual trigger when visibility changes while ready
   useEffect(() => {
-    if (isVisible && isReadyToPlay) {
-      if (videoRef.current) {
-        videoRef.current.play().catch(() => {});
-      }
-      if (iframeRef.current && iframeRef.current.contentWindow) {
-        iframeRef.current.contentWindow.postMessage(JSON.stringify({
-          event: 'command',
-          func: 'playVideo',
-          args: []
-        }), '*');
-      }
+    if (isVisible && isReadyToPlay && videoRef.current) {
+      videoRef.current.play().catch(() => {});
     }
   }, [isVisible, isReadyToPlay]);
 
@@ -261,44 +240,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const displayLocation = useLocationDisplay(post.location || '', lat, lng);
 
-  // 유튜브 비디오 ID 추출
-  const getYouTubeId = (url?: string) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&]{11})/);
-    return match ? match[1] : null;
-  };
-
-  // Ad 포스팅은 유튜브 영상 무시, 항상 이미지로 표시
-  const videoId = isAd ? null : getYouTubeId(post.youtubeUrl);
-
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
-  const renderMedia = () => {
-    // 1. 유튜브 영상 처리
-    if (videoId) {
-      const shouldPlay = autoPlayVideo && isVisible && isReadyToPlay;
-      return (
-        <div className="w-full h-full relative">
-          <iframe
-            ref={iframeRef}
-            src={`https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=${shouldPlay ? 1 : 0}&mute=0&loop=1&playlist=${videoId}&controls=1&modestbranding=1&rel=0&origin=${window.location.origin}`}
-            className="w-full h-full object-cover"
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            onLoad={() => setVideoLoaded(true)}
-          />
-          {(!videoLoaded || !isVisible) && (
-            <img 
-              src={currentImage} 
-              alt="" 
-              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
-            />
-          )}
-        </div>
-      );
-    }
 
-    // 2. 일반 업로드 동영상 처리 (광고는 영상 재생 금지)
+  const renderMedia = () => {
+    // 일반 업로드 동영상 처리 (광고는 영상 재생 금지)
     if (!isAd && post.videoUrl) {
+
       return (
         <div className="w-full h-full relative">
           <video
@@ -414,16 +361,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   };
 
   const handleImageError = async () => {
-    if (imgError) return; // 무한 루프 방지
-    
+    if (imgError) return;
     setImgError(true);
-    const fallback = getFallbackImage();
-    setCurrentImage(fallback);
-    
-    // 백엔드에도 깨진 이미지임을 알리고 수정 시도
-    if (post.id) {
-      await handleBrokenImage(post.id, currentImage);
-    }
+    setCurrentImage(getFallbackImage());
   };
 
   useEffect(() => {
@@ -450,9 +390,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       navigate('/profile');
       return;
     }
-    // 이동할 유저 ID 결정: display_user_id(시드 데이터용) 또는 실제 user_id
-    const targetUserId = user.id || post.user_id;
-    // UUID 형식인지 확인 (랜덤 닉네임 풀 등 실제 유저가 없는 경우 제외)
+    const targetUserId = post.owner_id || post.user_id || user.id;
     const isValidUUID = targetUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
     if (isValidUUID) {
       navigate(`/profile/${targetUserId}`);
@@ -658,7 +596,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             {/* Media Section */}
             <div
               className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-              onClick={() => !videoId && !post.videoUrl && onLocationClick?.({} as any, lat!, lng!)}
+              onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
               {renderMedia()}
             </div>
@@ -762,7 +700,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           {/* Media Section */}
           <div
             className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-            onClick={() => !videoId && !post.videoUrl && onLocationClick?.({} as any, lat!, lng!)}
+            onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
             {renderMedia()}
           </div>

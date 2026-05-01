@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 're
 import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn, getYoutubeId } from '@/lib/utils';
+import { cn, getFallbackImage } from '@/lib/utils';
+
 import { useNavigate } from 'react-router-dom';
 import { Comment } from '@/types';
 import {
@@ -38,11 +39,7 @@ interface PostDetailProps {
   onLocationClick?: (lat: number, lng: number) => void;
 }
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
-
-const getFallbackImage = (postId: string) => {
-  return `https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80`;
-};
+const FALLBACK_IMAGE = "/placeholder.svg";
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
@@ -52,10 +49,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
-  const youtubeId = useMemo(() => {
-    if (!currentPost || currentPost.isAd) return '';
-    return getYoutubeId(currentPost.youtubeUrl || '');
-  }, [currentPost]);
+
   const [hasInitialized, setHasInitialized] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -184,7 +178,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   useEffect(() => {
     const currentPost = posts[currentPostIndex];
-    if (!isOpen || !currentPost || !(currentPost.videoUrl || getYoutubeId(currentPost.youtubeUrl || ''))) return;
+    if (!isOpen || !currentPost || !currentPost.videoUrl) return;
     const observer = new IntersectionObserver(([entry]) => { }, { threshold: 0.6 });
     if (videoContainerRef.current) observer.observe(videoContainerRef.current);
     return () => observer.disconnect();
@@ -593,16 +587,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const renderMediaArea = () => (
     <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
-      {youtubeId ? (
-        <iframe
-          className="w-full h-full"
-          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=0&controls=1&loop=1&playlist=${youtubeId}`}
-          title="YouTube video player"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      ) : (currentPost.videoUrl && !currentPost.isAd) ? (
+      {currentPost.videoUrl && !currentPost.isAd ? (
         <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
       ) : (
         renderImageSlider()
@@ -818,6 +803,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+      />
+    </>
+  );
+};
+
+export default PostDetail;  isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+      />
+    </>
+  );
+};
+
+export default PostDetail;{confirmDelete}
+      />
+    </>
+  );
+};
+
+export default PostDetail;  isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
       />

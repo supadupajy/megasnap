@@ -16,14 +16,14 @@ import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { Post } from '@/types';
 import { cn, formatCount } from '@/lib/utils';
+
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
-import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
+
 import { toggleLikeInDb } from '@/utils/like-utils';
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+const FALLBACK_IMAGE = "/placeholder.svg";
 
 const ProfileHeaderSkeleton = () => (
   <div className="p-6">
@@ -73,7 +73,7 @@ const Profile = () => {
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
-  const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
+  const avatarUrl = useMemo(() => profile?.avatar_url || '/placeholder.svg', [profile]);
 
   const isValidUrl = (url: any) => {
     if (!url || typeof url !== 'string') return false;
@@ -84,7 +84,7 @@ const Profile = () => {
     return true;
   };
 
-  const SAFE_FALLBACK = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+  const SAFE_FALLBACK = "/placeholder.svg";
 
   const mapDbToPost = (p: any, isLiked = false, isSaved = false): Post => {
     let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
@@ -104,9 +104,6 @@ const Profile = () => {
     }
 
     let finalImage = isValidUrl(rawImage) ? rawImage : SAFE_FALLBACK;
-    if (finalImage.includes('unsplash.com')) {
-      finalImage = remapUnsplashDisplayUrl(finalImage, p.id, isAd ? 'food' : (p.category || 'general')) || finalImage;
-    }
 
     let finalImages = rawImages.filter(isValidUrl);
     if (finalImages.length === 0) finalImages = [finalImage];
@@ -118,7 +115,7 @@ const Profile = () => {
       user: {
         id: p.user_id,
         name: p.user_id === authUser?.id ? displayName : (p.user_name || '탐험가'),
-        avatar: p.user_id === authUser?.id ? avatarUrl : (p.user_avatar || `https://i.pravatar.cc/150?u=${p.user_id}`)
+        avatar: p.user_id === authUser?.id ? avatarUrl : (p.user_avatar || '/placeholder.svg')
       },
       content: p.content?.replace(/^\[AD\]\s*/, '') || '',
       location: p.location_name || '알 수 없는 장소',
@@ -128,7 +125,7 @@ const Profile = () => {
       commentsCount: 0, comments: [],
       image: finalImage, image_url: finalImage,
       images: finalImages,
-      youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+      videoUrl: p.video_url,
       isLiked, isSaved,
       createdAt: new Date(p.created_at),
       borderType,
@@ -143,13 +140,13 @@ const Profile = () => {
       const [myPostsRes, savedPostsRes, followersRes, followingRes, profileRes] = await Promise.all([
         supabase
           .from('posts')
-          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id')
+          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id')
           .eq('user_id', uid)
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('saved_posts')
-          .select('post_id, posts(id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id)')
+          .select('post_id, posts(id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id)')
           .eq('user_id', uid)
           .limit(20),
         supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
@@ -186,30 +183,14 @@ const Profile = () => {
         (extraSavedData || []).forEach((s: any) => savedPostIdSet.add(s.post_id));
       }
 
-      // ✅ 즉시 렌더링 (YouTube 검증 전)
+      // 즉시 렌더링
+
       const initialMyPosts = myData.map(p => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
       const initialSavedPosts = savedPostObjects.map((p: any) => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
       setMyPosts(initialMyPosts);
       setSavedPosts(initialSavedPosts);
       setIsDataLoading(false);
 
-      // ✅ YouTube 검증은 백그라운드에서 배치 처리
-      const allPostsWithYoutube = [...myData, ...savedPostObjects].filter(p => p.youtube_url);
-      if (allPostsWithYoutube.length > 0) {
-        sanitizeYoutubeMediaBatch(allPostsWithYoutube).then(sanitized => {
-          const sanitizedMap: Record<string, any> = Object.fromEntries(sanitized.map(p => [p.id, p]));
-          setMyPosts(prev => prev.map(post => {
-            const s = sanitizedMap[post.id];
-            if (!s) return post;
-            return mapDbToPost(s, post.isLiked, post.isSaved);
-          }));
-          setSavedPosts(prev => prev.map(post => {
-            const s = sanitizedMap[post.id];
-            if (!s) return post;
-            return mapDbToPost(s, post.isLiked, post.isSaved);
-          }));
-        });
-      }
     } catch (err) {
       console.error('[Profile] loadProfileData error:', err);
       setIsDataLoading(false);
@@ -448,7 +429,8 @@ const Profile = () => {
                           ) : (
                             <img src={post.image_url || post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={() => handleImageError(post.id)} />
                           )}
-                          {(post.videoUrl || post.youtubeUrl) && (
+                          {post.videoUrl && (
+
                             <div className="absolute top-2 right-2 z-10">
                               <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
                             </div>

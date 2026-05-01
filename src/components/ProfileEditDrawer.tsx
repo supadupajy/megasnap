@@ -166,10 +166,8 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
         });
 
       if (uploadError) {
-        // Storage 버킷이 없을 경우 fallback: dicebear URL 사용
         console.error('Storage upload error:', uploadError);
-        showError('이미지 업로드에 실패했습니다. 기본 아바타를 사용합니다.');
-        setAvatarUrl(`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}_${Date.now()}`);
+        showError('이미지 업로드에 실패했습니다.');
         return;
       }
 
@@ -218,9 +216,8 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
       return;
     }
 
-    // Base64가 avatarUrl에 들어오는 것을 최종 방어
     const safeAvatarUrl = avatarUrl?.startsWith('data:image')
-      ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`
+      ? '/placeholder.svg'
       : avatarUrl;
 
     setIsSubmitting(true);
@@ -276,10 +273,11 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
               <div className="relative group">
                 <div className="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 shadow-xl">
                   <Avatar className="w-full h-full border-4 border-white">
-                    <AvatarImage 
-                      src={avatarUrl || `https://i.pravatar.cc/150?u=${user?.id || 'me'}`} 
-                      className="object-cover" 
+                    <AvatarImage
+                      src={avatarUrl || '/placeholder.svg'}
+                      className="object-cover"
                     />
+
                     <AvatarFallback className="bg-gray-100">
                       <User className="w-10 h-10 text-gray-300" />
                     </AvatarFallback>

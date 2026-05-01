@@ -252,7 +252,8 @@ const Messages = () => {
                       <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6"><button onClick={(e) => handleDeleteClick(e, conv.other_id)} className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"><Trash2 className="w-6 h-6" /><span className="text-[10px] font-bold">삭제</span></button></div>
                       <motion.div drag="x" dragConstraints={{ left: -80, right: 0 }} dragElastic={0.1} animate={{ x: isSwiped ? -80 : 0 }} onDragEnd={(_, info) => { if (info.offset.x < -40) setSwipedId(conv.other_id); else setSwipedId(null); }} onClick={() => { if (!swipedId) navigate(`/chat/${conv.other_id}`); }} className="relative bg-white flex items-center gap-4 py-4 px-1 cursor-pointer z-10">
                         <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm relative" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
-                          <img src={conv.profile.avatar_url || `https://i.pravatar.cc/150?u=${conv.other_id}`} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
+                          <img src={conv.profile.avatar_url || '/placeholder.svg'} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
+
                           <div className={cn(
                             "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10 transition-colors duration-300",
                             isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"

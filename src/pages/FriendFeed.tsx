@@ -4,9 +4,9 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Users, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDiverseUnsplashUrl, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn, getYoutubeThumbnail } from '@/lib/utils';
+import { cn, getFallbackImage } from '@/lib/utils';
+
 import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,12 +27,8 @@ const mapPostImmediate = (p: any): Post => {
   const followers = Number(p.profiles?.followers ?? 0);
   const borderType = p.hot_since ? 'popular' : getTierFromFollowers(followers);
   const isAd = p.content?.trim().startsWith('[AD]');
-  let finalImage = p.youtube_url
-    ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-    : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
-  if (!isAd && !p.youtube_url && !p.video_url && finalImage?.includes('img.youtube.com')) {
-    finalImage = getDiverseUnsplashUrl(p.id, 'general');
-  }
+  const finalImage = p.image_url || getFallbackImage(String(p.id));
+  const finalImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
   return {
     id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
     user: { id: p.user_id, name: p.profiles?.nickname || p.user_name || '사용자', avatar: p.profiles?.avatar_url || p.user_avatar || '' },
@@ -40,9 +36,9 @@ const mapPostImmediate = (p: any): Post => {
     location: p.location_name, lat: p.latitude, lng: p.longitude,
     likes: Number(p.likes || 0), commentsCount: 0, comments: [],
     image: finalImage, image_url: finalImage,
-    images: Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage],
+    images: finalImages,
     latitude: p.latitude, longitude: p.longitude,
-    youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+    videoUrl: p.video_url,
     isLiked: false, isSaved: false,
     createdAt: new Date(p.created_at),
     borderType: borderType as any,
@@ -121,7 +117,7 @@ const FriendFeed = () => {
       // 3단계: 팔로잉 유저들의 포스트 + profiles JOIN으로 실제 닉네임/아바타 가져오기
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
         .in('user_id', ids)
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1);
@@ -150,7 +146,7 @@ const FriendFeed = () => {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
+      .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
       .in('user_id', followingIds)
       .order('created_at', { ascending: false })
       .range(from, to);

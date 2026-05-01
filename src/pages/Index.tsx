@@ -12,14 +12,14 @@ import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverla
 import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
 import { RefreshCw, LayoutGrid, Navigation, Search, Layers, Check, X } from 'lucide-react';
 import { Post } from '@/types';
-import { cn, getYoutubeThumbnail } from '@/lib/utils';
+import { cn, getFallbackImage } from '@/lib/utils';
+
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, fetchOffScreenCounts, fetchNearestInDirection, DirectionCounts } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
-import { getDiverseUnsplashUrl } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
@@ -229,35 +229,29 @@ const Index = () => {
       else if (followers >= 1000000) borderType = 'gold';
       else if (followers >= 100000) borderType = 'silver';
     }
-    // profiles JOIN이 있으면 그것을 우선, 없으면 raw의 user_name/user_avatar, 그것도 없으면 prev 유지
     const userName = p.profiles?.nickname || p.user_name || prev?.user?.name || '탐험가';
-    const userAvatar = p.profiles?.avatar_url || p.user_avatar || prev?.user?.avatar || `https://i.pravatar.cc/150?u=${p.user_id}`;
-    // [FIX] display_user_id: 시드 데이터에서 표시용 유저 ID. 없으면 user_id(실제 소유자)
-    // user.id는 화면 표시/프로필 이동용이므로 display_user_id를 우선 사용
-    const displayUserId = p.display_user_id || prev?.user?.id || p.user_id || '';
-    let img = p.image_url ?? prev?.image_url ?? '';
+    const userAvatar = p.profiles?.avatar_url || p.user_avatar || prev?.user?.avatar || '/placeholder.svg';
+    const displayUserId = p.user_id || prev?.user?.id || '';
+    let img = p.image_url ?? prev?.image_url ?? getFallbackImage(String(p.id));
 
-    // [AD 보정] 광고 포스트는 영상/유튜브 썸네일/빈 이미지를 모두 무시하고
-    // 안정적인 음식 사진 풀에서 ID 해시 기반으로 대체한다. (영상으로 표시되는 사고 방지)
-    const isYoutubeThumb = typeof img === 'string' && img.includes('img.youtube.com');
-    if (isAd && (!img || isYoutubeThumb)) {
-      img = getDiverseUnsplashUrl(`ad:${p.id}`, 'food');
+    if (!img) {
+      img = getFallbackImage(String(p.id));
     }
 
-    const rawImages = p.images || prev?.images || (img ? [img] : []);
+    const rawImages = Array.isArray(p.images) && p.images.length > 0
+      ? p.images
+      : (prev?.images && prev.images.length > 0 ? prev.images : [img]);
     const images = isAd ? [img] : rawImages;
-    const youtubeUrl = isAd ? undefined : (p.youtube_url ?? prev?.youtubeUrl);
     const videoUrl = isAd ? undefined : (p.video_url ?? prev?.videoUrl);
 
     return {
       id: p.id,
       user_id: p.user_id || prev?.user_id || '',
-      owner_id: p.user_id || prev?.owner_id || '', // [FIX] RLS 소유자 ID (isMine 판별용)
-      display_user_id: p.display_user_id ?? prev?.display_user_id ?? null, // [FIX] 표시용 유저 ID (MapContainer isMine 판별용)
+      owner_id: p.user_id || prev?.owner_id || '',
       isAd,
       isGif: false,
       isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-      user: { id: displayUserId, name: userName, avatar: userAvatar }, // [FIX] display_user_id 우선 사용
+      user: { id: displayUserId, name: userName, avatar: userAvatar },
       content: content.replace(/^\[AD\]\s*/, ''),
       location: p.location_name ?? prev?.location ?? '알 수 없는 장소',
       lat: p.latitude ?? prev?.lat,
@@ -272,12 +266,10 @@ const Index = () => {
       image_url: img,
       images,
       isLiked: prev?.isLiked ?? false,
-      youtubeUrl,
       videoUrl,
       category: isAd ? 'food' : (p.category ?? prev?.category ?? 'none'),
       createdAt: p.created_at ? new Date(p.created_at) : (prev?.createdAt ?? new Date()),
       borderType,
-      is_seed_data: p.is_seed_data ?? prev?.is_seed_data,
       hot_since: hotSince,
       link_url: isAd ? (p.link_url ?? prev?.link_url ?? '') : undefined,
     };
@@ -452,7 +444,6 @@ const Index = () => {
         id: AD_POST_ID,
         user_id: 'ad',
         owner_id: 'ad',
-        display_user_id: null,
         isAd: true,
         isAdPending: slot.isPending,
         isGif: false,
@@ -680,7 +671,7 @@ const Index = () => {
       // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, display_user_id, user_name, user_avatar, is_seed_data, hot_since, profiles:user_id(nickname, avatar_url, followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
         .eq('id', lightPost.id)
         .single();
       if (!error && data) {

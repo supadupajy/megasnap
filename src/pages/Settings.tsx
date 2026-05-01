@@ -34,14 +34,8 @@ import { useAuth } from '@/components/AuthProvider';
 import { showSuccess, showError, showLoading, dismissToast, showInfo } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  seedGlobalPosts, 
-  randomizeExistingLikes, 
-  cleanupInvalidYoutubePosts, 
-  enrichExistingPostLocations, 
-  seedInBoundsPosts, 
-  deletePostsInBounds 
-} from '@/utils/db-seeder';
+import { deletePostsInBounds } from '@/utils/post-admin';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -120,9 +114,6 @@ const Settings = () => {
   const { signOut, user, profile } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
-  const [showSeedConfirm, setShowSeedConfirm] = useState(false);
-  const [showRandomizeConfirm, setShowRandomizeConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showBugReport, setShowBugReport] = useState(false);
@@ -151,63 +142,6 @@ const Settings = () => {
     navigate('/login');
   };
 
-  const handleSeedData = async () => {
-    if (!user) return;
-    setIsProcessing(true);
-    const toastId = showLoading('대한민국 전역 데이터를 생성 중입니다...');
-    try {
-      const count = await seedGlobalPosts(
-        user.id, 
-        profile?.nickname || '탐험가', 
-        profile?.avatar_url || `https://i.pravatar.cc/150?u=${user.id}`
-      );
-      dismissToast(toastId);
-      showSuccess(`${count}개의 포스팅이 전국에 생성되었습니다! ✨`);
-    } catch (err: any) {
-      dismissToast(toastId);
-      showError(`생성 실패: ${err.message || '알 수 없는 오류'}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleRandomizeLikes = async () => {
-    setIsProcessing(true);
-    const toastId = showLoading('전체 좋아요 수치를 랜덤하게 섞는 중...');
-    try {
-      const count = await randomizeExistingLikes();
-      dismissToast(toastId);
-      showSuccess(`${count}개 포스팅의 좋아요가 무작위로 변경되었습니다! 🎲`);
-    } catch (err: any) {
-      dismissToast(toastId);
-      showError(`수치 변경 실패: ${err.message || 'RPC 함수를 찾을 수 없거나 권한이 없습니다.'}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleGenerateInView = async () => {
-    if (!user) return;
-    const storedBounds = localStorage.getItem('map_bounds');
-    if (!storedBounds) {
-      showError('지도를 한 번 이상 확인해야 화면 범위를 알 수 있습니다.');
-      return;
-    }
-    setIsProcessing(true);
-    const toastId = showLoading('현재 화면 안에 포스팅을 생성 중입니다...');
-    try {
-      const bounds = JSON.parse(storedBounds);
-      const count = await seedInBoundsPosts(user.id, bounds, profile?.nickname);
-      dismissToast(toastId);
-      showSuccess(`현재 화면 안에 ${count}개의 포스팅이 생성되었습니다! 📍`);
-      window.dispatchEvent(new CustomEvent('refresh-map-data'));
-    } catch (err: any) {
-      dismissToast(toastId);
-      showError(`생성 실패: ${err.message || '알 수 없는 오류'}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleDeleteInView = async () => {
     const storedBounds = localStorage.getItem('map_bounds');
@@ -456,26 +390,9 @@ const Settings = () => {
               </button>
 
               <button 
-                onClick={() => setShowGenerateConfirm(true)}
-                disabled={isProcessing}
-                className="w-full flex items-center justify-between py-3 px-4 hover:bg-indigo-50 active:bg-indigo-100 transition-colors border-b border-gray-50 disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-100 text-indigo-600">
-                    <MapPin className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-indigo-600">현재 화면 안에 포스팅 생성</span>
-                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">지도의 현재 보이는 영역에 5개의 다양한 포스팅을 랜덤하게 배치합니다.</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-              </button>
-
-              <button 
                 onClick={() => setShowDeleteConfirm(true)}
                 disabled={isProcessing}
-                className="w-full flex items-center justify-between py-3 px-4 hover:bg-rose-50 active:bg-rose-100 transition-colors border-b border-gray-50 disabled:opacity-50"
+                className="w-full flex items-center justify-between py-3 px-4 hover:bg-rose-50 active:bg-rose-100 transition-colors last:border-none disabled:opacity-50"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-100 text-rose-600">
@@ -484,40 +401,6 @@ const Settings = () => {
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-rose-600">현재 화면 내 포스팅 일괄 삭제</span>
                     <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">지도의 현재 영역에 있는 모든 데이터를 DB에서 영구 삭제합니다.</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-              </button>
-
-              <button 
-                onClick={() => setShowSeedConfirm(true)}
-                disabled={isProcessing}
-                className="w-full flex items-center justify-between py-3 px-4 hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-50 disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-100 text-gray-600">
-                    <Database className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-gray-700">전국 데이터 대량 생성</span>
-                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">대한민국 전역에 대량의 포스팅을 골고루 배치합니다.</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-              </button>
-
-              <button 
-                onClick={() => setShowRandomizeConfirm(true)}
-                disabled={isProcessing}
-                className="w-full flex items-center justify-between py-3 px-4 hover:bg-orange-50 active:bg-orange-100 transition-colors last:border-none disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-orange-100 text-orange-600">
-                    <RefreshCw className={cn("w-5 h-5", isProcessing && "animate-spin")} />
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-orange-600">좋아요 수치 전체 랜덤화</span>
-                    <span className="text-[11px] text-gray-400 font-medium mt-0.5">모든 포스팅의 좋아요를 무작위로 섞어 인기 탭을 갱신합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -604,51 +487,6 @@ const Settings = () => {
       </Dialog>
 
       {/* 관리자 다이얼로그들 */}
-      <AlertDialog open={showGenerateConfirm} onOpenChange={setShowGenerateConfirm}>
-        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
-          <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">포스팅 생성</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
-              현재 화면 안에 5개의 포스팅을 랜덤하게 생성합니다. 진행하시겠습니까?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowGenerateConfirm(false); handleGenerateInView(); }} className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all m-0">생성 실행</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showSeedConfirm} onOpenChange={setShowSeedConfirm}>
-        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
-          <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">전국 데이터 대량 생성</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
-              대한민국 전역에 대량의 포스팅을 생성합니다. 진행하시겠습니까?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowSeedConfirm(false); handleSeedData(); }} className="flex-1 h-12 rounded-2xl bg-gray-700 text-white font-bold hover:bg-gray-800 shadow-lg shadow-gray-100 transition-all m-0">생성 실행</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showRandomizeConfirm} onOpenChange={setShowRandomizeConfirm}>
-        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
-          <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">좋아요 수치 랜덤화</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
-              모든 포스팅의 좋아요 수치를 무작위로 변경합니다. 이 작업은 되돌릴 수 없습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowRandomizeConfirm(false); handleRandomizeLikes(); }} className="flex-1 h-12 rounded-2xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-100 transition-all m-0">랜덤화 실행</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">

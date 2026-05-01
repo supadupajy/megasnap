@@ -4,13 +4,13 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Flame, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getDiverseUnsplashUrl, initializeYoutubePool, remapUnsplashDisplayUrl } from '@/lib/mock-data';
 import { Post } from '@/types';
-import { cn, getYoutubeThumbnail } from '@/lib/utils';
+import { getFallbackImage } from '@/lib/utils';
+
 import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
-import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
+
 import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
 import AdMobBanner from '@/components/AdMobBanner';
@@ -26,18 +26,14 @@ const getTierFromFollowers = (followers: number) => {
 
 const PAGE_SIZE = 15;
 
-// 포스트 데이터를 즉시 매핑 (YouTube 검증 없이)
+// 포스트 데이터를 즉시 매핑
+
 const mapPostImmediate = (p: any): Post => {
   const followers = Number(p.profiles?.followers ?? 0);
   const borderType = p.hot_since ? 'popular' : getTierFromFollowers(followers);
   const isAd = p.content?.trim().startsWith('[AD]');
-  let finalImage = p.youtube_url
-    ? (getYoutubeThumbnail(p.youtube_url) || p.image_url)
-    : remapUnsplashDisplayUrl(p.image_url, p.id, isAd ? 'food' : 'general') || p.image_url;
-  if (!isAd && !p.youtube_url && !p.video_url && finalImage?.includes('img.youtube.com')) {
-    finalImage = getDiverseUnsplashUrl(p.id, 'general');
-  }
-  // profiles 테이블의 최신 닉네임/아바타를 우선 사용, 없으면 posts 테이블 값 fallback
+  const finalImage = p.image_url || getFallbackImage(String(p.id));
+  const finalImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
   const displayName = p.profiles?.nickname || p.user_name;
   const displayAvatar = p.profiles?.avatar_url || p.user_avatar;
   return {
@@ -47,9 +43,9 @@ const mapPostImmediate = (p: any): Post => {
     location: p.location_name, lat: p.latitude, lng: p.longitude,
     likes: Number(p.likes || 0), commentsCount: 0, comments: [],
     image: finalImage, image_url: finalImage,
-    images: Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage],
+    images: finalImages,
     latitude: p.latitude, longitude: p.longitude,
-    youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+    videoUrl: p.video_url,
     isLiked: false, isSaved: false,
     createdAt: new Date(p.created_at),
     borderType: borderType as any,
@@ -106,30 +102,14 @@ const Popular = () => {
       const to = from + PAGE_SIZE - 1;
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
         .order('likes', { ascending: false })
         .range(from, to);
 
       if (error) throw error;
       if (!data || data.length < PAGE_SIZE) setHasMore(false);
 
-      // 즉시 렌더링: YouTube 검증 없이 바로 표시
-      const immediatePost = (data || []).map(mapPostImmediate);
-
-      // YouTube 검증은 백그라운드에서 배치 처리
-      const postsWithYoutube = (data || []).filter(p => p.youtube_url);
-      if (postsWithYoutube.length > 0) {
-        sanitizeYoutubeMediaBatch(postsWithYoutube).then(sanitized => {
-          const sanitizedMap: Record<string, any> = Object.fromEntries(sanitized.map(p => [p.id, p]));
-          setPosts(prev => prev.map(post => {
-            const s = sanitizedMap[post.id];
-            if (!s) return post;
-            return mapPostImmediate(s);
-          }));
-        });
-      }
-
-      return immediatePost;
+      return (data || []).map(mapPostImmediate);
     } catch (err) {
       return [];
     }
@@ -138,11 +118,7 @@ const Popular = () => {
   const loadInitialData = useCallback(async () => {
     if (hasLoaded.current) return;
     setIsInitialLoading(true);
-    // YouTube pool 초기화와 포스트 로딩을 병렬로
-    const [initialPosts] = await Promise.all([
-      fetchPopularPosts(0),
-      initializeYoutubePool(),
-    ]);
+    const initialPosts = await fetchPopularPosts(0);
     setPosts(initialPosts);
     hasLoaded.current = true;
     setIsInitialLoading(false);

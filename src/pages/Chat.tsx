@@ -177,7 +177,8 @@ const Chat = () => {
         const room = chatStore.getRoom(chatId);
         setOtherUser(room
           ? { nickname: room.user.name, avatar_url: room.user.avatar, last_seen: null }
-          : { nickname: `Explorer_${chatId}`, avatar_url: `https://i.pravatar.cc/150?u=${chatId}`, last_seen: null });
+          : { nickname: `Explorer_${chatId}`, avatar_url: '/placeholder.svg', last_seen: null });
+
         setIsLoading(false);
         return;
       }
@@ -351,10 +352,11 @@ const Chat = () => {
               onClick={() => navigate(`/profile/${chatId}`)}
             >
               <img
-                src={otherUser?.avatar_url || `https://i.pravatar.cc/150?u=${chatId}`}
+                src={otherUser?.avatar_url || '/placeholder.svg'}
                 alt="user"
                 className="w-full h-full rounded-full object-cover border-2 border-white"
               />
+
             </div>
             <div className="flex flex-col min-w-0">
                               <h2 className="text-sm font-black text-gray-900 truncate leading-normal">{otherUser?.nickname || '사용자'}</h2>

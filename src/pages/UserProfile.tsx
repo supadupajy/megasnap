@@ -16,10 +16,11 @@ import {
 } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, formatCount } from '@/lib/utils';
+
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { sanitizeYoutubeMediaBatch } from '@/utils/youtube-utils';
 import { showSuccess, showError } from '@/utils/toast';
+
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { Button } from '@/components/ui/button';
 import PostItem from '@/components/PostItem';
@@ -32,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-const FALLBACK_IMAGE = 'https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg';
+const FALLBACK_IMAGE = '/placeholder.svg';
 
 // Skeleton UI for profile header
 const ProfileSkeleton = () => (
@@ -83,7 +84,7 @@ const UserProfile = () => {
     likedSet: Set<string> = new Set(),
     savedSet: Set<string> = new Set()
   ): Post => {
-    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+    const SAFE_FALLBACK = "/placeholder.svg";
     const isValidUrl = (url: any) => {
       if (!url || typeof url !== 'string') return false;
       const clean = url.trim();
@@ -113,7 +114,7 @@ const UserProfile = () => {
       isGif: false,
       isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
       borderType: borderType as any,
-      user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar || `https://i.pravatar.cc/150?u=${p.user_id}` },
+      user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar || '/placeholder.svg' },
       content: p.content?.replace(/^\[AD\]\s*/, '') || '',
       location: p.location_name || '알 수 없는 장소',
       lat: p.latitude, lng: p.longitude,
@@ -122,7 +123,7 @@ const UserProfile = () => {
       image: finalImage,
       image_url: finalImage,
       images: finalImages.length > 0 ? finalImages : [finalImage],
-      youtubeUrl: p.youtube_url, videoUrl: p.video_url,
+      videoUrl: p.video_url,
       isLiked: likedSet.has(p.id),
       isSaved: savedSet.has(p.id),
       createdAt: new Date(p.created_at),
@@ -196,7 +197,7 @@ const UserProfile = () => {
             .single(),
           supabase
             .from('posts')
-            .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar')
+            .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar')
             .eq('user_id', profileUserId)
             .order('created_at', { ascending: false })
             .limit(100),
@@ -230,18 +231,12 @@ const UserProfile = () => {
           savedSet = new Set((savedData || []).map(s => s.post_id));
         }
 
-        // ✅ 즉시 렌더링: YouTube 검증 전에 먼저 표시
+        // 즉시 렌더링
+
         const initialPosts = posts.map(p => mapDbToPost(p, likedSet, savedSet));
         setUserPosts(initialPosts);
         setLoading(false);
 
-        // ✅ YouTube 검증은 백그라운드에서 배치 처리
-        if (posts.some(p => p.youtube_url)) {
-          sanitizeYoutubeMediaBatch(posts).then(sanitized => {
-            const updatedPosts = sanitized.map(p => mapDbToPost(p, likedSet, savedSet));
-            setUserPosts(updatedPosts);
-          });
-        }
       } catch (error) {
         console.error('Error fetching user data:', error);
         setLoading(false);
@@ -395,7 +390,8 @@ const UserProfile = () => {
                           className="w-full h-full object-cover hover:opacity-80 transition-opacity"
                         />
                       )}
-                      {(post.videoUrl || post.youtubeUrl) && (
+                      {post.videoUrl && (
+
                         <div className="absolute top-2 right-2 z-10">
                           <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
                         </div>

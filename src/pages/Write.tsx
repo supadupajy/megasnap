@@ -6,7 +6,7 @@ import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn } from '@/lib/utils';
+import { cn, createVideoThumbnail } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
@@ -228,7 +228,7 @@ const Write = () => {
     setIsSubmitting(true);
 
     try {
-      const uploadedUrls: string[] = [];
+      const uploadedMedia: Array<{ url: string; type: 'image' | 'video'; previewUrl: string }> = [];
       const mediaToUpload = [...mediaFiles];
 
       for (const [index, media] of mediaToUpload.entries()) {
@@ -247,28 +247,55 @@ const Write = () => {
         if (uploadError) throw uploadError;
         
         const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(filePath);
-        uploadedUrls.push(publicUrl);
+
+        if (media.type === 'video') {
+          const thumbnailBlob = await createVideoThumbnail(media.file);
+          const thumbnailFileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}-thumb.jpg`;
+          const thumbnailPath = `${authUser.id}/${thumbnailFileName}`;
+
+          const { error: thumbnailUploadError } = await supabase.storage
+            .from('post-images')
+            .upload(thumbnailPath, thumbnailBlob, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: 'image/jpeg',
+            });
+
+          if (thumbnailUploadError) throw thumbnailUploadError;
+
+          const { data: { publicUrl: thumbnailUrl } } = supabase.storage
+            .from('post-images')
+            .getPublicUrl(thumbnailPath);
+
+          uploadedMedia.push({ url: publicUrl, type: media.type, previewUrl: thumbnailUrl });
+        } else {
+          uploadedMedia.push({ url: publicUrl, type: media.type, previewUrl: publicUrl });
+        }
       }
+
+      const uploadedUrls = uploadedMedia.map((item) => item.url);
+      const previewUrls = uploadedMedia.map((item) => item.previewUrl);
 
       // 위치 정보: 선택된 위치 → 지도 마지막 중심 순으로 fallback
       const fallbackCenter = mapCache.lastCenter;
       const postLat = initialLocation?.lat ?? fallbackCenter?.lat ?? null;
       const postLng = initialLocation?.lng ?? fallbackCenter?.lng ?? null;
 
-      const isFirstMediaVideo = mediaToUpload[0]?.type === 'video';
+      const firstUploadedMedia = uploadedMedia[0];
+      const isFirstMediaVideo = firstUploadedMedia?.type === 'video';
       
       const postData = {
         content: content.trim(),
         location_name: address || '위치 미지정',
-        latitude: postLat, // ✅ 확실한 변수 사용
-        longitude: postLng, // ✅ 확실한 변수 사용
-        image_url: uploadedUrls[0], 
-        images: uploadedUrls,
+        latitude: postLat,
+        longitude: postLng,
+        image_url: previewUrls[0], 
+        images: previewUrls,
         user_id: authUser.id,
         user_name: profile?.nickname || '탐험가',
         user_avatar: profile?.avatar_url,
         category,
-        video_url: isFirstMediaVideo ? uploadedUrls[0] : null,
+        video_url: isFirstMediaVideo ? firstUploadedMedia.url : null,
       };
 
       const { data: createdPost, error: insertError } = await supabase
@@ -288,7 +315,6 @@ const Write = () => {
         id: createdPost.id,
         user_id: authUser.id,
         owner_id: authUser.id,
-        display_user_id: null,
         isAd: createdPost.content?.startsWith('[AD]'),
         isGif: false,
         isInfluencer: false,
@@ -302,14 +328,13 @@ const Write = () => {
         lat: createdPost.latitude,
         lng: createdPost.longitude,
         likes: 0,
-        image: uploadedUrls[0],
-        image_url: uploadedUrls[0],
-        images: uploadedUrls,
+        image: previewUrls[0],
+        image_url: previewUrls[0],
+        images: previewUrls,
         videoUrl: createdPost.video_url,
         createdAt: new Date(createdPost.created_at),
         category: createdPost.category,
         borderType: 'none',
-        is_seed_data: false,
       };
 
       showSuccess('게시물이 등록되었습니다! ✨');

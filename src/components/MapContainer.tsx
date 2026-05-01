@@ -17,12 +17,8 @@ interface MapContainerProps {
   searchResultLocation?: { lat: number; lng: number } | null;
 }
 
-const FALLBACK_IMAGE = "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg";
+const FALLBACK_IMAGE = "/placeholder.svg";
 
-const BROKEN_UNSPLASH_IDS = new Set([
-  "photo-1548199973-03cbf5292374",
-  "photo-1501785888041-af3ef285b470",
-]);
 
 const LONG_PRESS_DURATION = 1000; // 1초
 const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그 감지를 빠르게)
@@ -558,21 +554,9 @@ const MapContainer = ({
       const isViewed = combinedViewedIds.has(post.id);
       const isNew = !!post.isNewRealtime;
       const existingOverlay = overlaysRef.current.get(post.id);
-      
-      const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
-      // [FIX] isMineKey: 시드 데이터는 display_user_id 기준, 일반 포스팅은 owner_id/user_id 기준
-      let isMineKey = false;
-      if (authUser) {
-        if (!isSeed) {
-          const ownerId = (post as any).owner_id || (post as any).user_id;
-          isMineKey = !!(ownerId && String(ownerId) === String(authUser.id));
-        } else {
-          const displayId = (post as any).display_user_id;
-          isMineKey = !!(displayId && String(displayId) === String(authUser.id));
-        }
-      }
+      const isMineKey = !!(authUser && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUser.id));
       const isAdPendingKey = !!(post as any).isAdPending;
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isSeed}-${isMineKey}-${isAdPendingKey}-${post.likes}`;
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -631,20 +615,9 @@ const MapContainer = ({
       if (isViewed === currentIsViewed) return;
       const p = postsRef.current.find(item => item.id === id);
       if (!p) return;
-      const isSeed = p.is_seed_data === true || p.is_seed_data === 'true' || p.is_seed_data === 1;
-      // [FIX] isMineKey: 시드 데이터는 display_user_id 기준, 일반 포스팅은 owner_id/user_id 기준
-      let isMineKey = false;
-      if (authUserRef.current) {
-        if (!isSeed) {
-          const ownerId = (p as any).owner_id || (p as any).user_id;
-          isMineKey = !!(ownerId && String(ownerId) === String(authUserRef.current.id));
-        } else {
-          const displayId = (p as any).display_user_id;
-          isMineKey = !!(displayId && String(displayId) === String(authUserRef.current.id));
-        }
-      }
+      const isMineKey = !!(authUserRef.current && String(((p as any).owner_id || (p as any).user_id || '')) === String(authUserRef.current.id));
       const isAdPendingKey = !!(p as any).isAdPending;
-      const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isSeed}-${isMineKey}-${isAdPendingKey}`;
+      const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${p.likes}`;
       content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
       content.setAttribute('data-content-state', newStateKey);
       scheduleOverlapBadgeUpdateRef.current();
@@ -702,19 +675,9 @@ const MapContainer = ({
                 ...Array.from(internalViewedIdsRef.current),
               ]);
               const isViewedNow = combinedViewedNow.has(postId);
-              const isSeedNow = pNow.is_seed_data === true || pNow.is_seed_data === 'true' || pNow.is_seed_data === 1;
-              let isMineKeyNow = false;
-              if (authUserRef.current) {
-                if (!isSeedNow) {
-                  const ownerIdNow = (pNow as any).owner_id || (pNow as any).user_id;
-                  isMineKeyNow = !!(ownerIdNow && String(ownerIdNow) === String(authUserRef.current.id));
-                } else {
-                  const displayIdNow = (pNow as any).display_user_id;
-                  isMineKeyNow = !!(displayIdNow && String(displayIdNow) === String(authUserRef.current.id));
-                }
-              }
+              const isMineKeyNow = !!(authUserRef.current && String(((pNow as any).owner_id || (pNow as any).user_id || '')) === String(authUserRef.current.id));
               const isAdPendingKeyNow = !!(pNow as any).isAdPending;
-              const nowStateKey = `${isViewedNow}-${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isSeedNow}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}`;
+              const nowStateKey = `${isViewedNow}-${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}`;
               content.innerHTML = getMarkerInnerHtmlRef.current(pNow, isViewedNow);
               content.setAttribute('data-content-state', nowStateKey);
               scheduleOverlapBadgeUpdateRef.current();
@@ -741,19 +704,9 @@ const MapContainer = ({
                   ...Array.from(internalViewedIdsRef.current),
                 ]);
                 const isViewed2 = combinedViewed.has(postId);
-                const isSeed2 = p2.is_seed_data === true || p2.is_seed_data === 'true' || p2.is_seed_data === 1;
-                let isMineKey2 = false;
-                if (authUserRef.current) {
-                  if (!isSeed2) {
-                    const ownerId2 = (p2 as any).owner_id || (p2 as any).user_id;
-                    isMineKey2 = !!(ownerId2 && String(ownerId2) === String(authUserRef.current.id));
-                  } else {
-                    const displayId2 = (p2 as any).display_user_id;
-                    isMineKey2 = !!(displayId2 && String(displayId2) === String(authUserRef.current.id));
-                  }
-                }
+                const isMineKey2 = !!(authUserRef.current && String(((p2 as any).owner_id || (p2 as any).user_id || '')) === String(authUserRef.current.id));
                 const isAdPendingKey2 = !!(p2 as any).isAdPending;
-                const finalStateKey = `${isViewed2}-${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isSeed2}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}`;
+                const finalStateKey = `${isViewed2}-${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}`;
                 content.innerHTML = getMarkerInnerHtmlRef.current(p2, isViewed2);
                 content.setAttribute('data-content-state', finalStateKey);
                 scheduleOverlapBadgeUpdateRef.current();
@@ -1176,7 +1129,6 @@ const MapContainer = ({
   const getMarkerInnerHtml = (post: any, isViewed: boolean) => {
     const isAd = post.isAd || (post.content && post.content.includes('[AD]'));
     const isAdPending = !!(post as any).isAdPending;
-    const isSeed = post.is_seed_data === true || post.is_seed_data === 'true' || post.is_seed_data === 1;
     
     // 광고 대기 중 마커: 반투명 + 시계 아이콘
     if (isAdPending) {
@@ -1195,56 +1147,24 @@ const MapContainer = ({
 
     let isMine = false;
     const currentUser = authUserRef.current;
-    if (currentUser) {
-      // [FIX] 시드 데이터는 user_id가 현재 사용자 ID이지만 실제로는 다른 사람 포스팅
-      // owner_id(실제 소유자)를 우선 사용하되, 시드 데이터는 display_user_id가 없거나
-      // display_user_id가 현재 사용자와 다르면 MY 표시 안 함
-      if (!isSeed) {
-        // 일반 포스팅: user_id 또는 owner_id로 판별
-        const ownerId = post.owner_id || post.user_id;
-        if (ownerId && String(ownerId) === String(currentUser.id)) isMine = true;
-      } else {
-        // 시드 데이터: display_user_id가 현재 사용자 ID인 경우에만 MY
-        // (display_user_id가 null이거나 다른 사람이면 MY 아님)
-        const displayId = post.display_user_id;
-        if (displayId && String(displayId) === String(currentUser.id)) isMine = true;
-        // display_user_id가 없으면 MY 표시 안 함 (랜덤 닉네임 풀에서 생성된 경우)
-      }
-    }
+    const isMine = !!(currentUser && String((post.owner_id || post.user_id || '')) === String(currentUser.id));
                    
-    // [AD 보정] 광고는 절대 비디오/유튜브로 표시하지 않음
-    const hasVideo = !isAd && (!!post.videoUrl || !!post.youtubeUrl);
+    // 광고가 아니고 videoUrl이 있으면 재생 아이콘만 표시
+    const hasVideo = !isAd && !!post.videoUrl;
 
     const isBrokenUrl = (url: string) => {
       if (!url || url === 'null' || url === 'undefined') return true;
-      if (url.includes('source.unsplash.com') || url.length < 50) return true;
-      for (const id of BROKEN_UNSPLASH_IDS) {
-        if (url.includes(id)) return true;
-      }
+      if (url.startsWith('blob:')) return true;
       return false;
     };
 
-    let displayImage = post.image;
-    const isVideo = !isAd && (!!post.videoUrl || !!post.youtubeUrl);
+    let displayImage = post.image_url || post.image;
 
-    // 광고이고 image가 유튜브 썸네일이면 안정적인 음식 이미지로 대체
-    if (isAd && typeof displayImage === 'string' && displayImage.includes('img.youtube.com')) {
-      displayImage = getFallbackImage(`ad:${post.id}`);
-    }
-
-    if (isVideo && post.videoUrl) {
-      displayImage = post.videoUrl;
-    } else if (displayImage && (displayImage.includes('unsplash.com') || displayImage.includes('photo-1501785888041-af3ef285b470'))) {
+    if (isBrokenUrl(displayImage)) {
       displayImage = getFallbackImage(String(post.id));
     }
 
-    if (isBrokenUrl(displayImage) && !isVideo) {
-      displayImage = getFallbackImage(String(post.id));
-    }
-
-    const optimizedDisplayImage = !isVideo
-      ? getOptimizedMarkerImage(displayImage, String(post.id))
-      : displayImage;
+    const optimizedDisplayImage = getOptimizedMarkerImage(displayImage, String(post.id));
 
     let borderType = post.borderType || 'none';
     let labelText = ''; let labelBg = ''; let labelColor = 'white';
@@ -1314,10 +1234,7 @@ const MapContainer = ({
         <div class="${influencerClass}" style="${innerBoxStyle}">
           ${isAd ? adSparklesHtml : ''}
           <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '15px' : '16px'};" class="${shineClass}">
-            ${isVideo && post.videoUrl ?
-              `<video src="${displayImage}#t=0.1" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>` :
-              `<img src="${optimizedDisplayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />`
-            }
+            <img src="${optimizedDisplayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />
             <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-filter:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);line-height:1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
             </div>

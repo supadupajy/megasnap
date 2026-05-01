@@ -7,42 +7,18 @@ import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { supabase } from "@/integrations/supabase/client";
 
+export const PLACEHOLDER_IMAGE = '/placeholder.svg';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getYoutubeId(url: string) {
-  if (!url) return null;
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
-}
-
-export const getYoutubeThumbnail = (url: string | null | undefined): string | null => {
-  if (!url) return null;
-  const id = getYoutubeId(url);
-  if (!id) return null;
-  return `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+export const getFallbackImage = (_seed: string = 'default') => {
+  return PLACEHOLDER_IMAGE;
 };
 
-/**
- * [CRITICAL FIX] Unsplash 관련 모든 기본 이미지를 Pexels 고화질 이미지로 강제 교체
- * 문제의 '노란 꽃 호수' 이미지(photo-1501785888041-af3ef285b470)를 완전히 박멸합니다.
- */
-export const getFallbackImage = (seed: string = "default") => {
-  const pexelsFallbacks = [
-    "https://images.pexels.com/photos/2371233/pexels-photo-2371233.jpeg",
-    "https://images.pexels.com/photos/2349141/pexels-photo-2349141.jpeg",
-    "https://images.pexels.com/photos/1486337/pexels-photo-1486337.jpeg",
-    "https://images.pexels.com/photos/3313009/pexels-photo-3313009.jpeg"
-  ];
-  let h = 0;
-  for(let i = 0; i < seed.length; i++) h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
-  return pexelsFallbacks[Math.abs(h) % pexelsFallbacks.length];
-};
-
-export const getPlaceholderImage = (width: number = 800, height: number = 600, seed: string = "seed") => {
-  return getFallbackImage(seed);
+export const getPlaceholderImage = (_width: number = 800, _height: number = 600, _seed: string = 'seed') => {
+  return PLACEHOLDER_IMAGE;
 };
 
 export const isMobilePlatform = () => Capacitor.isNativePlatform();
@@ -79,13 +55,15 @@ export const getOptimizedMarkerImage = (url: string | null | undefined, seed: st
   const normalizedUrl = url.trim();
   const lowerUrl = normalizedUrl.toLowerCase();
 
+  if (normalizedUrl.startsWith('data:') || normalizedUrl.startsWith('/')) {
+    return normalizedUrl;
+  }
+
   if (
-    normalizedUrl.startsWith('data:') ||
     lowerUrl.endsWith('.svg') ||
     lowerUrl.includes('.svg?') ||
     lowerUrl.endsWith('.gif') ||
-    lowerUrl.includes('.gif?') ||
-    normalizedUrl.includes('img.youtube.com')
+    lowerUrl.includes('.gif?')
   ) {
     return normalizedUrl;
   }
@@ -99,45 +77,73 @@ export const getOptimizedMarkerImage = (url: string | null | undefined, seed: st
     return data.publicUrl;
   }
 
+  return normalizedUrl;
+};
+
+export const createVideoThumbnail = async (file: File): Promise<Blob> => {
+  const objectUrl = URL.createObjectURL(file);
+
   try {
-    const parsed = new URL(normalizedUrl);
+    return await new Promise<Blob>((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      video.src = objectUrl;
 
-    if (parsed.hostname === 'images.unsplash.com') {
-      parsed.searchParams.set('auto', 'format');
-      parsed.searchParams.set('fit', 'crop');
-      parsed.searchParams.set('crop', 'entropy');
-      parsed.searchParams.set('w', '160');
-      parsed.searchParams.set('h', '160');
-      parsed.searchParams.set('q', '60');
-      parsed.searchParams.set('dpr', '1');
-      return parsed.toString();
-    }
+      const cleanup = () => {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+        URL.revokeObjectURL(objectUrl);
+      };
 
-    if (parsed.hostname === 'images.pexels.com') {
-      parsed.searchParams.set('auto', 'compress');
-      parsed.searchParams.set('cs', 'tinysrgb');
-      parsed.searchParams.set('fit', 'crop');
-      parsed.searchParams.set('w', '160');
-      parsed.searchParams.set('h', '160');
-      parsed.searchParams.set('dpr', '1');
-      return parsed.toString();
-    }
+      const fail = () => {
+        cleanup();
+        reject(new Error('비디오 썸네일을 생성할 수 없습니다.'));
+      };
 
-    return normalizedUrl;
-  } catch {
-    return normalizedUrl;
+      video.onloadeddata = () => {
+        const seekTime = Math.min(Math.max(video.duration * 0.15, 0.1), Math.max(video.duration - 0.1, 0.1));
+        video.currentTime = Number.isFinite(seekTime) ? seekTime : 0.1;
+      };
+
+      video.onseeked = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const width = video.videoWidth || 320;
+          const height = video.videoHeight || 320;
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d');
+          if (!context) {
+            fail();
+            return;
+          }
+
+          context.drawImage(video, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            cleanup();
+            if (!blob) {
+              reject(new Error('비디오 썸네일을 생성할 수 없습니다.'));
+              return;
+            }
+            resolve(blob);
+          }, 'image/jpeg', 0.82);
+        } catch (error) {
+          cleanup();
+          reject(error instanceof Error ? error : new Error('비디오 썸네일을 생성할 수 없습니다.'));
+        }
+      };
+
+      video.onerror = fail;
+    });
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl);
+    throw error;
   }
 };
 
-/**
- * 숫자를 읽기 좋은 형식으로 포맷
- * - 1,000,000 이상: 1.5M 형식
- * - 1,000 이상: 1,500 형식 (천 단위 콤마)
- * - 그 외: 그대로 표시
- */
-/**
- * 날짜를 "N분 전" 형태로 포맷. 1분 미만은 "1분 전"으로 표시.
- */
 export const formatRelativeTime = (date: Date | string): string => {
   const d = new Date(date);
   const diffMs = Date.now() - d.getTime();

@@ -198,7 +198,8 @@ const PrivacySettings = () => {
               blockedUsers.map((b) => (
                 <div key={b.blocked_id} className="flex items-center gap-3 p-4 border-b border-gray-50 last:border-none">
                   <img
-                    src={b.profile?.avatar_url || `https://i.pravatar.cc/150?u=${b.blocked_id}`}
+                    src={b.profile?.avatar_url || '/placeholder.svg'}
+
                     alt=""
                     className="w-10 h-10 rounded-full object-cover flex-shrink-0 grayscale opacity-60"
                   />

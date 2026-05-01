@@ -233,7 +233,8 @@ const Notifications = () => {
                           }}
                         >
                           <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
-                            <AvatarImage src={notif.actor?.avatar_url || `https://i.pravatar.cc/150?u=${notif.actor_id}`} />
+                            <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
+
                             <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1 text-sm leading-tight">

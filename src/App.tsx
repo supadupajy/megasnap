@@ -36,7 +36,6 @@ import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { NotificationProvider } from "./components/NotificationProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
-import { initializeYoutubePool } from "./lib/mock-data";
 import ConnectedAccounts from "./pages/ConnectedAccounts";
 import DeviceManagement from "./pages/DeviceManagement";
 import Subscription from "./pages/Subscription";
@@ -241,8 +240,6 @@ const App = () => {
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    initializeYoutubePool();
-    // 3초 동안 스플래시 유지
     const timer = setTimeout(() => {
       setShowSplash(false);
     }, 3000);
@@ -274,4 +271,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default App;default App;

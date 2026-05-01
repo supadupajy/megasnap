@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
-import { sanitizeYoutubeMedia } from '@/utils/youtube-utils';
-import { remapUnsplashDisplayUrl } from '@/lib/mock-data';
+import { getFallbackImage } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { handleDeepLink } from '@/utils/share';
 
-const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, youtube_url, video_url, created_at, user_id, user_name, user_avatar';
+const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar';
 
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +24,7 @@ const PostDetail = () => {
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
-  const avatarUrl = useMemo(() => profile?.avatar_url || `https://i.pravatar.cc/150?u=${userId}`, [profile, userId]);
+  const avatarUrl = useMemo(() => profile?.avatar_url || '/placeholder.svg', [profile]);
 
   const isValidUrl = (url: any) => {
     if (!url || typeof url !== 'string') return false;
@@ -39,53 +39,48 @@ const PostDetail = () => {
     likedSet: Set<string>,
     savedSet: Set<string>
   ): Promise<Post> => {
-    const SAFE_FALLBACK = "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+    const fallbackImage = getFallbackImage(String(p.id));
 
-    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
+    let rawImage = isValidUrl(p.image_url) ? p.image_url : fallbackImage;
     let rawImages = Array.isArray(p.images) && p.images.length > 0
       ? p.images.filter(isValidUrl)
       : [rawImage];
 
-    const sanitized = await sanitizeYoutubeMedia({ ...p, image_url: rawImage, images: rawImages });
-    const isAd = sanitized.content?.trim().startsWith('[AD]');
+    const isAd = p.content?.trim().startsWith('[AD]');
+    const finalImage = isValidUrl(rawImage) ? rawImage : fallbackImage;
 
-    let finalImage = isValidUrl(sanitized.image_url) ? sanitized.image_url : SAFE_FALLBACK;
-    if (finalImage.includes('unsplash.com')) {
-      finalImage = remapUnsplashDisplayUrl(finalImage, sanitized.id, isAd ? 'food' : (sanitized.category || 'general')) || finalImage;
-    }
-
-    let finalImages = Array.isArray(sanitized.images) && sanitized.images.length > 0
-      ? sanitized.images.filter(isValidUrl)
+    let finalImages = Array.isArray(rawImages) && rawImages.length > 0
+      ? rawImages.filter(isValidUrl)
       : [finalImage];
 
     return {
-      id: sanitized.id,
+      id: p.id,
       isAd,
       isGif: false,
       isInfluencer: false,
       user: {
-        id: sanitized.user_id,
-        name: sanitized.user_name || '탐험가',
-        avatar: sanitized.user_avatar || `https://i.pravatar.cc/150?u=${sanitized.user_id}`
+        id: p.user_id,
+        name: p.user_name || '탐험가',
+        avatar: p.user_avatar || '/placeholder.svg'
       },
-      content: sanitized.content?.replace(/^\[AD\]\s*/, '') || '',
-      location: sanitized.location_name || '알 수 없는 장소',
-      lat: sanitized.latitude,
-      lng: sanitized.longitude,
-      latitude: sanitized.latitude,
-      longitude: sanitized.longitude,
-      likes: Number(sanitized.likes || 0),
+
+      content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+      location: p.location_name || '알 수 없는 장소',
+      lat: p.latitude,
+      lng: p.longitude,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      likes: Number(p.likes || 0),
       commentsCount: 0,
       comments: [],
       image: finalImage,
       image_url: finalImage,
       images: finalImages,
-      youtubeUrl: sanitized.youtube_url,
-      videoUrl: sanitized.video_url,
-      isLiked: likedSet.has(sanitized.id),
-      isSaved: savedSet.has(sanitized.id),
-      createdAt: new Date(sanitized.created_at),
-      category: sanitized.category || 'none'
+      videoUrl: p.video_url,
+      isLiked: likedSet.has(p.id),
+      isSaved: savedSet.has(p.id),
+      createdAt: new Date(p.created_at),
+      category: p.category || 'none'
     };
   };
 

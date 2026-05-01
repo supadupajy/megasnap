@@ -215,7 +215,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
   );
 };
 
-const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80";
+const FALLBACK_IMAGE = "/placeholder.svg";
 
 const TrendingAdBanner: React.FC = () => {
   const { ad, loading, now } = useAd('trending');
@@ -352,7 +352,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, []);
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80';
+    (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+
   };
 
   useEffect(() => {
@@ -484,4 +485,4 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   );
 };
 
-export default TrendingPosts;
+export default TrendingPosts;ts;

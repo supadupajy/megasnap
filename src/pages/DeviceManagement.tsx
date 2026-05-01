@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Smartphone, Monitor, Tablet, LogOut, MapPin } from 'lucide-react';
+import { ChevronLeft, Smartphone, LogOut, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess } from '@/utils/toast';
 import {
@@ -13,45 +13,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const mockDevices = [
-  {
-    id: '1',
-    name: 'iPhone 15 Pro',
-    type: 'mobile',
-    os: 'iOS 17.4',
-    location: '서울, 대한민국',
-    lastActive: '현재 사용 중',
-    isCurrent: true,
-  },
-  {
-    id: '2',
-    name: 'MacBook Pro',
-    type: 'desktop',
-    os: 'macOS 14.4',
-    location: '서울, 대한민국',
-    lastActive: '2일 전',
-    isCurrent: false,
-  },
-  {
-    id: '3',
-    name: 'iPad Air',
-    type: 'tablet',
-    os: 'iPadOS 17.2',
-    location: '부산, 대한민국',
-    lastActive: '1주일 전',
-    isCurrent: false,
-  },
-];
-
-const DeviceIcon = ({ type }: { type: string }) => {
-  if (type === 'desktop') return <Monitor className="w-5 h-5" />;
-  if (type === 'tablet') return <Tablet className="w-5 h-5" />;
-  return <Smartphone className="w-5 h-5" />;
-};
+interface DeviceSession {
+  id: string;
+  name: string;
+  isCurrent: boolean;
+}
 
 const DeviceManagement = () => {
   const navigate = useNavigate();
-  const [devices, setDevices] = useState(mockDevices);
+  const [devices, setDevices] = useState<DeviceSession[]>([]);
   const [targetDevice, setTargetDevice] = useState<string | null>(null);
   const [showLogoutAll, setShowLogoutAll] = useState(false);
 
@@ -81,45 +51,52 @@ const DeviceManagement = () => {
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="px-4 pt-5 space-y-4">
           <p className="text-[13px] text-gray-400 font-medium px-1">
-            현재 계정에 로그인된 기기 목록입니다. 모르는 기기가 있다면 즉시 로그아웃하세요.
+            현재 계정에 로그인된 기기 목록입니다. 실제 세션 데이터가 연결되면 이 화면에 표시됩니다.
           </p>
 
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            {devices.map((device, idx) => (
-              <div
-                key={device.id}
-                className={`flex items-center justify-between py-4 px-4 ${idx < devices.length - 1 ? 'border-b border-gray-50' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${device.isCurrent ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
-                    <DeviceIcon type={device.type} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-gray-800">{device.name}</p>
-                      {device.isCurrent && (
-                        <span className="text-[10px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">현재 기기</span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-gray-400 font-medium mt-0.5">{device.os}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-gray-300" />
-                      <p className="text-[11px] text-gray-400 font-medium">{device.location} · {device.lastActive}</p>
-                    </div>
-                  </div>
-                </div>
-                {!device.isCurrent && (
-                  <button
-                    onClick={() => setTargetDevice(device.id)}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 active:scale-95 transition-all"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    로그아웃
-                  </button>
-                )}
+          {devices.length === 0 ? (
+            <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm p-8 flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center mb-4">
+                <Shield className="w-8 h-8 text-indigo-500" />
               </div>
-            ))}
-          </div>
+              <h2 className="text-base font-black text-gray-900">표시할 로그인 기기가 없습니다</h2>
+              <p className="text-sm text-gray-500 font-medium leading-relaxed mt-2">
+                목업 기기 목록은 제거했고, 실제 세션 연동 전까지는 빈 상태로 표시됩니다.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+              {devices.map((device, idx) => (
+                <div
+                  key={device.id}
+                  className={`flex items-center justify-between py-4 px-4 ${idx < devices.length - 1 ? 'border-b border-gray-50' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${device.isCurrent ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
+                      <Smartphone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-gray-800">{device.name}</p>
+                        {device.isCurrent && (
+                          <span className="text-[10px] font-black bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full">현재 기기</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {!device.isCurrent && (
+                    <button
+                      onClick={() => setTargetDevice(device.id)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 active:scale-95 transition-all"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      로그아웃
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {devices.filter(d => !d.isCurrent).length > 0 && (
             <button
