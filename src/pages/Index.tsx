@@ -159,6 +159,11 @@ const Index = () => {
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
 
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
+  const handleCategorySelect = useCallback((cats: string[]) => {
+    setSelectedCategories(cats);
+  }, []);
+
   // ── 팔로잉 목록 (내 친구 포스팅 필터용) ─────────────────────
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
 
@@ -177,6 +182,37 @@ const Index = () => {
         }
       });
   }, [authUser?.id]);
+
+  // ── friends 필터 선택 시 친구 포스팅 전국 범위 fetch ──────────
+  // 친구 포스팅이 현재 화면 bounds 밖에 있어도 allPosts에 주입해
+  // displayedMarkers와 offScreenCounts에 반영되도록 함
+  useEffect(() => {
+    if (!selectedCategories.includes('friends')) return;
+    if (followingIds.size === 0) return;
+
+    const ids = Array.from(followingIds);
+    let cancelled = false;
+
+    supabase
+      .from('posts')
+      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, image_url, user_id, user_name, user_avatar, images, content, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
+      .in('user_id', ids)
+      .limit(500)
+      .then(({ data, error }) => {
+        if (cancelled || error || !data) return;
+        setAllPosts(prev => {
+          const existingMap = new Map(prev.map(p => [p.id, p]));
+          data.forEach((r: any) => {
+            if (!existingMap.has(r.id)) {
+              existingMap.set(r.id, mapRawToPost(r, null));
+            }
+          });
+          return Array.from(existingMap.values()).slice(0, 5000);
+        });
+      });
+
+    return () => { cancelled = true; };
+  }, [selectedCategories, followingIds]);
 
   // map_marker 광고 데이터 구독 (여러 개 지원, now: 시간 전환 시 리렌더 트리거)
   const { ads: mapMarkerAds, now: mapMarkerNow } = useMapMarkerAds();
@@ -197,10 +233,6 @@ const Index = () => {
   const trendingDivRef = useRef<HTMLDivElement>(null);
   const [trendingBottom, setTrendingBottom] = useState(160);
   const bottomNavHeight = 64; // BottomNav 높이(px)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(['all']);
-  const handleCategorySelect = useCallback((cats: string[]) => {
-    setSelectedCategories(cats);
-  }, []);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
