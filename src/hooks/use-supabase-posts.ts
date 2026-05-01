@@ -95,30 +95,8 @@ export const fetchOffScreenCounts = async (
   const latRange = ne.lat - sw.lat;
   const lngRange = ne.lng - sw.lng;
 
-  // 카카오맵 getBounds()가 실제 화면보다 좁게 반환하는 경우를 보정:
-  // 경계를 바깥쪽으로 확장해서 화면 가장자리 포스팅이 "화면 안"으로 판단되도록 함
-  // → qNe.lng보다 더 오른쪽에 있어야 right로 카운트
-  const pad = 0.10;
-  const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
-  const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
-
-  // 코너 분류 기준: lat 초과 비율 vs lng 초과 비율
-  // lat 초과 비율이 더 크면 상/하, lng 초과 비율이 더 크면 좌/우
-  // 비율이 같으면 (45도 대각선) 상/하 우선
-  // 이를 DB에서 표현하기 위해 각 코너의 분류 경계를 계산
-  //
-  // 예: 오른쪽 상단 코너에서
-  //   lat 초과량 / latRange >= lng 초과량 / lngRange → top
-  //   lat 초과량 / latRange <  lng 초과량 / lngRange → right
-  //
-  // lat 초과량 = lat - ne.lat, lng 초과량 = lng - ne.lng (오른쪽 상단)
-  // 경계: (lat - ne.lat) / latRange = (lng - ne.lng) / lngRange
-  //      → lat = ne.lat + latRange/lngRange * (lng - ne.lng)
-  // 이를 단순화: lat 초과 비율 >= lng 초과 비율이면 top
-  //
-  // Supabase에서는 computed column이 없으므로,
-  // 코너를 "정확히 45도 경계"로 나누는 대신
-  // 각 코너를 lat/lng 범위 비율로 분할하는 경계 lat를 계산해서 필터링합니다.
+  // pad 없이 실제 bounds 기준으로 화면 밖 포스팅 카운트
+  // (onClickDirection의 isOutsideInDir 로직과 동일한 기준)
 
   // 카테고리/사용자 필터 적용 헬퍼
   const applyFilters = <T>(q: T): T => {
@@ -127,7 +105,6 @@ export const fetchOffScreenCounts = async (
     if (cats.includes('mine') && options?.userId) {
       qq = qq.eq('user_id', options.userId);
     } else if (!cats.includes('all') && cats.length > 0 && !cats.includes('friends') && !cats.includes('mine')) {
-      // 일반 카테고리 필터: food/accident/place/animal/hot/influencer
       const dbCats = cats.filter(c => ['food', 'accident', 'place', 'animal'].includes(c));
       if (dbCats.length > 0) {
         qq = qq.in('category', dbCats);
@@ -145,19 +122,19 @@ export const fetchOffScreenCounts = async (
       cornerRes,
     ] = await Promise.all([
       applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('latitude', qNe.lat)
-        .gte('longitude', qSw.lng).lte('longitude', qNe.lng)),
+        .gt('latitude', ne.lat)
+        .gte('longitude', sw.lng).lte('longitude', ne.lng)),
       applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('latitude', qSw.lat)
-        .gte('longitude', qSw.lng).lte('longitude', qNe.lng)),
+        .lt('latitude', sw.lat)
+        .gte('longitude', sw.lng).lte('longitude', ne.lng)),
       applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .lt('longitude', qSw.lng)
-        .gte('latitude', qSw.lat).lte('latitude', qNe.lat)),
+        .lt('longitude', sw.lng)
+        .gte('latitude', sw.lat).lte('latitude', ne.lat)),
       applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true })
-        .gt('longitude', qNe.lng)
-        .gte('latitude', qSw.lat).lte('latitude', qNe.lat)),
+        .gt('longitude', ne.lng)
+        .gte('latitude', sw.lat).lte('latitude', ne.lat)),
       applyFilters(supabase.from('posts').select('id, latitude, longitude')
-        .or(`and(latitude.gt.${qNe.lat},longitude.lt.${qSw.lng}),and(latitude.gt.${qNe.lat},longitude.gt.${qNe.lng}),and(latitude.lt.${qSw.lat},longitude.lt.${qSw.lng}),and(latitude.lt.${qSw.lat},longitude.gt.${qNe.lng})`)),
+        .or(`and(latitude.gt.${ne.lat},longitude.lt.${sw.lng}),and(latitude.gt.${ne.lat},longitude.gt.${ne.lng}),and(latitude.lt.${sw.lat},longitude.lt.${sw.lng}),and(latitude.lt.${sw.lat},longitude.gt.${ne.lng})`)),
     ]);
 
     if (topOnlyRes.error) throw topOnlyRes.error;
@@ -172,20 +149,18 @@ export const fetchOffScreenCounts = async (
     let right = rightOnlyRes.count || 0;
 
     (cornerRes.data || []).forEach((p: any) => {
-      const latExcessTop = p.latitude > qNe.lat ? (p.latitude - qNe.lat) / latRange : 0;
-      const latExcessBottom = p.latitude < qSw.lat ? (qSw.lat - p.latitude) / latRange : 0;
-      const lngExcessLeft = p.longitude < qSw.lng ? (qSw.lng - p.longitude) / lngRange : 0;
-      const lngExcessRight = p.longitude > qNe.lng ? (p.longitude - qNe.lng) / lngRange : 0;
+      const latExcessTop    = p.latitude  > ne.lat ? (p.latitude  - ne.lat)  / latRange : 0;
+      const latExcessBottom = p.latitude  < sw.lat ? (sw.lat  - p.latitude)  / latRange : 0;
+      const lngExcessLeft   = p.longitude < sw.lng ? (sw.lng  - p.longitude) / lngRange : 0;
+      const lngExcessRight  = p.longitude > ne.lng ? (p.longitude - ne.lng)  / lngRange : 0;
 
-      const vertical = Math.max(latExcessTop, latExcessBottom);
+      const vertical   = Math.max(latExcessTop, latExcessBottom);
       const horizontal = Math.max(lngExcessLeft, lngExcessRight);
 
       if (vertical >= horizontal) {
-        if (latExcessTop > 0) top++;
-        else bottom++;
+        if (latExcessTop > 0) top++; else bottom++;
       } else {
-        if (lngExcessLeft > 0) left++;
-        else right++;
+        if (lngExcessLeft > 0) left++; else right++;
       }
     });
 
