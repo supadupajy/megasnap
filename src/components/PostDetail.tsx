@@ -810,26 +810,4 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   );
 };
 
-export default PostDetail;  isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-      />
-    </>
-  );
-};
-
-export default PostDetail;{confirmDelete}
-      />
-    </>
-  );
-};
-
-export default PostDetail;  isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={confirmDelete}
-      />
-    </>
-  );
-};
-
 export default PostDetail;
