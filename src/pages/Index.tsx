@@ -758,6 +758,11 @@ const Index = () => {
 
   // ── 마커 클릭 ────────────────────────────────────────────────
   const handleMarkerClick = useCallback(async (lightPost: Post) => {
+    // allPosts에 없는 포스트라면 먼저 추가해서 initialIndex가 -1이 되지 않도록 보장
+    setAllPosts(prev => {
+      if (prev.some(p => p.id === lightPost.id)) return prev;
+      return [lightPost, ...prev];
+    });
     setSelectedPostId(lightPost.id);
     // 광고 마커는 posts 테이블에 없으므로 DB fetch 스킵
     if (lightPost.isAd) return;
