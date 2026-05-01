@@ -585,6 +585,8 @@ const Index = () => {
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
+  const mapChangeCalledRef = useRef(false);
+
   const handleMapChange = useCallback((data: any) => {
     // mapDataRef는 즉시 업데이트 (throttle 전에도 최신값 유지)
     mapDataRef.current = data;
@@ -602,6 +604,14 @@ const Index = () => {
     }
     if (isSelectingAdLocationRef.current && data.center) {
       tempAdLocationRef.current = data.center;
+    }
+
+    // 최초 호출은 throttle 없이 즉시 처리 → 앱 시작 시 마커 즉시 로딩
+    if (!mapChangeCalledRef.current) {
+      mapChangeCalledRef.current = true;
+      if (data.level !== undefined) setCurrentZoom(data.level);
+      setMapData(data);
+      return;
     }
 
     if (throttleTimer.current) clearTimeout(throttleTimer.current);

@@ -480,7 +480,8 @@ const MapContainer = ({
       const tryInitialUpdate = (attempts: number) => {
         if (initialUpdateDone || !mapInstance.current) return;
         try {
-          mapInstance.current.relayout();
+          // 첫 시도에서만 relayout() 호출 (이후엔 불필요하고 깜빡임 유발 가능)
+          if (attempts === 15) mapInstance.current.relayout();
           updateZoomClass();
           const bounds = mapInstance.current.getBounds();
           const sw = bounds.getSouthWest();
@@ -584,7 +585,9 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       const isMineKey = !!(authUser && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUser.id));
       const isAdPendingKey = !!(post as any).isAdPending;
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}`;
+      // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
+      const hasThumbKey = (!post.isAd && post.videoUrl) ? (videoThumbCacheRef.current.has(post.id) ? '1' : '0') : '';
+      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -1206,6 +1209,10 @@ const MapContainer = ({
             if (img) {
               img.src = dataUrl;
             }
+            // data-content-state를 무효화해서 다음 React 렌더 시 마커 HTML이 갱신되도록 함
+            // (썸네일 캐시 key '0' → '1' 변경으로 contentStateKey가 달라짐)
+            const currentState = content.getAttribute('data-content-state') || '';
+            content.setAttribute('data-content-state', currentState + '-thumb');
           }
         }
       } catch {
