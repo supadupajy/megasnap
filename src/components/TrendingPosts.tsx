@@ -137,6 +137,7 @@ interface TrendingPostItemProps {
 
 const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, handleImageError }) => {
   const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
+  const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
   const borderType = post.borderType || 'none';
   let borderColor = 'border-gray-100';
@@ -205,7 +206,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
         </div>
       </div>
 
-      {post.hot_since && new Date().getTime() - new Date(post.hot_since).getTime() < 60 * 60 * 1000 && (
+      {isHot && (
         <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
           <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
         </div>
