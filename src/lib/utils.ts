@@ -3,6 +3,9 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Capacitor } from '@capacitor/core';
+import { formatDistanceToNow } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { supabase } from "@/integrations/supabase/client";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -44,6 +47,88 @@ export const getPlaceholderImage = (width: number = 800, height: number = 600, s
 
 export const isMobilePlatform = () => Capacitor.isNativePlatform();
 
+const MARKER_IMAGE_TRANSFORM = {
+  width: 160,
+  height: 160,
+  quality: 60,
+  resize: 'cover' as const,
+};
+
+const getSupabaseStorageSource = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.endsWith('.supabase.co')) return null;
+
+    const match = parsed.pathname.match(/^\/storage\/v1\/(?:object|render\/image)\/public\/([^/]+)\/(.+)$/);
+    if (!match) return null;
+
+    return {
+      bucket: decodeURIComponent(match[1]),
+      path: decodeURIComponent(match[2]),
+    };
+  } catch {
+    return null;
+  }
+};
+
+export const getOptimizedMarkerImage = (url: string | null | undefined, seed: string = 'default') => {
+  if (!url || url === 'null' || url === 'undefined') {
+    return getFallbackImage(seed);
+  }
+
+  const normalizedUrl = url.trim();
+  const lowerUrl = normalizedUrl.toLowerCase();
+
+  if (
+    normalizedUrl.startsWith('data:') ||
+    lowerUrl.endsWith('.svg') ||
+    lowerUrl.includes('.svg?') ||
+    lowerUrl.endsWith('.gif') ||
+    lowerUrl.includes('.gif?') ||
+    normalizedUrl.includes('img.youtube.com')
+  ) {
+    return normalizedUrl;
+  }
+
+  const supabaseSource = getSupabaseStorageSource(normalizedUrl);
+  if (supabaseSource) {
+    const { data } = supabase.storage
+      .from(supabaseSource.bucket)
+      .getPublicUrl(supabaseSource.path, { transform: MARKER_IMAGE_TRANSFORM });
+
+    return data.publicUrl;
+  }
+
+  try {
+    const parsed = new URL(normalizedUrl);
+
+    if (parsed.hostname === 'images.unsplash.com') {
+      parsed.searchParams.set('auto', 'format');
+      parsed.searchParams.set('fit', 'crop');
+      parsed.searchParams.set('crop', 'entropy');
+      parsed.searchParams.set('w', '160');
+      parsed.searchParams.set('h', '160');
+      parsed.searchParams.set('q', '60');
+      parsed.searchParams.set('dpr', '1');
+      return parsed.toString();
+    }
+
+    if (parsed.hostname === 'images.pexels.com') {
+      parsed.searchParams.set('auto', 'compress');
+      parsed.searchParams.set('cs', 'tinysrgb');
+      parsed.searchParams.set('fit', 'crop');
+      parsed.searchParams.set('w', '160');
+      parsed.searchParams.set('h', '160');
+      parsed.searchParams.set('dpr', '1');
+      return parsed.toString();
+    }
+
+    return normalizedUrl;
+  } catch {
+    return normalizedUrl;
+  }
+};
+
 /**
  * 숫자를 읽기 좋은 형식으로 포맷
  * - 1,000,000 이상: 1.5M 형식
@@ -53,9 +138,6 @@ export const isMobilePlatform = () => Capacitor.isNativePlatform();
 /**
  * 날짜를 "N분 전" 형태로 포맷. 1분 미만은 "1분 전"으로 표시.
  */
-import { formatDistanceToNow } from 'date-fns';
-import { ko } from 'date-fns/locale';
-
 export const formatRelativeTime = (date: Date | string): string => {
   const d = new Date(date);
   const diffMs = Date.now() - d.getTime();

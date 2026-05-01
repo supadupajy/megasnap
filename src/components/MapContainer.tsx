@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
-import { getFallbackImage } from '@/lib/utils';
+import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
 
 interface MapContainerProps {
   posts: any[];
@@ -1242,6 +1242,10 @@ const MapContainer = ({
       displayImage = getFallbackImage(String(post.id));
     }
 
+    const optimizedDisplayImage = !isVideo
+      ? getOptimizedMarkerImage(displayImage, String(post.id))
+      : displayImage;
+
     let borderType = post.borderType || 'none';
     let labelText = ''; let labelBg = ''; let labelColor = 'white';
     if (isAd) { labelText = 'AD'; labelBg = 'ad-rainbow'; }
@@ -1312,7 +1316,7 @@ const MapContainer = ({
           <div style="width:100%;height:100%;overflow:hidden;position:relative;border-radius:${isAd ? '15px' : '16px'};" class="${shineClass}">
             ${isVideo && post.videoUrl ?
               `<video src="${displayImage}#t=0.1" style="width:100%;height:100%;object-fit:cover;pointer-events:none;"></video>` :
-              `<img src="${displayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />`
+              `<img src="${optimizedDisplayImage}" onerror="this.src='${FALLBACK_IMAGE}'" style="width:100%;height:100%;object-fit:cover;" />`
             }
             <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-filter:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);line-height:1;">
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
