@@ -18,7 +18,8 @@ export const getTierFromFollowers = (followers: number): string => {
 
 /**
  * Fetches posts within the given geographical bounds with a limit.
- * profiles JOIN으로 followers 값을 함께 가져와 tier 결정에 사용.
+ * profiles JOIN으로 followers 값을 함께 가져오고,
+ * 최근 1시간 likes 수를 합쳐 HOT 판정에 사용합니다.
  */
 export const fetchPostsInBounds = async (
   sw: { lat: number, lng: number }, 
@@ -43,7 +44,30 @@ export const fetchPostsInBounds = async (
 
     if (error) throw error;
 
-    return data || [];
+    const posts = data || [];
+    if (posts.length === 0) return [];
+
+    const postIds = posts.map((post: any) => post.id).filter(Boolean);
+    const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const { data: recentLikes, error: likesError } = await supabase
+      .from('likes')
+      .select('post_id')
+      .in('post_id', postIds)
+      .gte('created_at', oneHourAgoIso);
+
+    if (likesError) throw likesError;
+
+    const likesPerHourMap = new Map<string, number>();
+    (recentLikes || []).forEach((like: any) => {
+      const postId = String(like.post_id);
+      likesPerHourMap.set(postId, (likesPerHourMap.get(postId) ?? 0) + 1);
+    });
+
+    return posts.map((post: any) => ({
+      ...post,
+      likes_per_hour: likesPerHourMap.get(String(post.id)) ?? 0,
+    }));
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);
     return [];
@@ -100,62 +124,56 @@ export const fetchOffScreenCounts = async (
       bottomOnlyRes,
       leftOnlyRes,
       rightOnlyRes,
-      cornerRes,  // 코너 포스팅 좌표를 직접 가져와서 클라이언트에서 정확히 분류
+      cornerRes,
     ] = await Promise.all([
-      // 순수 상단: lat > qNe.lat AND lng between qSw.lng and qNe.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
         .gt('latitude', qNe.lat)
         .gte('longitude', qSw.lng).lte('longitude', qNe.lng),
-      // 순수 하단: lat < qSw.lat AND lng between qSw.lng and qNe.lng
       supabase.from('posts').select('id', { count: 'exact', head: true })
         .lt('latitude', qSw.lat)
         .gte('longitude', qSw.lng).lte('longitude', qNe.lng),
-      // 순수 좌측: lng < qSw.lng AND lat between qSw.lat and qNe.lat
       supabase.from('posts').select('id', { count: 'exact', head: true })
         .lt('longitude', qSw.lng)
         .gte('latitude', qSw.lat).lte('latitude', qNe.lat),
-      // 순수 우측: lng > qNe.lng AND lat between qSw.lat and qNe.lat
       supabase.from('posts').select('id', { count: 'exact', head: true })
         .gt('longitude', qNe.lng)
         .gte('latitude', qSw.lat).lte('latitude', qNe.lat),
-      // 코너 포스팅: 좌표를 직접 가져와서 클라이언트에서 정확히 분류
-      supabase.from('posts').select('latitude, longitude')
+      supabase.from('posts').select('id, latitude, longitude')
         .or(`and(latitude.gt.${qNe.lat},longitude.lt.${qSw.lng}),and(latitude.gt.${qNe.lat},longitude.gt.${qNe.lng}),and(latitude.lt.${qSw.lat},longitude.lt.${qSw.lng}),and(latitude.lt.${qSw.lat},longitude.gt.${qNe.lng})`),
     ]);
 
-    // 코너 포스팅을 각 포스팅의 실제 lat/lng 초과 비율로 정확히 분류
-    let topAdd = 0, bottomAdd = 0, leftAdd = 0, rightAdd = 0;
-    for (const p of (cornerRes.data ?? [])) {
-      if (p.latitude == null || p.longitude == null) continue;
-      const isAbove = p.latitude > qNe.lat;
-      const isLeft = p.longitude < qSw.lng;
-      const isRight = p.longitude > qNe.lng;
+    if (topOnlyRes.error) throw topOnlyRes.error;
+    if (bottomOnlyRes.error) throw bottomOnlyRes.error;
+    if (leftOnlyRes.error) throw leftOnlyRes.error;
+    if (rightOnlyRes.error) throw rightOnlyRes.error;
+    if (cornerRes.error) throw cornerRes.error;
 
-      // lat 초과량 / latRange vs lng 초과량 / lngRange
-      const latExcess = isAbove
-        ? (p.latitude - qNe.lat) / latRange
-        : (qSw.lat - p.latitude) / latRange;
-      const lngExcess = isLeft
-        ? (qSw.lng - p.longitude) / lngRange
-        : (p.longitude - qNe.lng) / lngRange;
+    let top = topOnlyRes.count || 0;
+    let bottom = bottomOnlyRes.count || 0;
+    let left = leftOnlyRes.count || 0;
+    let right = rightOnlyRes.count || 0;
 
-      if (latExcess >= lngExcess) {
-        // lat 방향으로 더 많이 벗어남 → 상/하
-        if (isAbove) topAdd++; else bottomAdd++;
+    (cornerRes.data || []).forEach((p: any) => {
+      const latExcessTop = p.latitude > qNe.lat ? (p.latitude - qNe.lat) / latRange : 0;
+      const latExcessBottom = p.latitude < qSw.lat ? (qSw.lat - p.latitude) / latRange : 0;
+      const lngExcessLeft = p.longitude < qSw.lng ? (qSw.lng - p.longitude) / lngRange : 0;
+      const lngExcessRight = p.longitude > qNe.lng ? (p.longitude - qNe.lng) / lngRange : 0;
+
+      const vertical = Math.max(latExcessTop, latExcessBottom);
+      const horizontal = Math.max(lngExcessLeft, lngExcessRight);
+
+      if (vertical >= horizontal) {
+        if (latExcessTop > 0) top++;
+        else bottom++;
       } else {
-        // lng 방향으로 더 많이 벗어남 → 좌/우
-        if (isLeft) leftAdd++; else rightAdd++;
+        if (lngExcessLeft > 0) left++;
+        else right++;
       }
-    }
+    });
 
-    return {
-      top: (topOnlyRes.count ?? 0) + topAdd,
-      bottom: (bottomOnlyRes.count ?? 0) + bottomAdd,
-      left: (leftOnlyRes.count ?? 0) + leftAdd,
-      right: (rightOnlyRes.count ?? 0) + rightAdd,
-    };
+    return { top, bottom, left, right };
   } catch (err) {
-    console.error('[SupabasePosts] fetchOffScreenCounts error:', err);
+    console.error('[SupabasePosts] Off-screen counts fetch error:', err);
     return { top: 0, bottom: 0, left: 0, right: 0 };
   }
 };

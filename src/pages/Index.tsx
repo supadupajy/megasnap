@@ -219,9 +219,10 @@ const Index = () => {
     const content = p.content !== undefined ? (p.content || '') : (prev?.content ?? '');
     const isAd = content.trim().startsWith('[AD]') || prev?.isAd || false;
     const likes = Number(p.likes ?? prev?.likes ?? 0);
+    const likesPerHour = Number(p.likes_per_hour ?? prev?.likes_per_hour ?? 0);
     let borderType: any = 'none';
     const hotSince = p.hot_since ?? prev?.hot_since ?? null;
-    if (hotSince) borderType = 'popular';
+    if (likesPerHour >= 100) borderType = 'popular';
     else if (!isAd) {
       const followers = Number(p.profiles?.followers ?? 0);
       if (followers >= 10000000) borderType = 'diamond';
@@ -264,6 +265,7 @@ const Index = () => {
       latitude: p.latitude ?? prev?.latitude,
       longitude: p.longitude ?? prev?.longitude,
       likes,
+      likes_per_hour: likesPerHour,
       commentsCount: prev?.commentsCount ?? 0,
       comments: prev?.comments ?? [],
       image: img,
