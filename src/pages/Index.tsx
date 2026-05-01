@@ -414,7 +414,7 @@ const Index = () => {
            selectedCategories.includes('influencer');
   }, [selectedCategories]);
 
-  // 클라이언트 계산: displayedMarkers 기반
+  // 클라이언트 계산: displayedMarkers 기반 (pad 없이 실제 bounds 기준)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
     if (!mapData?.bounds || currentZoom >= 7) return null;
     if (!useClientSideCounts) return null;
@@ -422,32 +422,30 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const latRange = ne.lat - sw.lat;
     const lngRange = ne.lng - sw.lng;
-    const pad = 0.10;
-    const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
-    const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
 
     let top = 0, bottom = 0, left = 0, right = 0;
 
     displayedMarkers.forEach(post => {
       if (post.lat == null || post.lng == null) return;
-      if (post.isAd) return; // 광고는 화면 밖 카운트에서 제외
+      if (post.isAd) return;
       const lat = post.lat;
       const lng = post.lng;
 
-      if (lat >= qSw.lat && lat <= qNe.lat && lng >= qSw.lng && lng <= qNe.lng) return;
+      // 화면 안이면 제외
+      if (lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng) return;
 
-      const isAbove = lat > qNe.lat;
-      const isBelow = lat < qSw.lat;
-      const isLeft  = lng < qSw.lng;
-      const isRight = lng > qNe.lng;
+      const isAbove = lat > ne.lat;
+      const isBelow = lat < sw.lat;
+      const isLeft  = lng < sw.lng;
+      const isRight = lng > ne.lng;
 
       if (isAbove && !isLeft && !isRight) { top++; return; }
       if (isBelow && !isLeft && !isRight) { bottom++; return; }
       if (isLeft  && !isAbove && !isBelow) { left++; return; }
       if (isRight && !isAbove && !isBelow) { right++; return; }
 
-      const latExcess = isAbove ? (lat - qNe.lat) / latRange : isBelow ? (qSw.lat - lat) / latRange : 0;
-      const lngExcess = isLeft  ? (qSw.lng - lng) / lngRange : isRight ? (lng - qNe.lng) / lngRange : 0;
+      const latExcess = isAbove ? (lat - ne.lat) / latRange : isBelow ? (sw.lat - lat) / latRange : 0;
+      const lngExcess = isLeft  ? (sw.lng - lng) / lngRange : isRight ? (lng - ne.lng) / lngRange : 0;
 
       if (latExcess >= lngExcess) {
         if (isAbove) top++; else bottom++;
@@ -1173,32 +1171,34 @@ const Index = () => {
                 const { sw, ne } = b;
                 const latRange = ne.lat - sw.lat;
                 const lngRange = ne.lng - sw.lng;
-                const pad = 0.10;
-                const qSw = { lat: sw.lat - latRange * pad, lng: sw.lng - lngRange * pad };
-                const qNe = { lat: ne.lat + latRange * pad, lng: ne.lng + lngRange * pad };
 
-                // 현재 필터가 적용된 마커 목록(spreadMarkersRef)에서 해당 방향 화면 밖 후보 찾기
-                // friends/mine/카테고리 필터 시 DB 쿼리 대신 이미 필터링된 목록 사용
+                // pad 없이 실제 화면 bounds 기준으로 화면 밖 포스팅 판별
                 const isFiltered = !selectedCategories.includes('all');
-                const clientCandidates = spreadMarkersRef.current.filter(post => {
-                  if (post.lat == null || post.lng == null || post.isAd) return false;
-                  const lat = post.lat, lng = post.lng;
-                  // 화면 안이면 제외
-                  if (lat >= qSw.lat && lat <= qNe.lat && lng >= qSw.lng && lng <= qNe.lng) return false;
-                  const isAbove = lat > qNe.lat, isBelow = lat < qSw.lat;
-                  const isLeft = lng < qSw.lng, isRight = lng > qNe.lng;
+
+                const isOutsideInDir = (lat: number, lng: number): boolean => {
+                  const inBounds = lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng;
+                  if (inBounds) return false;
+                  const isAbove = lat > ne.lat, isBelow = lat < sw.lat;
+                  const isLeft = lng < sw.lng, isRight = lng > ne.lng;
                   if (dir === 'top'    && isAbove && !isLeft && !isRight) return true;
                   if (dir === 'bottom' && isBelow && !isLeft && !isRight) return true;
                   if (dir === 'left'   && isLeft  && !isAbove && !isBelow) return true;
                   if (dir === 'right'  && isRight && !isAbove && !isBelow) return true;
-                  const latExcess = isAbove ? (lat - qNe.lat) / latRange : isBelow ? (qSw.lat - lat) / latRange : 0;
-                  const lngExcess = isLeft  ? (qSw.lng - lng) / lngRange : isRight ? (lng - qNe.lng) / lngRange : 0;
+                  // 코너: 비율로 분류
+                  const latExcess = isAbove ? (lat - ne.lat) / latRange : isBelow ? (sw.lat - lat) / latRange : 0;
+                  const lngExcess = isLeft  ? (sw.lng - lng) / lngRange : isRight ? (lng - ne.lng) / lngRange : 0;
                   if (latExcess >= lngExcess) return (dir === 'top' && isAbove) || (dir === 'bottom' && isBelow);
                   return (dir === 'left' && isLeft) || (dir === 'right' && isRight);
+                };
+
+                // 현재 필터가 적용된 마커 목록(spreadMarkersRef)에서 해당 방향 화면 밖 후보 찾기
+                const clientCandidates = spreadMarkersRef.current.filter(post => {
+                  if (post.lat == null || post.lng == null || post.isAd) return false;
+                  return isOutsideInDir(post.lat, post.lng);
                 });
 
                 if (clientCandidates.length > 0) {
-                  // 클라이언트 목록에서 가장 가까운 포스팅으로 이동
+                  // 가장 가까운 포스팅으로 이동
                   let nearest = clientCandidates[0];
                   let minDist = Infinity;
                   for (const p of clientCandidates) {
@@ -1212,18 +1212,14 @@ const Index = () => {
                   if (nearest) {
                     setMapCenter({ lat: nearest.lat, lng: nearest.lng });
                   } else {
-                    const latSpan = b.ne.lat - b.sw.lat;
-                    const lngSpan = b.ne.lng - b.sw.lng;
-                    const panLat = { top: latSpan * 0.8, bottom: -latSpan * 0.8, left: 0, right: 0 }[dir];
-                    const panLng = { top: 0, bottom: 0, left: -lngSpan * 0.8, right: lngSpan * 0.8 }[dir];
+                    const panLat = { top: latRange * 0.8, bottom: -latRange * 0.8, left: 0, right: 0 }[dir];
+                    const panLng = { top: 0, bottom: 0, left: -lngRange * 0.8, right: lngRange * 0.8 }[dir];
                     setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
                   }
                 } else {
-                  // 필터 적용 중인데 해당 방향에 친구/카테고리 포스팅 없음 → 패닝
-                  const latSpan = b.ne.lat - b.sw.lat;
-                  const lngSpan = b.ne.lng - b.sw.lng;
-                  const panLat = { top: latSpan * 0.8, bottom: -latSpan * 0.8, left: 0, right: 0 }[dir];
-                  const panLng = { top: 0, bottom: 0, left: -lngSpan * 0.8, right: lngSpan * 0.8 }[dir];
+                  // 필터 적용 중인데 해당 방향에 포스팅 없음 → 패닝
+                  const panLat = { top: latRange * 0.8, bottom: -latRange * 0.8, left: 0, right: 0 }[dir];
+                  const panLng = { top: 0, bottom: 0, left: -lngRange * 0.8, right: lngRange * 0.8 }[dir];
                   setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
                 }
               }}
