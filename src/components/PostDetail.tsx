@@ -576,65 +576,99 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     </div>
   );
 
-  const renderImageSlider = () => (
-    <div
-      ref={imageScrollRef}
-      className={cn(
-        "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
-        isDragging && "cursor-grabbing snap-none"
-      )}
-      onScroll={handleImageScroll}
-      onMouseDown={onMouseDown}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
-      onMouseMove={onMouseMove}
-    >
-      {displayImages.map((img, index) => (
-        <div
-          key={index}
-          className="w-full shrink-0 snap-center relative"
-          style={{ scrollSnapStop: 'always', minWidth: '100%' }}
-        >
-          <img
-            src={img}
-            alt={`Post content ${index + 1}`}
-            className="w-full h-full object-cover block"
-            draggable={false}
-            loading="eager"
-            onError={(e) => {
-              const target = e.currentTarget;
-              target.src = '/placeholder.svg';
-              target.style.objectFit = 'contain';
-              target.style.padding = '20%';
-              target.style.opacity = '0.3';
-            }}
-          />
+  const renderMediaArea = () => {
+    if (currentPost.videoUrl && !currentPost.isAd) {
+      return (
+        <div className="w-full rounded-3xl overflow-hidden bg-black shadow-inner" style={{ aspectRatio: '1/1' }}>
+          <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
         </div>
-      ))}
-    </div>
-  );
+      );
+    }
 
-  const renderMediaArea = () => (
-    <div className="relative w-full rounded-3xl overflow-hidden bg-gray-100 shadow-inner" style={{ aspectRatio: '1/1' }}>
-      {currentPost.videoUrl && !currentPost.isAd ? (
-        <video src={currentPost.videoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop playsInline controls />
-      ) : (
-        <div className="absolute inset-0">
-          {renderImageSlider()}
-          {displayImages.length > 1 && (
-            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-              {displayImages.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
-                />
-              ))}
+    return (
+      <div className="w-full rounded-3xl overflow-hidden bg-gray-100 shadow-inner" style={{ aspectRatio: '1/1', position: 'relative' }}>
+        {/* 이미지 슬라이더: overflow-hidden 부모 안에서 가로 스크롤 */}
+        <div
+          ref={imageScrollRef}
+          style={{
+            display: 'flex',
+            width: '100%',
+            height: '100%',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollSnapType: 'x mandatory',
+            scrollBehavior: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+          } as React.CSSProperties}
+          onScroll={handleImageScroll}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onMouseMove={onMouseMove}
+        >
+          {displayImages.map((img, index) => (
+            <div
+              key={index}
+              style={{
+                flexShrink: 0,
+                width: '100%',
+                height: '100%',
+                scrollSnapAlign: 'start',
+                scrollSnapStop: 'always',
+                position: 'relative',
+              }}
+            >
+              <img
+                src={img}
+                alt={`Post content ${index + 1}`}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+                draggable={false}
+                loading="eager"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.src = '/placeholder.svg';
+                  target.style.objectFit = 'contain';
+                  target.style.padding = '20%';
+                  target.style.opacity = '0.3';
+                }}
+              />
             </div>
-          )}
+          ))}
         </div>
-      )}
-    </div>
-  );
+        {/* 페이지 인디케이터 */}
+        {displayImages.length > 1 && (
+          <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
+            {displayImages.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: 6,
+                  borderRadius: 3,
+                  background: 'white',
+                  opacity: currentImageIndex === i ? 1 : 0.4,
+                  width: currentImageIndex === i ? 24 : 6,
+                  transition: 'all 0.3s',
+                  boxShadow: currentImageIndex === i ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderActionButtons = () => (
     <div className="flex flex-col gap-3">
