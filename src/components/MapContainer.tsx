@@ -1513,7 +1513,6 @@ const MapContainer = ({
 
     // ── 마우스 휠 ──────────────────────────────────────────────────────
     const onWheel = (e: WheelEvent) => {
-      console.log('[SmoothZoom] wheel 이벤트 - ctrlKey:', e.ctrlKey, 'deltaY:', e.deltaY.toFixed(2), 'inMap:', isInMap(e.clientX, e.clientY));
       if (!isInMap(e.clientX, e.clientY)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -1524,7 +1523,14 @@ const MapContainer = ({
       if (!map || !wrapper || !container) return;
 
       lastWheelTimeRef.current = Date.now();
-      wheelAccumRef.current += e.deltaY * 0.001;
+
+      // 맥 트랙패드 핀치: ctrlKey=true, deltaY가 작은 값(-0.1 ~ -10)
+      // 일반 마우스 휠: ctrlKey=false, deltaY가 큰 값(100~)
+      // → 각각 다른 sensitivity 적용
+      const isPinchGesture = e.ctrlKey;
+      const sensitivity = isPinchGesture ? 0.04 : 0.001;
+      wheelAccumRef.current += e.deltaY * sensitivity;
+
       const lvl = map.getLevel();
 
       if (wheelAccumRef.current <= -0.4) { applyZoomLevel(lvl - 1, true); return; }
@@ -1562,17 +1568,13 @@ const MapContainer = ({
     };
 
     const onPointerDown = (e: PointerEvent) => {
-      console.log('[SmoothZoom] pointerdown - type:', e.pointerType, 'inMap:', isInMap(e.clientX, e.clientY));
       if (!isInMap(e.clientX, e.clientY)) return;
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      console.log('[SmoothZoom] pointerdown - 활성 포인터 수:', activePointers.size);
-
       if (activePointers.size === 2) {
         pinchStartDist = getPinchDist();
         const pts = Array.from(activePointers.values());
         pinchOriginX = (pts[0].x + pts[1].x) / 2;
         pinchOriginY = (pts[0].y + pts[1].y) / 2;
-        console.log('[SmoothZoom] 핀치 시작 - dist:', pinchStartDist.toFixed(1));
 
         const wrapper = getWrapper();
         const container = getContainer();
@@ -1596,7 +1598,6 @@ const MapContainer = ({
       const currentDist = getPinchDist();
       const ratio = currentDist / pinchStartDist;
       const lvl = map.getLevel();
-      console.log('[SmoothZoom] 핀치 이동 - ratio:', ratio.toFixed(3), 'level:', lvl);
 
       // CSS scale 즉각 반영
       const clamped = Math.max(0.45, Math.min(2.3, ratio));
@@ -1605,11 +1606,9 @@ const MapContainer = ({
       wrapper.style.transform = `scale(${clamped})`;
 
       if (ratio >= 1.7 && lvl > MIN_LEVEL) {
-        console.log('[SmoothZoom] 줌인! →', lvl - 1);
         applyZoomLevel(lvl - 1, true);
         pinchStartDist = getPinchDist(); // 현재 거리를 새 시작점으로
       } else if (ratio <= 0.6 && lvl < MAX_LEVEL) {
-        console.log('[SmoothZoom] 줌아웃! →', lvl + 1);
         applyZoomLevel(lvl + 1, false);
         pinchStartDist = getPinchDist();
       }
@@ -1617,7 +1616,6 @@ const MapContainer = ({
 
     const onPointerUp = (e: PointerEvent) => {
       activePointers.delete(e.pointerId);
-      console.log('[SmoothZoom] pointerup - 남은 포인터 수:', activePointers.size);
 
       if (activePointers.size < 2) {
         pinchStartDist = 0;
