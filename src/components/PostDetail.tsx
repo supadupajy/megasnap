@@ -626,16 +626,73 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               draggable={false}
               onLoad={(e) => {
                 const t = e.currentTarget;
+                const cs = window.getComputedStyle(t);
+                const rect = t.getBoundingClientRect();
+                const parent = t.parentElement;
+                const parentRect = parent?.getBoundingClientRect();
+                const parentCs = parent ? window.getComputedStyle(parent) : null;
+                const grandparent = parent?.parentElement;
+                const gpRect = grandparent?.getBoundingClientRect();
+                const gpCs = grandparent ? window.getComputedStyle(grandparent) : null;
                 console.log('[PostDetail/DEBUG] img onLoad', {
                   postId: currentPost?.id,
                   index,
                   src: img,
-                  srcLength: typeof img === 'string' ? img.length : 'n/a',
                   naturalWidth: t.naturalWidth,
                   naturalHeight: t.naturalHeight,
                   clientWidth: t.clientWidth,
                   clientHeight: t.clientHeight,
+                  rect: { x: rect.x, y: rect.y, w: rect.width, h: rect.height },
+                  // img computed style
+                  imgStyle: {
+                    display: cs.display,
+                    visibility: cs.visibility,
+                    opacity: cs.opacity,
+                    transform: cs.transform,
+                    objectFit: cs.objectFit,
+                    zIndex: cs.zIndex,
+                    position: cs.position,
+                  },
+                  // 슬라이드 div(부모)
+                  parent: {
+                    rect: parentRect ? { x: parentRect.x, y: parentRect.y, w: parentRect.width, h: parentRect.height } : null,
+                    display: parentCs?.display,
+                    visibility: parentCs?.visibility,
+                    opacity: parentCs?.opacity,
+                    transform: parentCs?.transform,
+                  },
+                  // 스크롤 컨테이너(조부모)
+                  grandparent: {
+                    rect: gpRect ? { x: gpRect.x, y: gpRect.y, w: gpRect.width, h: gpRect.height } : null,
+                    display: gpCs?.display,
+                    visibility: gpCs?.visibility,
+                    opacity: gpCs?.opacity,
+                    transform: gpCs?.transform,
+                    overflow: gpCs?.overflow,
+                    overflowX: gpCs?.overflowX,
+                  },
                 });
+                // 한 단계 더 위(absolute inset-0 wrapper)와 그 위(bg-black aspect-square)
+                let node: HTMLElement | null = grandparent?.parentElement || null;
+                let level = 0;
+                while (node && level < 4) {
+                  const r = node.getBoundingClientRect();
+                  const s = window.getComputedStyle(node);
+                  console.log(`[PostDetail/DEBUG] ancestor[${level}]`, {
+                    tag: node.tagName,
+                    className: node.className?.toString().slice(0, 120),
+                    rect: { w: r.width, h: r.height, x: r.x, y: r.y },
+                    display: s.display,
+                    visibility: s.visibility,
+                    opacity: s.opacity,
+                    transform: s.transform,
+                    background: s.backgroundColor,
+                    zIndex: s.zIndex,
+                    position: s.position,
+                  });
+                  node = node.parentElement;
+                  level++;
+                }
               }}
               onError={(e) => {
                 const target = e.currentTarget;
