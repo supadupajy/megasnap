@@ -1504,7 +1504,6 @@ const MapContainer = ({
       const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
       map.setLevel(clampedLevel, { animate: false });
       wheelAccumRef.current = 0;
-      // scale을 1로 즉시 복귀 (레벨이 이미 반영됐으므로 애니메이션 없이)
       currentScaleRef.current = 1;
       targetScaleRef.current = 1;
       wrapper.style.transform = 'scale(1)';
@@ -1533,43 +1532,57 @@ const MapContainer = ({
         return;
       }
 
-      // 핀치 제스처: 500ms 이상 간격이면 새 제스처 시작 → accum 리셋
+      // 핀치 제스처: 500ms 이상 간격이면 새 제스처 → accum 리셋
       if (now - lastWheelTimeRef.current > 500) {
         wheelAccumRef.current = 0;
       }
       lastWheelTimeRef.current = now;
 
-      // accum = 핀치 누적량 (음수=줌인, 양수=줌아웃)
-      // sensitivity 0.018 → accum ≈ log2(scale) 근사
+      // deltaY 누적 (음수=핀치아웃=줌인, 양수=핀치인=줌아웃)
       wheelAccumRef.current += e.deltaY * 0.018;
 
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
-      // accum을 scale로 변환: accum=-1 → scale=2(줌인), accum=+1 → scale=0.5(줌아웃)
-      // 2^(-accum) 공식 사용 (카카오맵 레벨 1 = 2배 관계)
+      // accum → scale: 줌인 방향(accum<0)이면 scale>1, 줌아웃(accum>0)이면 scale<1
       const visualScale = Math.pow(2, -wheelAccumRef.current);
-      const clampedScale = Math.max(0.25, Math.min(4, visualScale));
+      const clampedScale = Math.max(0.3, Math.min(3.5, visualScale));
       currentScaleRef.current = clampedScale;
       targetScaleRef.current = clampedScale;
       wrapper.style.transform = `scale(${clampedScale})`;
 
-      // 핀치 종료 감지: 150ms 동안 이벤트 없으면 레벨 확정
+      // 핀치 중 레벨 전환: scale이 임계점을 넘으면 레벨 바꾸고 scale 연속성 유지
+      const lvl = map.getLevel();
+      if (clampedScale >= 1.8 && lvl > MIN_LEVEL) {
+        // 줌인: 레벨 -1, scale을 절반으로 (연속감)
+        map.setLevel(lvl - 1, { animate: false });
+        wheelAccumRef.current = wheelAccumRef.current + Math.log2(1.8); // accum 보정
+        const newScale = Math.pow(2, -wheelAccumRef.current);
+        currentScaleRef.current = newScale;
+        targetScaleRef.current = newScale;
+        wrapper.style.transform = `scale(${newScale})`;
+      } else if (clampedScale <= 0.55 && lvl < MAX_LEVEL) {
+        // 줌아웃: 레벨 +1, scale을 2배로 (연속감)
+        map.setLevel(lvl + 1, { animate: false });
+        wheelAccumRef.current = wheelAccumRef.current - Math.log2(1.8); // accum 보정
+        const newScale = Math.pow(2, -wheelAccumRef.current);
+        currentScaleRef.current = newScale;
+        targetScaleRef.current = newScale;
+        wrapper.style.transform = `scale(${newScale})`;
+      }
+
+      // 핀치 종료: 150ms 후 scale을 1로 복귀 (현재 레벨 유지)
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         zoomResetTimerRef.current = null;
-        const currentMap = mapInstance.current;
-        if (!currentMap) return;
-        const startLvl = currentMap.getLevel();
-        const accum = wheelAccumRef.current;
-
-        // accum → 레벨 변화량: 카카오맵은 레벨이 클수록 축소
-        // 줌인(accum<0) → 레벨 감소, 줌아웃(accum>0) → 레벨 증가
-        // 1레벨 = 2배 관계이므로 Math.round(accum)으로 레벨 변화량 결정
-        const levelDelta = Math.round(accum);
-        const targetLvl = startLvl + levelDelta;
-
-        applyZoomLevel(targetLvl);
+        wheelAccumRef.current = 0;
+        targetScaleRef.current = 1;
+        currentScaleRef.current = 1;
+        const w = getWrapper();
+        if (w) {
+          w.style.transform = 'scale(1)';
+          w.style.transformOrigin = 'center center';
+        }
       }, 150);
     };
 
@@ -1609,32 +1622,53 @@ const MapContainer = ({
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (activePointers.size !== 2 || pinchStartDist === 0) return;
 
+      const map = mapInstance.current;
       const wrapper = getWrapper();
-      if (!wrapper) return;
+      if (!map || !wrapper) return;
 
-      const ratio = getPinchDist() / pinchStartDist;
-      const clampedScale = Math.max(0.25, Math.min(4, ratio));
+      let ratio = getPinchDist() / pinchStartDist;
+      let clampedScale = Math.max(0.3, Math.min(3.5, ratio));
+      wrapper.style.transform = `scale(${clampedScale})`;
       currentScaleRef.current = clampedScale;
       targetScaleRef.current = clampedScale;
-      wrapper.style.transform = `scale(${clampedScale})`;
+
+      // 임계점 넘으면 레벨 전환 + 시작점 재설정 (연속감)
+      const lvl = map.getLevel();
+      if (clampedScale >= 1.8 && lvl > MIN_LEVEL) {
+        map.setLevel(lvl - 1, { animate: false });
+        pinchStartDist = getPinchDist() / 1.8 * getPinchDist();
+        // 새 시작거리 = 현재거리 / 1.8 (scale이 1.8에서 1.0으로 리셋되는 효과)
+        pinchStartDist = getPinchDist() / 1.8;
+        const newScale = getPinchDist() / pinchStartDist;
+        clampedScale = Math.max(0.3, Math.min(3.5, newScale));
+        wrapper.style.transform = `scale(${clampedScale})`;
+        currentScaleRef.current = clampedScale;
+        targetScaleRef.current = clampedScale;
+      } else if (clampedScale <= 0.55 && lvl < MAX_LEVEL) {
+        map.setLevel(lvl + 1, { animate: false });
+        pinchStartDist = getPinchDist() / 0.55;
+        const newScale = getPinchDist() / pinchStartDist;
+        clampedScale = Math.max(0.3, Math.min(3.5, newScale));
+        wrapper.style.transform = `scale(${clampedScale})`;
+        currentScaleRef.current = clampedScale;
+        targetScaleRef.current = clampedScale;
+      }
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      // 두 손가락 중 하나가 떼어질 때 레벨 확정
-      if (activePointers.size === 2 && pinchStartDist > 0) {
-        const ratio = getPinchDist() / pinchStartDist;
-        // ratio → 레벨 변화: log2(ratio) = 몇 레벨 변화인지
-        // 줌인(ratio>1) → 레벨 감소, 줌아웃(ratio<1) → 레벨 증가
-        const levelDelta = -Math.round(Math.log2(ratio));
-        const targetLvl = pinchStartLvl + levelDelta;
-        applyZoomLevel(targetLvl);
-      }
-
       activePointers.delete(e.pointerId);
-
       if (activePointers.size < 2) {
         pinchStartDist = 0;
         pinchStartLvl = 0;
+        // 손 뗄 때 scale만 1로 복귀 (레벨은 현재 상태 유지)
+        wheelAccumRef.current = 0;
+        targetScaleRef.current = 1;
+        currentScaleRef.current = 1;
+        const w = getWrapper();
+        if (w) {
+          w.style.transform = 'scale(1)';
+          w.style.transformOrigin = 'center center';
+        }
       }
     };
 
