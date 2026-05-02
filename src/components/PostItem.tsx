@@ -285,36 +285,22 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
-    const slideSize = sliderWidth > 0 ? sliderWidth : undefined;
-
-    // 이미지 슬라이더 - flex + translateX (인스타그램 방식)
+    // 이미지 슬라이더 - 단일 이미지만 렌더 (가장 단순/안전)
+    const currentImg = displayImages[currentImageIndex] || displayImages[0];
     return (
       <>
-        <div
-          className="absolute inset-0 flex"
-          style={{
-            transform: `translateX(-${currentImageIndex * 100}%)`,
-            transition: 'transform 0.3s ease',
-            willChange: 'transform',
-          }}
-        >
-          {displayImages.map((img, index) => (
-            <div key={index} className="relative shrink-0" style={{ width: '100%', height: '100%' }}>
-              {img && (
-                <img
-                  src={img}
-                  alt={`Content ${index}`}
-                  className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-                  draggable={false}
-                  loading="eager"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src = getFallbackImage();
-                  }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+        {currentImg && (
+          <img
+            src={currentImg}
+            alt={`Content ${currentImageIndex}`}
+            className="absolute inset-0 w-full h-full object-cover select-none"
+            draggable={false}
+            loading="eager"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = getFallbackImage();
+            }}
+          />
+        )}
 
         {/* 페이지 인디케이터 */}
         {displayImages.length > 1 && (
@@ -433,7 +419,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     }
   };
   const handleMediaTouchEnd = (e: React.TouchEvent) => {
-    if (!swipeMovedRef.current) return;
+    if (!swipeMovedRef.current) {
+      return;
+    }
     const t = e.changedTouches[0];
     const dx = t.clientX - swipeStartXRef.current;
     if (dx < -50 && currentImageIndex < displayImages.length - 1) {
@@ -441,7 +429,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     } else if (dx > 50 && currentImageIndex > 0) {
       setCurrentImageIndex(currentImageIndex - 1);
     }
-    swipeMovedRef.current = false;
+    // 스와이프 발생 후의 click 이벤트 차단
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
