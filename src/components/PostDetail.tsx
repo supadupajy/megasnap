@@ -579,26 +579,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const renderMediaArea = () => {
     if (currentPost.videoUrl && !currentPost.isAd) {
       return (
-        <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', borderRadius: 24, overflow: 'hidden', background: '#000' }}>
+        <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 24, overflow: 'hidden', background: '#000' }}>
           <video
             src={currentPost.videoUrl}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             autoPlay loop playsInline controls
           />
         </div>
       );
     }
 
-    // paddingBottom 100% 트릭으로 정사각형 컨테이너 생성
-    // → 자식들이 position:absolute 로 채우면 높이 계산 문제 없음
+    // 슬라이더: 각 슬라이드가 자체적으로 aspect-ratio 1/1을 가짐
+    // → 부모 높이에 의존하지 않으므로 높이 계산 문제 없음
     return (
-      <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', borderRadius: 24, overflow: 'hidden', background: '#e5e7eb' }}>
-        {/* 실제 슬라이더는 absolute로 꽉 채움 */}
+      <div style={{ position: 'relative', width: '100%', borderRadius: 24, overflow: 'hidden', background: '#e5e7eb' }}>
         <div
           ref={imageScrollRef}
           style={{
-            position: 'absolute',
-            inset: 0,
             display: 'flex',
             overflowX: 'auto',
             overflowY: 'hidden',
@@ -621,9 +618,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               style={{
                 flexShrink: 0,
                 width: '100%',
-                height: '100%',
+                aspectRatio: '1 / 1',
                 scrollSnapAlign: 'start',
                 scrollSnapStop: 'always',
+                background: '#e5e7eb',
               }}
             >
               <img
