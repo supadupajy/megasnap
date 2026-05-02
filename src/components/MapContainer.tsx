@@ -1524,39 +1524,58 @@ const MapContainer = ({
       const container = getContainer();
       if (!map || !wrapper || !container) return;
 
-      lastWheelTimeRef.current = Date.now();
-
-      // 맥 트랙패드 핀치: ctrlKey=true / 일반 마우스 휠: ctrlKey=false
+      const now = Date.now();
       const isPinchGesture = e.ctrlKey;
-      const sensitivity = isPinchGesture ? 0.018 : 0.0008;
+
+      // 핀치 제스처(ctrlKey)가 아니면 일반 휠로 처리
+      if (!isPinchGesture) {
+        // 일반 마우스 휠: 즉시 레벨 변경
+        const lvl = map.getLevel();
+        if (e.deltaY < 0 && lvl > MIN_LEVEL) applyZoomLevel(lvl - 1, true);
+        else if (e.deltaY > 0 && lvl < MAX_LEVEL) applyZoomLevel(lvl + 1, false);
+        return;
+      }
+
+      // 핀치 제스처 처리
+      // 이전 이벤트로부터 500ms 이상 지났으면 새 핀치 시작 → accum 리셋
+      if (now - lastWheelTimeRef.current > 500) {
+        wheelAccumRef.current = 0;
+        console.log(`[Zoom] pinch gesture START - accum reset`);
+      }
+      lastWheelTimeRef.current = now;
+
+      const sensitivity = 0.018;
       const delta = e.deltaY * sensitivity;
       wheelAccumRef.current += delta;
 
       const lvl = map.getLevel();
-      console.log(`[Zoom] wheel ctrlKey=${isPinchGesture} deltaY=${e.deltaY.toFixed(2)} delta=${delta.toFixed(4)} accum=${wheelAccumRef.current.toFixed(4)} lvl=${lvl}`);
-
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
-      // scale 시각적 피드백 (누적값에 비례)
+      // scale 시각적 피드백
       targetScaleRef.current = Math.max(0.75, Math.min(1.4, 1 - wheelAccumRef.current * 0.5));
       startScaleAnim();
 
-      // 핀치 종료 감지: 이벤트가 멈추면 현재 누적값 기준으로 레벨 결정
+      console.log(`[Zoom] wheel pinch deltaY=${e.deltaY.toFixed(2)} accum=${wheelAccumRef.current.toFixed(4)} lvl=${lvl}`);
+
+      // 핀치 종료 감지: 이벤트가 150ms 멈추면 레벨 결정
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
-        if (Date.now() - lastWheelTimeRef.current < 300) return;
+        zoomResetTimerRef.current = null;
+        const currentMap = mapInstance.current;
+        if (!currentMap) return;
+        const currentLvl = currentMap.getLevel(); // 클로저 아닌 최신 레벨
         const accum = wheelAccumRef.current;
-        console.log(`[Zoom] timer fired: accum=${accum.toFixed(4)} lvl=${lvl} MIN=${MIN_LEVEL} MAX=${MAX_LEVEL}`);
-        // 누적값이 충분히 음수(줌인) 또는 양수(줌아웃)면 레벨 변경
-        if (accum <= -0.35 && lvl > MIN_LEVEL) {
-          console.log(`[Zoom] → zoom IN (level ${lvl} → ${lvl - 1})`);
-          applyZoomLevel(lvl - 1, true);
-        } else if (accum >= 0.35 && lvl < MAX_LEVEL) {
-          console.log(`[Zoom] → zoom OUT (level ${lvl} → ${lvl + 1})`);
-          applyZoomLevel(lvl + 1, false);
+        console.log(`[Zoom] timer fired: accum=${accum.toFixed(4)} currentLvl=${currentLvl}`);
+
+        if (accum <= -0.35 && currentLvl > MIN_LEVEL) {
+          console.log(`[Zoom] → zoom IN (${currentLvl} → ${currentLvl - 1})`);
+          applyZoomLevel(currentLvl - 1, true);
+        } else if (accum >= 0.35 && currentLvl < MAX_LEVEL) {
+          console.log(`[Zoom] → zoom OUT (${currentLvl} → ${currentLvl + 1})`);
+          applyZoomLevel(currentLvl + 1, false);
         } else {
-          console.log(`[Zoom] → threshold not met, resetting scale only`);
+          console.log(`[Zoom] → threshold not met, scale reset only`);
           wheelAccumRef.current = 0;
           targetScaleRef.current = 1;
           const w = getWrapper();
