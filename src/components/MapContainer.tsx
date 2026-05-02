@@ -1497,21 +1497,21 @@ const MapContainer = ({
       scaleAnimFrameRef.current = requestAnimationFrame(animateScale);
     };
 
-    const applyZoomLevel = (newLevel: number, isZoomIn: boolean) => {
+    const applyZoomLevel = (newLevel: number) => {
       const map = mapInstance.current;
       const wrapper = getWrapper();
       if (!map || !wrapper) return;
       const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
       map.setLevel(clampedLevel, { animate: false });
       wheelAccumRef.current = 0;
-      const startScale = isZoomIn ? 0.7 : 1.45;
-      currentScaleRef.current = startScale;
+      // scale을 1로 즉시 복귀 (레벨이 이미 반영됐으므로 애니메이션 없이)
+      currentScaleRef.current = 1;
       targetScaleRef.current = 1;
-      wrapper.style.transform = `scale(${startScale})`;
-      startScaleAnim();
+      wrapper.style.transform = 'scale(1)';
+      wrapper.style.transformOrigin = 'center center';
     };
 
-    // ── 마우스 휠 ──────────────────────────────────────────────────────
+    // ── 마우스 휠 (Mac 트랙패드 핀치 포함) ────────────────────────────
     const onWheel = (e: WheelEvent) => {
       if (!isInMap(e.clientX, e.clientY)) return;
       e.preventDefault();
@@ -1525,55 +1525,58 @@ const MapContainer = ({
       const now = Date.now();
       const isPinchGesture = e.ctrlKey;
 
+      // 일반 마우스 휠: 즉시 레벨 변경
       if (!isPinchGesture) {
         const lvl = map.getLevel();
-        if (e.deltaY < 0 && lvl > MIN_LEVEL) applyZoomLevel(lvl - 1, true);
-        else if (e.deltaY > 0 && lvl < MAX_LEVEL) applyZoomLevel(lvl + 1, false);
+        if (e.deltaY < 0 && lvl > MIN_LEVEL) applyZoomLevel(lvl - 1);
+        else if (e.deltaY > 0 && lvl < MAX_LEVEL) applyZoomLevel(lvl + 1);
         return;
       }
 
-      // 이전 이벤트로부터 500ms 이상 지났으면 새 핀치 시작 → accum 리셋
+      // 핀치 제스처: 500ms 이상 간격이면 새 제스처 시작 → accum 리셋
       if (now - lastWheelTimeRef.current > 500) {
         wheelAccumRef.current = 0;
       }
       lastWheelTimeRef.current = now;
 
-      const sensitivity = 0.018;
-      wheelAccumRef.current += e.deltaY * sensitivity;
+      // accum = 핀치 누적량 (음수=줌인, 양수=줌아웃)
+      // sensitivity 0.018 → accum ≈ log2(scale) 근사
+      wheelAccumRef.current += e.deltaY * 0.018;
 
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
-      targetScaleRef.current = Math.max(0.75, Math.min(1.4, 1 - wheelAccumRef.current * 0.5));
-      startScaleAnim();
+      // accum을 scale로 변환: accum=-1 → scale=2(줌인), accum=+1 → scale=0.5(줌아웃)
+      // 2^(-accum) 공식 사용 (카카오맵 레벨 1 = 2배 관계)
+      const visualScale = Math.pow(2, -wheelAccumRef.current);
+      const clampedScale = Math.max(0.25, Math.min(4, visualScale));
+      currentScaleRef.current = clampedScale;
+      targetScaleRef.current = clampedScale;
+      wrapper.style.transform = `scale(${clampedScale})`;
 
+      // 핀치 종료 감지: 150ms 동안 이벤트 없으면 레벨 확정
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         zoomResetTimerRef.current = null;
         const currentMap = mapInstance.current;
         if (!currentMap) return;
-        const currentLvl = currentMap.getLevel();
+        const startLvl = currentMap.getLevel();
         const accum = wheelAccumRef.current;
 
-        if (accum <= -0.35 && currentLvl > MIN_LEVEL) {
-          applyZoomLevel(currentLvl - 1, true);
-        } else if (accum >= 0.35 && currentLvl < MAX_LEVEL) {
-          applyZoomLevel(currentLvl + 1, false);
-        } else {
-          wheelAccumRef.current = 0;
-          targetScaleRef.current = 1;
-          const w = getWrapper();
-          if (w) w.style.transformOrigin = 'center center';
-          startScaleAnim();
-        }
+        // accum → 레벨 변화량: 카카오맵은 레벨이 클수록 축소
+        // 줌인(accum<0) → 레벨 감소, 줌아웃(accum>0) → 레벨 증가
+        // 1레벨 = 2배 관계이므로 Math.round(accum)으로 레벨 변화량 결정
+        const levelDelta = Math.round(accum);
+        const targetLvl = startLvl + levelDelta;
+
+        applyZoomLevel(targetLvl);
       }, 150);
     };
 
-    // ── 핀치 (PointerEvent 기반 - 브라우저 시뮬레이터 + 실제 터치 모두 동작) ──
+    // ── 핀치 (PointerEvent - 실제 터치 기기) ──────────────────────────
     const activePointers = new Map<number, { x: number; y: number }>();
     let pinchStartDist = 0;
-    let pinchOriginX = 0;
-    let pinchOriginY = 0;
+    let pinchStartLvl = 0;
 
     const getPinchDist = () => {
       const pts = Array.from(activePointers.values());
@@ -1586,19 +1589,17 @@ const MapContainer = ({
     const onPointerDown = (e: PointerEvent) => {
       if (!isInMap(e.clientX, e.clientY)) return;
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      console.log(`[Zoom] pointerdown id=${e.pointerId} pointerType=${e.pointerType} total=${activePointers.size}`);
       if (activePointers.size === 2) {
         pinchStartDist = getPinchDist();
+        pinchStartLvl = mapInstance.current?.getLevel() ?? 6;
         const pts = Array.from(activePointers.values());
-        pinchOriginX = (pts[0].x + pts[1].x) / 2;
-        pinchOriginY = (pts[0].y + pts[1].y) / 2;
-        console.log(`[Zoom] pinch START dist=${pinchStartDist.toFixed(1)}`);
-
+        const originX = (pts[0].x + pts[1].x) / 2;
+        const originY = (pts[0].y + pts[1].y) / 2;
         const wrapper = getWrapper();
         const container = getContainer();
         const rect = container?.getBoundingClientRect();
         if (wrapper && rect) {
-          wrapper.style.transformOrigin = `${((pinchOriginX - rect.left) / rect.width) * 100}% ${((pinchOriginY - rect.top) / rect.height) * 100}%`;
+          wrapper.style.transformOrigin = `${((originX - rect.left) / rect.width) * 100}% ${((originY - rect.top) / rect.height) * 100}%`;
         }
       }
     };
@@ -1606,59 +1607,34 @@ const MapContainer = ({
     const onPointerMove = (e: PointerEvent) => {
       if (!activePointers.has(e.pointerId)) return;
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
       if (activePointers.size !== 2 || pinchStartDist === 0) return;
 
-      const map = mapInstance.current;
       const wrapper = getWrapper();
-      if (!map || !wrapper) return;
+      if (!wrapper) return;
 
-      const currentDist = getPinchDist();
-      const ratio = currentDist / pinchStartDist;
-
-      // CSS scale 즉각 반영 (레벨 변경은 손 뗄 때만)
-      const clamped = Math.max(0.45, Math.min(2.3, ratio));
-      currentScaleRef.current = clamped;
-      targetScaleRef.current = clamped;
-      wrapper.style.transform = `scale(${clamped})`;
+      const ratio = getPinchDist() / pinchStartDist;
+      const clampedScale = Math.max(0.25, Math.min(4, ratio));
+      currentScaleRef.current = clampedScale;
+      targetScaleRef.current = clampedScale;
+      wrapper.style.transform = `scale(${clampedScale})`;
     };
 
     const onPointerUp = (e: PointerEvent) => {
-      console.log(`[Zoom] pointerup id=${e.pointerId} pointerType=${e.pointerType} size=${activePointers.size} pinchStartDist=${pinchStartDist.toFixed(1)}`);
-      // 손 뗄 때 현재 ratio로 레벨 변경 여부 결정
+      // 두 손가락 중 하나가 떼어질 때 레벨 확정
       if (activePointers.size === 2 && pinchStartDist > 0) {
-        const currentDist = getPinchDist();
-        const ratio = currentDist / pinchStartDist;
-        const map = mapInstance.current;
-        console.log(`[Zoom] pinch END: currentDist=${currentDist.toFixed(1)} ratio=${ratio.toFixed(3)} lvl=${map?.getLevel()}`);
-        if (map) {
-          const lvl = map.getLevel();
-          if (ratio >= 1.25 && lvl > MIN_LEVEL) {
-            console.log(`[Zoom] → pinch zoom IN (${lvl} → ${lvl - 1})`);
-            applyZoomLevel(lvl - 1, true);
-          } else if (ratio <= 0.8 && lvl < MAX_LEVEL) {
-            console.log(`[Zoom] → pinch zoom OUT (${lvl} → ${lvl + 1})`);
-            applyZoomLevel(lvl + 1, false);
-          } else {
-            console.log(`[Zoom] → pinch threshold not met (ratio=${ratio.toFixed(3)}), scale reset only`);
-            targetScaleRef.current = 1;
-            const w = getWrapper();
-            if (w) w.style.transformOrigin = 'center center';
-            startScaleAnim();
-          }
-        }
+        const ratio = getPinchDist() / pinchStartDist;
+        // ratio → 레벨 변화: log2(ratio) = 몇 레벨 변화인지
+        // 줌인(ratio>1) → 레벨 감소, 줌아웃(ratio<1) → 레벨 증가
+        const levelDelta = -Math.round(Math.log2(ratio));
+        const targetLvl = pinchStartLvl + levelDelta;
+        applyZoomLevel(targetLvl);
       }
 
       activePointers.delete(e.pointerId);
 
       if (activePointers.size < 2) {
         pinchStartDist = 0;
-        if (targetScaleRef.current !== 1) {
-          targetScaleRef.current = 1;
-          const w = getWrapper();
-          if (w) w.style.transformOrigin = 'center center';
-          startScaleAnim();
-        }
+        pinchStartLvl = 0;
       }
     };
 
