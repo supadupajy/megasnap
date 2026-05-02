@@ -1513,6 +1513,7 @@ const MapContainer = ({
 
     // ── 마우스 휠 ──────────────────────────────────────────────────────
     const onWheel = (e: WheelEvent) => {
+      console.log('[SmoothZoom] wheel 이벤트 - ctrlKey:', e.ctrlKey, 'deltaY:', e.deltaY.toFixed(2), 'inMap:', isInMap(e.clientX, e.clientY));
       if (!isInMap(e.clientX, e.clientY)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -1561,6 +1562,7 @@ const MapContainer = ({
     };
 
     const onPointerDown = (e: PointerEvent) => {
+      console.log('[SmoothZoom] pointerdown - type:', e.pointerType, 'inMap:', isInMap(e.clientX, e.clientY));
       if (!isInMap(e.clientX, e.clientY)) return;
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       console.log('[SmoothZoom] pointerdown - 활성 포인터 수:', activePointers.size);
