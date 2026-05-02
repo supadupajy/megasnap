@@ -285,32 +285,24 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
-    // 이미지 슬라이더 - 단일 이미지만 렌더 (가장 단순/안전)
+    // CSS background-image 방식 (iOS Safari 큰 이미지 페인트 버그 회피)
     const currentImg = displayImages[currentImageIndex] || displayImages[0];
-    console.log('[PostItem renderMedia]', {
-      postId: post.id,
-      currentImageIndex,
-      displayImagesLength: displayImages.length,
-      currentImg,
-      displayImages,
-    });
     return (
       <>
-        {currentImg ? (
-          <img
-            src={currentImg}
-            alt={`Content ${currentImageIndex}`}
-            className="absolute inset-0 w-full h-full object-cover select-none"
-            draggable={false}
-            loading="eager"
-            onLoad={() => console.log('[PostItem img onLoad]', { postId: post.id, src: currentImg })}
-            onError={(e) => {
-              console.error('[PostItem img onError]', { postId: post.id, src: currentImg });
-              (e.currentTarget as HTMLImageElement).src = getFallbackImage();
+        {currentImg && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundImage: `url("${currentImg}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
             }}
           />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-red-600 text-xs">NO IMG</div>
         )}
 
         {/* 페이지 인디케이터 */}
@@ -411,16 +403,26 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     });
   }, [displayImages]);
 
-  // 미디어 영역 스와이프 핸들러
+  // 미디어 영역 스와이프 핸들러 (터치 + 마우스)
   const swipeStartXRef = useRef(0);
   const swipeStartYRef = useRef(0);
   const swipeMovedRef = useRef(false);
+  const swipeMouseDownRef = useRef(false);
+
+  const commitSwipe = (dx: number) => {
+    if (!swipeMovedRef.current) return;
+    if (dx < -50 && currentImageIndex < displayImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    } else if (dx > 50 && currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
   const handleMediaTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
     swipeStartXRef.current = t.clientX;
     swipeStartYRef.current = t.clientY;
     swipeMovedRef.current = false;
-    console.log('[PostItem TouchStart]', { x: t.clientX, y: t.clientY, len: displayImages.length });
   };
   const handleMediaTouchMove = (e: React.TouchEvent) => {
     const t = e.touches[0];
@@ -432,18 +434,29 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   };
   const handleMediaTouchEnd = (e: React.TouchEvent) => {
     const t = e.changedTouches[0];
-    const dx = t.clientX - swipeStartXRef.current;
-    console.log('[PostItem TouchEnd]', { dx, moved: swipeMovedRef.current, currentImageIndex, len: displayImages.length });
-    if (!swipeMovedRef.current) {
-      return;
+    commitSwipe(t.clientX - swipeStartXRef.current);
+  };
+  const handleMediaMouseDown = (e: React.MouseEvent) => {
+    swipeStartXRef.current = e.clientX;
+    swipeStartYRef.current = e.clientY;
+    swipeMovedRef.current = false;
+    swipeMouseDownRef.current = true;
+  };
+  const handleMediaMouseMove = (e: React.MouseEvent) => {
+    if (!swipeMouseDownRef.current) return;
+    const dx = e.clientX - swipeStartXRef.current;
+    const dy = e.clientY - swipeStartYRef.current;
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+      swipeMovedRef.current = true;
     }
-    if (dx < -50 && currentImageIndex < displayImages.length - 1) {
-      console.log('[PostItem] swipe LEFT → next');
-      setCurrentImageIndex(currentImageIndex + 1);
-    } else if (dx > 50 && currentImageIndex > 0) {
-      console.log('[PostItem] swipe RIGHT → prev');
-      setCurrentImageIndex(currentImageIndex - 1);
-    }
+  };
+  const handleMediaMouseUp = (e: React.MouseEvent) => {
+    if (!swipeMouseDownRef.current) return;
+    swipeMouseDownRef.current = false;
+    commitSwipe(e.clientX - swipeStartXRef.current);
+  };
+  const handleMediaMouseLeave = () => {
+    swipeMouseDownRef.current = false;
   };
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
@@ -676,7 +689,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               onTouchStart={handleMediaTouchStart}
               onTouchMove={handleMediaTouchMove}
               onTouchEnd={handleMediaTouchEnd}
-              onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
+              onMouseDown={handleMediaMouseDown}
+              onMouseMove={handleMediaMouseMove}
+              onMouseUp={handleMediaMouseUp}
+              onMouseLeave={handleMediaMouseLeave}
+              onClick={() => {
+                if (swipeMovedRef.current) { swipeMovedRef.current = false; return; }
+                if (!post.videoUrl && lat != null && lng != null) onLocationClick?.({} as any, lat, lng);
+              }}
             >
               {renderMedia()}
             </div>
@@ -785,7 +805,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             onTouchStart={handleMediaTouchStart}
             onTouchMove={handleMediaTouchMove}
             onTouchEnd={handleMediaTouchEnd}
-            onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
+            onMouseDown={handleMediaMouseDown}
+            onMouseMove={handleMediaMouseMove}
+            onMouseUp={handleMediaMouseUp}
+            onMouseLeave={handleMediaMouseLeave}
+            onClick={() => {
+              if (swipeMovedRef.current) { swipeMovedRef.current = false; return; }
+              if (!post.videoUrl && lat != null && lng != null) onLocationClick?.({} as any, lat, lng);
+            }}
           >
             {renderMedia()}
           </div>

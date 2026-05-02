@@ -639,21 +639,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         style={{
           position: 'relative',
           width: '100%',
-          minHeight: 300,
           aspectRatio: '1 / 1',
           borderRadius: 24,
           overflow: 'hidden',
-          background: 'red',
-          border: '5px solid lime',
+          background: '#e5e7eb', // gray-200
           touchAction: 'pan-y',
-          zIndex: 10,
         }}
         onTouchStart={(e) => {
           const t = e.touches[0];
           swipeStartXRef.current = t.clientX;
           swipeStartYRef.current = t.clientY;
           swipeMovedRef.current = false;
-          console.log('[PostDetail TouchStart]', { x: t.clientX, y: t.clientY });
         }}
         onTouchMove={(e) => {
           const t = e.touches[0];
@@ -664,69 +660,59 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           }
         }}
         onTouchEnd={(e) => {
+          if (!swipeMovedRef.current) return;
           const t = e.changedTouches[0];
           const dx = t.clientX - swipeStartXRef.current;
-          console.log('[PostDetail TouchEnd]', { dx, moved: swipeMovedRef.current, currentImageIndex });
-          if (!swipeMovedRef.current) return;
           if (dx < -50 && currentImageIndex < displayImages.length - 1) {
             setCurrentImageIndex(currentImageIndex + 1);
           } else if (dx > 50 && currentImageIndex > 0) {
             setCurrentImageIndex(currentImageIndex - 1);
           }
         }}
+        onMouseDown={(e) => {
+          swipeStartXRef.current = e.clientX;
+          swipeStartYRef.current = e.clientY;
+          swipeMovedRef.current = false;
+          (e.currentTarget as HTMLDivElement).dataset.mouseDown = '1';
+        }}
+        onMouseMove={(e) => {
+          if ((e.currentTarget as HTMLDivElement).dataset.mouseDown !== '1') return;
+          const dx = e.clientX - swipeStartXRef.current;
+          const dy = e.clientY - swipeStartYRef.current;
+          if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+            swipeMovedRef.current = true;
+          }
+        }}
+        onMouseUp={(e) => {
+          (e.currentTarget as HTMLDivElement).dataset.mouseDown = '0';
+          if (!swipeMovedRef.current) return;
+          const dx = e.clientX - swipeStartXRef.current;
+          if (dx < -50 && currentImageIndex < displayImages.length - 1) {
+            setCurrentImageIndex(currentImageIndex + 1);
+          } else if (dx > 50 && currentImageIndex > 0) {
+            setCurrentImageIndex(currentImageIndex - 1);
+          }
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).dataset.mouseDown = '0';
+        }}
       >
-        {/* 단일 이미지 렌더링 - 강제 인라인 스타일 */}
+        {/* CSS background-image 방식 (큰 이미지에 안전) */}
         {displayImages[currentImageIndex] && (
-          <>
-            <img
-              src={displayImages[currentImageIndex]}
-              alt={`Post content ${currentImageIndex + 1}`}
-              draggable={false}
-              loading="eager"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-                opacity: 1,
-                visibility: 'visible',
-                zIndex: 5,
-              }}
-              onLoad={(e) => {
-                const img = e.currentTarget;
-                const r = img.getBoundingClientRect();
-                const info = `LOADED nat=${img.naturalWidth}x${img.naturalHeight} box=${Math.round(r.width)}x${Math.round(r.height)}`;
-                console.log('[PostDetail img onLoad]', { src: displayImages[currentImageIndex], info });
-                const dbg = document.getElementById('img-debug-overlay');
-                if (dbg) dbg.textContent = info;
-              }}
-              onError={(e) => {
-                console.error('[PostDetail img onError]', { src: displayImages[currentImageIndex] });
-                const dbg = document.getElementById('img-debug-overlay');
-                if (dbg) dbg.textContent = 'ERROR';
-              }}
-            />
-            <div
-              id="img-debug-overlay"
-              style={{
-                position: 'absolute',
-                top: 8,
-                left: 8,
-                zIndex: 100,
-                background: 'black',
-                color: 'lime',
-                padding: '4px 8px',
-                fontSize: 12,
-                fontFamily: 'monospace',
-                pointerEvents: 'none',
-              }}
-            >
-              waiting...
-            </div>
-          </>
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              backgroundImage: `url("${displayImages[currentImageIndex]}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              zIndex: 5,
+            }}
+          />
         )}
 
         {displayImages.length > 1 && (
