@@ -636,8 +636,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return (
       <div
         ref={mediaContainerRef}
-        className="relative w-full rounded-3xl overflow-hidden bg-gray-200"
-        style={{ aspectRatio: '1 / 1', touchAction: 'pan-y' }}
+        style={{
+          position: 'relative',
+          width: '100%',
+          aspectRatio: '1 / 1',
+          borderRadius: 24,
+          overflow: 'hidden',
+          background: 'red', // 디버그용: 컨테이너 보이는지 확인
+          touchAction: 'pan-y',
+        }}
         onTouchStart={(e) => {
           const t = e.touches[0];
           swipeStartXRef.current = t.clientX;
