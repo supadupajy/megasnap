@@ -293,7 +293,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
         {displayImages.map((img, index) => (
           img ? (
             <img
-              key={index}
+              key={`${post.id}-${index}-${img}`}
               src={img}
               alt={`Content ${index}`}
               style={{
