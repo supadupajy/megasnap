@@ -89,6 +89,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [avatarError, setAvatarError] = useState(false);
   const [sliderWidth, setSliderWidth] = useState(0);
   const mediaContainerRef = useRef<HTMLDivElement>(null);
+  const swipeStartXRef = useRef(0);
+  const swipeStartYRef = useRef(0);
+  const swipeMovedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen && !isDeleteDialogOpen) {
@@ -628,25 +631,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         style={{ aspectRatio: '1 / 1', touchAction: 'pan-y' }}
         onTouchStart={(e) => {
           const t = e.touches[0];
-          setStartX(t.clientX);
-          setIsDragging(false);
-          setScrollLeft(0);
+          swipeStartXRef.current = t.clientX;
+          swipeStartYRef.current = t.clientY;
+          swipeMovedRef.current = false;
         }}
         onTouchMove={(e) => {
           const t = e.touches[0];
-          const dx = t.clientX - startX;
-          if (Math.abs(dx) > 10) setIsDragging(true);
+          const dx = t.clientX - swipeStartXRef.current;
+          const dy = t.clientY - swipeStartYRef.current;
+          if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+            swipeMovedRef.current = true;
+          }
         }}
         onTouchEnd={(e) => {
-          if (!isDragging) return;
+          if (!swipeMovedRef.current) return;
           const t = e.changedTouches[0];
-          const dx = t.clientX - startX;
+          const dx = t.clientX - swipeStartXRef.current;
           if (dx < -50 && currentImageIndex < displayImages.length - 1) {
             setCurrentImageIndex(currentImageIndex + 1);
           } else if (dx > 50 && currentImageIndex > 0) {
             setCurrentImageIndex(currentImageIndex - 1);
           }
-          setIsDragging(false);
+          swipeMovedRef.current = false;
         }}
       >
         {/* 현재 인덱스의 이미지 1장만 렌더링 - absolute inset-0 */}
@@ -665,36 +671,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               target.style.opacity = '0.3';
             }}
           />
-        )}
-
-        {/* 좌우 네비게이션 버튼 (데스크탑/터치 모두) */}
-        {displayImages.length > 1 && currentImageIndex > 0 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex - 1); }}
-            style={{
-              position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'rgba(0,0,0,0.4)', color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 10, border: 'none', cursor: 'pointer',
-            }}
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-        )}
-        {displayImages.length > 1 && currentImageIndex < displayImages.length - 1 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex + 1); }}
-            style={{
-              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'rgba(0,0,0,0.4)', color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 10, border: 'none', cursor: 'pointer',
-            }}
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
         )}
 
         {displayImages.length > 1 && (

@@ -314,36 +314,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           />
         )}
 
-        {/* 좌우 네비게이션 버튼 */}
-        {displayImages.length > 1 && currentImageIndex > 0 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex - 1); }}
-            style={{
-              position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'rgba(0,0,0,0.4)', color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 10, border: 'none', cursor: 'pointer',
-            }}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-        )}
-        {displayImages.length > 1 && currentImageIndex < displayImages.length - 1 && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex + 1); }}
-            style={{
-              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'rgba(0,0,0,0.4)', color: 'white',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              zIndex: 10, border: 'none', cursor: 'pointer',
-            }}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
-
         {/* 페이지 인디케이터 */}
         {displayImages.length > 1 && (
           <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 20, pointerEvents: 'none' }}>
@@ -441,6 +411,36 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       }
     });
   }, [displayImages]);
+
+  // 미디어 영역 스와이프 핸들러
+  const swipeStartXRef = useRef(0);
+  const swipeStartYRef = useRef(0);
+  const swipeMovedRef = useRef(false);
+  const handleMediaTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    swipeStartXRef.current = t.clientX;
+    swipeStartYRef.current = t.clientY;
+    swipeMovedRef.current = false;
+  };
+  const handleMediaTouchMove = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    const dx = t.clientX - swipeStartXRef.current;
+    const dy = t.clientY - swipeStartYRef.current;
+    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+      swipeMovedRef.current = true;
+    }
+  };
+  const handleMediaTouchEnd = (e: React.TouchEvent) => {
+    if (!swipeMovedRef.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - swipeStartXRef.current;
+    if (dx < -50 && currentImageIndex < displayImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    } else if (dx > 50 && currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+    swipeMovedRef.current = false;
+  };
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -668,7 +668,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             <div
               ref={mediaContainerRef}
               className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-              style={sliderWidth > 0 ? { height: sliderWidth, containerType: 'inline-size' } : { aspectRatio: '1 / 1', containerType: 'inline-size' }}
+              style={{ aspectRatio: '1 / 1', touchAction: 'pan-y' }}
+              onTouchStart={handleMediaTouchStart}
+              onTouchMove={handleMediaTouchMove}
+              onTouchEnd={handleMediaTouchEnd}
               onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
               {renderMedia()}
@@ -774,7 +777,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           <div
             ref={mediaContainerRef}
             className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-            style={sliderWidth > 0 ? { height: sliderWidth, containerType: 'inline-size' } : { aspectRatio: '1 / 1', containerType: 'inline-size' }}
+            style={{ aspectRatio: '1 / 1', touchAction: 'pan-y' }}
+            onTouchStart={handleMediaTouchStart}
+            onTouchMove={handleMediaTouchMove}
+            onTouchEnd={handleMediaTouchEnd}
             onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
             {renderMedia()}
