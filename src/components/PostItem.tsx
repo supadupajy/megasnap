@@ -287,32 +287,34 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     const slideSize = sliderWidth > 0 ? sliderWidth : undefined;
 
-    // 이미지 슬라이더 - 현재 인덱스 이미지 1장만 렌더 (단순/안전)
-    const currentImg = displayImages[currentImageIndex];
+    // 이미지 슬라이더 - flex + translateX (인스타그램 방식)
     return (
       <>
-        {currentImg && (
-          <img
-            src={currentImg}
-            alt={`Content ${currentImageIndex}`}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-            draggable={false}
-            loading="eager"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = getFallbackImage();
-            }}
-          />
-        )}
+        <div
+          className="absolute inset-0 flex"
+          style={{
+            transform: `translateX(-${currentImageIndex * 100}%)`,
+            transition: 'transform 0.3s ease',
+            willChange: 'transform',
+          }}
+        >
+          {displayImages.map((img, index) => (
+            <div key={index} className="relative shrink-0" style={{ width: '100%', height: '100%' }}>
+              {img && (
+                <img
+                  src={img}
+                  alt={`Content ${index}`}
+                  className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+                  draggable={false}
+                  loading="eager"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = getFallbackImage();
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* 페이지 인디케이터 */}
         {displayImages.length > 1 && (

@@ -655,23 +655,38 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           swipeMovedRef.current = false;
         }}
       >
-        {/* 현재 인덱스의 이미지 1장만 렌더링 - absolute inset-0 */}
-        {displayImages[currentImageIndex] && (
-          <img
-            src={displayImages[currentImageIndex]}
-            alt={`Post content ${currentImageIndex + 1}`}
-            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
-            draggable={false}
-            loading="eager"
-            onError={(e) => {
-              const target = e.currentTarget;
-              target.src = '/placeholder.svg';
-              target.style.objectFit = 'contain';
-              target.style.padding = '20%';
-              target.style.opacity = '0.3';
-            }}
-          />
-        )}
+        {/* 모든 이미지를 가로로 배치하고 translateX로 이동 (인스타그램 방식) */}
+        <div
+          className="absolute inset-0 flex"
+          style={{
+            transform: `translateX(-${currentImageIndex * 100}%)`,
+            transition: 'transform 0.3s ease',
+            willChange: 'transform',
+          }}
+        >
+          {displayImages.map((img, index) => (
+            <div
+              key={index}
+              className="relative shrink-0"
+              style={{ width: '100%', height: '100%' }}
+            >
+              <img
+                src={img}
+                alt={`Post content ${index + 1}`}
+                className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
+                draggable={false}
+                loading="eager"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.src = '/placeholder.svg';
+                  target.style.objectFit = 'contain';
+                  target.style.padding = '20%';
+                  target.style.opacity = '0.3';
+                }}
+              />
+            </div>
+          ))}
+        </div>
 
         {displayImages.length > 1 && (
           <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
