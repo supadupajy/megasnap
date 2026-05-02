@@ -235,6 +235,7 @@ const Index = () => {
   // 위치 선택 모드에서 throttle 없이 즉시 최신 center를 추적 (stale closure 방지)
   const tempSelectedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
 
@@ -897,7 +898,9 @@ const Index = () => {
           maximumAge: 30000,
         });
         if (pos?.coords) {
-          setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setMapCenter(loc);
+          setUserLocation(loc);
           if (toastId) dismissToast(toastId);
           if (showToast) showSuccess('현재 위치로 이동했습니다.');
         }
@@ -924,7 +927,9 @@ const Index = () => {
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setMapCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setMapCenter(loc);
+          setUserLocation(loc);
           if (toastId) dismissToast(toastId);
           if (showToast) showSuccess('현재 위치로 이동했습니다.');
         },
@@ -1236,6 +1241,7 @@ const Index = () => {
               level={currentZoom}
               searchResultLocation={searchResultLocation}
               onMapClick={() => setSearchResultLocation(null)}
+              userLocation={userLocation}
             />
           </div>
 

@@ -15,6 +15,7 @@ interface MapContainerProps {
   center?: { lat: number; lng: number };
   level?: number;
   searchResultLocation?: { lat: number; lng: number } | null;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg";
@@ -32,6 +33,7 @@ const MapContainer = ({
   center,
   level = 6,
   searchResultLocation,
+  userLocation,
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -54,6 +56,7 @@ const MapContainer = ({
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   const searchOverlayRef = useRef<any>(null);
+  const userLocationOverlayRef = useRef<any>(null);
   const highlightingIdsRef = useRef<Set<string>>(new Set());
   const animationFrameRef = useRef<number | null>(null);
   const levelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -276,6 +279,82 @@ const MapContainer = ({
       kakao.maps.event.removeListener(mapInstance.current, 'dragend', handleDragEnd);
     };
   }, [isMapReady, cancelLongPress, revealMarkersOnce]);
+
+  // ── 현재 위치 오버레이 ──────────────────────────────────────
+  useEffect(() => {
+    const kakao = (window as any).kakao;
+    if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
+
+    // 기존 오버레이 제거
+    if (userLocationOverlayRef.current) {
+      userLocationOverlayRef.current.setMap(null);
+      userLocationOverlayRef.current = null;
+    }
+
+    if (!userLocation) return;
+
+    const content = document.createElement('div');
+    content.className = 'user-location-marker';
+    content.innerHTML = `
+      <div style="
+        position: relative;
+        width: 22px;
+        height: 22px;
+        transform: translate(-50%, -50%);
+      ">
+        <!-- 정확도 파동 (큰 원) -->
+        <div style="
+          position: absolute;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+          width: 48px; height: 48px;
+          border-radius: 50%;
+          background: rgba(66, 133, 244, 0.15);
+          animation: user-loc-accuracy 2.4s ease-out infinite;
+          pointer-events: none;
+        "></div>
+        <!-- 파동 링 -->
+        <div style="
+          position: absolute;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+          width: 22px; height: 22px;
+          border-radius: 50%;
+          background: transparent;
+          border: 2.5px solid rgba(66, 133, 244, 0.6);
+          animation: user-loc-pulse 2.4s ease-out infinite;
+          pointer-events: none;
+        "></div>
+        <!-- 흰 테두리 -->
+        <div style="
+          position: absolute;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+          width: 22px; height: 22px;
+          border-radius: 50%;
+          background: white;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        "></div>
+        <!-- 파란 점 -->
+        <div style="
+          position: absolute;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+          width: 14px; height: 14px;
+          border-radius: 50%;
+          background: #4285F4;
+        "></div>
+      </div>
+    `;
+
+    const overlay = new kakao.maps.CustomOverlay({
+      position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
+      content: content,
+      zIndex: 9000,
+    });
+    overlay.setMap(mapInstance.current);
+    userLocationOverlayRef.current = overlay;
+  }, [userLocation, isMapReady]);
 
   // ── 기존 이벤트 핸들러들 ──────────────────────────────────────────────
 
@@ -1424,6 +1503,18 @@ const MapContainer = ({
       }}
       onContextMenu={(e) => e.preventDefault()}
     >
+      <style>{`
+        @keyframes user-loc-pulse {
+          0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.8; }
+          70%  { transform: translate(-50%, -50%) scale(2.8); opacity: 0; }
+          100% { transform: translate(-50%, -50%) scale(2.8); opacity: 0; }
+        }
+        @keyframes user-loc-accuracy {
+          0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0.5; }
+          60%  { transform: translate(-50%, -50%) scale(1.4); opacity: 0.1; }
+          100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+        }
+      `}</style>
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
