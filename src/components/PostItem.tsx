@@ -299,26 +299,32 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 scrollSnapAlign: 'start',
                 scrollSnapStop: 'always',
                 aspectRatio: '1 / 1',
+                background: '#f3f4f6',
               }}
             >
-              <img
-                src={img}
-                alt={`Content ${index}`}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-                draggable={false}
-                loading="eager"
-                onError={(e) => {
-                  console.log('[PostItem] Image error for:', img);
-                  handleImageError();
-                }}
-              />
+              {img ? (
+                <img
+                  src={img}
+                  alt={`Content ${index}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}
+                  draggable={false}
+                  loading="eager"
+                  onLoad={() => console.log('[PostItem] Image loaded OK:', img)}
+                  onError={(e) => {
+                    console.log('[PostItem] Image error for:', img);
+                    (e.currentTarget as HTMLImageElement).src = getFallbackImage();
+                  }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: '#f3f4f6' }} />
+              )}
             </div>
           ))}
         </div>
@@ -347,10 +353,23 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   // 이미지 슬라이더 데이터 준비
   const displayImages = useMemo(() => {
-    // Ad 포스팅은 image_url(이미 음식 이미지로 교체됨)만 사용, images 배열 무시
-    const baseImages = isAd
-      ? [post.image_url || post.image]
-      : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
+    const isValidImg = (url: any) => typeof url === 'string' && url.trim().length > 0;
+
+    let baseImages: string[];
+    if (isAd) {
+      baseImages = [post.image_url || post.image].filter(isValidImg) as string[];
+    } else if (Array.isArray(post.images) && post.images.length > 0) {
+      // null/빈문자열 필터링
+      baseImages = post.images.filter(isValidImg) as string[];
+    } else {
+      baseImages = [post.image_url || post.image].filter(isValidImg) as string[];
+    }
+
+    // 유효한 이미지가 하나도 없으면 fallback
+    if (baseImages.length === 0) {
+      baseImages = [getFallbackImage()];
+    }
+
     console.log('[PostItem] displayImages for post', post.id, ':', baseImages);
     return baseImages;
   }, [post.images, post.image, post.image_url, isAd]);
