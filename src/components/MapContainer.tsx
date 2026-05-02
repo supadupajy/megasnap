@@ -1499,15 +1499,11 @@ const MapContainer = ({
 
     const applyZoomLevel = (newLevel: number) => {
       const map = mapInstance.current;
-      const wrapper = getWrapper();
-      if (!map || !wrapper) return;
+      if (!map) return;
       const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
       map.setLevel(clampedLevel, { animate: false });
       wheelAccumRef.current = 0;
-      currentScaleRef.current = 1;
-      targetScaleRef.current = 1;
-      wrapper.style.transform = 'scale(1)';
-      wrapper.style.transformOrigin = 'center center';
+      // scale은 건드리지 않음 - 호출자가 직접 처리
     };
 
     // ── 마우스 휠 (Mac 트랙패드 핀치 포함) ────────────────────────────
@@ -1524,11 +1520,14 @@ const MapContainer = ({
       const now = Date.now();
       const isPinchGesture = e.ctrlKey;
 
-      // 일반 마우스 휠: 즉시 레벨 변경
+      // 일반 마우스 휠: 즉시 레벨 변경, scale 리셋
       if (!isPinchGesture) {
         const lvl = map.getLevel();
-        if (e.deltaY < 0 && lvl > MIN_LEVEL) applyZoomLevel(lvl - 1);
-        else if (e.deltaY > 0 && lvl < MAX_LEVEL) applyZoomLevel(lvl + 1);
+        if (e.deltaY < 0 && lvl > MIN_LEVEL) {
+          map.setLevel(lvl - 1, { animate: false });
+        } else if (e.deltaY > 0 && lvl < MAX_LEVEL) {
+          map.setLevel(lvl + 1, { animate: false });
+        }
         return;
       }
 
@@ -1538,16 +1537,14 @@ const MapContainer = ({
       }
       lastWheelTimeRef.current = now;
 
-      // sensitivity: Mac 트랙패드 기준 한 번 핀치에 accum ≈ ±0.5~1.0
       wheelAccumRef.current += e.deltaY * 0.025;
-
-      // accum을 ±1로 클램프 → 한 번에 최대 1레벨만 변화
+      // ±1 클램프: 한 제스처에 최대 1레벨
       wheelAccumRef.current = Math.max(-1, Math.min(1, wheelAccumRef.current));
 
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
-      // accum → scale: -1=2배(줌인), +1=0.5배(줌아웃)
+      // 핀치 중 시각적 scale 피드백
       const visualScale = Math.pow(2, -wheelAccumRef.current);
       currentScaleRef.current = visualScale;
       targetScaleRef.current = visualScale;
@@ -1555,22 +1552,33 @@ const MapContainer = ({
 
       console.log(`[Zoom] wheel: accum=${wheelAccumRef.current.toFixed(3)} scale=${visualScale.toFixed(3)} lvl=${map.getLevel()}`);
 
-      // 핀치 종료: 150ms 후 레벨 결정
+      // 핀치 종료: 150ms 후 레벨 결정 + scale을 부드럽게 1로 복귀
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         zoomResetTimerRef.current = null;
         const currentMap = mapInstance.current;
-        if (!currentMap) return;
+        const w = getWrapper();
+        if (!currentMap || !w) return;
+
         const currentLvl = currentMap.getLevel();
         const accum = wheelAccumRef.current;
 
-        // 임계값 ±0.3: 그 이상이면 레벨 변경, 미만이면 현재 레벨 유지
         let newLvl = currentLvl;
         if (accum <= -0.3 && currentLvl > MIN_LEVEL) newLvl = currentLvl - 1;
         else if (accum >= 0.3 && currentLvl < MAX_LEVEL) newLvl = currentLvl + 1;
 
         console.log(`[Zoom] PINCH END: accum=${accum.toFixed(3)} lvl=${currentLvl} → ${newLvl}`);
-        applyZoomLevel(newLvl);
+
+        // 레벨 변경
+        if (newLvl !== currentLvl) {
+          currentMap.setLevel(newLvl, { animate: false });
+        }
+        wheelAccumRef.current = 0;
+
+        // scale을 현재 값에서 1로 부드럽게 복귀 (레벨 변경 후에도 scale 유지하다가 서서히 복귀)
+        targetScaleRef.current = 1;
+        w.style.transformOrigin = 'center center';
+        startScaleAnim();
       }, 150);
     };
 
