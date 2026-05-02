@@ -1179,20 +1179,12 @@ const Index = () => {
                 });
 
                 if (clientCandidates.length > 0) {
-                  // 누른 방향의 화면 경계에서 가장 가까운 마커로 이동
-                  // top: lat이 가장 작은 것 (ne.lat 바로 위)
-                  // bottom: lat이 가장 큰 것 (sw.lat 바로 아래)
-                  // left: lng이 가장 큰 것 (sw.lng 바로 왼쪽)
-                  // right: lng이 가장 작은 것 (ne.lng 바로 오른쪽)
+                  // 현재 지도 중심에서 유클리드 거리가 가장 가까운 마커로 이동
                   let nearest = clientCandidates[0];
-                  if (dir === 'top') {
-                    nearest = clientCandidates.reduce((a, b) => (a.lat! < b.lat! ? a : b));
-                  } else if (dir === 'bottom') {
-                    nearest = clientCandidates.reduce((a, b) => (a.lat! > b.lat! ? a : b));
-                  } else if (dir === 'left') {
-                    nearest = clientCandidates.reduce((a, b) => (a.lng! > b.lng! ? a : b));
-                  } else if (dir === 'right') {
-                    nearest = clientCandidates.reduce((a, b) => (a.lng! < b.lng! ? a : b));
+                  let minDist = Infinity;
+                  for (const p of clientCandidates) {
+                    const d = Math.pow(p.lat! - c.lat, 2) + Math.pow(p.lng! - c.lng, 2);
+                    if (d < minDist) { minDist = d; nearest = p; }
                   }
                   setMapCenter({ lat: nearest.lat!, lng: nearest.lng! });
                 } else {
