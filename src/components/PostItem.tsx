@@ -287,37 +287,32 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     const slideSize = sliderWidth > 0 ? sliderWidth : undefined;
 
-    // 이미지 슬라이더 - absolute + opacity 방식 (sliderWidth 측정 불필요)
+    // 이미지 슬라이더 - 현재 인덱스 이미지 1장만 렌더 (단순/안전)
+    const currentImg = displayImages[currentImageIndex];
     return (
       <>
-        {displayImages.map((img, index) => (
-          img ? (
-            <img
-              key={`${post.id}-${index}-${img}`}
-              src={img}
-              alt={`Content ${index}`}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-                pointerEvents: 'none',
-                userSelect: 'none',
-                opacity: currentImageIndex === index ? 1 : 0,
-                transition: 'opacity 0.3s ease',
-                zIndex: currentImageIndex === index ? 2 : 1,
-              }}
-              draggable={false}
-              loading="eager"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = getFallbackImage();
-              }}
-            />
-          ) : null
-        ))}
+        {currentImg && (
+          <img
+            src={currentImg}
+            alt={`Content ${currentImageIndex}`}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+            draggable={false}
+            loading="eager"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = getFallbackImage();
+            }}
+          />
+        )}
 
         {/* 좌우 네비게이션 버튼 */}
         {displayImages.length > 1 && currentImageIndex > 0 && (
@@ -436,6 +431,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     setCurrentImage(post.image_url || post.image || getFallbackImage());
     setImgError(false);
   }, [post.image_url, post.image]);
+
+  // 다중 이미지 백그라운드 preload (슬라이드 전환 시 즉시 표시)
+  useEffect(() => {
+    displayImages.forEach((url) => {
+      if (typeof url === 'string' && url.startsWith('http')) {
+        const img = new window.Image();
+        img.src = url;
+      }
+    });
+  }, [displayImages]);
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
     e.stopPropagation();

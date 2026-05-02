@@ -122,6 +122,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return () => ro.disconnect();
   }, [isOpen, currentPostIndex]);
 
+  // 현재 포스트의 모든 이미지를 백그라운드로 미리 로드 (슬라이드 전환 시 즉시 표시)
+  useEffect(() => {
+    if (!isOpen) return;
+    const post = posts[currentPostIndex];
+    if (!post) return;
+    const imgs: string[] = Array.isArray(post.images) ? post.images : [];
+    const single = post.image_url || post.image;
+    const allImages = imgs.length > 0 ? imgs : single ? [single] : [];
+    allImages.forEach((url) => {
+      if (typeof url === 'string' && url.startsWith('http')) {
+        const img = new window.Image();
+        img.src = url;
+      }
+    });
+  }, [isOpen, currentPostIndex, posts]);
+
   const onMouseDown = (e: React.MouseEvent) => {
     if (!imageScrollRef.current) return;
     setIsDragging(true);
@@ -310,7 +326,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const isAd = currentPost?.isAd || false;
 
-  const displayImages = (() => {
+  const displayImages = useMemo(() => {
     if (!currentPost) return [];
     let baseImages: string[] = [];
     if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
@@ -323,15 +339,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
-    console.log('[PostDetail] 📦 displayImages computed', {
-      postId: currentPost.id,
-      raw_images: currentPost.images,
-      raw_image_url: currentPost.image_url,
-      raw_image: currentPost.image,
-      result: baseImages,
-    });
     return baseImages;
-  })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPost?.id, JSON.stringify(currentPost?.images), currentPost?.image_url, currentPost?.image, displayImage]);
 
   const postDisplayName = currentPost?.user?.name || '익명';
   
@@ -647,14 +657,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           setIsDragging(false);
         }}
       >
-        {/* 각 이미지를 absolute로 쌓고 현재 인덱스만 opacity로 표시 */}
-        {displayImages.map((img, index) => (
+        {/* 현재 인덱스의 이미지 1장만 렌더링 (가장 단순하고 확실한 방식) */}
+        {displayImages[currentImageIndex] && (
           <img
-            key={`${currentPost?.id}-${index}-${img}`}
-            src={img}
-            alt={`Post content ${index + 1}`}
-            data-img-index={index}
-            data-img-status="pending"
+            src={displayImages[currentImageIndex]}
+            alt={`Post content ${currentImageIndex + 1}`}
             style={{
               position: 'absolute',
               top: 0,
@@ -665,53 +672,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               display: 'block',
               pointerEvents: 'none',
               userSelect: 'none',
-              opacity: currentImageIndex === index ? 1 : 0,
-              transition: 'opacity 0.3s ease',
-              zIndex: currentImageIndex === index ? 2 : 1,
             }}
             draggable={false}
             loading="eager"
-            onLoad={(e) => {
-              e.currentTarget.dataset.imgStatus = 'loaded';
-              const el = e.currentTarget;
-              const rect = el.getBoundingClientRect();
-              const cs = window.getComputedStyle(el);
-              const parent = el.parentElement;
-              const pRect = parent?.getBoundingClientRect();
-              const pCs = parent ? window.getComputedStyle(parent) : null;
-              // 객체를 펼쳐서 보이도록 한 줄 요약 문자열로 출력
-              console.log(
-                `[IMG${index}] rect=${rect.width.toFixed(0)}x${rect.height.toFixed(0)}@(${rect.x.toFixed(0)},${rect.y.toFixed(0)}) | opacity=${cs.opacity} display=${cs.display} visibility=${cs.visibility} zIndex=${cs.zIndex} pos=${cs.position} transform=${cs.transform} filter=${cs.filter}`
-              );
-              console.log(
-                `[IMG${index}-parent] rect=${pRect?.width.toFixed(0)}x${pRect?.height.toFixed(0)} | overflow=${pCs?.overflow} bg=${pCs?.backgroundColor} pos=${pCs?.position} transform=${pCs?.transform}`
-              );
-            }}
             onError={(e) => {
-              e.currentTarget.dataset.imgStatus = 'error';
-              console.error(`[PostDetail] ❌ img[${index}] FAILED`, {
-                postId: currentPost?.id,
-                src: img,
-              });
+              const target = e.currentTarget;
+              target.src = '/placeholder.svg';
+              target.style.objectFit = 'contain';
+              target.style.padding = '20%';
+              target.style.opacity = '0.3';
             }}
           />
-        ))}
+        )}
 
-        {/* 🐛 DEBUG 오버레이 */}
-        <div style={{
-          position: 'absolute', top: 8, left: 8, right: 8, zIndex: 100,
-          background: 'rgba(255,0,0,0.85)', color: 'white', padding: '6px 8px',
-          fontSize: '9px', borderRadius: 6, pointerEvents: 'none',
-          fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: 1.3,
-        }}>
-          <div>idx: {currentImageIndex} / total: {displayImages.length}</div>
-          <div>postId: {String(currentPost?.id).slice(0, 30)}</div>
-          {displayImages.map((u, i) => (
-            <div key={i} style={{ opacity: i === currentImageIndex ? 1 : 0.6 }}>
-              [{i}]: {(u || 'EMPTY').slice(0, 70)}
-            </div>
-          ))}
-        </div>
 
         {/* 좌우 네비게이션 버튼 (데스크탑/터치 모두) */}
         {displayImages.length > 1 && currentImageIndex > 0 && (
