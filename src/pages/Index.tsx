@@ -1180,36 +1180,23 @@ const Index = () => {
                   return false;
                 };
 
-                // 현재 필터가 적용된 마커 목록(spreadMarkersRef)에서 해당 방향 후보 찾기
-                const clientCandidates = spreadMarkersRef.current.filter(post => {
-                  if (post.lat == null || post.lng == null || post.isAd) return false;
-                  return isInDir(post.lat, post.lng);
+                // 항상 DB에서 정확한 결과를 가져옴
+                // (클라이언트 캐시는 화면 근처만 fetch되어 있어 멀리 있는 마커를 놓칠 수 있음)
+                console.log('[OffScreenBadge] dir:', dir, 'bounds:', JSON.stringify(b), 'center:', JSON.stringify(c));
+                const dbNearest = await fetchNearestInDirection(b, c, dir, {
+                  categories: selectedCategories,
+                  userId: authUser?.id || null,
+                  followingIds: Array.from(followingIds),
                 });
+                console.log('[OffScreenBadge] dbNearest:', JSON.stringify(dbNearest));
 
-                if (clientCandidates.length > 0) {
-                  // 현재 지도 중심에서 유클리드 거리가 가장 가까운 마커로 이동
-                  let nearest = clientCandidates[0];
-                  let minDist = Infinity;
-                  for (const p of clientCandidates) {
-                    const d = Math.pow(p.lat! - c.lat, 2) + Math.pow(p.lng! - c.lng, 2);
-                    if (d < minDist) { minDist = d; nearest = p; }
-                  }
-                  setMapCenter({ lat: nearest.lat!, lng: nearest.lng! });
+                if (dbNearest) {
+                  setMapCenter({ lat: dbNearest.lat, lng: dbNearest.lng });
                 } else {
-                  // 클라이언트 목록에 없으면 DB에서 조회
-                  const nearest = await fetchNearestInDirection(b, c, dir, {
-                    categories: selectedCategories,
-                    userId: authUser?.id || null,
-                    followingIds: Array.from(followingIds),
-                  });
-                  if (nearest) {
-                    setMapCenter({ lat: nearest.lat, lng: nearest.lng });
-                  } else {
-                    // 해당 방향에 포스팅이 정말 없으면 패닝
-                    const panLat = { top: latRange * 0.8, bottom: -latRange * 0.8, left: 0, right: 0 }[dir];
-                    const panLng = { top: 0, bottom: 0, left: -lngRange * 0.8, right: lngRange * 0.8 }[dir];
-                    setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
-                  }
+                  // 해당 방향에 포스팅이 정말 없으면 패닝
+                  const panLat = { top: latRange * 0.8, bottom: -latRange * 0.8, left: 0, right: 0 }[dir];
+                  const panLng = { top: 0, bottom: 0, left: -lngRange * 0.8, right: lngRange * 0.8 }[dir];
+                  setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
                 }
               }}
               bottomOffset={bottomNavHeight}
