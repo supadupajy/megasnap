@@ -1603,32 +1603,46 @@ const MapContainer = ({
 
       const currentDist = getPinchDist();
       const ratio = currentDist / pinchStartDist;
-      const lvl = map.getLevel();
 
-      // CSS scale 즉각 반영
+      // CSS scale 즉각 반영 (레벨 변경은 손 뗄 때만)
       const clamped = Math.max(0.45, Math.min(2.3, ratio));
       currentScaleRef.current = clamped;
       targetScaleRef.current = clamped;
       wrapper.style.transform = `scale(${clamped})`;
-
-      if (ratio >= 1.7 && lvl > MIN_LEVEL) {
-        applyZoomLevel(lvl - 1, true);
-        pinchStartDist = getPinchDist(); // 현재 거리를 새 시작점으로
-      } else if (ratio <= 0.6 && lvl < MAX_LEVEL) {
-        applyZoomLevel(lvl + 1, false);
-        pinchStartDist = getPinchDist();
-      }
     };
 
     const onPointerUp = (e: PointerEvent) => {
+      // 손 뗄 때 현재 ratio로 레벨 변경 여부 결정
+      if (activePointers.size === 2 && pinchStartDist > 0) {
+        const currentDist = getPinchDist();
+        const ratio = currentDist / pinchStartDist;
+        const map = mapInstance.current;
+        if (map) {
+          const lvl = map.getLevel();
+          if (ratio >= 1.25 && lvl > MIN_LEVEL) {
+            applyZoomLevel(lvl - 1, true);
+          } else if (ratio <= 0.8 && lvl < MAX_LEVEL) {
+            applyZoomLevel(lvl + 1, false);
+          } else {
+            // 임계점 미달 → scale만 1로 복귀
+            targetScaleRef.current = 1;
+            const w = getWrapper();
+            if (w) w.style.transformOrigin = 'center center';
+            startScaleAnim();
+          }
+        }
+      }
+
       activePointers.delete(e.pointerId);
 
       if (activePointers.size < 2) {
         pinchStartDist = 0;
-        targetScaleRef.current = 1;
-        const w = getWrapper();
-        if (w) w.style.transformOrigin = 'center center';
-        startScaleAnim();
+        if (targetScaleRef.current !== 1) {
+          targetScaleRef.current = 1;
+          const w = getWrapper();
+          if (w) w.style.transformOrigin = 'center center';
+          startScaleAnim();
+        }
       }
     };
 
