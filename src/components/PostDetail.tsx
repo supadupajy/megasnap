@@ -120,7 +120,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     // 초기값 즉시 설정
     if (el.offsetWidth > 0) setSliderWidth(el.offsetWidth);
     return () => ro.disconnect();
-  }, [isOpen]);
+  }, [isOpen, currentPostIndex]);
 
   const onMouseDown = (e: React.MouseEvent) => {
     if (!imageScrollRef.current) return;
@@ -323,7 +323,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
-    console.log('[PostDetail] post.id:', currentPost.id, 'images raw:', currentPost.images, 'displayImages:', baseImages);
     return baseImages;
   })();
 
@@ -606,8 +605,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       );
     }
 
-    // sliderWidth가 측정되기 전엔 aspect-ratio로 공간 확보, 측정 후엔 픽셀값 사용
-    const slideSize = sliderWidth > 0 ? sliderWidth : undefined;
+    const measuredWidth = sliderWidth > 0 ? sliderWidth : (mediaContainerRef.current?.offsetWidth ?? 0);
+    const slideSize = measuredWidth > 0 ? measuredWidth : null;
 
     return (
       <div
@@ -615,90 +614,92 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         style={{
           position: 'relative',
           width: '100%',
-          // sliderWidth 측정 전: aspect-ratio로 공간 확보 (모바일 정상 동작)
-          // sliderWidth 측정 후: 명시적 height로 고정 (데스크탑 버그 우회)
-          ...(slideSize ? { height: slideSize } : { aspectRatio: '1 / 1' }),
+          aspectRatio: '1 / 1',
+          ...(slideSize ? { height: slideSize } : {}),
           borderRadius: 24,
           overflow: 'hidden',
           background: '#e5e7eb',
         }}
       >
-        <div
-          ref={imageScrollRef}
-          style={{
-            display: 'flex',
-            width: '100%',
-            height: '100%',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            scrollSnapType: 'x mandatory',
-            scrollBehavior: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            cursor: isDragging ? 'grabbing' : 'grab',
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none',
-          } as React.CSSProperties}
-          onScroll={handleImageScroll}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-          onMouseMove={onMouseMove}
-        >
-          {displayImages.map((img, index) => (
+        {slideSize && (
+          <>
             <div
-              key={index}
+              ref={imageScrollRef}
               style={{
-                flexShrink: 0,
-                // 픽셀값이 있으면 명시적으로, 없으면 100%
-                width: slideSize ? `${slideSize}px` : '100%',
-                height: slideSize ? `${slideSize}px` : '100%',
-                scrollSnapAlign: 'start',
-                scrollSnapStop: 'always',
-                background: '#e5e7eb',
-              }}
+                display: 'flex',
+                width: '100%',
+                height: '100%',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                scrollSnapType: 'x mandatory',
+                scrollBehavior: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                cursor: isDragging ? 'grabbing' : 'grab',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none',
+              } as React.CSSProperties}
+              onScroll={handleImageScroll}
+              onMouseDown={onMouseDown}
+              onMouseUp={onMouseUp}
+              onMouseLeave={onMouseUp}
+              onMouseMove={onMouseMove}
             >
-              <img
-                src={img}
-                alt={`Post content ${index + 1}`}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-                draggable={false}
-                loading="eager"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.src = '/placeholder.svg';
-                  target.style.objectFit = 'contain';
-                  target.style.padding = '20%';
-                  target.style.opacity = '0.3';
-                }}
-              />
+              {displayImages.map((img, index) => (
+                <div
+                  key={index}
+                  style={{
+                    flexShrink: 0,
+                    width: `${slideSize}px`,
+                    height: `${slideSize}px`,
+                    minWidth: `${slideSize}px`,
+                    scrollSnapAlign: 'start',
+                    scrollSnapStop: 'always',
+                    background: '#e5e7eb',
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`Post content ${index + 1}`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    }}
+                    draggable={false}
+                    loading="eager"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.src = '/placeholder.svg';
+                      target.style.objectFit = 'contain';
+                      target.style.padding = '20%';
+                      target.style.opacity = '0.3';
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        {/* 페이지 인디케이터 */}
-        {displayImages.length > 1 && (
-          <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
-            {displayImages.map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  height: 6,
-                  borderRadius: 3,
-                  background: 'white',
-                  opacity: currentImageIndex === i ? 1 : 0.4,
-                  width: currentImageIndex === i ? 24 : 6,
-                  transition: 'all 0.3s',
-                  boxShadow: currentImageIndex === i ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-                }}
-              />
-            ))}
-          </div>
+            {displayImages.length > 1 && (
+              <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
+                {displayImages.map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      height: 6,
+                      borderRadius: 3,
+                      background: 'white',
+                      opacity: currentImageIndex === i ? 1 : 0.4,
+                      width: currentImageIndex === i ? 24 : 6,
+                      transition: 'all 0.3s',
+                      boxShadow: currentImageIndex === i ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     );
