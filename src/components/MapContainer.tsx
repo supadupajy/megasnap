@@ -1532,28 +1532,30 @@ const MapContainer = ({
         return;
       }
 
-      // 핀치 제스처: 500ms 이상 간격이면 새 제스처 → accum 리셋
+      // 500ms 이상 간격이면 새 제스처 → accum 리셋
       if (now - lastWheelTimeRef.current > 500) {
         wheelAccumRef.current = 0;
       }
       lastWheelTimeRef.current = now;
 
-      // sensitivity를 높여서 Mac 트랙패드의 작은 deltaY도 충분히 누적되게
-      wheelAccumRef.current += e.deltaY * 0.04;
+      // sensitivity: Mac 트랙패드 기준 한 번 핀치에 accum ≈ ±0.5~1.0
+      wheelAccumRef.current += e.deltaY * 0.025;
+
+      // accum을 ±1로 클램프 → 한 번에 최대 1레벨만 변화
+      wheelAccumRef.current = Math.max(-1, Math.min(1, wheelAccumRef.current));
 
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
-      // 핀치 중 시각적 scale 피드백
+      // accum → scale: -1=2배(줌인), +1=0.5배(줌아웃)
       const visualScale = Math.pow(2, -wheelAccumRef.current);
-      const clampedScale = Math.max(0.3, Math.min(3.5, visualScale));
-      currentScaleRef.current = clampedScale;
-      targetScaleRef.current = clampedScale;
-      wrapper.style.transform = `scale(${clampedScale})`;
+      currentScaleRef.current = visualScale;
+      targetScaleRef.current = visualScale;
+      wrapper.style.transform = `scale(${visualScale})`;
 
-      console.log(`[Zoom] wheel: accum=${wheelAccumRef.current.toFixed(3)} scale=${clampedScale.toFixed(3)} lvl=${map.getLevel()}`);
+      console.log(`[Zoom] wheel: accum=${wheelAccumRef.current.toFixed(3)} scale=${visualScale.toFixed(3)} lvl=${map.getLevel()}`);
 
-      // 핀치 종료: 150ms 후 accum 기반으로 레벨 결정
+      // 핀치 종료: 150ms 후 레벨 결정
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         zoomResetTimerRef.current = null;
@@ -1561,12 +1563,14 @@ const MapContainer = ({
         if (!currentMap) return;
         const currentLvl = currentMap.getLevel();
         const accum = wheelAccumRef.current;
-        // accum 부호: 음수=줌인(레벨↓), 양수=줌아웃(레벨↑)
-        // 레벨 변화량: 1레벨당 accum 약 ±1 (sensitivity 0.04 기준)
-        const levelDelta = -Math.round(accum);
-        const targetLvl = currentLvl + levelDelta;
-        console.log(`[Zoom] PINCH END: accum=${accum.toFixed(3)} lvl=${currentLvl} → ${targetLvl} (delta=${levelDelta})`);
-        applyZoomLevel(targetLvl);
+
+        // 임계값 ±0.3: 그 이상이면 레벨 변경, 미만이면 현재 레벨 유지
+        let newLvl = currentLvl;
+        if (accum <= -0.3 && currentLvl > MIN_LEVEL) newLvl = currentLvl - 1;
+        else if (accum >= 0.3 && currentLvl < MAX_LEVEL) newLvl = currentLvl + 1;
+
+        console.log(`[Zoom] PINCH END: accum=${accum.toFixed(3)} lvl=${currentLvl} → ${newLvl}`);
+        applyZoomLevel(newLvl);
       }, 150);
     };
 
