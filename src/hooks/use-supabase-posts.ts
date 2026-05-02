@@ -80,20 +80,27 @@ export interface DirectionCounts {
   bottom: number;
   left: number;
   right: number;
+  hasTop: boolean;
+  hasBottom: boolean;
+  hasLeft: boolean;
+  hasRight: boolean;
 }
 
 /**
  * 현재 화면 bounds 밖의 포스트 수를 방향별로 COUNT 쿼리로 가져옵니다.
- * - 각 마커는 실제로 벗어난 방향(들)에 모두 카운트 (남동쪽 마커 → bottom+right 각 1씩)
- * - 단, 한 마커가 여러 방향에 걸쳐도 각 방향 카운트는 독립적으로 1씩만 증가
+ * - count(top/bottom/left/right): 45도 섹터 독점 분류 — 각 마커는 가장 주된 방향 1개에만 카운트 (전체 합 = 실제 마커 수)
+ * - has*(hasTop 등): 해당 방향 bounds를 실제로 벗어난 마커가 하나라도 있으면 true (뱃지 표시 여부)
  */
 export const fetchOffScreenCounts = async (
   bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
   options?: { categories?: string[]; userId?: string | null }
 ): Promise<DirectionCounts> => {
   const { sw, ne } = bounds;
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
+  const latRange = ne.lat - sw.lat;
+  const lngRange = ne.lng - sw.lng;
 
-  // 카테고리/사용자 필터 적용 헬퍼
   const applyFilters = <T>(q: T): T => {
     let qq: any = q;
     const cats = options?.categories || [];
@@ -117,23 +124,31 @@ export const fetchOffScreenCounts = async (
     if (res.error) throw res.error;
 
     let top = 0, bottom = 0, left = 0, right = 0;
+    let hasTop = false, hasBottom = false, hasLeft = false, hasRight = false;
 
     (res.data || []).forEach((p: any) => {
       if (p.latitude == null || p.longitude == null) return;
-      // 화면 안이면 제외
       if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
 
-      // 실제로 벗어난 방향마다 독립적으로 카운트
-      if (p.latitude > ne.lat)   top++;
-      if (p.latitude < sw.lat)   bottom++;
-      if (p.longitude < sw.lng)  left++;
-      if (p.longitude > ne.lng)  right++;
+      // has*: 실제로 벗어난 방향 (중복 허용 — 뱃지 표시 여부용)
+      if (p.latitude > ne.lat)  hasTop    = true;
+      if (p.latitude < sw.lat)  hasBottom = true;
+      if (p.longitude < sw.lng) hasLeft   = true;
+      if (p.longitude > ne.lng) hasRight  = true;
+
+      // count: 45도 섹터 독점 분류 (중복 없음 — 숫자용)
+      const dLat = (p.latitude - centerLat) / latRange;
+      const dLng = (p.longitude - centerLng) / lngRange;
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           top++;
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottom++;
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) left++;
+      else                                                      right++;
     });
 
-    return { top, bottom, left, right };
+    return { top, bottom, left, right, hasTop, hasBottom, hasLeft, hasRight };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
-    return { top: 0, bottom: 0, left: 0, right: 0 };
+    return { top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false };
   }
 };
 
