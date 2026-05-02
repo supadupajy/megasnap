@@ -1653,18 +1653,19 @@ const MapContainer = ({
     };
 
     // capture: true → 카카오맵 내부 리스너보다 먼저 실행
-    document.addEventListener('wheel', onWheel, { passive: false, capture: true });
-    document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-    document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
-    document.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
+    // window에 등록해야 iframe 안에서도 동작함
+    window.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
 
     return () => {
-      document.removeEventListener('wheel', onWheel, { capture: true } as any);
-      document.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
-      document.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
-      document.removeEventListener('touchend', onTouchEnd, { capture: true } as any);
-      document.removeEventListener('touchcancel', onTouchEnd, { capture: true } as any);
+      window.removeEventListener('wheel', onWheel, { capture: true } as any);
+      window.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
+      window.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
+      window.removeEventListener('touchend', onTouchEnd, { capture: true } as any);
+      window.removeEventListener('touchcancel', onTouchEnd, { capture: true } as any);
       if (scaleAnimFrameRef.current) cancelAnimationFrame(scaleAnimFrameRef.current);
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
     };
