@@ -595,14 +595,17 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
             {/* Media Section */}
             <div
-              className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+              className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+              style={{ paddingBottom: '100%' }}
               onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
-              {renderMedia()}
+              <div className="absolute inset-0">
+                {renderMedia()}
+              </div>
             </div>
-
+  
             {renderInteractionButtons()}
-
+  
             {/* Content Section - AD */}
             <div className="px-4 pb-4 space-y-1">
               <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
@@ -699,10 +702,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
           {/* Media Section */}
           <div
-            className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+            className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+            style={{ paddingBottom: '100%' }}
             onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
-            {renderMedia()}
+            <div className="absolute inset-0">
+              {renderMedia()}
+            </div>
           </div>
 
           {renderInteractionButtons()}
