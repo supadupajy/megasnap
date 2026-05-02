@@ -21,7 +21,9 @@ import {
   Utensils,
   Car,
   TreePine,
-  PawPrint
+  PawPrint,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { cn, getFallbackImage, formatRelativeTime } from '@/lib/utils';
 
@@ -285,67 +287,67 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     const slideSize = sliderWidth > 0 ? sliderWidth : undefined;
 
-    // 이미지 슬라이더
+    // 이미지 슬라이더 - absolute + opacity 방식 (sliderWidth 측정 불필요)
     return (
       <>
-        <div
-          ref={imageScrollRef}
-          style={{
-            display: 'flex',
-            width: '100%',
-            height: '100%',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            scrollSnapType: 'x mandatory',
-            WebkitOverflowScrolling: 'touch',
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none',
-            cursor: isDragging ? 'grabbing' : 'grab',
-          } as React.CSSProperties}
-          onScroll={handleImageScroll}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-          onMouseMove={onMouseMove}
-        >
-          {displayImages.map((img, index) => (
-            <div
+        {displayImages.map((img, index) => (
+          img ? (
+            <img
               key={index}
+              src={img}
+              alt={`Content ${index}`}
               style={{
-                flexShrink: 0,
-                width: slideSize ? `${slideSize}px` : '100cqw',
-                height: slideSize ? `${slideSize}px` : '100cqh',
-                minWidth: slideSize ? `${slideSize}px` : '100cqw',
-                scrollSnapAlign: 'start',
-                scrollSnapStop: 'always',
-                background: '#f3f4f6',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+                pointerEvents: 'none',
+                userSelect: 'none',
+                opacity: currentImageIndex === index ? 1 : 0,
+                transition: 'opacity 0.3s ease',
+                zIndex: currentImageIndex === index ? 2 : 1,
               }}
-            >
-              {img ? (
-                <img
-                  src={img}
-                  alt={`Content ${index}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    display: 'block',
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                  }}
-                  draggable={false}
-                  loading="eager"
-                  onError={(e) => {
-                    console.log('[PostItem] Image error for:', img);
-                    (e.currentTarget as HTMLImageElement).src = getFallbackImage();
-                  }}
-                />
-              ) : (
-                <div style={{ width: '100%', height: '100%', background: '#f3f4f6' }} />
-              )}
-            </div>
-          ))}
-        </div>
+              draggable={false}
+              loading="eager"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = getFallbackImage();
+              }}
+            />
+          ) : null
+        ))}
+
+        {/* 좌우 네비게이션 버튼 */}
+        {displayImages.length > 1 && currentImageIndex > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex - 1); }}
+            style={{
+              position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.4)', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10, border: 'none', cursor: 'pointer',
+            }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+        {displayImages.length > 1 && currentImageIndex < displayImages.length - 1 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex + 1); }}
+            style={{
+              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.4)', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10, border: 'none', cursor: 'pointer',
+            }}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
 
         {/* 페이지 인디케이터 */}
         {displayImages.length > 1 && (

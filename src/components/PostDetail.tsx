@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getFallbackImage } from '@/lib/utils';
@@ -605,9 +605,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       );
     }
 
-    const measuredWidth = sliderWidth > 0 ? sliderWidth : (mediaContainerRef.current?.offsetWidth ?? 0);
-    const slideSize = measuredWidth > 0 ? measuredWidth : null;
-
     return (
       <div
         ref={mediaContainerRef}
@@ -615,72 +612,96 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           position: 'relative',
           width: '100%',
           aspectRatio: '1 / 1',
-          ...(slideSize ? { height: slideSize } : {}),
           borderRadius: 24,
           overflow: 'hidden',
           background: '#e5e7eb',
-          containerType: 'inline-size',
+          touchAction: 'pan-y',
+        }}
+        onTouchStart={(e) => {
+          const t = e.touches[0];
+          setStartX(t.clientX);
+          setIsDragging(false);
+          setScrollLeft(0);
+        }}
+        onTouchMove={(e) => {
+          const t = e.touches[0];
+          const dx = t.clientX - startX;
+          if (Math.abs(dx) > 10) setIsDragging(true);
+        }}
+        onTouchEnd={(e) => {
+          if (!isDragging) return;
+          const t = e.changedTouches[0];
+          const dx = t.clientX - startX;
+          if (dx < -50 && currentImageIndex < displayImages.length - 1) {
+            setCurrentImageIndex(currentImageIndex + 1);
+          } else if (dx > 50 && currentImageIndex > 0) {
+            setCurrentImageIndex(currentImageIndex - 1);
+          }
+          setIsDragging(false);
         }}
       >
-        <div
-          ref={imageScrollRef}
-          style={{
-            display: 'flex',
-            width: '100%',
-            height: '100%',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            scrollSnapType: 'x mandatory',
-            scrollBehavior: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            cursor: isDragging ? 'grabbing' : 'grab',
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none',
-          } as React.CSSProperties}
-          onScroll={handleImageScroll}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-          onMouseLeave={onMouseUp}
-          onMouseMove={onMouseMove}
-        >
-          {displayImages.map((img, index) => (
-            <div
-              key={index}
-              style={{
-                flexShrink: 0,
-                // slideSize가 있으면 픽셀값, 없으면 container query 단위 사용
-                width: slideSize ? `${slideSize}px` : '100cqw',
-                height: slideSize ? `${slideSize}px` : '100cqh',
-                minWidth: slideSize ? `${slideSize}px` : '100cqw',
-                scrollSnapAlign: 'start',
-                scrollSnapStop: 'always',
-                background: '#e5e7eb',
-              }}
-            >
-              <img
-                src={img}
-                alt={`Post content ${index + 1}`}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  display: 'block',
-                  pointerEvents: 'none',
-                  userSelect: 'none',
-                }}
-                draggable={false}
-                loading="eager"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.src = '/placeholder.svg';
-                  target.style.objectFit = 'contain';
-                  target.style.padding = '20%';
-                  target.style.opacity = '0.3';
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        {/* 각 이미지를 absolute로 쌓고 현재 인덱스만 opacity로 표시 */}
+        {displayImages.map((img, index) => (
+          <img
+            key={index}
+            src={img}
+            alt={`Post content ${index + 1}`}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              opacity: currentImageIndex === index ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+              zIndex: currentImageIndex === index ? 2 : 1,
+            }}
+            draggable={false}
+            loading="eager"
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.src = '/placeholder.svg';
+              target.style.objectFit = 'contain';
+              target.style.padding = '20%';
+              target.style.opacity = '0.3';
+            }}
+          />
+        ))}
+
+        {/* 좌우 네비게이션 버튼 (데스크탑/터치 모두) */}
+        {displayImages.length > 1 && currentImageIndex > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex - 1); }}
+            style={{
+              position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.4)', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10, border: 'none', cursor: 'pointer',
+            }}
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+        {displayImages.length > 1 && currentImageIndex < displayImages.length - 1 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(currentImageIndex + 1); }}
+            style={{
+              position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.4)', color: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              zIndex: 10, border: 'none', cursor: 'pointer',
+            }}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        )}
+
         {displayImages.length > 1 && (
           <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
             {displayImages.map((_, i) => (
