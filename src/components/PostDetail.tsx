@@ -639,11 +639,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         style={{
           position: 'relative',
           width: '100%',
+          minHeight: 300,
           aspectRatio: '1 / 1',
           borderRadius: 24,
           overflow: 'hidden',
-          background: 'red', // 디버그용: 컨테이너 보이는지 확인
+          background: 'red',
+          border: '5px solid lime',
           touchAction: 'pan-y',
+          zIndex: 10,
         }}
         onTouchStart={(e) => {
           const t = e.touches[0];
