@@ -33,6 +33,8 @@
     margin: 0;
     padding: 0;
     background-color: white;
+    /* iOS Safari가 user-scalable=no를 무시하므로 CSS로 페이지 줌 차단 */
+    touch-action: pan-x pan-y;
   }
 }
 
