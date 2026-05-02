@@ -326,7 +326,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
 
   const isAd = currentPost?.isAd || false;
 
-  const displayImages = useMemo(() => {
+  const displayImages = (() => {
     if (!currentPost) return [];
     let baseImages: string[] = [];
     if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
@@ -340,8 +340,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       baseImages = [displayImage];
     }
     return baseImages;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPost?.id, JSON.stringify(currentPost?.images), currentPost?.image_url, currentPost?.image, displayImage]);
+  })();
 
   const postDisplayName = currentPost?.user?.name || '익명';
   
@@ -625,15 +624,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return (
       <div
         ref={mediaContainerRef}
-        style={{
-          position: 'relative',
-          width: '100%',
-          aspectRatio: '1 / 1',
-          borderRadius: 24,
-          overflow: 'hidden',
-          background: '#e5e7eb',
-          touchAction: 'pan-y',
-        }}
+        className="relative w-full rounded-3xl overflow-hidden bg-gray-200"
+        style={{ aspectRatio: '1 / 1', touchAction: 'pan-y' }}
         onTouchStart={(e) => {
           const t = e.touches[0];
           setStartX(t.clientX);
@@ -657,22 +649,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           setIsDragging(false);
         }}
       >
-        {/* 현재 인덱스의 이미지 1장만 렌더링 (가장 단순하고 확실한 방식) */}
+        {/* 현재 인덱스의 이미지 1장만 렌더링 - absolute inset-0 */}
         {displayImages[currentImageIndex] && (
           <img
             src={displayImages[currentImageIndex]}
             alt={`Post content ${currentImageIndex + 1}`}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
+            className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
             loading="eager"
             onError={(e) => {
@@ -684,7 +666,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             }}
           />
         )}
-
 
         {/* 좌우 네비게이션 버튼 (데스크탑/터치 모두) */}
         {displayImages.length > 1 && currentImageIndex > 0 && (
