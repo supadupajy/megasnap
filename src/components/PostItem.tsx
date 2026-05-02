@@ -83,9 +83,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
+  const mediaContainerRef = useRef<HTMLDivElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  
+  const [sliderWidth, setSliderWidth] = useState(0);
+
   // 마우스 드래그를 위한 상태
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -242,6 +244,19 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
 
+  // 슬라이더 컨테이너 실제 픽셀 너비 측정 (flex 안 aspect-ratio 계산 타이밍 버그 우회)
+  useEffect(() => {
+    const el = mediaContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setSliderWidth(w);
+    });
+    ro.observe(el);
+    if (el.offsetWidth > 0) setSliderWidth(el.offsetWidth);
+    return () => ro.disconnect();
+  }, []);
+
   const renderMedia = () => {
     // 일반 업로드 동영상 처리 (광고는 영상 재생 금지)
     if (!isAd && post.videoUrl) {
@@ -268,14 +283,17 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
-    // 이미지 슬라이더: 각 슬라이드를 독립적인 정사각형으로 렌더링
+    const slideSize = sliderWidth > 0 ? sliderWidth : undefined;
+
+    // 이미지 슬라이더
     return (
       <>
-        {/* 가로 스크롤 슬라이더 */}
         <div
           ref={imageScrollRef}
           style={{
             display: 'flex',
+            width: '100%',
+            height: '100%',
             overflowX: 'auto',
             overflowY: 'hidden',
             scrollSnapType: 'x mandatory',
@@ -295,10 +313,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               key={index}
               style={{
                 flexShrink: 0,
-                width: '100%',
+                width: slideSize ? `${slideSize}px` : '100%',
+                height: slideSize ? `${slideSize}px` : '100%',
                 scrollSnapAlign: 'start',
                 scrollSnapStop: 'always',
-                aspectRatio: '1 / 1',
                 background: '#f3f4f6',
               }}
             >
@@ -316,7 +334,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                   }}
                   draggable={false}
                   loading="eager"
-                  onLoad={() => console.log('[PostItem] Image loaded OK:', img)}
                   onError={(e) => {
                     console.log('[PostItem] Image error for:', img);
                     (e.currentTarget as HTMLImageElement).src = getFallbackImage();
@@ -640,9 +657,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </div>
             </div>
 
-            {/* Media Section - 슬라이더가 자체 높이를 가짐 */}
+            {/* Media Section - AD */}
             <div
+              ref={mediaContainerRef}
               className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+              style={sliderWidth > 0 ? { height: sliderWidth } : { aspectRatio: '1 / 1' }}
               onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
               {renderMedia()}
@@ -744,9 +763,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </div>
           </div>
 
-          {/* Media Section - 슬라이더가 자체 높이를 가짐 */}
+          {/* Media Section - 일반 */}
           <div
+            ref={mediaContainerRef}
             className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+            style={sliderWidth > 0 ? { height: sliderWidth } : { aspectRatio: '1 / 1' }}
             onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
             {renderMedia()}

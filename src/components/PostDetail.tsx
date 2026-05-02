@@ -87,6 +87,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [avatarError, setAvatarError] = useState(false);
+  const [sliderWidth, setSliderWidth] = useState(0);
+  const mediaContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen && !isDeleteDialogOpen) {
@@ -105,6 +107,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const commentInputRef = useRef<HTMLInputElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
+
+  // 슬라이더 컨테이너 실제 픽셀 너비 측정 (aspect-ratio 계산 타이밍 버그 우회)
+  useEffect(() => {
+    const el = mediaContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width;
+      if (w && w > 0) setSliderWidth(w);
+    });
+    ro.observe(el);
+    // 초기값 즉시 설정
+    if (el.offsetWidth > 0) setSliderWidth(el.offsetWidth);
+    return () => ro.disconnect();
+  }, [isOpen]);
 
   const onMouseDown = (e: React.MouseEvent) => {
     if (!imageScrollRef.current) return;
@@ -579,7 +595,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const renderMediaArea = () => {
     if (currentPost.videoUrl && !currentPost.isAd) {
       return (
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 24, overflow: 'hidden', background: '#000' }}>
+        <div ref={mediaContainerRef} style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 24, overflow: 'hidden', background: '#000' }}>
           <video
             src={currentPost.videoUrl}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -589,14 +605,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       );
     }
 
-    // 슬라이더: 각 슬라이드가 자체적으로 aspect-ratio 1/1을 가짐
-    // → 부모 높이에 의존하지 않으므로 높이 계산 문제 없음
+    // sliderWidth가 측정되기 전엔 aspect-ratio로 공간 확보, 측정 후엔 픽셀값 사용
+    const slideSize = sliderWidth > 0 ? sliderWidth : undefined;
+
     return (
-      <div style={{ position: 'relative', width: '100%', borderRadius: 24, overflow: 'hidden', background: '#e5e7eb' }}>
+      <div
+        ref={mediaContainerRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          // sliderWidth 측정 전: aspect-ratio로 공간 확보 (모바일 정상 동작)
+          // sliderWidth 측정 후: 명시적 height로 고정 (데스크탑 버그 우회)
+          ...(slideSize ? { height: slideSize } : { aspectRatio: '1 / 1' }),
+          borderRadius: 24,
+          overflow: 'hidden',
+          background: '#e5e7eb',
+        }}
+      >
         <div
           ref={imageScrollRef}
           style={{
             display: 'flex',
+            width: '100%',
+            height: '100%',
             overflowX: 'auto',
             overflowY: 'hidden',
             scrollSnapType: 'x mandatory',
@@ -617,8 +648,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               key={index}
               style={{
                 flexShrink: 0,
-                width: '100%',
-                aspectRatio: '1 / 1',
+                // 픽셀값이 있으면 명시적으로, 없으면 100%
+                width: slideSize ? `${slideSize}px` : '100%',
+                height: slideSize ? `${slideSize}px` : '100%',
                 scrollSnapAlign: 'start',
                 scrollSnapStop: 'always',
                 background: '#e5e7eb',
