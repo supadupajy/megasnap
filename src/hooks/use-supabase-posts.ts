@@ -92,10 +92,6 @@ export const fetchOffScreenCounts = async (
   options?: { categories?: string[]; userId?: string | null }
 ): Promise<DirectionCounts> => {
   const { sw, ne } = bounds;
-  const latRange = ne.lat - sw.lat;
-  const lngRange = ne.lng - sw.lng;
-  const centerLat = (sw.lat + ne.lat) / 2;
-  const centerLng = (sw.lng + ne.lng) / 2;
 
   // 카테고리/사용자 필터 적용 헬퍼
   const applyFilters = <T>(q: T): T => {
@@ -113,33 +109,21 @@ export const fetchOffScreenCounts = async (
   };
 
   try {
-    // 화면 밖 전체 포스팅을 가져와서 클라이언트에서 45도 섹터로 분류
-    // (DB COUNT 쿼리로는 섹터 분류가 불가능하므로 좌표 데이터를 가져옴)
-    const res = await applyFilters(
-      supabase.from('posts').select('latitude, longitude')
-        .or(
-          `latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`
-        )
-    );
+    // 각 방향별로 해당 경계를 벗어난 포스팅 수를 DB에서 직접 카운트
+    // 45도 섹터 제한 없이 해당 방향 경계를 벗어난 모든 마커를 카운트
+    const [topRes, bottomRes, leftRes, rightRes] = await Promise.all([
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).gt('latitude', ne.lat)),
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).lt('latitude', sw.lat)),
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).lt('longitude', sw.lng)),
+      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).gt('longitude', ne.lng)),
+    ]);
 
-    if (res.error) throw res.error;
-
-    let top = 0, bottom = 0, left = 0, right = 0;
-
-    (res.data || []).forEach((p: any) => {
-      if (p.latitude == null || p.longitude == null) return;
-      // 화면 안이면 제외
-      if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
-      // 화면 중심 기준 45도 섹터 분류
-      const dLat = (p.latitude  - centerLat) / latRange;
-      const dLng = (p.longitude - centerLng) / lngRange;
-      if      (dLat > 0 && dLat >= Math.abs(dLng))          top++;
-      else if (dLat < 0 && Math.abs(dLat) >= Math.abs(dLng)) bottom++;
-      else if (dLng < 0 && Math.abs(dLng) > Math.abs(dLat))  left++;
-      else if (dLng > 0 && dLng > Math.abs(dLat))            right++;
-    });
-
-    return { top, bottom, left, right };
+    return {
+      top: topRes.count ?? 0,
+      bottom: bottomRes.count ?? 0,
+      left: leftRes.count ?? 0,
+      right: rightRes.count ?? 0,
+    };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
     return { top: 0, bottom: 0, left: 0, right: 0 };
@@ -157,20 +141,16 @@ export const fetchNearestInDirection = async (
   options?: { categories?: string[]; userId?: string | null; followingIds?: string[] }
 ): Promise<{ lat: number; lng: number } | null> => {
   const { sw, ne } = bounds;
-  const latRange = ne.lat - sw.lat;
-  const lngRange = ne.lng - sw.lng;
-  const centerLat = (sw.lat + ne.lat) / 2;
-  const centerLng = (sw.lng + ne.lng) / 2;
 
   try {
-    // DB 쿼리: 해당 방향 축 기준으로 화면 밖인 것을 넓게 가져옴
-    // (코너 포스팅도 포함하기 위해 한 축만 필터링)
+    // DB 쿼리: 해당 방향 경계를 벗어난 것만 정확히 필터링
+    // 45도 섹터 제한 없이 해당 방향으로 화면 밖인 모든 마커를 대상으로 함
     let query = supabase.from('posts').select('latitude, longitude');
 
-    if (dir === 'top')    query = query.gt('latitude', sw.lat);   // 화면 아래쪽 제외
-    if (dir === 'bottom') query = query.lt('latitude', ne.lat);   // 화면 위쪽 제외
-    if (dir === 'left')   query = query.lt('longitude', ne.lng);  // 화면 오른쪽 제외
-    if (dir === 'right')  query = query.gt('longitude', sw.lng);  // 화면 왼쪽 제외
+    if (dir === 'top')    query = query.gt('latitude', ne.lat);
+    if (dir === 'bottom') query = query.lt('latitude', sw.lat);
+    if (dir === 'left')   query = query.lt('longitude', sw.lng);
+    if (dir === 'right')  query = query.gt('longitude', ne.lng);
 
     // 카테고리/사용자 필터 적용
     const cats = options?.categories || [];
@@ -188,42 +168,26 @@ export const fetchNearestInDirection = async (
     const { data, error } = await query.limit(500);
     if (error || !data || data.length === 0) return null;
 
-    // 클라이언트에서 45도 섹터 + 화면 밖 필터링
-    const filtered = data.filter(p => {
-      if (p.latitude == null || p.longitude == null) return false;
-      // 화면 안이면 제외
-      if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return false;
-      // 화면 중심 기준 상대 벡터 (위도/경도 스케일 보정)
-      const dLat = (p.latitude  - centerLat) / latRange;
-      const dLng = (p.longitude - centerLng) / lngRange;
-      if (dir === 'top')    return dLat > 0 && dLat >= Math.abs(dLng);
-      if (dir === 'bottom') return dLat < 0 && Math.abs(dLat) >= Math.abs(dLng);
-      if (dir === 'left')   return dLng < 0 && Math.abs(dLng) > Math.abs(dLat);
-      if (dir === 'right')  return dLng > 0 && dLng > Math.abs(dLat);
-      return false;
-    });
-
-    if (filtered.length === 0) return null;
+    const valid = data.filter(p => p.latitude != null && p.longitude != null);
+    if (valid.length === 0) return null;
 
     // 누른 방향의 화면 경계에서 가장 가까운 포스팅
-    // top: lat이 가장 작은 것 (ne.lat 바로 위에서 가장 가까운 것)
-    // bottom: lat이 가장 큰 것 (sw.lat 바로 아래에서 가장 가까운 것)
-    // left: lng이 가장 큰 것 (sw.lng 바로 왼쪽에서 가장 가까운 것)
-    // right: lng이 가장 작은 것 (ne.lng 바로 오른쪽에서 가장 가까운 것)
-    let nearest = filtered[0];
+    // top: lat이 가장 작은 것 (ne.lat 바로 위)
+    // bottom: lat이 가장 큰 것 (sw.lat 바로 아래)
+    // left: lng이 가장 큰 것 (sw.lng 바로 왼쪽)
+    // right: lng이 가장 작은 것 (ne.lng 바로 오른쪽)
+    let nearest = valid[0];
     if (dir === 'top') {
-      nearest = filtered.reduce((a, b) => (a.latitude < b.latitude ? a : b));
+      nearest = valid.reduce((a, b) => (a.latitude < b.latitude ? a : b));
     } else if (dir === 'bottom') {
-      nearest = filtered.reduce((a, b) => (a.latitude > b.latitude ? a : b));
+      nearest = valid.reduce((a, b) => (a.latitude > b.latitude ? a : b));
     } else if (dir === 'left') {
-      nearest = filtered.reduce((a, b) => (a.longitude > b.longitude ? a : b));
+      nearest = valid.reduce((a, b) => (a.longitude > b.longitude ? a : b));
     } else if (dir === 'right') {
-      nearest = filtered.reduce((a, b) => (a.longitude < b.longitude ? a : b));
+      nearest = valid.reduce((a, b) => (a.longitude < b.longitude ? a : b));
     }
 
-    return nearest?.latitude != null
-      ? { lat: nearest.latitude, lng: nearest.longitude }
-      : null;
+    return { lat: nearest.latitude, lng: nearest.longitude };
   } catch (err) {
     console.error('[SupabasePosts] fetchNearestInDirection error:', err);
     return null;

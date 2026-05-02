@@ -415,16 +415,12 @@ const Index = () => {
            selectedCategories.includes('influencer');
   }, [selectedCategories]);
 
-  // 클라이언트 계산: displayedMarkers 기반 (화면 중심 기준 45도 섹터 분류)
+  // 클라이언트 계산: displayedMarkers 기반 (방향별 경계 기준 분류)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
     if (!mapData?.bounds || currentZoom >= 7) return null;
     if (!useClientSideCounts) return null;
 
     const { sw, ne } = mapData.bounds;
-    const latRange = ne.lat - sw.lat;
-    const lngRange = ne.lng - sw.lng;
-    const centerLat = (sw.lat + ne.lat) / 2;
-    const centerLng = (sw.lng + ne.lng) / 2;
 
     let top = 0, bottom = 0, left = 0, right = 0;
 
@@ -437,13 +433,11 @@ const Index = () => {
       // 화면 안이면 제외
       if (lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng) return;
 
-      // 화면 중심 기준 45도 섹터 분류
-      const dLat = (lat - centerLat) / latRange;
-      const dLng = (lng - centerLng) / lngRange;
-      if      (dLat > 0 && dLat >= Math.abs(dLng))           top++;
-      else if (dLat < 0 && Math.abs(dLat) >= Math.abs(dLng)) bottom++;
-      else if (dLng < 0 && Math.abs(dLng) > Math.abs(dLat))  left++;
-      else if (dLng > 0 && dLng > Math.abs(dLat))            right++;
+      // 해당 방향 경계를 벗어난 것으로 분류 (45도 섹터 제한 없음)
+      if (lat > ne.lat) top++;
+      if (lat < sw.lat) bottom++;
+      if (lng < sw.lng) left++;
+      if (lng > ne.lng) right++;
     });
 
     return { top, bottom, left, right };
@@ -1166,24 +1160,15 @@ const Index = () => {
                 const latRange = ne.lat - sw.lat;
                 const lngRange = ne.lng - sw.lng;
 
-                // pad 없이 실제 화면 bounds 기준으로 화면 밖 포스팅 판별
-                const isFiltered = !selectedCategories.includes('all');
-
-                // 화면 밖 포스팅을 "화면 중심 기준 각도(45도 섹터)"로 방향 분류
-                // 오른쪽: 중심 대비 lng 차이가 lat 차이보다 크고 오른쪽
-                // 이렇게 하면 오른쪽 위 코너 포스팅도 오른쪽 뱃지 후보에 포함됨
-                const centerLat = (sw.lat + ne.lat) / 2;
-                const centerLng = (sw.lng + ne.lng) / 2;
+                // 해당 방향으로 화면 밖에 있는 마커인지 판별
+                // 45도 섹터 제한 없이, 해당 방향 경계를 벗어난 모든 마커를 후보로 포함
                 const isOutsideInDir = (lat: number, lng: number): boolean => {
                   const inBounds = lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng;
                   if (inBounds) return false;
-                  // 화면 중심 기준 상대 벡터 (위도/경도 스케일 보정)
-                  const dLat = (lat - centerLat) / latRange;
-                  const dLng = (lng - centerLng) / lngRange;
-                  if (dir === 'top')    return dLat > 0 && dLat >= Math.abs(dLng);
-                  if (dir === 'bottom') return dLat < 0 && Math.abs(dLat) >= Math.abs(dLng);
-                  if (dir === 'left')   return dLng < 0 && Math.abs(dLng) > Math.abs(dLat);
-                  if (dir === 'right')  return dLng > 0 && dLng > Math.abs(dLat);
+                  if (dir === 'top')    return lat > ne.lat;
+                  if (dir === 'bottom') return lat < sw.lat;
+                  if (dir === 'left')   return lng < sw.lng;
+                  if (dir === 'right')  return lng > ne.lng;
                   return false;
                 };
 
@@ -1195,10 +1180,10 @@ const Index = () => {
 
                 if (clientCandidates.length > 0) {
                   // 누른 방향의 화면 경계에서 가장 가까운 마커로 이동
-                  // top: ne.lat에서 가장 가까운 것 → lat이 가장 작은 것
-                  // bottom: sw.lat에서 가장 가까운 것 → lat이 가장 큰 것
-                  // left: sw.lng에서 가장 가까운 것 → lng이 가장 큰 것
-                  // right: ne.lng에서 가장 가까운 것 → lng이 가장 작은 것
+                  // top: lat이 가장 작은 것 (ne.lat 바로 위)
+                  // bottom: lat이 가장 큰 것 (sw.lat 바로 아래)
+                  // left: lng이 가장 큰 것 (sw.lng 바로 왼쪽)
+                  // right: lng이 가장 작은 것 (ne.lng 바로 오른쪽)
                   let nearest = clientCandidates[0];
                   if (dir === 'top') {
                     nearest = clientCandidates.reduce((a, b) => (a.lat! < b.lat! ? a : b));
@@ -1211,8 +1196,7 @@ const Index = () => {
                   }
                   setMapCenter({ lat: nearest.lat!, lng: nearest.lng! });
                 } else {
-                  // 클라이언트 목록에 없으면 항상 DB에서 조회
-                  // (필터 여부 무관 — 카테고리/friends/mine 필터도 DB 쿼리에 적용)
+                  // 클라이언트 목록에 없으면 DB에서 조회
                   const nearest = await fetchNearestInDirection(b, c, dir, {
                     categories: selectedCategories,
                     userId: authUser?.id || null,
