@@ -205,12 +205,20 @@ export const fetchNearestInDirection = async (
 
     if (filtered.length === 0) return null;
 
-    // 중심에서 유클리드 거리가 가장 가까운 포스팅
+    // 누른 방향의 화면 경계에서 가장 가까운 포스팅
+    // top: lat이 가장 작은 것 (ne.lat 바로 위에서 가장 가까운 것)
+    // bottom: lat이 가장 큰 것 (sw.lat 바로 아래에서 가장 가까운 것)
+    // left: lng이 가장 큰 것 (sw.lng 바로 왼쪽에서 가장 가까운 것)
+    // right: lng이 가장 작은 것 (ne.lng 바로 오른쪽에서 가장 가까운 것)
     let nearest = filtered[0];
-    let minDist = Infinity;
-    for (const p of filtered) {
-      const d = Math.pow(p.latitude - center.lat, 2) + Math.pow(p.longitude - center.lng, 2);
-      if (d < minDist) { minDist = d; nearest = p; }
+    if (dir === 'top') {
+      nearest = filtered.reduce((a, b) => (a.latitude < b.latitude ? a : b));
+    } else if (dir === 'bottom') {
+      nearest = filtered.reduce((a, b) => (a.latitude > b.latitude ? a : b));
+    } else if (dir === 'left') {
+      nearest = filtered.reduce((a, b) => (a.longitude > b.longitude ? a : b));
+    } else if (dir === 'right') {
+      nearest = filtered.reduce((a, b) => (a.longitude < b.longitude ? a : b));
     }
 
     return nearest?.latitude != null

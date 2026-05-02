@@ -1194,12 +1194,20 @@ const Index = () => {
                 });
 
                 if (clientCandidates.length > 0) {
-                  // 클라이언트 목록에서 가장 가까운 포스팅으로 이동
+                  // 누른 방향의 화면 경계에서 가장 가까운 마커로 이동
+                  // top: ne.lat에서 가장 가까운 것 → lat이 가장 작은 것
+                  // bottom: sw.lat에서 가장 가까운 것 → lat이 가장 큰 것
+                  // left: sw.lng에서 가장 가까운 것 → lng이 가장 큰 것
+                  // right: ne.lng에서 가장 가까운 것 → lng이 가장 작은 것
                   let nearest = clientCandidates[0];
-                  let minDist = Infinity;
-                  for (const p of clientCandidates) {
-                    const d = Math.pow(p.lat! - c.lat, 2) + Math.pow(p.lng! - c.lng, 2);
-                    if (d < minDist) { minDist = d; nearest = p; }
+                  if (dir === 'top') {
+                    nearest = clientCandidates.reduce((a, b) => (a.lat! < b.lat! ? a : b));
+                  } else if (dir === 'bottom') {
+                    nearest = clientCandidates.reduce((a, b) => (a.lat! > b.lat! ? a : b));
+                  } else if (dir === 'left') {
+                    nearest = clientCandidates.reduce((a, b) => (a.lng! > b.lng! ? a : b));
+                  } else if (dir === 'right') {
+                    nearest = clientCandidates.reduce((a, b) => (a.lng! < b.lng! ? a : b));
                   }
                   setMapCenter({ lat: nearest.lat!, lng: nearest.lng! });
                 } else {
