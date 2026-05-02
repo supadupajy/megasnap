@@ -1492,22 +1492,22 @@ const MapContainer = ({
       scaleAnimFrameRef.current = requestAnimationFrame(animateScale);
     };
 
-    const resetScale = () => {
-      const wrapper = getWrapper();
-      if (!wrapper) return;
-      currentScaleRef.current = 1;
-      targetScaleRef.current = 1;
-      wrapper.style.transform = 'scale(1)';
-      wrapper.style.transformOrigin = 'center center';
-    };
-
-    const applyZoomLevel = (newLevel: number, pivotX?: number, pivotY?: number) => {
+    const applyZoomLevel = (newLevel: number, isZoomIn: boolean) => {
       const map = mapInstance.current;
-      if (!map) return;
+      const wrapper = getWrapper();
+      if (!map || !wrapper) return;
       const clamped = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
       map.setLevel(clamped, { animate: false });
-      resetScale();
       wheelAccumRef.current = 0;
+
+      // 레벨 변경 후 scale을 반대 방향 시작점으로 순간이동 → 연속감 유지
+      // 줌인(손가락 벌림): 레벨 변경 후 scale을 0.65에서 다시 1로 올라오는 것처럼
+      // 줌아웃(손가락 모음): 레벨 변경 후 scale을 1.5에서 다시 1로 내려오는 것처럼
+      const startScale = isZoomIn ? 0.65 : 1.5;
+      currentScaleRef.current = startScale;
+      targetScaleRef.current = 1;
+      wrapper.style.transform = `scale(${startScale})`;
+      startScaleAnim();
     };
 
     // ── 휠 ──
@@ -1527,11 +1527,11 @@ const MapContainer = ({
       const lvl = map.getLevel();
 
       if (wheelAccumRef.current <= -0.4) {
-        applyZoomLevel(lvl - 1);
+        applyZoomLevel(lvl - 1, true);
         return;
       }
       if (wheelAccumRef.current >= 0.4) {
-        applyZoomLevel(lvl + 1);
+        applyZoomLevel(lvl + 1, false);
         return;
       }
 
@@ -1603,8 +1603,9 @@ const MapContainer = ({
       wrapper.style.transform = `scale(${clamped})`;
 
       // 임계점 도달 → 레벨 변경 후 새 핀치 시작점 리셋
-      if (ratio >= 1.3 && lvl > MIN_LEVEL) {
-        applyZoomLevel(lvl - 1);
+      // 임계점을 크게 잡아서 "조금만 핀치해도 바뀌는" 느낌 방지
+      if (ratio >= 1.7 && lvl > MIN_LEVEL) {
+        applyZoomLevel(lvl - 1, true);
         isPinching = false;
         setTimeout(() => {
           if (e.touches.length === 2) {
@@ -1612,8 +1613,8 @@ const MapContainer = ({
             pinchStartDist = getDist(e.touches);
           }
         }, 80);
-      } else if (ratio <= 0.77 && lvl < MAX_LEVEL) {
-        applyZoomLevel(lvl + 1);
+      } else if (ratio <= 0.6 && lvl < MAX_LEVEL) {
+        applyZoomLevel(lvl + 1, false);
         isPinching = false;
         setTimeout(() => {
           if (e.touches.length === 2) {
