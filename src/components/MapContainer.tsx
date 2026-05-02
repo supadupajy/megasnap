@@ -1552,7 +1552,7 @@ const MapContainer = ({
 
       console.log(`[Zoom] wheel: accum=${wheelAccumRef.current.toFixed(3)} scale=${visualScale.toFixed(3)} lvl=${map.getLevel()}`);
 
-      // 핀치 종료: 150ms 후 레벨 결정 + scale을 부드럽게 1로 복귀
+      // 핀치 종료: 150ms 후 레벨 결정 + scale 보정
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         zoomResetTimerRef.current = null;
@@ -1562,23 +1562,40 @@ const MapContainer = ({
 
         const currentLvl = currentMap.getLevel();
         const accum = wheelAccumRef.current;
+        const currentScale = currentScaleRef.current;
 
         let newLvl = currentLvl;
         if (accum <= -0.3 && currentLvl > MIN_LEVEL) newLvl = currentLvl - 1;
         else if (accum >= 0.3 && currentLvl < MAX_LEVEL) newLvl = currentLvl + 1;
 
-        console.log(`[Zoom] PINCH END: accum=${accum.toFixed(3)} lvl=${currentLvl} → ${newLvl}`);
-
-        // 레벨 변경
-        if (newLvl !== currentLvl) {
-          currentMap.setLevel(newLvl, { animate: false });
-        }
         wheelAccumRef.current = 0;
 
-        // scale을 현재 값에서 1로 부드럽게 복귀 (레벨 변경 후에도 scale 유지하다가 서서히 복귀)
-        targetScaleRef.current = 1;
-        w.style.transformOrigin = 'center center';
-        startScaleAnim();
+        if (newLvl !== currentLvl) {
+          // 레벨 변경: 카카오맵 레벨 1 = 2배 관계
+          // 줌인(레벨↓): 지도가 2배 확대됨 → scale을 절반으로 보정해야 시각적 연속성 유지
+          // 줌아웃(레벨↑): 지도가 2배 축소됨 → scale을 2배로 보정
+          const levelChange = newLvl - currentLvl; // 줌인이면 음수, 줌아웃이면 양수
+          const scaleFactor = Math.pow(2, levelChange); // 줌인이면 0.5, 줌아웃이면 2
+          const correctedScale = currentScale * scaleFactor;
+
+          currentMap.setLevel(newLvl, { animate: false });
+
+          // 보정된 scale로 즉시 설정 후 1로 부드럽게 복귀
+          const clampedCorrected = Math.max(0.3, Math.min(3.5, correctedScale));
+          currentScaleRef.current = clampedCorrected;
+          targetScaleRef.current = 1;
+          w.style.transform = `scale(${clampedCorrected})`;
+          w.style.transformOrigin = 'center center';
+          startScaleAnim();
+
+          console.log(`[Zoom] LEVEL CHANGE: ${currentLvl}→${newLvl}, scale ${currentScale.toFixed(3)}→${clampedCorrected.toFixed(3)}→1`);
+        } else {
+          // 레벨 유지: scale만 1로 복귀
+          targetScaleRef.current = 1;
+          w.style.transformOrigin = 'center center';
+          startScaleAnim();
+          console.log(`[Zoom] LEVEL KEEP: ${currentLvl}, scale ${currentScale.toFixed(3)}→1`);
+        }
       }, 150);
     };
 
