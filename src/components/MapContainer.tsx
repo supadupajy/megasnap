@@ -1501,7 +1501,9 @@ const MapContainer = ({
       const map = mapInstance.current;
       const wrapper = getWrapper();
       if (!map || !wrapper) return;
-      map.setLevel(Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel)), { animate: false });
+      const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
+      console.log(`[Zoom] applyZoomLevel: ${map.getLevel()} → ${clampedLevel} (isZoomIn=${isZoomIn})`);
+      map.setLevel(clampedLevel, { animate: false });
       wheelAccumRef.current = 0;
       // 레벨 변경 후 반대 방향에서 1로 복귀 → 연속감
       const startScale = isZoomIn ? 0.7 : 1.45;
@@ -1527,9 +1529,12 @@ const MapContainer = ({
       // 맥 트랙패드 핀치: ctrlKey=true / 일반 마우스 휠: ctrlKey=false
       const isPinchGesture = e.ctrlKey;
       const sensitivity = isPinchGesture ? 0.018 : 0.0008;
-      wheelAccumRef.current += e.deltaY * sensitivity;
+      const delta = e.deltaY * sensitivity;
+      wheelAccumRef.current += delta;
 
       const lvl = map.getLevel();
+      console.log(`[Zoom] wheel ctrlKey=${isPinchGesture} deltaY=${e.deltaY.toFixed(2)} delta=${delta.toFixed(4)} accum=${wheelAccumRef.current.toFixed(4)} lvl=${lvl}`);
+
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
@@ -1542,14 +1547,16 @@ const MapContainer = ({
       zoomResetTimerRef.current = setTimeout(() => {
         if (Date.now() - lastWheelTimeRef.current < 300) return;
         const accum = wheelAccumRef.current;
+        console.log(`[Zoom] timer fired: accum=${accum.toFixed(4)} lvl=${lvl} MIN=${MIN_LEVEL} MAX=${MAX_LEVEL}`);
         // 누적값이 충분히 음수(줌인) 또는 양수(줌아웃)면 레벨 변경
-        // 그렇지 않으면 현재 레벨 유지하고 scale만 1로 복귀
         if (accum <= -0.35 && lvl > MIN_LEVEL) {
+          console.log(`[Zoom] → zoom IN (level ${lvl} → ${lvl - 1})`);
           applyZoomLevel(lvl - 1, true);
         } else if (accum >= 0.35 && lvl < MAX_LEVEL) {
+          console.log(`[Zoom] → zoom OUT (level ${lvl} → ${lvl + 1})`);
           applyZoomLevel(lvl + 1, false);
         } else {
-          // 임계점 미달 → scale만 원래대로 복귀 (레벨 변경 없음)
+          console.log(`[Zoom] → threshold not met, resetting scale only`);
           wheelAccumRef.current = 0;
           targetScaleRef.current = 1;
           const w = getWrapper();
@@ -1576,11 +1583,13 @@ const MapContainer = ({
     const onPointerDown = (e: PointerEvent) => {
       if (!isInMap(e.clientX, e.clientY)) return;
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      console.log(`[Zoom] pointerdown id=${e.pointerId} pointerType=${e.pointerType} total=${activePointers.size}`);
       if (activePointers.size === 2) {
         pinchStartDist = getPinchDist();
         const pts = Array.from(activePointers.values());
         pinchOriginX = (pts[0].x + pts[1].x) / 2;
         pinchOriginY = (pts[0].y + pts[1].y) / 2;
+        console.log(`[Zoom] pinch START dist=${pinchStartDist.toFixed(1)}`);
 
         const wrapper = getWrapper();
         const container = getContainer();
@@ -1612,19 +1621,23 @@ const MapContainer = ({
     };
 
     const onPointerUp = (e: PointerEvent) => {
+      console.log(`[Zoom] pointerup id=${e.pointerId} pointerType=${e.pointerType} size=${activePointers.size} pinchStartDist=${pinchStartDist.toFixed(1)}`);
       // 손 뗄 때 현재 ratio로 레벨 변경 여부 결정
       if (activePointers.size === 2 && pinchStartDist > 0) {
         const currentDist = getPinchDist();
         const ratio = currentDist / pinchStartDist;
         const map = mapInstance.current;
+        console.log(`[Zoom] pinch END: currentDist=${currentDist.toFixed(1)} ratio=${ratio.toFixed(3)} lvl=${map?.getLevel()}`);
         if (map) {
           const lvl = map.getLevel();
           if (ratio >= 1.25 && lvl > MIN_LEVEL) {
+            console.log(`[Zoom] → pinch zoom IN (${lvl} → ${lvl - 1})`);
             applyZoomLevel(lvl - 1, true);
           } else if (ratio <= 0.8 && lvl < MAX_LEVEL) {
+            console.log(`[Zoom] → pinch zoom OUT (${lvl} → ${lvl + 1})`);
             applyZoomLevel(lvl + 1, false);
           } else {
-            // 임계점 미달 → scale만 1로 복귀
+            console.log(`[Zoom] → pinch threshold not met (ratio=${ratio.toFixed(3)}), scale reset only`);
             targetScaleRef.current = 1;
             const w = getWrapper();
             if (w) w.style.transformOrigin = 'center center';
