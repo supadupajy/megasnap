@@ -21,9 +21,7 @@ import {
   Utensils,
   Car,
   TreePine,
-  PawPrint,
-  ChevronLeft,
-  ChevronRight
+  PawPrint
 } from 'lucide-react';
 import { cn, getFallbackImage, formatRelativeTime } from '@/lib/utils';
 
@@ -85,11 +83,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-  const mediaContainerRef = useRef<HTMLDivElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  const [sliderWidth, setSliderWidth] = useState(0);
-
+  
   // 마우스 드래그를 위한 상태
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -246,22 +242,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
 
-  // 슬라이더 컨테이너 실제 픽셀 너비 측정 (flex 안 aspect-ratio 계산 타이밍 버그 우회)
-  useEffect(() => {
-    const el = mediaContainerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      const w = entries[0]?.contentRect.width;
-      if (w && w > 0) setSliderWidth(w);
-    });
-    ro.observe(el);
-    if (el.offsetWidth > 0) setSliderWidth(el.offsetWidth);
-    return () => ro.disconnect();
-  }, []);
-
   const renderMedia = () => {
     // 일반 업로드 동영상 처리 (광고는 영상 재생 금지)
     if (!isAd && post.videoUrl) {
+
       return (
         <div className="w-full h-full relative">
           <video
@@ -273,6 +257,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             playsInline
             onLoadedData={() => setVideoLoaded(true)}
           />
+          {/* 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출 */}
           {(!videoLoaded || !isVisible || !isReadyToPlay) && (
             <img 
               src={currentImage} 
@@ -285,85 +270,60 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
+    // 3. 일반 이미지 슬라이더 처리
     return (
-      <>
-        {/* 인스타그램 방식: 모든 이미지 가로 배치 + translateX */}
+      <div className="relative w-full h-full group/slider">
         <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            transform: `translateX(-${currentImageIndex * 100}%)`,
-            transition: 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
-            willChange: 'transform',
-          }}
+          ref={imageScrollRef}
+          className={cn(
+            "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+            isDragging && "cursor-grabbing snap-none" // 드래그 중에는 스냅 일시 중지하여 부드럽게
+          )}
+          onScroll={handleImageScroll}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onMouseMove={onMouseMove}
         >
-          {displayImages.map((url, i) => (
-            <img
-              key={i}
-              src={url}
-              alt=""
-              draggable={false}
-              loading="eager"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: `${i * 100}%`,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-              }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = getFallbackImage();
-              }}
-            />
+          {displayImages.map((img, index) => (
+            <div
+              key={index}
+              className="w-full h-full shrink-0 snap-center snap-always relative"
+            >
+              <img
+                src={img}
+                alt={`Content ${index}`}
+                className="w-full h-full object-cover pointer-events-none"
+                onError={handleImageError}
+              />
+            </div>
           ))}
         </div>
 
-        {/* 페이지 인디케이터 */}
+        {/* 페이지 인디케이터 (구분자) */}
         {displayImages.length > 1 && (
-          <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 20, pointerEvents: 'none' }}>
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
             {displayImages.map((_, i) => (
               <div
                 key={i}
-                style={{
-                  height: 6,
-                  borderRadius: 3,
-                  background: 'white',
-                  opacity: currentImageIndex === i ? 1 : 0.5,
-                  width: currentImageIndex === i ? 16 : 6,
-                  transition: 'all 0.3s',
-                }}
+                className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
+                )}
               />
             ))}
           </div>
         )}
-      </>
+      </div>
     );
   };
 
   // 이미지 슬라이더 데이터 준비
   const displayImages = useMemo(() => {
-    const isValidImg = (url: any) => typeof url === 'string' && url.trim().length > 0;
-
-    let baseImages: string[];
-    if (isAd) {
-      baseImages = [post.image_url || post.image].filter(isValidImg) as string[];
-    } else if (Array.isArray(post.images) && post.images.length > 0) {
-      // null/빈문자열 필터링
-      baseImages = post.images.filter(isValidImg) as string[];
-    } else {
-      baseImages = [post.image_url || post.image].filter(isValidImg) as string[];
-    }
-
-    // 유효한 이미지가 하나도 없으면 fallback
-    if (baseImages.length === 0) {
-      baseImages = [getFallbackImage()];
-    }
-
+    // Ad 포스팅은 image_url(이미 음식 이미지로 교체됨)만 사용, images 배열 무시
+    const baseImages = isAd
+      ? [post.image_url || post.image]
+      : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
     return baseImages;
   }, [post.images, post.image, post.image_url, isAd]);
 
@@ -410,72 +370,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     setCurrentImage(post.image_url || post.image || getFallbackImage());
     setImgError(false);
   }, [post.image_url, post.image]);
-
-  // 다중 이미지 백그라운드 preload (슬라이드 전환 시 즉시 표시)
-  useEffect(() => {
-    displayImages.forEach((url) => {
-      if (typeof url === 'string' && url.startsWith('http')) {
-        const img = new window.Image();
-        img.src = url;
-      }
-    });
-  }, [displayImages]);
-
-  // 미디어 영역 스와이프 핸들러 (터치 + 마우스)
-  const swipeStartXRef = useRef(0);
-  const swipeStartYRef = useRef(0);
-  const swipeMovedRef = useRef(false);
-  const swipeMouseDownRef = useRef(false);
-
-  const commitSwipe = (dx: number) => {
-    if (!swipeMovedRef.current) return;
-    if (dx < -50 && currentImageIndex < displayImages.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1);
-    } else if (dx > 50 && currentImageIndex > 0) {
-      setCurrentImageIndex(currentImageIndex - 1);
-    }
-  };
-
-  const handleMediaTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    swipeStartXRef.current = t.clientX;
-    swipeStartYRef.current = t.clientY;
-    swipeMovedRef.current = false;
-  };
-  const handleMediaTouchMove = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    const dx = t.clientX - swipeStartXRef.current;
-    const dy = t.clientY - swipeStartYRef.current;
-    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-      swipeMovedRef.current = true;
-    }
-  };
-  const handleMediaTouchEnd = (e: React.TouchEvent) => {
-    const t = e.changedTouches[0];
-    commitSwipe(t.clientX - swipeStartXRef.current);
-  };
-  const handleMediaMouseDown = (e: React.MouseEvent) => {
-    swipeStartXRef.current = e.clientX;
-    swipeStartYRef.current = e.clientY;
-    swipeMovedRef.current = false;
-    swipeMouseDownRef.current = true;
-  };
-  const handleMediaMouseMove = (e: React.MouseEvent) => {
-    if (!swipeMouseDownRef.current) return;
-    const dx = e.clientX - swipeStartXRef.current;
-    const dy = e.clientY - swipeStartYRef.current;
-    if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-      swipeMovedRef.current = true;
-    }
-  };
-  const handleMediaMouseUp = (e: React.MouseEvent) => {
-    if (!swipeMouseDownRef.current) return;
-    swipeMouseDownRef.current = false;
-    commitSwipe(e.clientX - swipeStartXRef.current);
-  };
-  const handleMediaMouseLeave = () => {
-    swipeMouseDownRef.current = false;
-  };
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -699,22 +593,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </div>
             </div>
 
-            {/* Media Section - AD */}
+            {/* Media Section */}
             <div
-              ref={mediaContainerRef}
-              className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-              style={{ aspectRatio: '1 / 1', touchAction: 'pan-y' }}
-              onTouchStart={handleMediaTouchStart}
-              onTouchMove={handleMediaTouchMove}
-              onTouchEnd={handleMediaTouchEnd}
-              onMouseDown={handleMediaMouseDown}
-              onMouseMove={handleMediaMouseMove}
-              onMouseUp={handleMediaMouseUp}
-              onMouseLeave={handleMediaMouseLeave}
-              onClick={() => {
-                if (swipeMovedRef.current) { swipeMovedRef.current = false; return; }
-                if (!post.videoUrl && lat != null && lng != null) onLocationClick?.({} as any, lat, lng);
-              }}
+              className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+              onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
               {renderMedia()}
             </div>
@@ -815,22 +697,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </div>
           </div>
 
-          {/* Media Section - 일반 */}
+          {/* Media Section */}
           <div
-            ref={mediaContainerRef}
-            className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-            style={{ aspectRatio: '1 / 1', touchAction: 'pan-y' }}
-            onTouchStart={handleMediaTouchStart}
-            onTouchMove={handleMediaTouchMove}
-            onTouchEnd={handleMediaTouchEnd}
-            onMouseDown={handleMediaMouseDown}
-            onMouseMove={handleMediaMouseMove}
-            onMouseUp={handleMediaMouseUp}
-            onMouseLeave={handleMediaMouseLeave}
-            onClick={() => {
-              if (swipeMovedRef.current) { swipeMovedRef.current = false; return; }
-              if (!post.videoUrl && lat != null && lng != null) onLocationClick?.({} as any, lat, lng);
-            }}
+            className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+            onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
             {renderMedia()}
           </div>

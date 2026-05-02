@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getFallbackImage } from '@/lib/utils';
@@ -87,11 +87,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [avatarError, setAvatarError] = useState(false);
-  const [sliderWidth, setSliderWidth] = useState(0);
-  const mediaContainerRef = useRef<HTMLDivElement>(null);
-  const swipeStartXRef = useRef(0);
-  const swipeStartYRef = useRef(0);
-  const swipeMovedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen && !isDeleteDialogOpen) {
@@ -110,36 +105,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const commentInputRef = useRef<HTMLInputElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-
-  // 슬라이더 컨테이너 실제 픽셀 너비 측정 (aspect-ratio 계산 타이밍 버그 우회)
-  useEffect(() => {
-    const el = mediaContainerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      const w = entries[0]?.contentRect.width;
-      if (w && w > 0) setSliderWidth(w);
-    });
-    ro.observe(el);
-    // 초기값 즉시 설정
-    if (el.offsetWidth > 0) setSliderWidth(el.offsetWidth);
-    return () => ro.disconnect();
-  }, [isOpen, currentPostIndex]);
-
-  // 현재 포스트의 모든 이미지를 백그라운드로 미리 로드 (슬라이드 전환 시 즉시 표시)
-  useEffect(() => {
-    if (!isOpen) return;
-    const post = posts[currentPostIndex];
-    if (!post) return;
-    const imgs: string[] = Array.isArray(post.images) ? post.images : [];
-    const single = post.image_url || post.image;
-    const allImages = imgs.length > 0 ? imgs : single ? [single] : [];
-    allImages.forEach((url) => {
-      if (typeof url === 'string' && url.startsWith('http')) {
-        const img = new window.Image();
-        img.src = url;
-      }
-    });
-  }, [isOpen, currentPostIndex, posts]);
 
   const onMouseDown = (e: React.MouseEvent) => {
     if (!imageScrollRef.current) return;
@@ -309,15 +274,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const isDummyUrl = (url: any) => {
     if (!url || typeof url !== 'string') return true;
     const clean = url.trim();
-    // supabase storage URL은 항상 유효한 것으로 처리
-    if (clean.includes('supabase.co')) return false;
-    // http(s)로 시작하는 URL은 유효한 것으로 처리
-    if (clean.startsWith('http')) return false;
-    // data URL (base64)도 유효
-    if (clean.startsWith('data:')) return false;
-    // 절대 경로도 유효
-    if (clean.startsWith('/')) return false;
-    return true;
+    if (clean.includes('supabase.co/storage')) return false;
+    return clean.length < 10 || 
+           clean.toLowerCase().includes('post') || 
+           clean.toLowerCase().includes('content') || 
+           !clean.startsWith('http');
   };
 
   const displayImage = (() => {
@@ -611,160 +572,52 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     </div>
   );
 
-  const renderMediaArea = () => {
-    console.log('[PostDetail renderMediaArea]', {
-      postId: currentPost.id,
-      videoUrl: currentPost.videoUrl,
-      isAd: currentPost.isAd,
-      currentImageIndex,
-      displayImagesLength: displayImages.length,
-      displayImages,
-      currentImg: displayImages[currentImageIndex],
-    });
-    if (currentPost.videoUrl && !currentPost.isAd) {
-      return (
-        <div ref={mediaContainerRef} style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 24, overflow: 'hidden', background: '#000' }}>
-          <video
-            src={currentPost.videoUrl}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            autoPlay loop playsInline controls
-          />
-        </div>
-      );
-    }
-
-    return (
+  const renderImageSlider = () => (
+    <div className="absolute inset-0 w-full h-full z-10">
       <div
-        ref={mediaContainerRef}
-        style={{
-          position: 'relative',
-          width: '100%',
-          aspectRatio: '1 / 1',
-          borderRadius: 24,
-          overflow: 'hidden',
-          background: '#e5e7eb', // gray-200
-          touchAction: 'pan-y',
-        }}
-        onTouchStart={(e) => {
-          const t = e.touches[0];
-          swipeStartXRef.current = t.clientX;
-          swipeStartYRef.current = t.clientY;
-          swipeMovedRef.current = false;
-        }}
-        onTouchMove={(e) => {
-          const t = e.touches[0];
-          const dx = t.clientX - swipeStartXRef.current;
-          const dy = t.clientY - swipeStartYRef.current;
-          if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-            swipeMovedRef.current = true;
-          }
-        }}
-        onTouchEnd={(e) => {
-          if (!swipeMovedRef.current) return;
-          const t = e.changedTouches[0];
-          const dx = t.clientX - swipeStartXRef.current;
-          if (dx < -50 && currentImageIndex < displayImages.length - 1) {
-            setCurrentImageIndex(currentImageIndex + 1);
-          } else if (dx > 50 && currentImageIndex > 0) {
-            setCurrentImageIndex(currentImageIndex - 1);
-          }
-        }}
-        onMouseDown={(e) => {
-          swipeStartXRef.current = e.clientX;
-          swipeStartYRef.current = e.clientY;
-          swipeMovedRef.current = false;
-          (e.currentTarget as HTMLDivElement).dataset.mouseDown = '1';
-        }}
-        onMouseMove={(e) => {
-          if ((e.currentTarget as HTMLDivElement).dataset.mouseDown !== '1') return;
-          const dx = e.clientX - swipeStartXRef.current;
-          const dy = e.clientY - swipeStartYRef.current;
-          if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-            swipeMovedRef.current = true;
-          }
-        }}
-        onMouseUp={(e) => {
-          (e.currentTarget as HTMLDivElement).dataset.mouseDown = '0';
-          if (!swipeMovedRef.current) return;
-          const dx = e.clientX - swipeStartXRef.current;
-          if (dx < -50 && currentImageIndex < displayImages.length - 1) {
-            setCurrentImageIndex(currentImageIndex + 1);
-          } else if (dx > 50 && currentImageIndex > 0) {
-            setCurrentImageIndex(currentImageIndex - 1);
-          }
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).dataset.mouseDown = '0';
-        }}
-        onWheel={(e) => {
-          // 맥북 트랙패드 가로 스와이프 (deltaX)
-          const now = Date.now();
-          const lastWheel = (e.currentTarget as any).__lastWheel || 0;
-          if (now - lastWheel < 500) return; // 디바운스
-          if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-            (e.currentTarget as any).__lastWheel = now;
-            if (e.deltaX > 0 && currentImageIndex < displayImages.length - 1) {
-              setCurrentImageIndex(currentImageIndex + 1);
-            } else if (e.deltaX < 0 && currentImageIndex > 0) {
-              setCurrentImageIndex(currentImageIndex - 1);
-            }
-          }
-        }}
+        ref={imageScrollRef}
+        className={cn(
+          "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+          isDragging && "cursor-grabbing snap-none"
+        )}
+        onScroll={handleImageScroll}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onMouseMove={onMouseMove}
       >
-        {/* 인스타그램 방식 슬라이더: 모든 이미지를 가로로 배치 + translateX */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            transform: `translateX(-${currentImageIndex * 100}%)`,
-            transition: 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
-            willChange: 'transform',
-          }}
-        >
-          {displayImages.map((url, i) => (
-            <img
+        {displayImages.map((img, index) => (
+          <div
+            key={index}
+            className="w-full h-full shrink-0 snap-center relative"
+            style={{ scrollSnapStop: 'always' }}
+          >
+            <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover pointer-events-none" draggable={false} />
+          </div>
+        ))}
+      </div>
+      {displayImages.length > 1 && (
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+          {displayImages.map((_, i) => (
+            <div
               key={i}
-              src={url}
-              alt=""
-              draggable={false}
-              loading="eager"
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: `${i * 100}%`,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-              }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
             />
           ))}
         </div>
+      )}
+    </div>
+  );
 
-        {displayImages.length > 1 && (
-          <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
-            {displayImages.map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  height: 6,
-                  borderRadius: 3,
-                  background: 'white',
-                  opacity: currentImageIndex === i ? 1 : 0.4,
-                  width: currentImageIndex === i ? 24 : 6,
-                  transition: 'all 0.3s',
-                  boxShadow: currentImageIndex === i ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-                }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+  const renderMediaArea = () => (
+    <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
+      {currentPost.videoUrl && !currentPost.isAd ? (
+        <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+      ) : (
+        renderImageSlider()
+      )}
+    </div>
+  );
 
   const renderActionButtons = () => (
     <div className="flex flex-col gap-3">

@@ -80,27 +80,28 @@ export interface DirectionCounts {
   bottom: number;
   left: number;
   right: number;
+  hasTop: boolean;
+  hasBottom: boolean;
+  hasLeft: boolean;
+  hasRight: boolean;
 }
 
 /**
- * 현재 화면 bounds 밖의 포스트 수를 방향별로 가져옵니다.
- *
- * 분류 규칙 (각 마커는 정확히 1개 방향에만 카운트):
- * - 위도만 초과 → top 또는 bottom
- * - 경도만 초과 → left 또는 right
- * - 위도+경도 둘 다 초과(코너) → 초과 비율이 더 큰 방향에 카운트
- *   예) 북쪽으로 0.3 범위 초과, 동쪽으로 0.1 범위 초과 → top
- *
- * 이렇게 하면 "실제로 북쪽 경계를 벗어난 마커"는 반드시 top에 카운트됨.
+ * 현재 화면 bounds 밖의 포스트 수를 방향별로 COUNT 쿼리로 가져옵니다.
+ * - count: 각 마커는 가장 주된 방향 1개에만 카운트 (중복 없음)
+ * - has*: 해당 방향으로 실제로 벗어난 마커가 하나라도 있으면 true (뱃지 표시 여부)
  */
 export const fetchOffScreenCounts = async (
   bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
   options?: { categories?: string[]; userId?: string | null }
 ): Promise<DirectionCounts> => {
   const { sw, ne } = bounds;
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
   const latRange = ne.lat - sw.lat;
   const lngRange = ne.lng - sw.lng;
 
+  // 카테고리/사용자 필터 적용 헬퍼
   const applyFilters = <T>(q: T): T => {
     let qq: any = q;
     const cats = options?.categories || [];
@@ -124,29 +125,37 @@ export const fetchOffScreenCounts = async (
     if (res.error) throw res.error;
 
     let top = 0, bottom = 0, left = 0, right = 0;
+    let hasTop = false, hasBottom = false, hasLeft = false, hasRight = false;
 
     (res.data || []).forEach((p: any) => {
       if (p.latitude == null || p.longitude == null) return;
+      // 화면 안이면 제외
       if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
 
-      // 각 방향으로 얼마나 벗어났는지 비율로 계산
-      const overTop    = p.latitude > ne.lat ? (p.latitude - ne.lat) / latRange : 0;
-      const overBottom = p.latitude < sw.lat ? (sw.lat - p.latitude) / latRange : 0;
-      const overLeft   = p.longitude < sw.lng ? (sw.lng - p.longitude) / lngRange : 0;
-      const overRight  = p.longitude > ne.lng ? (p.longitude - ne.lng) / lngRange : 0;
+      // 실제로 벗어난 방향 판별 (has* 용 — 중복 허용)
+      const outTop    = p.latitude > ne.lat;
+      const outBottom = p.latitude < sw.lat;
+      const outLeft   = p.longitude < sw.lng;
+      const outRight  = p.longitude > ne.lng;
 
-      // 가장 많이 벗어난 방향 1개에만 카운트
-      const max = Math.max(overTop, overBottom, overLeft, overRight);
-      if      (overTop    === max) top++;
-      else if (overBottom === max) bottom++;
-      else if (overLeft   === max) left++;
-      else                         right++;
+      if (outTop)    hasTop    = true;
+      if (outBottom) hasBottom = true;
+      if (outLeft)   hasLeft   = true;
+      if (outRight)  hasRight  = true;
+
+      // 가장 주된 방향 1개에만 카운트 (45도 섹터 독점 분류)
+      const dLat = (p.latitude - centerLat) / latRange;
+      const dLng = (p.longitude - centerLng) / lngRange;
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           top++;
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottom++;
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) left++;
+      else                                                      right++;
     });
 
-    return { top, bottom, left, right };
+    return { top, bottom, left, right, hasTop, hasBottom, hasLeft, hasRight };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
-    return { top: 0, bottom: 0, left: 0, right: 0 };
+    return { top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false };
   }
 };
 

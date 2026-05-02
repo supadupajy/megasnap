@@ -9,6 +9,7 @@ interface Bounds {
 interface OffScreenMarkerIndicatorProps {
   bounds: Bounds | null;
   onClickDirection: (dir: Direction) => void;
+  // topOffset: 상단 버튼의 top CSS 값 (문자열 또는 숫자px)
   topOffset?: string | number;
   bottomOffset: number;
   dbCounts?: DirectionCounts | null;
@@ -26,9 +27,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   if (!dbCounts) return null;
 
   const counts = dbCounts;
-  const hasAny = counts.top > 0 || counts.bottom > 0 || counts.left > 0 || counts.right > 0;
+  const hasAny = counts.hasTop || counts.hasBottom || counts.hasLeft || counts.hasRight;
   if (!hasAny) return null;
 
+  // 트렌딩 패널 접힌 높이(56px) + 패널 top(safe-area+74px) + 여백(8px)
   const topCss = topOffset !== undefined
     ? (typeof topOffset === 'number' ? `${topOffset}px` : topOffset)
     : 'calc(env(safe-area-inset-top, 0px) + 74px + 56px + 8px)';
@@ -53,7 +55,14 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
   const Btn = ({ dir }: { dir: Direction }) => {
     const count = counts[dir];
-    if (count === 0) return null;
+    const hasMarker = {
+      top: counts.hasTop,
+      bottom: counts.hasBottom,
+      left: counts.hasLeft,
+      right: counts.hasRight,
+    }[dir];
+
+    if (!hasMarker) return null;
 
     const isVertical = dir === 'top' || dir === 'bottom';
 
