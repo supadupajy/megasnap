@@ -612,6 +612,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   );
 
   const renderMediaArea = () => {
+    console.log('[PostDetail renderMediaArea]', {
+      postId: currentPost.id,
+      videoUrl: currentPost.videoUrl,
+      isAd: currentPost.isAd,
+      currentImageIndex,
+      displayImagesLength: displayImages.length,
+      displayImages,
+      currentImg: displayImages[currentImageIndex],
+    });
     if (currentPost.videoUrl && !currentPost.isAd) {
       return (
         <div ref={mediaContainerRef} style={{ position: 'relative', width: '100%', aspectRatio: '1 / 1', borderRadius: 24, overflow: 'hidden', background: '#000' }}>
@@ -634,6 +643,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           swipeStartXRef.current = t.clientX;
           swipeStartYRef.current = t.clientY;
           swipeMovedRef.current = false;
+          console.log('[PostDetail TouchStart]', { x: t.clientX, y: t.clientY });
         }}
         onTouchMove={(e) => {
           const t = e.touches[0];
@@ -644,27 +654,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           }
         }}
         onTouchEnd={(e) => {
-          if (!swipeMovedRef.current) return;
           const t = e.changedTouches[0];
           const dx = t.clientX - swipeStartXRef.current;
+          console.log('[PostDetail TouchEnd]', { dx, moved: swipeMovedRef.current, currentImageIndex });
+          if (!swipeMovedRef.current) return;
           if (dx < -50 && currentImageIndex < displayImages.length - 1) {
             setCurrentImageIndex(currentImageIndex + 1);
           } else if (dx > 50 && currentImageIndex > 0) {
             setCurrentImageIndex(currentImageIndex - 1);
           }
-          e.preventDefault();
-          e.stopPropagation();
         }}
       >
         {/* 단일 이미지 렌더링 (가장 단순/안전) */}
-        {displayImages[currentImageIndex] && (
+        {displayImages[currentImageIndex] ? (
           <img
             src={displayImages[currentImageIndex]}
             alt={`Post content ${currentImageIndex + 1}`}
             className="absolute inset-0 w-full h-full object-cover select-none"
             draggable={false}
             loading="eager"
+            onLoad={() => console.log('[PostDetail img onLoad]', { src: displayImages[currentImageIndex] })}
             onError={(e) => {
+              console.error('[PostDetail img onError]', { src: displayImages[currentImageIndex] });
               const target = e.currentTarget;
               target.src = '/placeholder.svg';
               target.style.objectFit = 'contain';
@@ -672,6 +683,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               target.style.opacity = '0.3';
             }}
           />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-red-600 text-xs font-bold">
+            NO IMG (idx={currentImageIndex}, len={displayImages.length})
+          </div>
         )}
 
         {displayImages.length > 1 && (
