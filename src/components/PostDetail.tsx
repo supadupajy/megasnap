@@ -323,6 +323,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
+    console.log('[PostDetail] 📦 displayImages computed', {
+      postId: currentPost.id,
+      raw_images: currentPost.images,
+      raw_image_url: currentPost.image_url,
+      raw_image: currentPost.image,
+      result: baseImages,
+    });
     return baseImages;
   })();
 
@@ -646,6 +653,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             key={`${currentPost?.id}-${index}-${img}`}
             src={img}
             alt={`Post content ${index + 1}`}
+            data-img-index={index}
+            data-img-status="pending"
             style={{
               position: 'absolute',
               top: 0,
@@ -662,15 +671,39 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             }}
             draggable={false}
             loading="eager"
+            onLoad={(e) => {
+              e.currentTarget.dataset.imgStatus = 'loaded';
+              console.log(`[PostDetail] ✅ img[${index}] LOADED`, {
+                postId: currentPost?.id,
+                src: img,
+                naturalWidth: e.currentTarget.naturalWidth,
+              });
+            }}
             onError={(e) => {
-              const target = e.currentTarget;
-              target.src = '/placeholder.svg';
-              target.style.objectFit = 'contain';
-              target.style.padding = '20%';
-              target.style.opacity = '0.3';
+              e.currentTarget.dataset.imgStatus = 'error';
+              console.error(`[PostDetail] ❌ img[${index}] FAILED`, {
+                postId: currentPost?.id,
+                src: img,
+              });
             }}
           />
         ))}
+
+        {/* 🐛 DEBUG 오버레이 */}
+        <div style={{
+          position: 'absolute', top: 8, left: 8, right: 8, zIndex: 100,
+          background: 'rgba(255,0,0,0.85)', color: 'white', padding: '6px 8px',
+          fontSize: '9px', borderRadius: 6, pointerEvents: 'none',
+          fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: 1.3,
+        }}>
+          <div>idx: {currentImageIndex} / total: {displayImages.length}</div>
+          <div>postId: {String(currentPost?.id).slice(0, 30)}</div>
+          {displayImages.map((u, i) => (
+            <div key={i} style={{ opacity: i === currentImageIndex ? 1 : 0.6 }}>
+              [{i}]: {(u || 'EMPTY').slice(0, 70)}
+            </div>
+          ))}
+        </div>
 
         {/* 좌우 네비게이션 버튼 (데스크탑/터치 모두) */}
         {displayImages.length > 1 && currentImageIndex > 0 && (
