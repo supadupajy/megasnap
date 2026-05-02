@@ -711,25 +711,38 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           }
         }}
       >
-        {/* 이미지 — img 태그 사용 (안전) */}
-        {displayImages[currentImageIndex] && (
-          <img
-            key={displayImages[currentImageIndex]}
-            src={displayImages[currentImageIndex]}
-            alt=""
-            draggable={false}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-              zIndex: 1,
-            }}
-          />
-        )}
+        {/* 인스타그램 방식 슬라이더: 모든 이미지를 가로로 배치 + translateX */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            transform: `translateX(-${currentImageIndex * 100}%)`,
+            transition: 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
+            willChange: 'transform',
+          }}
+        >
+          {displayImages.map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt=""
+              draggable={false}
+              loading="eager"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: `${i * 100}%`,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          ))}
+        </div>
 
         {displayImages.length > 1 && (
           <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>

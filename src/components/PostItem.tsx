@@ -285,29 +285,43 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
-    const currentImg = displayImages[currentImageIndex] || displayImages[0];
     return (
       <>
-        {currentImg && (
-          <img
-            key={currentImg}
-            src={currentImg}
-            alt=""
-            draggable={false}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-            }}
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).src = getFallbackImage();
-            }}
-          />
-        )}
+        {/* 인스타그램 방식: 모든 이미지 가로 배치 + translateX */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            transform: `translateX(-${currentImageIndex * 100}%)`,
+            transition: 'transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)',
+            willChange: 'transform',
+          }}
+        >
+          {displayImages.map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt=""
+              draggable={false}
+              loading="eager"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: `${i * 100}%`,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = getFallbackImage();
+              }}
+            />
+          ))}
+        </div>
 
         {/* 페이지 인디케이터 */}
         {displayImages.length > 1 && (
