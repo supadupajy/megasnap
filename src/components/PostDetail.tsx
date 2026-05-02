@@ -675,28 +675,39 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           }
         }}
       >
-        {/* 단일 이미지 렌더링 (가장 단순/안전) */}
-        {displayImages[currentImageIndex] ? (
+        {/* 단일 이미지 렌더링 - 강제 인라인 스타일 */}
+        {displayImages[currentImageIndex] && (
           <img
             src={displayImages[currentImageIndex]}
             alt={`Post content ${currentImageIndex + 1}`}
-            className="absolute inset-0 w-full h-full object-cover select-none"
             draggable={false}
             loading="eager"
-            onLoad={() => console.log('[PostDetail img onLoad]', { src: displayImages[currentImageIndex] })}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+              opacity: 1,
+              visibility: 'visible',
+              zIndex: 5,
+              border: '3px solid blue', // 디버그
+            }}
+            onLoad={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              console.log('[PostDetail img onLoad]', {
+                src: displayImages[currentImageIndex],
+                w: r.width, h: r.height, top: r.top, left: r.left,
+                naturalW: e.currentTarget.naturalWidth,
+              });
+            }}
             onError={(e) => {
               console.error('[PostDetail img onError]', { src: displayImages[currentImageIndex] });
-              const target = e.currentTarget;
-              target.src = '/placeholder.svg';
-              target.style.objectFit = 'contain';
-              target.style.padding = '20%';
-              target.style.opacity = '0.3';
+              (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
             }}
           />
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-red-600 text-xs font-bold">
-            NO IMG (idx={currentImageIndex}, len={displayImages.length})
-          </div>
         )}
 
         {displayImages.length > 1 && (
