@@ -676,24 +676,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               const el = e.currentTarget;
               const rect = el.getBoundingClientRect();
               const cs = window.getComputedStyle(el);
-              console.log(`[PostDetail] ✅ img[${index}] LOADED`, {
-                postId: currentPost?.id,
-                src: img,
-                naturalWidth: el.naturalWidth,
-                rect: { w: rect.width, h: rect.height, x: rect.x, y: rect.y },
-                styles: {
-                  display: cs.display,
-                  visibility: cs.visibility,
-                  opacity: cs.opacity,
-                  position: cs.position,
-                  zIndex: cs.zIndex,
-                  width: cs.width,
-                  height: cs.height,
-                  transform: cs.transform,
-                  filter: cs.filter,
-                },
-                parentRect: el.parentElement?.getBoundingClientRect(),
-              });
+              const parent = el.parentElement;
+              const pRect = parent?.getBoundingClientRect();
+              const pCs = parent ? window.getComputedStyle(parent) : null;
+              // 객체를 펼쳐서 보이도록 한 줄 요약 문자열로 출력
+              console.log(
+                `[IMG${index}] rect=${rect.width.toFixed(0)}x${rect.height.toFixed(0)}@(${rect.x.toFixed(0)},${rect.y.toFixed(0)}) | opacity=${cs.opacity} display=${cs.display} visibility=${cs.visibility} zIndex=${cs.zIndex} pos=${cs.position} transform=${cs.transform} filter=${cs.filter}`
+              );
+              console.log(
+                `[IMG${index}-parent] rect=${pRect?.width.toFixed(0)}x${pRect?.height.toFixed(0)} | overflow=${pCs?.overflow} bg=${pCs?.backgroundColor} pos=${pCs?.position} transform=${pCs?.transform}`
+              );
             }}
             onError={(e) => {
               e.currentTarget.dataset.imgStatus = 'error';
