@@ -62,7 +62,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       right: counts.hasRight,
     }[dir];
 
-    if (!hasMarker) return null;
+    if (!hasMarker || count === 0) return null;
 
     const isVertical = dir === 'top' || dir === 'bottom';
 
