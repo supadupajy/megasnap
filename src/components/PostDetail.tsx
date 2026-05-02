@@ -275,10 +275,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (!url || typeof url !== 'string') return true;
     const clean = url.trim();
     if (clean.includes('supabase.co/storage')) return false;
-    return clean.length < 10 || 
-           clean.toLowerCase().includes('post') || 
-           clean.toLowerCase().includes('content') || 
-           !clean.startsWith('http');
+    // "post content" 같은 placeholder 문자열만 더미로 간주 (정상 URL의 'post'/'content' 단어는 허용)
+    if (/post\s*content/i.test(clean)) return true;
+    return clean.length < 10 || !clean.startsWith('http');
   };
 
   const displayImage = (() => {
@@ -592,7 +591,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             className="w-full h-full shrink-0 snap-center relative"
             style={{ scrollSnapStop: 'always' }}
           >
-            <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover pointer-events-none" draggable={false} />
+            <img
+              src={img}
+              alt={`Post content ${index + 1}`}
+              className="w-full h-full object-cover pointer-events-none"
+              draggable={false}
+              onError={(e) => {
+                const target = e.currentTarget;
+                const fallback = getFallbackImage(currentPost.id);
+                if (target.src !== fallback) target.src = fallback;
+              }}
+            />
           </div>
         ))}
       </div>
