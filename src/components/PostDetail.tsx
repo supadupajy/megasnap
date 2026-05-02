@@ -571,10 +571,38 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     </div>
   );
 
-  const renderImageSlider = () => (
+  const renderImageSlider = () => {
+    // [DEBUG] 슬라이더에 들어오는 이미지 데이터 진단
+    console.log('[PostDetail/DEBUG] renderImageSlider', {
+      postId: currentPost?.id,
+      isAd: currentPost?.isAd,
+      rawImages: currentPost?.images,
+      rawImagesLength: Array.isArray(currentPost?.images) ? currentPost.images.length : 'not-array',
+      image_url: currentPost?.image_url,
+      image: currentPost?.image,
+      displayImages,
+      displayImagesLength: displayImages.length,
+      firstImage: displayImages[0],
+      firstImageType: typeof displayImages[0],
+      firstImageLength: typeof displayImages[0] === 'string' ? displayImages[0].length : 'n/a',
+    });
+
+    return (
     <div className="absolute inset-0 w-full h-full z-10">
       <div
-        ref={imageScrollRef}
+        ref={(el) => {
+          imageScrollRef.current = el;
+          if (el) {
+            // [DEBUG] 슬라이더 컨테이너 크기 측정
+            console.log('[PostDetail/DEBUG] slider container size', {
+              postId: currentPost?.id,
+              clientWidth: el.clientWidth,
+              clientHeight: el.clientHeight,
+              scrollLeft: el.scrollLeft,
+              scrollWidth: el.scrollWidth,
+            });
+          }
+        }}
         className={cn(
           "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
           isDragging && "cursor-grabbing snap-none"
@@ -596,8 +624,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               alt={`Post content ${index + 1}`}
               className="w-full h-full object-cover pointer-events-none"
               draggable={false}
+              onLoad={(e) => {
+                const t = e.currentTarget;
+                console.log('[PostDetail/DEBUG] img onLoad', {
+                  postId: currentPost?.id,
+                  index,
+                  src: img,
+                  srcLength: typeof img === 'string' ? img.length : 'n/a',
+                  naturalWidth: t.naturalWidth,
+                  naturalHeight: t.naturalHeight,
+                  clientWidth: t.clientWidth,
+                  clientHeight: t.clientHeight,
+                });
+              }}
               onError={(e) => {
                 const target = e.currentTarget;
+                console.error('[PostDetail/DEBUG] img onError', {
+                  postId: currentPost?.id,
+                  index,
+                  failedSrc: img,
+                  failedSrcLength: typeof img === 'string' ? img.length : 'n/a',
+                  currentSrc: target.src,
+                });
                 const fallback = getFallbackImage(currentPost.id);
                 if (target.src !== fallback) target.src = fallback;
               }}
@@ -616,7 +664,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   const renderMediaArea = () => (
     <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
