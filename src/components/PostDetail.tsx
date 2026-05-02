@@ -307,6 +307,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
+    console.log('[PostDetail] displayImages:', baseImages, 'from post.images:', currentPost.images, 'image_url:', currentPost.image_url);
     return baseImages;
   })();
 
@@ -592,8 +593,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       >
         {displayImages.map((img, index) => (
           <div
-            key={index}
-            className="w-full h-full shrink-0 snap-center relative bg-gray-100"
+            key={`${currentPost.id}-${index}`}
+            className="w-full h-full shrink-0 snap-center relative bg-gray-100 flex items-center justify-center"
             style={{ scrollSnapStop: 'always' }}
           >
             <img
@@ -601,11 +602,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               alt={`Post content ${index + 1}`}
               className="w-full h-full object-cover pointer-events-none"
               draggable={false}
-              loading={index === 0 ? 'eager' : 'lazy'}
-              decoding="async"
+              loading="eager"
+              decoding="sync"
               onError={(e) => {
+                console.log('[PostDetail] image load error:', img);
                 const target = e.currentTarget;
-                target.style.display = 'none';
+                target.src = '/placeholder.svg';
+                target.className = 'w-16 h-16 object-contain opacity-30 pointer-events-none';
               }}
             />
           </div>
