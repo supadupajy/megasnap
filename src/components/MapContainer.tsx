@@ -1564,10 +1564,23 @@ const MapContainer = ({
       return Math.sqrt(dx * dx + dy * dy);
     };
 
-    const onTouchStart = (e: TouchEvent) => {
+    // 터치 좌표가 지도 컨테이너 rect 안에 있는지 확인 (contains 대신 좌표 비교)
+    const isTouchInMap = (touch: Touch) => {
       const container = getContainer();
-      if (!container || !container.contains(e.target as Node)) return;
+      if (!container) return false;
+      const rect = container.getBoundingClientRect();
+      return touch.clientX >= rect.left && touch.clientX <= rect.right &&
+             touch.clientY >= rect.top && touch.clientY <= rect.bottom;
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      console.log('[SmoothZoom] touchstart - touches:', e.touches.length);
       if (e.touches.length === 2) {
+        // 두 손가락 중 하나라도 지도 위에 있으면 핀치로 처리
+        if (!isTouchInMap(e.touches[0]) && !isTouchInMap(e.touches[1])) {
+          console.log('[SmoothZoom] 지도 밖 터치 - 무시');
+          return;
+        }
         isPinching = true;
         pinchStartDist = getDist(e.touches);
         pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
@@ -1575,7 +1588,8 @@ const MapContainer = ({
         console.log('[SmoothZoom] 핀치 시작 - startDist:', pinchStartDist.toFixed(1));
 
         const wrapper = getWrapper();
-        const rect = container.getBoundingClientRect();
+        const container = getContainer();
+        const rect = container?.getBoundingClientRect();
         if (wrapper && rect) {
           wrapper.style.transformOrigin = `${((pinchCenterX - rect.left) / rect.width) * 100}% ${((pinchCenterY - rect.top) / rect.height) * 100}%`;
         }
@@ -1583,9 +1597,7 @@ const MapContainer = ({
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      const container = getContainer();
       if (!isPinching || e.touches.length !== 2) return;
-      if (!container || !container.contains(e.target as Node)) return;
 
       e.preventDefault();
       e.stopPropagation();
@@ -1596,7 +1608,7 @@ const MapContainer = ({
 
       const ratio = getDist(e.touches) / pinchStartDist;
       const lvl = map.getLevel();
-      console.log('[SmoothZoom] 핀치 이동 - ratio:', ratio.toFixed(3), 'level:', lvl, 'scale:', Math.max(0.5, Math.min(2.2, ratio)).toFixed(3));
+      console.log('[SmoothZoom] 핀치 이동 - ratio:', ratio.toFixed(3), 'level:', lvl);
 
       // CSS scale 즉각 반영
       const clamped = Math.max(0.5, Math.min(2.2, ratio));
