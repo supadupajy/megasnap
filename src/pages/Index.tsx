@@ -245,8 +245,12 @@ const Index = () => {
   const mapDataRef = useRef<any>(null);
   const spreadMarkersRef = useRef<Post[]>([]);
   // route state로 위치가 지정된 경우 geolocation이 덮어쓰지 못하도록 보호
-  // 초기 마운트 시 initialFocusRef가 있으면 즉시 잠금 (geolocation race condition 차단)
-  const locationLockedRef = useRef(initialFocusRef.current !== null);
+  // 초기 마운트 시 initialFocusRef가 있거나 startSelection 상태이면 즉시 잠금 (geolocation race condition 차단)
+  const locationLockedRef = useRef(
+    initialFocusRef.current !== null ||
+    !!(location.state as any)?.startSelection ||
+    !!(location.state as any)?.startAdLocationSelection
+  );
 
   const currentZoomRef = useRef<number>(mapCache.lastZoom || 6);
 
@@ -954,7 +958,7 @@ const Index = () => {
   const handleCurrentLocation = () => moveToCurrentLocation(true);
 
   // ── 앱 시작 시 현재 위치로 자동 이동 (마운트 1회만) ──────────
-  // initialFocusRef가 있으면 (Profile 등에서 위치보기로 진입) geolocation 건너뜀
+  // initialFocusRef가 있거나 startSelection 상태이면 geolocation 건너뜀
   const didAutoLocateRef = useRef(false);
   useEffect(() => {
     if (didAutoLocateRef.current) return;
@@ -964,6 +968,8 @@ const Index = () => {
       sessionStorage.removeItem('pendingMapFocus');
       return;
     }
+    // 위치 선택 모드 진입 시 현재 위치로 자동 이동하지 않음 (보고 있던 지도 유지)
+    if (locationLockedRef.current) return;
     moveToCurrentLocation(false);
   }, []);
 
@@ -1094,6 +1100,8 @@ const Index = () => {
     }
     if (routeState.startSelection) {
       setIsPostListOpen(false);
+      // 위치 선택 모드 진입 시 geolocation이 지도를 덮어쓰지 못하도록 잠금
+      locationLockedRef.current = true;
       const initialLoc = mapCache.lastCenter;
       tempSelectedLocationRef.current = initialLoc;
       setTimeout(() => { setIsSelectingLocation(true); setTempSelectedLocation(initialLoc); }, 500);
