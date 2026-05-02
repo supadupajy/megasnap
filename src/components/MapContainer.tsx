@@ -1655,14 +1655,14 @@ const MapContainer = ({
       if (!map) return;
       const currentLevel = map.getLevel();
 
-      // CSS scale로 시각적 피드백 (핀치 비율 그대로 반영)
-      const visualScale = Math.max(0.5, Math.min(2.5, ratio));
+      // CSS scale로 시각적 피드백 (핀치 비율 그대로 반영, 임계점 범위에 맞게 클램프)
+      const visualScale = Math.max(0.65, Math.min(1.6, ratio));
       targetScaleRef.current = visualScale;
       currentScaleRef.current = visualScale; // 핀치는 즉각 반응
       wrapper.style.transform = `scale(${visualScale})`;
 
-      // 임계점: 2배 이상 확대 → 줌인, 0.5배 이하 축소 → 줌아웃
-      if (ratio >= 1.85 && currentLevel > MIN_LEVEL) {
+      // 임계점: 1.35배 이상 확대 → 줌인, 0.75배 이하 축소 → 줌아웃
+      if (ratio >= 1.35 && currentLevel > MIN_LEVEL) {
         isPinching = false;
         pinchStartDist = 0;
         const rect = containerRef.current?.getBoundingClientRect();
@@ -1678,7 +1678,7 @@ const MapContainer = ({
             pinchAccum = 1;
           }
         }, 50);
-      } else if (ratio <= 0.55 && currentLevel < MAX_LEVEL) {
+      } else if (ratio <= 0.75 && currentLevel < MAX_LEVEL) {
         isPinching = false;
         pinchStartDist = 0;
         const rect = containerRef.current?.getBoundingClientRect();
