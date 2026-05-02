@@ -26,7 +26,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   if (!dbCounts) return null;
 
   const counts = dbCounts;
-  const hasAny = counts.hasTop || counts.hasBottom || counts.hasLeft || counts.hasRight;
+  const hasAny = counts.top > 0 || counts.bottom > 0 || counts.left > 0 || counts.right > 0;
   if (!hasAny) return null;
 
   const topCss = topOffset !== undefined
@@ -52,18 +52,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   };
 
   const Btn = ({ dir }: { dir: Direction }) => {
-    // 뱃지 표시 여부: 해당 방향으로 실제 벗어난 마커가 있으면 표시
-    const hasMarker = {
-      top: counts.hasTop,
-      bottom: counts.hasBottom,
-      left: counts.hasLeft,
-      right: counts.hasRight,
-    }[dir];
-
-    if (!hasMarker) return null;
-
-    // 숫자: 45도 섹터 독점 분류 카운트 (중복 없음). 코너 마커는 주된 방향에만 카운트되므로 0일 수 있음
     const count = counts[dir];
+    if (count === 0) return null;
 
     const isVertical = dir === 'top' || dir === 'bottom';
 
@@ -115,11 +105,9 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       >
         {dir === 'top' && <Arrow dir="top" />}
         {dir === 'left' && <Arrow dir="left" />}
-        {count > 0 && (
-          <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: 'rgb(79, 70, 229)' }}>
-            {count > 999 ? '999+' : count}
-          </span>
-        )}
+        <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: 'rgb(79, 70, 229)' }}>
+          {count > 999 ? '999+' : count}
+        </span>
         {dir === 'bottom' && <Arrow dir="bottom" />}
         {dir === 'right' && <Arrow dir="right" />}
       </button>
