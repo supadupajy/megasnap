@@ -1535,46 +1535,47 @@ const MapContainer = ({
       // 핀치 제스처: 500ms 이상 간격이면 새 제스처 → accum 리셋
       if (now - lastWheelTimeRef.current > 500) {
         wheelAccumRef.current = 0;
+        console.log('[Zoom] NEW pinch gesture, accum reset');
       }
       lastWheelTimeRef.current = now;
 
-      // deltaY 누적 (음수=핀치아웃=줌인, 양수=핀치인=줌아웃)
       wheelAccumRef.current += e.deltaY * 0.018;
 
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
-      // accum → scale: 줌인 방향(accum<0)이면 scale>1, 줌아웃(accum>0)이면 scale<1
       const visualScale = Math.pow(2, -wheelAccumRef.current);
       const clampedScale = Math.max(0.3, Math.min(3.5, visualScale));
       currentScaleRef.current = clampedScale;
       targetScaleRef.current = clampedScale;
       wrapper.style.transform = `scale(${clampedScale})`;
 
-      // 핀치 중 레벨 전환: scale이 임계점을 넘으면 레벨 바꾸고 scale 연속성 유지
       const lvl = map.getLevel();
+      console.log(`[Zoom] wheel: accum=${wheelAccumRef.current.toFixed(3)} scale=${clampedScale.toFixed(3)} lvl=${lvl}`);
+
       if (clampedScale >= 1.8 && lvl > MIN_LEVEL) {
-        // 줌인: 레벨 -1, scale을 절반으로 (연속감)
         map.setLevel(lvl - 1, { animate: false });
-        wheelAccumRef.current = wheelAccumRef.current + Math.log2(1.8); // accum 보정
+        wheelAccumRef.current = wheelAccumRef.current + Math.log2(1.8);
         const newScale = Math.pow(2, -wheelAccumRef.current);
         currentScaleRef.current = newScale;
         targetScaleRef.current = newScale;
         wrapper.style.transform = `scale(${newScale})`;
+        console.log(`[Zoom] LEVEL IN: ${lvl} → ${lvl - 1}, newScale=${newScale.toFixed(3)}, newAccum=${wheelAccumRef.current.toFixed(3)}`);
       } else if (clampedScale <= 0.55 && lvl < MAX_LEVEL) {
-        // 줌아웃: 레벨 +1, scale을 2배로 (연속감)
         map.setLevel(lvl + 1, { animate: false });
-        wheelAccumRef.current = wheelAccumRef.current - Math.log2(1.8); // accum 보정
+        wheelAccumRef.current = wheelAccumRef.current - Math.log2(1.8);
         const newScale = Math.pow(2, -wheelAccumRef.current);
         currentScaleRef.current = newScale;
         targetScaleRef.current = newScale;
         wrapper.style.transform = `scale(${newScale})`;
+        console.log(`[Zoom] LEVEL OUT: ${lvl} → ${lvl + 1}, newScale=${newScale.toFixed(3)}, newAccum=${wheelAccumRef.current.toFixed(3)}`);
       }
 
-      // 핀치 종료: 150ms 후 scale을 1로 복귀 (현재 레벨 유지)
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         zoomResetTimerRef.current = null;
+        const finalLvl = mapInstance.current?.getLevel();
+        console.log(`[Zoom] PINCH END → scale reset to 1, final level=${finalLvl}`);
         wheelAccumRef.current = 0;
         targetScaleRef.current = 1;
         currentScaleRef.current = 1;
