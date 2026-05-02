@@ -75,18 +75,6 @@ const MapContainer = ({
   // extractVideoThumbnailForMarker를 ref로 감싸서 마커 생성 useEffect에서 stale closure 없이 참조
   const extractVideoThumbRef = useRef<(postId: string, videoUrl: string) => void>(() => {});
 
-  const pinchStartDistRef = useRef<number | null>(null);
-
-  // ── 부드러운 줌 관련 refs ──────────────────────────────────────────────
-  const smoothZoomWrapperRef = useRef<HTMLDivElement>(null);
-  const currentScaleRef = useRef<number>(1);
-  const targetScaleRef = useRef<number>(1);
-  const scaleAnimFrameRef = useRef<number | null>(null);
-  const isZoomingRef = useRef<boolean>(false);
-  const zoomResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastWheelTimeRef = useRef<number>(0);
-  const wheelAccumRef = useRef<number>(0);
-
   const centerRef = useRef(center);
   const levelRef = useRef(6);
   useEffect(() => { centerRef.current = center; }, [center]);
@@ -477,8 +465,7 @@ const MapContainer = ({
       const map = new kakao.maps.Map(containerRef.current!, {
         center: new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng),
         level: initialLevel,
-        scrollwheel: false,  // 카카오맵 기본 휠 줌 비활성화 (우리가 직접 처리)
-        disableDoubleClickZoom: true, // 더블클릭 줌 비활성화
+        disableDoubleClickZoom: true,
       });
       map.setMaxLevel(11);
       mapInstance.current = map;
@@ -1460,226 +1447,6 @@ const MapContainer = ({
   // CSS 애니메이션 duration을 변수로 전달
   const circleCircumference = 2 * Math.PI * 13; // r=13
 
-  // ── 부드러운 줌 (휠 + 핀치/PointerEvent) ────────────────────────────
-  useEffect(() => {
-    const MIN_LEVEL = 3;
-    const MAX_LEVEL = 11;
-
-    const getWrapper = () => smoothZoomWrapperRef.current;
-    const getContainer = () => containerRef.current;
-
-    // 좌표가 지도 컨테이너 안에 있는지 확인
-    const isInMap = (x: number, y: number) => {
-      const c = getContainer();
-      if (!c) return false;
-      const r = c.getBoundingClientRect();
-      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-    };
-
-    // scale 애니메이션 (lerp)
-    const animateScale = () => {
-      const wrapper = getWrapper();
-      if (!wrapper) { scaleAnimFrameRef.current = null; return; }
-      const diff = targetScaleRef.current - currentScaleRef.current;
-      if (Math.abs(diff) < 0.001) {
-        currentScaleRef.current = targetScaleRef.current;
-        wrapper.style.transform = `scale(${targetScaleRef.current})`;
-        scaleAnimFrameRef.current = null;
-        return;
-      }
-      currentScaleRef.current += diff * 0.22;
-      wrapper.style.transform = `scale(${currentScaleRef.current})`;
-      scaleAnimFrameRef.current = requestAnimationFrame(animateScale);
-    };
-
-    const startScaleAnim = () => {
-      if (scaleAnimFrameRef.current) cancelAnimationFrame(scaleAnimFrameRef.current);
-      scaleAnimFrameRef.current = requestAnimationFrame(animateScale);
-    };
-
-    const applyZoomLevel = (newLevel: number) => {
-      const map = mapInstance.current;
-      if (!map) return;
-      const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
-      map.setLevel(clampedLevel, { animate: false });
-      wheelAccumRef.current = 0;
-    };
-
-    // ── 마우스 휠 (Mac 트랙패드 핀치 포함) ────────────────────────────
-    const onWheel = (e: WheelEvent) => {
-      if (!isInMap(e.clientX, e.clientY)) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      const map = mapInstance.current;
-      const wrapper = getWrapper();
-      const container = getContainer();
-      if (!map || !wrapper || !container) return;
-
-      const now = Date.now();
-      const isPinchGesture = e.ctrlKey;
-
-      // 일반 마우스 휠: 즉시 레벨 변경
-      if (!isPinchGesture) {
-        const lvl = map.getLevel();
-        if (e.deltaY < 0 && lvl > MIN_LEVEL) applyZoomLevel(lvl - 1);
-        else if (e.deltaY > 0 && lvl < MAX_LEVEL) applyZoomLevel(lvl + 1);
-        return;
-      }
-
-      // 500ms 이상 간격이면 새 제스처 → accum 리셋
-      if (now - lastWheelTimeRef.current > 500) {
-        wheelAccumRef.current = 0;
-      }
-      lastWheelTimeRef.current = now;
-
-      wheelAccumRef.current += e.deltaY * 0.025;
-      wheelAccumRef.current = Math.max(-1, Math.min(1, wheelAccumRef.current));
-
-      const rect = container.getBoundingClientRect();
-      wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
-
-      // 핀치 중 시각적 scale 피드백만 (레벨은 아직 안 바꿈)
-      const visualScale = Math.pow(2, -wheelAccumRef.current);
-      currentScaleRef.current = visualScale;
-      targetScaleRef.current = visualScale;
-      wrapper.style.transform = `scale(${visualScale})`;
-
-      // 핀치 종료: 150ms 후 레벨 결정
-      if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
-      zoomResetTimerRef.current = setTimeout(() => {
-        zoomResetTimerRef.current = null;
-        const currentMap = mapInstance.current;
-        const w = getWrapper();
-        if (!currentMap || !w) return;
-
-        const currentLvl = currentMap.getLevel();
-        const accum = wheelAccumRef.current;
-
-        let newLvl = currentLvl;
-        if (accum <= -0.3 && currentLvl > MIN_LEVEL) newLvl = currentLvl - 1;
-        else if (accum >= 0.3 && currentLvl < MAX_LEVEL) newLvl = currentLvl + 1;
-
-        // 레벨 변경 + scale 즉시 1로 리셋 (애니메이션 없음)
-        // 레벨이 바뀌면 카카오맵이 새 레벨로 타일을 다시 그리므로
-        // scale=1이 자연스러운 상태
-        if (newLvl !== currentLvl) {
-          currentMap.setLevel(newLvl, { animate: false });
-        }
-        wheelAccumRef.current = 0;
-        currentScaleRef.current = 1;
-        targetScaleRef.current = 1;
-        w.style.transform = 'scale(1)';
-        w.style.transformOrigin = 'center center';
-        if (scaleAnimFrameRef.current) {
-          cancelAnimationFrame(scaleAnimFrameRef.current);
-          scaleAnimFrameRef.current = null;
-        }
-      }, 150);
-    };
-
-    // ── 핀치 (PointerEvent - 실제 터치 기기) ──────────────────────────
-    const activePointers = new Map<number, { x: number; y: number }>();
-    let pinchStartDist = 0;
-    let pinchStartLvl = 0;
-
-    const getPinchDist = () => {
-      const pts = Array.from(activePointers.values());
-      if (pts.length < 2) return 0;
-      const dx = pts[0].x - pts[1].x;
-      const dy = pts[0].y - pts[1].y;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (!isInMap(e.clientX, e.clientY)) return;
-      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (activePointers.size === 2) {
-        pinchStartDist = getPinchDist();
-        pinchStartLvl = mapInstance.current?.getLevel() ?? 6;
-        const pts = Array.from(activePointers.values());
-        const originX = (pts[0].x + pts[1].x) / 2;
-        const originY = (pts[0].y + pts[1].y) / 2;
-        const wrapper = getWrapper();
-        const container = getContainer();
-        const rect = container?.getBoundingClientRect();
-        if (wrapper && rect) {
-          wrapper.style.transformOrigin = `${((originX - rect.left) / rect.width) * 100}% ${((originY - rect.top) / rect.height) * 100}%`;
-        }
-      }
-    };
-
-    const onPointerMove = (e: PointerEvent) => {
-      if (!activePointers.has(e.pointerId)) return;
-      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (activePointers.size !== 2 || pinchStartDist === 0) return;
-
-      const map = mapInstance.current;
-      const wrapper = getWrapper();
-      if (!map || !wrapper) return;
-
-      let ratio = getPinchDist() / pinchStartDist;
-      let clampedScale = Math.max(0.3, Math.min(3.5, ratio));
-      wrapper.style.transform = `scale(${clampedScale})`;
-      currentScaleRef.current = clampedScale;
-      targetScaleRef.current = clampedScale;
-
-      // 임계점 넘으면 레벨 전환 + 시작점 재설정 (연속감)
-      const lvl = map.getLevel();
-      if (clampedScale >= 1.8 && lvl > MIN_LEVEL) {
-        map.setLevel(lvl - 1, { animate: false });
-        pinchStartDist = getPinchDist() / 1.8 * getPinchDist();
-        // 새 시작거리 = 현재거리 / 1.8 (scale이 1.8에서 1.0으로 리셋되는 효과)
-        pinchStartDist = getPinchDist() / 1.8;
-        const newScale = getPinchDist() / pinchStartDist;
-        clampedScale = Math.max(0.3, Math.min(3.5, newScale));
-        wrapper.style.transform = `scale(${clampedScale})`;
-        currentScaleRef.current = clampedScale;
-        targetScaleRef.current = clampedScale;
-      } else if (clampedScale <= 0.55 && lvl < MAX_LEVEL) {
-        map.setLevel(lvl + 1, { animate: false });
-        pinchStartDist = getPinchDist() / 0.55;
-        const newScale = getPinchDist() / pinchStartDist;
-        clampedScale = Math.max(0.3, Math.min(3.5, newScale));
-        wrapper.style.transform = `scale(${clampedScale})`;
-        currentScaleRef.current = clampedScale;
-        targetScaleRef.current = clampedScale;
-      }
-    };
-
-    const onPointerUp = (e: PointerEvent) => {
-      activePointers.delete(e.pointerId);
-      if (activePointers.size < 2) {
-        pinchStartDist = 0;
-        pinchStartLvl = 0;
-        // 손 뗄 때 scale만 1로 복귀 (레벨은 현재 상태 유지)
-        wheelAccumRef.current = 0;
-        targetScaleRef.current = 1;
-        currentScaleRef.current = 1;
-        const w = getWrapper();
-        if (w) {
-          w.style.transform = 'scale(1)';
-          w.style.transformOrigin = 'center center';
-        }
-      }
-    };
-
-    window.addEventListener('wheel', onWheel, { passive: false, capture: true });
-    window.addEventListener('pointerdown', onPointerDown, { capture: true });
-    window.addEventListener('pointermove', onPointerMove, { capture: true });
-    window.addEventListener('pointerup', onPointerUp, { capture: true });
-    window.addEventListener('pointercancel', onPointerUp, { capture: true });
-
-    return () => {
-      window.removeEventListener('wheel', onWheel, { capture: true } as any);
-      window.removeEventListener('pointerdown', onPointerDown, { capture: true } as any);
-      window.removeEventListener('pointermove', onPointerMove, { capture: true } as any);
-      window.removeEventListener('pointerup', onPointerUp, { capture: true } as any);
-      window.removeEventListener('pointercancel', onPointerUp, { capture: true } as any);
-      if (scaleAnimFrameRef.current) cancelAnimationFrame(scaleAnimFrameRef.current);
-      if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
-    };
-  }, []);
 
   return (
     <div
@@ -1714,7 +1481,7 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 롱프레스 진행 표시 - CSS 애니메이션으로 부드럽게 */}
+      {/* 롱프레스 진행 표시 */}
       {uiState === 'pressing' && (
         <div
           className="longpress-toast"
@@ -1736,15 +1503,8 @@ const MapContainer = ({
             whiteSpace: 'nowrap',
           }}
         >
-          {/* CSS 애니메이션 원형 진행 바 */}
-          <svg
-            width="32" height="32"
-            viewBox="0 0 32 32"
-            style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}
-          >
-            {/* 배경 트랙 */}
+          <svg width="32" height="32" viewBox="0 0 32 32" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
             <circle cx="16" cy="16" r="13" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-            {/* 진행 원 - CSS 애니메이션으로 strokeDashoffset 변화 */}
             <circle
               cx="16" cy="16" r="13"
               fill="none"
@@ -1753,9 +1513,7 @@ const MapContainer = ({
               strokeLinecap="round"
               strokeDasharray={circleCircumference}
               strokeDashoffset={circleCircumference}
-              style={{
-                animation: `longpress-circle ${LONG_PRESS_DURATION - 500}ms linear forwards`,
-              }}
+              style={{ animation: `longpress-circle ${LONG_PRESS_DURATION - 500}ms linear forwards` }}
             />
           </svg>
           <span style={{ color: 'white', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
@@ -1824,22 +1582,11 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 부드러운 줌을 위한 CSS Transform 래퍼 */}
       <div
-        ref={smoothZoomWrapperRef}
-        style={{
-          width: '100%',
-          height: '100%',
-          transformOrigin: 'center center',
-          willChange: 'transform',
-        }}
-      >
-        <div
-          ref={containerRef}
-          id="kakao-map"
-          className="w-full h-full select-none"
-        />
-      </div>
+        ref={containerRef}
+        id="kakao-map"
+        className="w-full h-full select-none"
+      />
     </div>
   );
 };
