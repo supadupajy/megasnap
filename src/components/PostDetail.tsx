@@ -677,37 +677,56 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       >
         {/* 단일 이미지 렌더링 - 강제 인라인 스타일 */}
         {displayImages[currentImageIndex] && (
-          <img
-            src={displayImages[currentImageIndex]}
-            alt={`Post content ${currentImageIndex + 1}`}
-            draggable={false}
-            loading="eager"
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: 'block',
-              opacity: 1,
-              visibility: 'visible',
-              zIndex: 5,
-              border: '3px solid blue', // 디버그
-            }}
-            onLoad={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              console.log('[PostDetail img onLoad]', {
-                src: displayImages[currentImageIndex],
-                w: r.width, h: r.height, top: r.top, left: r.left,
-                naturalW: e.currentTarget.naturalWidth,
-              });
-            }}
-            onError={(e) => {
-              console.error('[PostDetail img onError]', { src: displayImages[currentImageIndex] });
-              (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
-            }}
-          />
+          <>
+            <img
+              src={displayImages[currentImageIndex]}
+              alt={`Post content ${currentImageIndex + 1}`}
+              draggable={false}
+              loading="eager"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+                opacity: 1,
+                visibility: 'visible',
+                zIndex: 5,
+              }}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                const r = img.getBoundingClientRect();
+                const info = `LOADED nat=${img.naturalWidth}x${img.naturalHeight} box=${Math.round(r.width)}x${Math.round(r.height)}`;
+                console.log('[PostDetail img onLoad]', { src: displayImages[currentImageIndex], info });
+                const dbg = document.getElementById('img-debug-overlay');
+                if (dbg) dbg.textContent = info;
+              }}
+              onError={(e) => {
+                console.error('[PostDetail img onError]', { src: displayImages[currentImageIndex] });
+                const dbg = document.getElementById('img-debug-overlay');
+                if (dbg) dbg.textContent = 'ERROR';
+              }}
+            />
+            <div
+              id="img-debug-overlay"
+              style={{
+                position: 'absolute',
+                top: 8,
+                left: 8,
+                zIndex: 100,
+                background: 'black',
+                color: 'lime',
+                padding: '4px 8px',
+                fontSize: 12,
+                fontFamily: 'monospace',
+                pointerEvents: 'none',
+              }}
+            >
+              waiting...
+            </div>
+          </>
         )}
 
         {displayImages.length > 1 && (
