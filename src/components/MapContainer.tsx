@@ -1460,8 +1460,7 @@ const MapContainer = ({
   // CSS 애니메이션 duration을 변수로 전달
   const circleCircumference = 2 * Math.PI * 13; // r=13
 
-  // ── 부드러운 줌 (휠 + 핀치) ──────────────────────────────────────────
-  // document 레벨에서 capture로 등록해야 카카오맵 내부 이벤트보다 먼저 처리됨
+  // ── 부드러운 줌 (휠 + 핀치/PointerEvent) ────────────────────────────
   useEffect(() => {
     const MIN_LEVEL = 3;
     const MAX_LEVEL = 11;
@@ -1469,21 +1468,27 @@ const MapContainer = ({
     const getWrapper = () => smoothZoomWrapperRef.current;
     const getContainer = () => containerRef.current;
 
+    // 좌표가 지도 컨테이너 안에 있는지 확인
+    const isInMap = (x: number, y: number) => {
+      const c = getContainer();
+      if (!c) return false;
+      const r = c.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    };
+
+    // scale 애니메이션 (lerp)
     const animateScale = () => {
       const wrapper = getWrapper();
       if (!wrapper) { scaleAnimFrameRef.current = null; return; }
-      const current = currentScaleRef.current;
-      const target = targetScaleRef.current;
-      const diff = target - current;
+      const diff = targetScaleRef.current - currentScaleRef.current;
       if (Math.abs(diff) < 0.001) {
-        currentScaleRef.current = target;
-        wrapper.style.transform = `scale(${target})`;
+        currentScaleRef.current = targetScaleRef.current;
+        wrapper.style.transform = `scale(${targetScaleRef.current})`;
         scaleAnimFrameRef.current = null;
         return;
       }
-      const next = current + diff * 0.22;
-      currentScaleRef.current = next;
-      wrapper.style.transform = `scale(${next})`;
+      currentScaleRef.current += diff * 0.22;
+      wrapper.style.transform = `scale(${currentScaleRef.current})`;
       scaleAnimFrameRef.current = requestAnimationFrame(animateScale);
     };
 
@@ -1496,49 +1501,37 @@ const MapContainer = ({
       const map = mapInstance.current;
       const wrapper = getWrapper();
       if (!map || !wrapper) return;
-      const clamped = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
-      map.setLevel(clamped, { animate: false });
+      map.setLevel(Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel)), { animate: false });
       wheelAccumRef.current = 0;
-
-      // 레벨 변경 후 scale을 반대 방향 시작점으로 순간이동 → 연속감 유지
-      // 줌인(손가락 벌림): 레벨 변경 후 scale을 0.65에서 다시 1로 올라오는 것처럼
-      // 줌아웃(손가락 모음): 레벨 변경 후 scale을 1.5에서 다시 1로 내려오는 것처럼
-      const startScale = isZoomIn ? 0.65 : 1.5;
+      // 레벨 변경 후 반대 방향에서 1로 복귀 → 연속감
+      const startScale = isZoomIn ? 0.7 : 1.45;
       currentScaleRef.current = startScale;
       targetScaleRef.current = 1;
       wrapper.style.transform = `scale(${startScale})`;
       startScaleAnim();
     };
 
-    // ── 휠 ──
+    // ── 마우스 휠 ──────────────────────────────────────────────────────
     const onWheel = (e: WheelEvent) => {
-      const container = getContainer();
-      if (!container || !container.contains(e.target as Node)) return;
+      if (!isInMap(e.clientX, e.clientY)) return;
       e.preventDefault();
       e.stopPropagation();
 
       const map = mapInstance.current;
       const wrapper = getWrapper();
-      if (!map || !wrapper) return;
+      const container = getContainer();
+      if (!map || !wrapper || !container) return;
 
       lastWheelTimeRef.current = Date.now();
       wheelAccumRef.current += e.deltaY * 0.001;
-
       const lvl = map.getLevel();
 
-      if (wheelAccumRef.current <= -0.4) {
-        applyZoomLevel(lvl - 1, true);
-        return;
-      }
-      if (wheelAccumRef.current >= 0.4) {
-        applyZoomLevel(lvl + 1, false);
-        return;
-      }
+      if (wheelAccumRef.current <= -0.4) { applyZoomLevel(lvl - 1, true); return; }
+      if (wheelAccumRef.current >= 0.4)  { applyZoomLevel(lvl + 1, false); return; }
 
-      const visualScale = Math.max(0.78, Math.min(1.35, 1 - wheelAccumRef.current * 0.7));
-      targetScaleRef.current = visualScale;
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
+      targetScaleRef.current = Math.max(0.78, Math.min(1.35, 1 - wheelAccumRef.current * 0.7));
       startScaleAnim();
 
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
@@ -1546,104 +1539,85 @@ const MapContainer = ({
         if (Date.now() - lastWheelTimeRef.current >= 280) {
           wheelAccumRef.current = 0;
           targetScaleRef.current = 1;
-          getWrapper()!.style.transformOrigin = 'center center';
+          const w = getWrapper();
+          if (w) w.style.transformOrigin = 'center center';
           startScaleAnim();
         }
       }, 320);
     };
 
-    // ── 핀치 ──
+    // ── 핀치 (PointerEvent 기반 - 브라우저 시뮬레이터 + 실제 터치 모두 동작) ──
+    const activePointers = new Map<number, { x: number; y: number }>();
     let pinchStartDist = 0;
-    let pinchCenterX = 0;
-    let pinchCenterY = 0;
-    let isPinching = false;
+    let pinchOriginX = 0;
+    let pinchOriginY = 0;
 
-    const getDist = (t: TouchList) => {
-      const dx = t[0].clientX - t[1].clientX;
-      const dy = t[0].clientY - t[1].clientY;
+    const getPinchDist = () => {
+      const pts = Array.from(activePointers.values());
+      if (pts.length < 2) return 0;
+      const dx = pts[0].x - pts[1].x;
+      const dy = pts[0].y - pts[1].y;
       return Math.sqrt(dx * dx + dy * dy);
     };
 
-    // 터치 좌표가 지도 컨테이너 rect 안에 있는지 확인 (contains 대신 좌표 비교)
-    const isTouchInMap = (touch: Touch) => {
-      const container = getContainer();
-      if (!container) return false;
-      const rect = container.getBoundingClientRect();
-      return touch.clientX >= rect.left && touch.clientX <= rect.right &&
-             touch.clientY >= rect.top && touch.clientY <= rect.bottom;
-    };
+    const onPointerDown = (e: PointerEvent) => {
+      if (!isInMap(e.clientX, e.clientY)) return;
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      console.log('[SmoothZoom] pointerdown - 활성 포인터 수:', activePointers.size);
 
-    const onTouchStart = (e: TouchEvent) => {
-      console.log('[SmoothZoom] touchstart - touches:', e.touches.length);
-      if (e.touches.length === 2) {
-        // 두 손가락 중 하나라도 지도 위에 있으면 핀치로 처리
-        if (!isTouchInMap(e.touches[0]) && !isTouchInMap(e.touches[1])) {
-          console.log('[SmoothZoom] 지도 밖 터치 - 무시');
-          return;
-        }
-        isPinching = true;
-        pinchStartDist = getDist(e.touches);
-        pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-        pinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        console.log('[SmoothZoom] 핀치 시작 - startDist:', pinchStartDist.toFixed(1));
+      if (activePointers.size === 2) {
+        pinchStartDist = getPinchDist();
+        const pts = Array.from(activePointers.values());
+        pinchOriginX = (pts[0].x + pts[1].x) / 2;
+        pinchOriginY = (pts[0].y + pts[1].y) / 2;
+        console.log('[SmoothZoom] 핀치 시작 - dist:', pinchStartDist.toFixed(1));
 
         const wrapper = getWrapper();
         const container = getContainer();
         const rect = container?.getBoundingClientRect();
         if (wrapper && rect) {
-          wrapper.style.transformOrigin = `${((pinchCenterX - rect.left) / rect.width) * 100}% ${((pinchCenterY - rect.top) / rect.height) * 100}%`;
+          wrapper.style.transformOrigin = `${((pinchOriginX - rect.left) / rect.width) * 100}% ${((pinchOriginY - rect.top) / rect.height) * 100}%`;
         }
       }
     };
 
-    const onTouchMove = (e: TouchEvent) => {
-      if (!isPinching || e.touches.length !== 2) return;
+    const onPointerMove = (e: PointerEvent) => {
+      if (!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-      e.preventDefault();
-      e.stopPropagation();
+      if (activePointers.size !== 2 || pinchStartDist === 0) return;
 
-      const wrapper = getWrapper();
       const map = mapInstance.current;
-      if (!wrapper || !map || pinchStartDist === 0) return;
+      const wrapper = getWrapper();
+      if (!map || !wrapper) return;
 
-      const ratio = getDist(e.touches) / pinchStartDist;
+      const currentDist = getPinchDist();
+      const ratio = currentDist / pinchStartDist;
       const lvl = map.getLevel();
       console.log('[SmoothZoom] 핀치 이동 - ratio:', ratio.toFixed(3), 'level:', lvl);
 
       // CSS scale 즉각 반영
-      const clamped = Math.max(0.5, Math.min(2.2, ratio));
+      const clamped = Math.max(0.45, Math.min(2.3, ratio));
       currentScaleRef.current = clamped;
       targetScaleRef.current = clamped;
       wrapper.style.transform = `scale(${clamped})`;
 
-      // 임계점 도달 → 레벨 변경 후 새 핀치 시작점 리셋
       if (ratio >= 1.7 && lvl > MIN_LEVEL) {
-        console.log('[SmoothZoom] 줌인 임계점 도달! ratio:', ratio.toFixed(3), '→ level', lvl - 1);
+        console.log('[SmoothZoom] 줌인! →', lvl - 1);
         applyZoomLevel(lvl - 1, true);
-        isPinching = false;
-        setTimeout(() => {
-          if (e.touches.length === 2) {
-            isPinching = true;
-            pinchStartDist = getDist(e.touches);
-          }
-        }, 80);
+        pinchStartDist = getPinchDist(); // 현재 거리를 새 시작점으로
       } else if (ratio <= 0.6 && lvl < MAX_LEVEL) {
-        console.log('[SmoothZoom] 줌아웃 임계점 도달! ratio:', ratio.toFixed(3), '→ level', lvl + 1);
+        console.log('[SmoothZoom] 줌아웃! →', lvl + 1);
         applyZoomLevel(lvl + 1, false);
-        isPinching = false;
-        setTimeout(() => {
-          if (e.touches.length === 2) {
-            isPinching = true;
-            pinchStartDist = getDist(e.touches);
-          }
-        }, 80);
+        pinchStartDist = getPinchDist();
       }
     };
 
-    const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) {
-        console.log('[SmoothZoom] 핀치 종료 - isPinching:', isPinching, 'touches:', e.touches.length);
-        isPinching = false;
+    const onPointerUp = (e: PointerEvent) => {
+      activePointers.delete(e.pointerId);
+      console.log('[SmoothZoom] pointerup - 남은 포인터 수:', activePointers.size);
+
+      if (activePointers.size < 2) {
         pinchStartDist = 0;
         targetScaleRef.current = 1;
         const w = getWrapper();
@@ -1652,20 +1626,18 @@ const MapContainer = ({
       }
     };
 
-    // capture: true → 카카오맵 내부 리스너보다 먼저 실행
-    // window에 등록해야 iframe 안에서도 동작함
     window.addEventListener('wheel', onWheel, { passive: false, capture: true });
-    window.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
+    window.addEventListener('pointerdown', onPointerDown, { capture: true });
+    window.addEventListener('pointermove', onPointerMove, { capture: true });
+    window.addEventListener('pointerup', onPointerUp, { capture: true });
+    window.addEventListener('pointercancel', onPointerUp, { capture: true });
 
     return () => {
       window.removeEventListener('wheel', onWheel, { capture: true } as any);
-      window.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
-      window.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
-      window.removeEventListener('touchend', onTouchEnd, { capture: true } as any);
-      window.removeEventListener('touchcancel', onTouchEnd, { capture: true } as any);
+      window.removeEventListener('pointerdown', onPointerDown, { capture: true } as any);
+      window.removeEventListener('pointermove', onPointerMove, { capture: true } as any);
+      window.removeEventListener('pointerup', onPointerUp, { capture: true } as any);
+      window.removeEventListener('pointercancel', onPointerUp, { capture: true } as any);
       if (scaleAnimFrameRef.current) cancelAnimationFrame(scaleAnimFrameRef.current);
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
     };
