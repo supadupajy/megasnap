@@ -628,70 +628,41 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                 const t = e.currentTarget;
                 const cs = window.getComputedStyle(t);
                 const rect = t.getBoundingClientRect();
-                const parent = t.parentElement;
-                const parentRect = parent?.getBoundingClientRect();
-                const parentCs = parent ? window.getComputedStyle(parent) : null;
-                const grandparent = parent?.parentElement;
-                const gpRect = grandparent?.getBoundingClientRect();
-                const gpCs = grandparent ? window.getComputedStyle(grandparent) : null;
-                console.log('[PostDetail/DEBUG] img onLoad', {
-                  postId: currentPost?.id,
-                  index,
-                  src: img,
-                  naturalWidth: t.naturalWidth,
-                  naturalHeight: t.naturalHeight,
-                  clientWidth: t.clientWidth,
-                  clientHeight: t.clientHeight,
-                  rect: { x: rect.x, y: rect.y, w: rect.width, h: rect.height },
-                  // img computed style
-                  imgStyle: {
-                    display: cs.display,
-                    visibility: cs.visibility,
-                    opacity: cs.opacity,
-                    transform: cs.transform,
-                    objectFit: cs.objectFit,
-                    zIndex: cs.zIndex,
-                    position: cs.position,
-                  },
-                  // 슬라이드 div(부모)
-                  parent: {
-                    rect: parentRect ? { x: parentRect.x, y: parentRect.y, w: parentRect.width, h: parentRect.height } : null,
-                    display: parentCs?.display,
-                    visibility: parentCs?.visibility,
-                    opacity: parentCs?.opacity,
-                    transform: parentCs?.transform,
-                  },
-                  // 스크롤 컨테이너(조부모)
-                  grandparent: {
-                    rect: gpRect ? { x: gpRect.x, y: gpRect.y, w: gpRect.width, h: gpRect.height } : null,
-                    display: gpCs?.display,
-                    visibility: gpCs?.visibility,
-                    opacity: gpCs?.opacity,
-                    transform: gpCs?.transform,
-                    overflow: gpCs?.overflow,
-                    overflowX: gpCs?.overflowX,
-                  },
-                });
-                // 한 단계 더 위(absolute inset-0 wrapper)와 그 위(bg-black aspect-square)
-                let node: HTMLElement | null = grandparent?.parentElement || null;
-                let level = 0;
-                while (node && level < 4) {
-                  const r = node.getBoundingClientRect();
-                  const s = window.getComputedStyle(node);
-                  console.log(`[PostDetail/DEBUG] ancestor[${level}]`, {
-                    tag: node.tagName,
-                    className: node.className?.toString().slice(0, 120),
-                    rect: { w: r.width, h: r.height, x: r.x, y: r.y },
-                    display: s.display,
-                    visibility: s.visibility,
-                    opacity: s.opacity,
-                    transform: s.transform,
-                    background: s.backgroundColor,
-                    zIndex: s.zIndex,
-                    position: s.position,
-                  });
-                  node = node.parentElement;
-                  level++;
+                // [DEBUG2] img 자체 평면 로그
+                console.log(
+                  `[PostDetail/DEBUG2] img idx=${index} pid=${currentPost?.id?.slice(0,8)} ` +
+                  `rect={x:${rect.x.toFixed(1)},y:${rect.y.toFixed(1)},w:${rect.width.toFixed(1)},h:${rect.height.toFixed(1)}} ` +
+                  `client={${t.clientWidth},${t.clientHeight}} natural={${t.naturalWidth},${t.naturalHeight}} ` +
+                  `display=${cs.display} vis=${cs.visibility} opacity=${cs.opacity} ` +
+                  `transform=${cs.transform} objectFit=${cs.objectFit} ` +
+                  `complete=${t.complete} currentSrc=${t.currentSrc?.slice(-40)}`
+                );
+                // [DEBUG2] elementFromPoint로 첫 슬라이드 중심에 무엇이 그려지는지 확인
+                if (index === 0) {
+                  const cx = rect.x + rect.width / 2;
+                  const cy = rect.y + rect.height / 2;
+                  const topElem = document.elementFromPoint(cx, cy);
+                  const topElemsAll = (document as any).elementsFromPoint?.(cx, cy) || [];
+                  console.log(
+                    `[PostDetail/DEBUG2] elementFromPoint center=(${cx.toFixed(1)},${cy.toFixed(1)}) ` +
+                    `top=<${topElem?.tagName} class="${(topElem as HTMLElement)?.className?.toString?.().slice(0,80)}"> ` +
+                    `stack=[${topElemsAll.slice(0, 6).map((el: any) => `${el.tagName}.${(el.className?.toString?.()||'').slice(0,30)}`).join(' | ')}]`
+                  );
+                  // 모든 ancestor를 평면 로그로
+                  let node: HTMLElement | null = t;
+                  let level = 0;
+                  while (node && level < 8) {
+                    const r = node.getBoundingClientRect();
+                    const s = window.getComputedStyle(node);
+                    console.log(
+                      `[PostDetail/DEBUG2] anc[${level}] <${node.tagName} class="${node.className?.toString?.().slice(0, 80)}"> ` +
+                      `rect={x:${r.x.toFixed(1)},y:${r.y.toFixed(1)},w:${r.width.toFixed(1)},h:${r.height.toFixed(1)}} ` +
+                      `disp=${s.display} vis=${s.visibility} op=${s.opacity} z=${s.zIndex} pos=${s.position} ` +
+                      `bg=${s.backgroundColor} transform=${s.transform} clipPath=${s.clipPath}`
+                    );
+                    node = node.parentElement;
+                    level++;
+                  }
                 }
               }}
               onError={(e) => {
