@@ -673,10 +673,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             loading="eager"
             onLoad={(e) => {
               e.currentTarget.dataset.imgStatus = 'loaded';
+              const el = e.currentTarget;
+              const rect = el.getBoundingClientRect();
+              const cs = window.getComputedStyle(el);
               console.log(`[PostDetail] ✅ img[${index}] LOADED`, {
                 postId: currentPost?.id,
                 src: img,
-                naturalWidth: e.currentTarget.naturalWidth,
+                naturalWidth: el.naturalWidth,
+                rect: { w: rect.width, h: rect.height, x: rect.x, y: rect.y },
+                styles: {
+                  display: cs.display,
+                  visibility: cs.visibility,
+                  opacity: cs.opacity,
+                  position: cs.position,
+                  zIndex: cs.zIndex,
+                  width: cs.width,
+                  height: cs.height,
+                  transform: cs.transform,
+                  filter: cs.filter,
+                },
+                parentRect: el.parentElement?.getBoundingClientRect(),
               });
             }}
             onError={(e) => {
