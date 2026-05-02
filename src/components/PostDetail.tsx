@@ -619,87 +619,85 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           borderRadius: 24,
           overflow: 'hidden',
           background: '#e5e7eb',
+          containerType: 'inline-size',
         }}
       >
-        {slideSize && (
-          <>
+        <div
+          ref={imageScrollRef}
+          style={{
+            display: 'flex',
+            width: '100%',
+            height: '100%',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollSnapType: 'x mandatory',
+            scrollBehavior: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+          } as React.CSSProperties}
+          onScroll={handleImageScroll}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseUp}
+          onMouseMove={onMouseMove}
+        >
+          {displayImages.map((img, index) => (
             <div
-              ref={imageScrollRef}
+              key={index}
               style={{
-                display: 'flex',
-                width: '100%',
-                height: '100%',
-                overflowX: 'auto',
-                overflowY: 'hidden',
-                scrollSnapType: 'x mandatory',
-                scrollBehavior: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                cursor: isDragging ? 'grabbing' : 'grab',
-                msOverflowStyle: 'none',
-                scrollbarWidth: 'none',
-              } as React.CSSProperties}
-              onScroll={handleImageScroll}
-              onMouseDown={onMouseDown}
-              onMouseUp={onMouseUp}
-              onMouseLeave={onMouseUp}
-              onMouseMove={onMouseMove}
+                flexShrink: 0,
+                // slideSize가 있으면 픽셀값, 없으면 container query 단위 사용
+                width: slideSize ? `${slideSize}px` : '100cqw',
+                height: slideSize ? `${slideSize}px` : '100cqh',
+                minWidth: slideSize ? `${slideSize}px` : '100cqw',
+                scrollSnapAlign: 'start',
+                scrollSnapStop: 'always',
+                background: '#e5e7eb',
+              }}
             >
-              {displayImages.map((img, index) => (
-                <div
-                  key={index}
-                  style={{
-                    flexShrink: 0,
-                    width: `${slideSize}px`,
-                    height: `${slideSize}px`,
-                    minWidth: `${slideSize}px`,
-                    scrollSnapAlign: 'start',
-                    scrollSnapStop: 'always',
-                    background: '#e5e7eb',
-                  }}
-                >
-                  <img
-                    src={img}
-                    alt={`Post content ${index + 1}`}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                      pointerEvents: 'none',
-                      userSelect: 'none',
-                    }}
-                    draggable={false}
-                    loading="eager"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      target.src = '/placeholder.svg';
-                      target.style.objectFit = 'contain';
-                      target.style.padding = '20%';
-                      target.style.opacity = '0.3';
-                    }}
-                  />
-                </div>
-              ))}
+              <img
+                src={img}
+                alt={`Post content ${index + 1}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+                draggable={false}
+                loading="eager"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.src = '/placeholder.svg';
+                  target.style.objectFit = 'contain';
+                  target.style.padding = '20%';
+                  target.style.opacity = '0.3';
+                }}
+              />
             </div>
-            {displayImages.length > 1 && (
-              <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
-                {displayImages.map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      height: 6,
-                      borderRadius: 3,
-                      background: 'white',
-                      opacity: currentImageIndex === i ? 1 : 0.4,
-                      width: currentImageIndex === i ? 24 : 6,
-                      transition: 'all 0.3s',
-                      boxShadow: currentImageIndex === i ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </>
+          ))}
+        </div>
+        {displayImages.length > 1 && (
+          <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
+            {displayImages.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  height: 6,
+                  borderRadius: 3,
+                  background: 'white',
+                  opacity: currentImageIndex === i ? 1 : 0.4,
+                  width: currentImageIndex === i ? 24 : 6,
+                  transition: 'all 0.3s',
+                  boxShadow: currentImageIndex === i ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                }}
+              />
+            ))}
+          </div>
         )}
       </div>
     );

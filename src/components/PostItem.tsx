@@ -313,8 +313,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               key={index}
               style={{
                 flexShrink: 0,
-                width: slideSize ? `${slideSize}px` : '100%',
-                height: slideSize ? `${slideSize}px` : '100%',
+                width: slideSize ? `${slideSize}px` : '100cqw',
+                height: slideSize ? `${slideSize}px` : '100cqh',
+                minWidth: slideSize ? `${slideSize}px` : '100cqw',
                 scrollSnapAlign: 'start',
                 scrollSnapStop: 'always',
                 background: '#f3f4f6',
@@ -387,7 +388,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       baseImages = [getFallbackImage()];
     }
 
-    console.log('[PostItem] displayImages for post', post.id, ':', baseImages);
     return baseImages;
   }, [post.images, post.image, post.image_url, isAd]);
 
@@ -661,7 +661,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             <div
               ref={mediaContainerRef}
               className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-              style={sliderWidth > 0 ? { height: sliderWidth } : { aspectRatio: '1 / 1' }}
+              style={sliderWidth > 0 ? { height: sliderWidth, containerType: 'inline-size' } : { aspectRatio: '1 / 1', containerType: 'inline-size' }}
               onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
               {renderMedia()}
@@ -767,7 +767,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           <div
             ref={mediaContainerRef}
             className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-            style={sliderWidth > 0 ? { height: sliderWidth } : { aspectRatio: '1 / 1' }}
+            style={sliderWidth > 0 ? { height: sliderWidth, containerType: 'inline-size' } : { aspectRatio: '1 / 1', containerType: 'inline-size' }}
             onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
             {renderMedia()}
