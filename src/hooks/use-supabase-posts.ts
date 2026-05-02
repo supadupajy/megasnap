@@ -92,6 +92,10 @@ export const fetchOffScreenCounts = async (
   options?: { categories?: string[]; userId?: string | null }
 ): Promise<DirectionCounts> => {
   const { sw, ne } = bounds;
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
+  const latRange = ne.lat - sw.lat;
+  const lngRange = ne.lng - sw.lng;
 
   // 카테고리/사용자 필터 적용 헬퍼
   const applyFilters = <T>(q: T): T => {
@@ -109,21 +113,32 @@ export const fetchOffScreenCounts = async (
   };
 
   try {
-    // 각 방향별로 해당 경계를 벗어난 포스팅 수를 DB에서 직접 카운트
-    // 45도 섹터 제한 없이 해당 방향 경계를 벗어난 모든 마커를 카운트
-    const [topRes, bottomRes, leftRes, rightRes] = await Promise.all([
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).gt('latitude', ne.lat)),
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).lt('latitude', sw.lat)),
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).lt('longitude', sw.lng)),
-      applyFilters(supabase.from('posts').select('id', { count: 'exact', head: true }).gt('longitude', ne.lng)),
-    ]);
+    // 화면 밖 전체 포스팅 좌표를 가져와서 클라이언트에서 45도 섹터로 독점 분류
+    // 각 마커는 정확히 하나의 방향에만 속함 (중복 카운트 없음)
+    const res = await applyFilters(
+      supabase.from('posts').select('latitude, longitude')
+        .or(`latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`)
+    );
 
-    return {
-      top: topRes.count ?? 0,
-      bottom: bottomRes.count ?? 0,
-      left: leftRes.count ?? 0,
-      right: rightRes.count ?? 0,
-    };
+    if (res.error) throw res.error;
+
+    let top = 0, bottom = 0, left = 0, right = 0;
+
+    (res.data || []).forEach((p: any) => {
+      if (p.latitude == null || p.longitude == null) return;
+      // 화면 안이면 제외
+      if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
+      // 중심 기준 상대 벡터 (위도/경도 스케일 보정)
+      const dLat = (p.latitude - centerLat) / latRange;
+      const dLng = (p.longitude - centerLng) / lngRange;
+      // 45도 섹터로 독점 분류 (각 마커는 정확히 하나의 방향에만 속함)
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           top++;
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottom++;
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) left++;
+      else                                                      right++;
+    });
+
+    return { top, bottom, left, right };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
     return { top: 0, bottom: 0, left: 0, right: 0 };
@@ -132,7 +147,6 @@ export const fetchOffScreenCounts = async (
 
 /**
  * 특정 방향(화면 밖)에서 현재 지도 중심에 가장 가까운 포스팅 좌표를 가져옵니다.
- * nearest가 없을 때 버튼 클릭 시 호출됩니다.
  */
 export const fetchNearestInDirection = async (
   bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
@@ -141,16 +155,15 @@ export const fetchNearestInDirection = async (
   options?: { categories?: string[]; userId?: string | null; followingIds?: string[] }
 ): Promise<{ lat: number; lng: number } | null> => {
   const { sw, ne } = bounds;
+  const centerLat = (sw.lat + ne.lat) / 2;
+  const centerLng = (sw.lng + ne.lng) / 2;
+  const latRange = ne.lat - sw.lat;
+  const lngRange = ne.lng - sw.lng;
 
   try {
-    // DB 쿼리: 해당 방향 경계를 벗어난 것만 정확히 필터링
-    // 45도 섹터 제한 없이 해당 방향으로 화면 밖인 모든 마커를 대상으로 함
-    let query = supabase.from('posts').select('latitude, longitude');
-
-    if (dir === 'top')    query = query.gt('latitude', ne.lat);
-    if (dir === 'bottom') query = query.lt('latitude', sw.lat);
-    if (dir === 'left')   query = query.lt('longitude', sw.lng);
-    if (dir === 'right')  query = query.gt('longitude', ne.lng);
+    // 화면 밖 전체 포스팅을 가져와서 클라이언트에서 45도 섹터 독점 분류 후 가장 가까운 것 선택
+    let query = supabase.from('posts').select('latitude, longitude')
+      .or(`latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`);
 
     // 카테고리/사용자 필터 적용
     const cats = options?.categories || [];
@@ -168,13 +181,25 @@ export const fetchNearestInDirection = async (
     const { data, error } = await query.limit(500);
     if (error || !data || data.length === 0) return null;
 
-    const valid = data.filter(p => p.latitude != null && p.longitude != null);
-    if (valid.length === 0) return null;
+    // 45도 섹터로 독점 분류하여 해당 방향 마커만 추출
+    const inDir = data.filter((p: any) => {
+      if (p.latitude == null || p.longitude == null) return false;
+      if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return false;
+      const dLat = (p.latitude - centerLat) / latRange;
+      const dLng = (p.longitude - centerLng) / lngRange;
+      if (dir === 'top')    return dLat >= 0 && dLat >= Math.abs(dLng);
+      if (dir === 'bottom') return dLat < 0  && Math.abs(dLat) > Math.abs(dLng);
+      if (dir === 'left')   return dLng < 0  && Math.abs(dLng) >= Math.abs(dLat);
+      if (dir === 'right')  return dLng >= 0 && dLng > Math.abs(dLat);
+      return false;
+    });
+
+    if (inDir.length === 0) return null;
 
     // 현재 지도 중심에서 유클리드 거리가 가장 가까운 포스팅
-    let nearest = valid[0];
+    let nearest = inDir[0];
     let minDist = Infinity;
-    for (const p of valid) {
+    for (const p of inDir) {
       const d = Math.pow(p.latitude - center.lat, 2) + Math.pow(p.longitude - center.lng, 2);
       if (d < minDist) { minDist = d; nearest = p; }
     }

@@ -415,12 +415,16 @@ const Index = () => {
            selectedCategories.includes('influencer');
   }, [selectedCategories]);
 
-  // 클라이언트 계산: displayedMarkers 기반 (방향별 경계 기준 분류)
+  // 클라이언트 계산: displayedMarkers 기반 (45도 섹터 독점 분류)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
     if (!mapData?.bounds || currentZoom >= 7) return null;
     if (!useClientSideCounts) return null;
 
     const { sw, ne } = mapData.bounds;
+    const centerLat = (sw.lat + ne.lat) / 2;
+    const centerLng = (sw.lng + ne.lng) / 2;
+    const latRange = ne.lat - sw.lat;
+    const lngRange = ne.lng - sw.lng;
 
     let top = 0, bottom = 0, left = 0, right = 0;
 
@@ -433,11 +437,13 @@ const Index = () => {
       // 화면 안이면 제외
       if (lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng) return;
 
-      // 해당 방향 경계를 벗어난 것으로 분류 (45도 섹터 제한 없음)
-      if (lat > ne.lat) top++;
-      if (lat < sw.lat) bottom++;
-      if (lng < sw.lng) left++;
-      if (lng > ne.lng) right++;
+      // 45도 섹터로 독점 분류 (각 마커는 정확히 하나의 방향에만 속함)
+      const dLat = (lat - centerLat) / latRange;
+      const dLng = (lng - centerLng) / lngRange;
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           top++;
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottom++;
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) left++;
+      else                                                      right++;
     });
 
     return { top, bottom, left, right };
@@ -1159,23 +1165,25 @@ const Index = () => {
                 const { sw, ne } = b;
                 const latRange = ne.lat - sw.lat;
                 const lngRange = ne.lng - sw.lng;
+                const centerLat = (sw.lat + ne.lat) / 2;
+                const centerLng = (sw.lng + ne.lng) / 2;
 
-                // 해당 방향으로 화면 밖에 있는 마커인지 판별
-                // 45도 섹터 제한 없이, 해당 방향 경계를 벗어난 모든 마커를 후보로 포함
-                const isOutsideInDir = (lat: number, lng: number): boolean => {
-                  const inBounds = lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng;
-                  if (inBounds) return false;
-                  if (dir === 'top')    return lat > ne.lat;
-                  if (dir === 'bottom') return lat < sw.lat;
-                  if (dir === 'left')   return lng < sw.lng;
-                  if (dir === 'right')  return lng > ne.lng;
+                // 45도 섹터로 독점 분류 — 각 마커는 정확히 하나의 방향에만 속함
+                const isInDir = (lat: number, lng: number): boolean => {
+                  if (lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng) return false;
+                  const dLat = (lat - centerLat) / latRange;
+                  const dLng = (lng - centerLng) / lngRange;
+                  if (dir === 'top')    return dLat >= 0 && dLat >= Math.abs(dLng);
+                  if (dir === 'bottom') return dLat < 0  && Math.abs(dLat) > Math.abs(dLng);
+                  if (dir === 'left')   return dLng < 0  && Math.abs(dLng) >= Math.abs(dLat);
+                  if (dir === 'right')  return dLng >= 0 && dLng > Math.abs(dLat);
                   return false;
                 };
 
-                // 현재 필터가 적용된 마커 목록(spreadMarkersRef)에서 해당 방향 화면 밖 후보 찾기
+                // 현재 필터가 적용된 마커 목록(spreadMarkersRef)에서 해당 방향 후보 찾기
                 const clientCandidates = spreadMarkersRef.current.filter(post => {
                   if (post.lat == null || post.lng == null || post.isAd) return false;
-                  return isOutsideInDir(post.lat, post.lng);
+                  return isInDir(post.lat, post.lng);
                 });
 
                 if (clientCandidates.length > 0) {
