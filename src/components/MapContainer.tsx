@@ -1503,7 +1503,6 @@ const MapContainer = ({
       const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
       map.setLevel(clampedLevel, { animate: false });
       wheelAccumRef.current = 0;
-      // scale은 건드리지 않음 - 호출자가 직접 처리
     };
 
     // ── 마우스 휠 (Mac 트랙패드 핀치 포함) ────────────────────────────
@@ -1520,14 +1519,11 @@ const MapContainer = ({
       const now = Date.now();
       const isPinchGesture = e.ctrlKey;
 
-      // 일반 마우스 휠: 즉시 레벨 변경, scale 리셋
+      // 일반 마우스 휠: 즉시 레벨 변경
       if (!isPinchGesture) {
         const lvl = map.getLevel();
-        if (e.deltaY < 0 && lvl > MIN_LEVEL) {
-          map.setLevel(lvl - 1, { animate: false });
-        } else if (e.deltaY > 0 && lvl < MAX_LEVEL) {
-          map.setLevel(lvl + 1, { animate: false });
-        }
+        if (e.deltaY < 0 && lvl > MIN_LEVEL) applyZoomLevel(lvl - 1);
+        else if (e.deltaY > 0 && lvl < MAX_LEVEL) applyZoomLevel(lvl + 1);
         return;
       }
 
@@ -1538,21 +1534,18 @@ const MapContainer = ({
       lastWheelTimeRef.current = now;
 
       wheelAccumRef.current += e.deltaY * 0.025;
-      // ±1 클램프: 한 제스처에 최대 1레벨
       wheelAccumRef.current = Math.max(-1, Math.min(1, wheelAccumRef.current));
 
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
 
-      // 핀치 중 시각적 scale 피드백
+      // 핀치 중 시각적 scale 피드백만 (레벨은 아직 안 바꿈)
       const visualScale = Math.pow(2, -wheelAccumRef.current);
       currentScaleRef.current = visualScale;
       targetScaleRef.current = visualScale;
       wrapper.style.transform = `scale(${visualScale})`;
 
-      console.log(`[Zoom] wheel: accum=${wheelAccumRef.current.toFixed(3)} scale=${visualScale.toFixed(3)} lvl=${map.getLevel()}`);
-
-      // 핀치 종료: 150ms 후 레벨 결정 + scale 보정
+      // 핀치 종료: 150ms 후 레벨 결정
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         zoomResetTimerRef.current = null;
@@ -1562,39 +1555,25 @@ const MapContainer = ({
 
         const currentLvl = currentMap.getLevel();
         const accum = wheelAccumRef.current;
-        const currentScale = currentScaleRef.current;
 
         let newLvl = currentLvl;
         if (accum <= -0.3 && currentLvl > MIN_LEVEL) newLvl = currentLvl - 1;
         else if (accum >= 0.3 && currentLvl < MAX_LEVEL) newLvl = currentLvl + 1;
 
-        wheelAccumRef.current = 0;
-
+        // 레벨 변경 + scale 즉시 1로 리셋 (애니메이션 없음)
+        // 레벨이 바뀌면 카카오맵이 새 레벨로 타일을 다시 그리므로
+        // scale=1이 자연스러운 상태
         if (newLvl !== currentLvl) {
-          // 레벨 변경: 카카오맵 레벨 1 = 2배 관계
-          // 줌인(레벨↓): 지도가 2배 확대됨 → scale을 절반으로 보정해야 시각적 연속성 유지
-          // 줌아웃(레벨↑): 지도가 2배 축소됨 → scale을 2배로 보정
-          const levelChange = newLvl - currentLvl; // 줌인이면 음수, 줌아웃이면 양수
-          const scaleFactor = Math.pow(2, levelChange); // 줌인이면 0.5, 줌아웃이면 2
-          const correctedScale = currentScale * scaleFactor;
-
           currentMap.setLevel(newLvl, { animate: false });
-
-          // 보정된 scale로 즉시 설정 후 1로 부드럽게 복귀
-          const clampedCorrected = Math.max(0.3, Math.min(3.5, correctedScale));
-          currentScaleRef.current = clampedCorrected;
-          targetScaleRef.current = 1;
-          w.style.transform = `scale(${clampedCorrected})`;
-          w.style.transformOrigin = 'center center';
-          startScaleAnim();
-
-          console.log(`[Zoom] LEVEL CHANGE: ${currentLvl}→${newLvl}, scale ${currentScale.toFixed(3)}→${clampedCorrected.toFixed(3)}→1`);
-        } else {
-          // 레벨 유지: scale만 1로 복귀
-          targetScaleRef.current = 1;
-          w.style.transformOrigin = 'center center';
-          startScaleAnim();
-          console.log(`[Zoom] LEVEL KEEP: ${currentLvl}, scale ${currentScale.toFixed(3)}→1`);
+        }
+        wheelAccumRef.current = 0;
+        currentScaleRef.current = 1;
+        targetScaleRef.current = 1;
+        w.style.transform = 'scale(1)';
+        w.style.transformOrigin = 'center center';
+        if (scaleAnimFrameRef.current) {
+          cancelAnimationFrame(scaleAnimFrameRef.current);
+          scaleAnimFrameRef.current = null;
         }
       }, 150);
     };
