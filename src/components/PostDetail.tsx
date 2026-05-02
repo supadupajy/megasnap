@@ -641,9 +641,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         }}
       >
         {/* 각 이미지를 absolute로 쌓고 현재 인덱스만 opacity로 표시 */}
+        {(() => {
+          console.log('[PostDetail] 🖼️ Rendering images:', {
+            postId: currentPost?.id,
+            count: displayImages.length,
+            currentImageIndex,
+            images: displayImages,
+          });
+          return null;
+        })()}
         {displayImages.map((img, index) => (
           <img
-            key={index}
+            key={`${currentPost?.id}-${index}-${img}`}
             src={img}
             alt={`Post content ${index + 1}`}
             style={{
@@ -662,7 +671,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             }}
             draggable={false}
             loading="eager"
+            onLoad={(e) => {
+              console.log(`[PostDetail] ✅ Image ${index} LOADED:`, {
+                src: img,
+                naturalWidth: e.currentTarget.naturalWidth,
+                naturalHeight: e.currentTarget.naturalHeight,
+              });
+            }}
             onError={(e) => {
+              console.error(`[PostDetail] ❌ Image ${index} FAILED:`, img);
               const target = e.currentTarget;
               target.src = '/placeholder.svg';
               target.style.objectFit = 'contain';
@@ -701,6 +718,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             <ChevronRight className="w-5 h-5" />
           </button>
         )}
+
+        {/* 🐛 DEBUG: 디버그 오버레이 - 첫 번째 이미지 URL 표시 */}
+        <div style={{
+          position: 'absolute', top: 8, left: 8, right: 8, zIndex: 100,
+          background: 'rgba(255,0,0,0.85)', color: 'white', padding: '6px 8px',
+          fontSize: '9px', borderRadius: 6, pointerEvents: 'none',
+          fontFamily: 'monospace', wordBreak: 'break-all', lineHeight: 1.3,
+        }}>
+          <div>idx: {currentImageIndex} / total: {displayImages.length}</div>
+          <div>src[0]: {(displayImages[0] || 'EMPTY').slice(0, 80)}</div>
+          {displayImages[currentImageIndex] && (
+            <div>cur: {displayImages[currentImageIndex].slice(0, 80)}</div>
+          )}
+        </div>
 
         {displayImages.length > 1 && (
           <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 30, pointerEvents: 'none' }}>
