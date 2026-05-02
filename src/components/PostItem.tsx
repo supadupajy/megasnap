@@ -245,7 +245,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const renderMedia = () => {
     // 일반 업로드 동영상 처리 (광고는 영상 재생 금지)
     if (!isAd && post.videoUrl) {
-
       return (
         <div className="w-full h-full relative">
           <video
@@ -257,7 +256,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             playsInline
             onLoadedData={() => setVideoLoaded(true)}
           />
-          {/* 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출 */}
           {(!videoLoaded || !isVisible || !isReadyToPlay) && (
             <img 
               src={currentImage} 
@@ -270,22 +268,21 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
-    // 3. 일반 이미지 슬라이더 처리
+    // 이미지 슬라이더: 각 슬라이드를 독립적인 정사각형으로 렌더링
     return (
-      <div style={{ position: 'absolute', inset: 0 }}>
+      <>
+        {/* 가로 스크롤 슬라이더 */}
         <div
           ref={imageScrollRef}
           style={{
             display: 'flex',
-            width: '100%',
-            height: '100%',
             overflowX: 'auto',
             overflowY: 'hidden',
             scrollSnapType: 'x mandatory',
             WebkitOverflowScrolling: 'touch',
-            cursor: isDragging ? 'grabbing' : 'grab',
             msOverflowStyle: 'none',
             scrollbarWidth: 'none',
+            cursor: isDragging ? 'grabbing' : 'grab',
           } as React.CSSProperties}
           onScroll={handleImageScroll}
           onMouseDown={onMouseDown}
@@ -299,10 +296,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               style={{
                 flexShrink: 0,
                 width: '100%',
-                height: '100%',
                 scrollSnapAlign: 'start',
                 scrollSnapStop: 'always',
-                overflow: 'hidden',
+                aspectRatio: '1 / 1',
               }}
             >
               <img
@@ -345,7 +341,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             ))}
           </div>
         )}
-      </div>
+      </>
     );
   };
 
@@ -625,17 +621,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </div>
             </div>
 
-            {/* Media Section */}
+            {/* Media Section - 슬라이더가 자체 높이를 가짐 */}
             <div
               className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-              style={{ paddingBottom: '100%' }}
               onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
               {renderMedia()}
             </div>
-  
+
             {renderInteractionButtons()}
-  
+
             {/* Content Section - AD */}
             <div className="px-4 pb-4 space-y-1">
               <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
@@ -730,10 +725,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </div>
           </div>
 
-          {/* Media Section */}
+          {/* Media Section - 슬라이더가 자체 높이를 가짐 */}
           <div
             className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-            style={{ paddingBottom: '100%' }}
             onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
             {renderMedia()}
