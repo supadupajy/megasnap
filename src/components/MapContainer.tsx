@@ -278,72 +278,6 @@ const MapContainer = ({
     };
   }, [isMapReady, cancelLongPress, revealMarkersOnce]);
 
-  // ── 커스텀 핀치 줌 (touchstart/touchmove/touchend) ──────────────────
-  useEffect(() => {
-    if (!isMapReady || !mapInstance.current) return;
-    const container = containerRef.current;
-    if (!container) return;
-
-    const MIN_LEVEL = 3;
-    const MAX_LEVEL = 11;
-    const SENSITIVITY = 2; // 높을수록 민감
-
-    let startDistance = 0;
-    let startLevel = 0;
-    let isPinching = false;
-
-    const getDistance = (touches: TouchList) => {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        isPinching = true;
-        startDistance = getDistance(e.touches);
-        startLevel = mapInstance.current?.getLevel() ?? 6;
-        // 롱프레스 취소 (핀치 중에는 롱프레스 불필요)
-        cancelLongPress();
-      }
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length !== 2 || !isPinching) return;
-      e.preventDefault();
-
-      const map = mapInstance.current;
-      if (!map || startDistance === 0) return;
-
-      const currentDistance = getDistance(e.touches);
-      const ratio = startDistance / currentDistance;
-      const levelDelta = Math.log2(ratio) * SENSITIVITY;
-      const newLevel = Math.round(startLevel + levelDelta);
-      const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
-
-      if (map.getLevel() !== clampedLevel) {
-        map.setLevel(clampedLevel, { animate: false });
-      }
-    };
-
-    const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) {
-        isPinching = false;
-        startDistance = 0;
-      }
-    };
-
-    container.addEventListener('touchstart', onTouchStart, { passive: true });
-    container.addEventListener('touchmove', onTouchMove, { passive: false });
-    container.addEventListener('touchend', onTouchEnd, { passive: true });
-
-    return () => {
-      container.removeEventListener('touchstart', onTouchStart);
-      container.removeEventListener('touchmove', onTouchMove);
-      container.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [isMapReady, cancelLongPress]);
-
   // ── 현재 위치 오버레이 ──────────────────────────────────────
   useEffect(() => {
     const kakao = (window as any).kakao;
@@ -534,7 +468,6 @@ const MapContainer = ({
         disableDoubleClickZoom: true,
       });
       map.setMaxLevel(11);
-      map.setZoomable(false); // 기본 터치 줌 비활성화 → 커스텀 핀치로 대체
       mapInstance.current = map;
 
       const updateZoomClass = () => {
@@ -904,7 +837,7 @@ const MapContainer = ({
 
       if (level < MIN_LEVEL) {
         const centerToRestore = lastAllowedCenter || map.getCenter();
-        map.setLevel(MIN_LEVEL, { animate: false });
+        map.setLevel(MIN_LEVEL, { animate: { duration: 200 } });
         map.setCenter(centerToRestore);
         const el = containerRef.current;
         if (el) {
@@ -959,10 +892,7 @@ const MapContainer = ({
   const applyLevel = useCallback((targetLevel: number) => {
     const map = mapInstance.current;
     if (!map) return;
-    const savedCenter = map.getCenter();
-    map.setLevel(targetLevel, { animate: false });
-    // setLevel이 center를 리셋하는 경우 복원
-    map.setCenter(savedCenter);
+    map.setLevel(targetLevel, { animate: { duration: 300 } });
     const newLevel = map.getLevel();
     setCurrentLevel(newLevel);
     currentLevelRef.current = newLevel;
