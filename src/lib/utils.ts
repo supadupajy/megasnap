@@ -80,6 +80,74 @@ export const getOptimizedMarkerImage = (url: string | null | undefined, seed: st
   return normalizedUrl;
 };
 
+/**
+ * 이미지 파일을 Canvas API로 리사이즈 + 압축합니다.
+ * - 긴 변 기준 maxSize px 이하로 리사이즈
+ * - JPEG quality로 압축
+ * - 결과는 File 객체로 반환 (원본 파일명 유지, 확장자는 jpg)
+ */
+export const compressImage = (
+  file: File,
+  maxSize = 1920,
+  quality = 0.82
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      let { naturalWidth: w, naturalHeight: h } = img;
+
+      // 리사이즈 필요 여부 판단
+      if (w > maxSize || h > maxSize) {
+        if (w >= h) {
+          h = Math.round((h / w) * maxSize);
+          w = maxSize;
+        } else {
+          w = Math.round((w / h) * maxSize);
+          h = maxSize;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas context를 생성할 수 없습니다.'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, w, h);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('이미지 압축에 실패했습니다.'));
+            return;
+          }
+          const baseName = file.name.replace(/\.[^.]+$/, '');
+          const compressed = new File([blob], `${baseName}.jpg`, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressed);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('이미지를 로드할 수 없습니다.'));
+    };
+
+    img.src = url;
+  });
+};
+
 export const createVideoThumbnail = async (file: File): Promise<Blob> => {
   const objectUrl = URL.createObjectURL(file);
 

@@ -6,7 +6,7 @@ import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn, createVideoThumbnail } from '@/lib/utils';
+import { cn, createVideoThumbnail, compressImage } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
@@ -250,10 +250,15 @@ const Write = () => {
         const fileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
-        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, media.file, {
+        // 이미지인 경우 업로드 전 압축 (최대 1920px, JPEG 82%)
+        const fileToUpload = media.type === 'image'
+          ? await compressImage(media.file).catch(() => media.file)
+          : media.file;
+
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, fileToUpload, {
           cacheControl: '3600',
           upsert: false,
-          contentType: media.file.type || (media.type === 'video' ? 'video/mp4' : 'image/jpeg')
+          contentType: media.type === 'image' ? 'image/jpeg' : (media.file.type || 'video/mp4')
         });
 
         if (uploadError) throw uploadError;
