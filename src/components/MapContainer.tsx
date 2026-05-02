@@ -860,7 +860,7 @@ const MapContainer = ({
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
 
-    const MIN_LEVEL = 4;
+    const MIN_LEVEL = 3;
     let lastAllowedCenter: any = null;
 
     const handleZoom = () => {
