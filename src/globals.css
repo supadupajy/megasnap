@@ -88,9 +88,10 @@
   position: relative;
   z-index: 10;
   width: 60px;
-  height: 60px;
+  height: auto;
   transition: none;
-  transform: translate(-50%, -100%) scale(1) !important;
+  /* xAnchor:0.5, yAnchor:1 설정으로 하단 중앙이 좌표에 맞춰지므로 transform 불필요 */
+  transform: scale(1) !important;
   transform-origin: 50% 100%;
   overflow: visible;
 }
@@ -101,19 +102,19 @@
 #kakao-map.zoom-3 .marker-container,
 #kakao-map.zoom-4 .marker-container,
 #kakao-map.zoom-5 .marker-container {
-  transform: translate(-50%, -100%) scale(1) !important;
+  transform: scale(1) !important;
   transform-origin: 50% 100%;
 }
 
 #kakao-map.zoom-6 .marker-container {
-  transform: translate(-50%, -100%) scale(0.7) !important;
+  transform: scale(0.7) !important;
   transform-origin: 50% 100%;
 }
 
 /* zoom 클래스가 없는 전환 순간에도 마커가 올바른 위치에 표시되도록 기본 보장 */
 #kakao-map .marker-container {
   display: block !important;
-  transform: translate(-50%, -100%) scale(1) !important;
+  transform: scale(1) !important;
   transform-origin: 50% 100%;
 }
 
@@ -124,7 +125,7 @@
 
 #kakao-map.zoom-7 .marker-container.is-ad {
   display: block !important;
-  transform: translate(-50%, -100%) scale(0.45) !important;
+  transform: scale(0.45) !important;
   transform-origin: 50% 100%;
 }
 
@@ -155,7 +156,7 @@
 .marker-container.highlighted .marker-content-wrapper {
   animation: none !important;
   opacity: 1 !important;
-  transform: scale(1) translateY(0) !important;
+  transform: none !important;
   visibility: visible !important;
 }
 
@@ -198,7 +199,7 @@
 .marker-container.highlighted .marker-content-wrapper {
   animation: none !important;
   opacity: 1 !important;
-  transform: scale(1) translateY(0) !important;
+  transform: none !important;
 }
 
 /* 마커 숨김 모드: !important로 모든 animation/transform 덮어씀 */

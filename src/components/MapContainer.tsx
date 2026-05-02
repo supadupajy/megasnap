@@ -686,6 +686,8 @@ const MapContainer = ({
         const overlay = new kakao.maps.CustomOverlay({
           position: position,
           content: content,
+          xAnchor: 0.5,
+          yAnchor: 1,
           zIndex: post.isAd ? 500 : (post.borderType !== 'none' ? 400 : 300)
         });
         overlay.setMap(mapInstance.current);
