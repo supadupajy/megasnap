@@ -323,6 +323,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
+    console.log('[PostDetail] post.id:', currentPost.id, 'images raw:', currentPost.images, 'displayImages:', baseImages);
     return baseImages;
   })();
 
