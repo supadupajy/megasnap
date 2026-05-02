@@ -1182,13 +1182,11 @@ const Index = () => {
 
                 // 항상 DB에서 정확한 결과를 가져옴
                 // (클라이언트 캐시는 화면 근처만 fetch되어 있어 멀리 있는 마커를 놓칠 수 있음)
-                console.log('[OffScreenBadge] dir:', dir, 'bounds:', JSON.stringify(b), 'center:', JSON.stringify(c));
                 const dbNearest = await fetchNearestInDirection(b, c, dir, {
                   categories: selectedCategories,
                   userId: authUser?.id || null,
                   followingIds: Array.from(followingIds),
                 });
-                console.log('[OffScreenBadge] dbNearest:', JSON.stringify(dbNearest));
 
                 if (dbNearest) {
                   setMapCenter({ lat: dbNearest.lat, lng: dbNearest.lng });
