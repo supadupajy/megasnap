@@ -1524,45 +1524,39 @@ const MapContainer = ({
 
       lastWheelTimeRef.current = Date.now();
 
-      // 맥 트랙패드 핀치: ctrlKey=true, deltaY가 작은 값(-0.1 ~ -10)
-      // 일반 마우스 휠: ctrlKey=false, deltaY가 큰 값(100~)
+      // 맥 트랙패드 핀치: ctrlKey=true / 일반 마우스 휠: ctrlKey=false
       const isPinchGesture = e.ctrlKey;
-      const sensitivity = isPinchGesture ? 0.018 : 0.001;
+      const sensitivity = isPinchGesture ? 0.018 : 0.0008;
       wheelAccumRef.current += e.deltaY * sensitivity;
 
-      // 임계점: ±1.0 → 레벨 변경 후 반대 방향으로 충분히 핀치해야 다시 변경됨
-      const THRESHOLD = 1.0;
       const lvl = map.getLevel();
-
-      if (wheelAccumRef.current <= -THRESHOLD) {
-        // 레벨 변경 후 누적값을 0이 아닌 반대쪽 절반으로 설정
-        // → 연속 핀치 시 바로 다시 트리거되지 않음
-        wheelAccumRef.current = THRESHOLD * 0.3;
-        applyZoomLevel(lvl - 1, true);
-        return;
-      }
-      if (wheelAccumRef.current >= THRESHOLD) {
-        wheelAccumRef.current = -THRESHOLD * 0.3;
-        applyZoomLevel(lvl + 1, false);
-        return;
-      }
-
       const rect = container.getBoundingClientRect();
       wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
-      // scale 시각적 피드백: 누적값에 비례 (임계점 1.0 기준)
-      targetScaleRef.current = Math.max(0.82, Math.min(1.25, 1 - wheelAccumRef.current * 0.35));
+
+      // scale 시각적 피드백 (누적값에 비례)
+      targetScaleRef.current = Math.max(0.75, Math.min(1.4, 1 - wheelAccumRef.current * 0.5));
       startScaleAnim();
 
+      // 핀치 종료 감지: 이벤트가 멈추면 현재 누적값 기준으로 레벨 결정
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
-        if (Date.now() - lastWheelTimeRef.current >= 350) {
+        if (Date.now() - lastWheelTimeRef.current < 300) return;
+        const accum = wheelAccumRef.current;
+        // 누적값이 충분히 음수(줌인) 또는 양수(줌아웃)면 레벨 변경
+        // 그렇지 않으면 현재 레벨 유지하고 scale만 1로 복귀
+        if (accum <= -0.35 && lvl > MIN_LEVEL) {
+          applyZoomLevel(lvl - 1, true);
+        } else if (accum >= 0.35 && lvl < MAX_LEVEL) {
+          applyZoomLevel(lvl + 1, false);
+        } else {
+          // 임계점 미달 → scale만 원래대로 복귀 (레벨 변경 없음)
           wheelAccumRef.current = 0;
           targetScaleRef.current = 1;
           const w = getWrapper();
           if (w) w.style.transformOrigin = 'center center';
           startScaleAnim();
         }
-      }, 380);
+      }, 150);
     };
 
     // ── 핀치 (PointerEvent 기반 - 브라우저 시뮬레이터 + 실제 터치 모두 동작) ──
