@@ -450,7 +450,13 @@ const Index = () => {
       else                                                      right++;
     });
 
-    return { top, bottom, left, right };
+    return {
+      top, bottom, left, right,
+      hasTop: top > 0,
+      hasBottom: bottom > 0,
+      hasLeft: left > 0,
+      hasRight: right > 0,
+    };
   }, [displayedMarkers, mapData?.bounds, currentZoom, useClientSideCounts]);
 
   // DB 쿼리 기반 카운트 (all/카테고리/mine)
