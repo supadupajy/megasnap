@@ -1572,6 +1572,7 @@ const MapContainer = ({
         pinchStartDist = getDist(e.touches);
         pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         pinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        console.log('[SmoothZoom] 핀치 시작 - startDist:', pinchStartDist.toFixed(1));
 
         const wrapper = getWrapper();
         const rect = container.getBoundingClientRect();
@@ -1595,6 +1596,7 @@ const MapContainer = ({
 
       const ratio = getDist(e.touches) / pinchStartDist;
       const lvl = map.getLevel();
+      console.log('[SmoothZoom] 핀치 이동 - ratio:', ratio.toFixed(3), 'level:', lvl, 'scale:', Math.max(0.5, Math.min(2.2, ratio)).toFixed(3));
 
       // CSS scale 즉각 반영
       const clamped = Math.max(0.5, Math.min(2.2, ratio));
@@ -1603,8 +1605,8 @@ const MapContainer = ({
       wrapper.style.transform = `scale(${clamped})`;
 
       // 임계점 도달 → 레벨 변경 후 새 핀치 시작점 리셋
-      // 임계점을 크게 잡아서 "조금만 핀치해도 바뀌는" 느낌 방지
       if (ratio >= 1.7 && lvl > MIN_LEVEL) {
+        console.log('[SmoothZoom] 줌인 임계점 도달! ratio:', ratio.toFixed(3), '→ level', lvl - 1);
         applyZoomLevel(lvl - 1, true);
         isPinching = false;
         setTimeout(() => {
@@ -1614,6 +1616,7 @@ const MapContainer = ({
           }
         }, 80);
       } else if (ratio <= 0.6 && lvl < MAX_LEVEL) {
+        console.log('[SmoothZoom] 줌아웃 임계점 도달! ratio:', ratio.toFixed(3), '→ level', lvl + 1);
         applyZoomLevel(lvl + 1, false);
         isPinching = false;
         setTimeout(() => {
@@ -1627,10 +1630,12 @@ const MapContainer = ({
 
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length < 2) {
+        console.log('[SmoothZoom] 핀치 종료 - isPinching:', isPinching, 'touches:', e.touches.length);
         isPinching = false;
         pinchStartDist = 0;
         targetScaleRef.current = 1;
-        getWrapper()!.style.transformOrigin = 'center center';
+        const w = getWrapper();
+        if (w) w.style.transformOrigin = 'center center';
         startScaleAnim();
       }
     };
