@@ -579,21 +579,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const renderMediaArea = () => {
     if (currentPost.videoUrl && !currentPost.isAd) {
       return (
-        <div className="w-full rounded-3xl overflow-hidden bg-black shadow-inner" style={{ aspectRatio: '1/1' }}>
-          <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+        <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', borderRadius: 24, overflow: 'hidden', background: '#000' }}>
+          <video
+            src={currentPost.videoUrl}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            autoPlay loop playsInline controls
+          />
         </div>
       );
     }
 
+    // paddingBottom 100% 트릭으로 정사각형 컨테이너 생성
+    // → 자식들이 position:absolute 로 채우면 높이 계산 문제 없음
     return (
-      <div className="w-full rounded-3xl overflow-hidden bg-gray-100 shadow-inner" style={{ aspectRatio: '1/1', position: 'relative' }}>
-        {/* 이미지 슬라이더: overflow-hidden 부모 안에서 가로 스크롤 */}
+      <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', borderRadius: 24, overflow: 'hidden', background: '#e5e7eb' }}>
+        {/* 실제 슬라이더는 absolute로 꽉 채움 */}
         <div
           ref={imageScrollRef}
           style={{
+            position: 'absolute',
+            inset: 0,
             display: 'flex',
-            width: '100%',
-            height: '100%',
             overflowX: 'auto',
             overflowY: 'hidden',
             scrollSnapType: 'x mandatory',
@@ -618,15 +624,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                 height: '100%',
                 scrollSnapAlign: 'start',
                 scrollSnapStop: 'always',
-                position: 'relative',
               }}
             >
               <img
                 src={img}
                 alt={`Post content ${index + 1}`}
                 style={{
-                  position: 'absolute',
-                  inset: 0,
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
