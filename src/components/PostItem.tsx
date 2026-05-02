@@ -285,22 +285,26 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       );
     }
 
-    // CSS background-image 방식 (iOS Safari 큰 이미지 페인트 버그 회피)
     const currentImg = displayImages[currentImageIndex] || displayImages[0];
     return (
       <>
         {currentImg && (
-          <div
+          <img
+            key={currentImg}
+            src={currentImg}
+            alt=""
+            draggable={false}
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               width: '100%',
               height: '100%',
-              backgroundImage: `url("${currentImg}")`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = getFallbackImage();
             }}
           />
         )}

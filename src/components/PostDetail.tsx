@@ -696,21 +696,37 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLDivElement).dataset.mouseDown = '0';
         }}
+        onWheel={(e) => {
+          // 맥북 트랙패드 가로 스와이프 (deltaX)
+          const now = Date.now();
+          const lastWheel = (e.currentTarget as any).__lastWheel || 0;
+          if (now - lastWheel < 500) return; // 디바운스
+          if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+            (e.currentTarget as any).__lastWheel = now;
+            if (e.deltaX > 0 && currentImageIndex < displayImages.length - 1) {
+              setCurrentImageIndex(currentImageIndex + 1);
+            } else if (e.deltaX < 0 && currentImageIndex > 0) {
+              setCurrentImageIndex(currentImageIndex - 1);
+            }
+          }
+        }}
       >
-        {/* CSS background-image 방식 (큰 이미지에 안전) */}
+        {/* 이미지 — img 태그 사용 (안전) */}
         {displayImages[currentImageIndex] && (
-          <div
+          <img
+            key={displayImages[currentImageIndex]}
+            src={displayImages[currentImageIndex]}
+            alt=""
+            draggable={false}
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               width: '100%',
               height: '100%',
-              backgroundImage: `url("${displayImages[currentImageIndex]}")`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              zIndex: 5,
+              objectFit: 'cover',
+              display: 'block',
+              zIndex: 1,
             }}
           />
         )}
