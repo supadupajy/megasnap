@@ -307,7 +307,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
-    console.log('[PostDetail] displayImages:', baseImages, 'from post.images:', currentPost.images, 'image_url:', currentPost.image_url);
     return baseImages;
   })();
 
@@ -578,61 +577,61 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   );
 
   const renderImageSlider = () => (
-    <div className="absolute inset-0 w-full h-full z-10">
-      <div
-        ref={imageScrollRef}
-        className={cn(
-          "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
-          isDragging && "cursor-grabbing snap-none"
-        )}
-        onScroll={handleImageScroll}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onMouseLeave={onMouseUp}
-        onMouseMove={onMouseMove}
-      >
-        {displayImages.map((img, index) => (
-          <div
-            key={`${currentPost.id}-${index}`}
-            className="w-full h-full shrink-0 snap-center relative bg-gray-100 flex items-center justify-center"
-            style={{ scrollSnapStop: 'always' }}
-          >
-            <img
-              src={img}
-              alt={`Post content ${index + 1}`}
-              className="w-full h-full object-cover pointer-events-none"
-              draggable={false}
-              loading="eager"
-              decoding="sync"
-              onError={(e) => {
-                console.log('[PostDetail] image load error:', img);
-                const target = e.currentTarget;
-                target.src = '/placeholder.svg';
-                target.className = 'w-16 h-16 object-contain opacity-30 pointer-events-none';
-              }}
-            />
-          </div>
-        ))}
-      </div>
-      {displayImages.length > 1 && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-          {displayImages.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
-            />
-          ))}
-        </div>
+    <div
+      ref={imageScrollRef}
+      className={cn(
+        "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+        isDragging && "cursor-grabbing snap-none"
       )}
+      onScroll={handleImageScroll}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      onMouseMove={onMouseMove}
+    >
+      {displayImages.map((img, index) => (
+        <div
+          key={index}
+          className="w-full shrink-0 snap-center relative"
+          style={{ scrollSnapStop: 'always', minWidth: '100%' }}
+        >
+          <img
+            src={img}
+            alt={`Post content ${index + 1}`}
+            className="w-full h-full object-cover block"
+            draggable={false}
+            loading="eager"
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.src = '/placeholder.svg';
+              target.style.objectFit = 'contain';
+              target.style.padding = '20%';
+              target.style.opacity = '0.3';
+            }}
+          />
+        </div>
+      ))}
     </div>
   );
 
   const renderMediaArea = () => (
-    <div className="relative aspect-square rounded-3xl overflow-hidden bg-gray-100 shadow-inner">
+    <div className="relative w-full rounded-3xl overflow-hidden bg-gray-100 shadow-inner" style={{ aspectRatio: '1/1' }}>
       {currentPost.videoUrl && !currentPost.isAd ? (
-        <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+        <video src={currentPost.videoUrl} className="absolute inset-0 w-full h-full object-cover" autoPlay loop playsInline controls />
       ) : (
-        renderImageSlider()
+        <div className="absolute inset-0">
+          {renderImageSlider()}
+          {displayImages.length > 1 && (
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
+              {displayImages.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
