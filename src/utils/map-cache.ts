@@ -8,5 +8,7 @@ export const mapCache = {
   populatedTiles: new Set<string>(),
   // null로 초기화 - 사용자가 실제로 지도를 본 적 없으면 null
   lastCenter: null as { lat: number; lng: number } | null,
-  lastZoom: 6
+  lastZoom: 6,
+  // Write 페이지 등에서 돌아올 때 현재 위치로 자동이동하지 않도록 하는 플래그
+  keepPosition: false,
 };

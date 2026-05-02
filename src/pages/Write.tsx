@@ -92,6 +92,8 @@ const Write = () => {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    // Write 페이지에서 돌아올 때 지도가 현재 위치로 자동이동하지 않도록 플래그 설정
+    mapCache.keepPosition = true;
     return () => { document.body.style.overflow = ''; };
   }, []);
 

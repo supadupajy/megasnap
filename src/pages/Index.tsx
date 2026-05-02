@@ -958,7 +958,7 @@ const Index = () => {
   const handleCurrentLocation = () => moveToCurrentLocation(true);
 
   // ── 앱 시작 시 현재 위치로 자동 이동 (마운트 1회만) ──────────
-  // initialFocusRef가 있거나 startSelection 상태이면 geolocation 건너뜀
+  // initialFocusRef가 있거나 startSelection 상태이거나 keepPosition 플래그가 있으면 geolocation 건너뜀
   const didAutoLocateRef = useRef(false);
   useEffect(() => {
     if (didAutoLocateRef.current) return;
@@ -970,6 +970,11 @@ const Index = () => {
     }
     // 위치 선택 모드 진입 시 현재 위치로 자동 이동하지 않음 (보고 있던 지도 유지)
     if (locationLockedRef.current) return;
+    // Write 페이지 등에서 돌아올 때 현재 위치로 자동이동하지 않음 (보고 있던 지도 유지)
+    if (mapCache.keepPosition) {
+      mapCache.keepPosition = false;
+      return;
+    }
     moveToCurrentLocation(false);
   }, []);
 
