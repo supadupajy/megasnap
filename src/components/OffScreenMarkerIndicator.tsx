@@ -27,7 +27,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   if (!dbCounts) return null;
 
   const counts = dbCounts;
-  const hasAny = Object.values(counts).some(c => c > 0);
+  const hasAny = counts.hasTop || counts.hasBottom || counts.hasLeft || counts.hasRight;
   if (!hasAny) return null;
 
   // 트렌딩 패널 접힌 높이(56px) + 패널 top(safe-area+74px) + 여백(8px)
@@ -55,7 +55,14 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
   const Btn = ({ dir }: { dir: Direction }) => {
     const count = counts[dir];
-    if (count === 0) return null;
+    const hasMarker = {
+      top: counts.hasTop,
+      bottom: counts.hasBottom,
+      left: counts.hasLeft,
+      right: counts.hasRight,
+    }[dir];
+
+    if (!hasMarker) return null;
 
     const isVertical = dir === 'top' || dir === 'bottom';
 

@@ -80,12 +80,16 @@ export interface DirectionCounts {
   bottom: number;
   left: number;
   right: number;
+  hasTop: boolean;
+  hasBottom: boolean;
+  hasLeft: boolean;
+  hasRight: boolean;
 }
 
 /**
  * 현재 화면 bounds 밖의 포스트 수를 방향별로 COUNT 쿼리로 가져옵니다.
- * 코너 포스팅은 lat/lng 초과 비율로 가장 가까운 방향에만 분류합니다.
- * 8방향 쿼리를 병렬로 실행 후 클라이언트에서 합산합니다.
+ * - count: 각 마커는 가장 주된 방향 1개에만 카운트 (중복 없음)
+ * - has*: 해당 방향으로 실제로 벗어난 마커가 하나라도 있으면 true (뱃지 표시 여부)
  */
 export const fetchOffScreenCounts = async (
   bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
@@ -113,8 +117,6 @@ export const fetchOffScreenCounts = async (
   };
 
   try {
-    // 화면 밖 전체 포스팅 좌표를 가져와서 클라이언트에서 45도 섹터로 독점 분류
-    // 각 마커는 정확히 하나의 방향에만 속함 (중복 카운트 없음)
     const res = await applyFilters(
       supabase.from('posts').select('latitude, longitude')
         .or(`latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`)
@@ -123,25 +125,37 @@ export const fetchOffScreenCounts = async (
     if (res.error) throw res.error;
 
     let top = 0, bottom = 0, left = 0, right = 0;
+    let hasTop = false, hasBottom = false, hasLeft = false, hasRight = false;
 
     (res.data || []).forEach((p: any) => {
       if (p.latitude == null || p.longitude == null) return;
       // 화면 안이면 제외
       if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
-      // 중심 기준 상대 벡터 (위도/경도 스케일 보정)
+
+      // 실제로 벗어난 방향 판별 (has* 용 — 중복 허용)
+      const outTop    = p.latitude > ne.lat;
+      const outBottom = p.latitude < sw.lat;
+      const outLeft   = p.longitude < sw.lng;
+      const outRight  = p.longitude > ne.lng;
+
+      if (outTop)    hasTop    = true;
+      if (outBottom) hasBottom = true;
+      if (outLeft)   hasLeft   = true;
+      if (outRight)  hasRight  = true;
+
+      // 가장 주된 방향 1개에만 카운트 (45도 섹터 독점 분류)
       const dLat = (p.latitude - centerLat) / latRange;
       const dLng = (p.longitude - centerLng) / lngRange;
-      // 45도 섹터로 독점 분류 (각 마커는 정확히 하나의 방향에만 속함)
       if      (dLat >= 0 && dLat >= Math.abs(dLng))           top++;
       else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottom++;
       else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) left++;
       else                                                      right++;
     });
 
-    return { top, bottom, left, right };
+    return { top, bottom, left, right, hasTop, hasBottom, hasLeft, hasRight };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
-    return { top: 0, bottom: 0, left: 0, right: 0 };
+    return { top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false };
   }
 };
 
