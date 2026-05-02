@@ -272,13 +272,21 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     // 3. 일반 이미지 슬라이더 처리
     return (
-      <div className="relative w-full h-full group/slider">
+      <div style={{ position: 'absolute', inset: 0 }}>
         <div
           ref={imageScrollRef}
-          className={cn(
-            "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
-            isDragging && "cursor-grabbing snap-none" // 드래그 중에는 스냅 일시 중지하여 부드럽게
-          )}
+          style={{
+            display: 'flex',
+            width: '100%',
+            height: '100%',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollSnapType: 'x mandatory',
+            WebkitOverflowScrolling: 'touch',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+          } as React.CSSProperties}
           onScroll={handleImageScroll}
           onMouseDown={onMouseDown}
           onMouseUp={onMouseUp}
@@ -288,28 +296,51 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           {displayImages.map((img, index) => (
             <div
               key={index}
-              className="w-full h-full shrink-0 snap-center snap-always relative"
+              style={{
+                flexShrink: 0,
+                width: '100%',
+                height: '100%',
+                scrollSnapAlign: 'start',
+                scrollSnapStop: 'always',
+                overflow: 'hidden',
+              }}
             >
               <img
                 src={img}
                 alt={`Content ${index}`}
-                className="w-full h-full object-cover pointer-events-none"
-                onError={handleImageError}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                }}
+                draggable={false}
+                loading="eager"
+                onError={(e) => {
+                  console.log('[PostItem] Image error for:', img);
+                  handleImageError();
+                }}
               />
             </div>
           ))}
         </div>
 
-        {/* 페이지 인디케이터 (구분자) */}
+        {/* 페이지 인디케이터 */}
         {displayImages.length > 1 && (
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+          <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6, zIndex: 20, pointerEvents: 'none' }}>
             {displayImages.map((_, i) => (
               <div
                 key={i}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
-                  currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
-                )}
+                style={{
+                  height: 6,
+                  borderRadius: 3,
+                  background: 'white',
+                  opacity: currentImageIndex === i ? 1 : 0.5,
+                  width: currentImageIndex === i ? 16 : 6,
+                  transition: 'all 0.3s',
+                }}
               />
             ))}
           </div>
@@ -324,6 +355,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     const baseImages = isAd
       ? [post.image_url || post.image]
       : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
+    console.log('[PostItem] displayImages for post', post.id, ':', baseImages);
     return baseImages;
   }, [post.images, post.image, post.image_url, isAd]);
 
@@ -599,9 +631,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               style={{ paddingBottom: '100%' }}
               onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
-              <div className="absolute inset-0">
-                {renderMedia()}
-              </div>
+              {renderMedia()}
             </div>
   
             {renderInteractionButtons()}
@@ -706,9 +736,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             style={{ paddingBottom: '100%' }}
             onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
-            <div className="absolute inset-0">
-              {renderMedia()}
-            </div>
+            {renderMedia()}
           </div>
 
           {renderInteractionButtons()}
