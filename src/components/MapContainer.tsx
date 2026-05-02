@@ -1460,272 +1460,197 @@ const MapContainer = ({
   // CSS 애니메이션 duration을 변수로 전달
   const circleCircumference = 2 * Math.PI * 13; // r=13
 
-  // ── 기존 pinch useEffect 제거 후 새로운 부드러운 줌 useEffect로 교체 ──
+  // ── 부드러운 줌 (휠 + 핀치) ──────────────────────────────────────────
+  // document 레벨에서 capture로 등록해야 카카오맵 내부 이벤트보다 먼저 처리됨
   useEffect(() => {
-    const container = containerRef.current;
-    const wrapper = smoothZoomWrapperRef.current;
-    if (!container || !wrapper) return;
-
     const MIN_LEVEL = 3;
     const MAX_LEVEL = 11;
 
-    // CSS scale을 부드럽게 적용하는 애니메이션 루프
+    const getWrapper = () => smoothZoomWrapperRef.current;
+    const getContainer = () => containerRef.current;
+
     const animateScale = () => {
+      const wrapper = getWrapper();
+      if (!wrapper) { scaleAnimFrameRef.current = null; return; }
       const current = currentScaleRef.current;
       const target = targetScaleRef.current;
       const diff = target - current;
-
       if (Math.abs(diff) < 0.001) {
         currentScaleRef.current = target;
         wrapper.style.transform = `scale(${target})`;
         scaleAnimFrameRef.current = null;
         return;
       }
-
-      // 부드러운 보간 (lerp)
-      const next = current + diff * 0.18;
+      const next = current + diff * 0.22;
       currentScaleRef.current = next;
       wrapper.style.transform = `scale(${next})`;
       scaleAnimFrameRef.current = requestAnimationFrame(animateScale);
     };
 
     const startScaleAnim = () => {
-      if (scaleAnimFrameRef.current) return;
+      if (scaleAnimFrameRef.current) cancelAnimationFrame(scaleAnimFrameRef.current);
       scaleAnimFrameRef.current = requestAnimationFrame(animateScale);
     };
 
-    // 실제 카카오맵 레벨 변경 후 scale 리셋
-    const applyZoomLevel = (newLevel: number, pivotX?: number, pivotY?: number) => {
-      const map = mapInstance.current;
-      const kakao = (window as any).kakao;
-      if (!map || !kakao?.maps) return;
-
-      const clampedLevel = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
-      const currentLevel = map.getLevel();
-      if (clampedLevel === currentLevel) {
-        // 레벨 변경 없으면 scale만 리셋
-        targetScaleRef.current = 1;
-        startScaleAnim();
-        return;
-      }
-
-      // 줌 중심점 기준으로 지도 중심 조정
-      if (pivotX !== undefined && pivotY !== undefined && kakao.maps.Projection) {
-        try {
-          const projection = map.getProjection();
-          const containerEl = containerRef.current;
-          if (projection && containerEl) {
-            const rect = containerEl.getBoundingClientRect();
-            const centerX = rect.width / 2;
-            const centerY = rect.height / 2;
-            const offsetX = pivotX - centerX;
-            const offsetY = pivotY - centerY;
-
-            const currentCenter = map.getCenter();
-            const centerPoint = projection.pointFromCoords(currentCenter);
-            const levelDiff = clampedLevel - currentLevel;
-            const factor = levelDiff > 0 ? (1 - 1 / Math.pow(2, Math.abs(levelDiff))) : (Math.pow(2, Math.abs(levelDiff)) - 1);
-            const newCenterPoint = new kakao.maps.Point(
-              centerPoint.x + offsetX * (levelDiff > 0 ? factor : -factor) * 0.3,
-              centerPoint.y + offsetY * (levelDiff > 0 ? factor : -factor) * 0.3
-            );
-            const newCenter = projection.coordsFromPoint(newCenterPoint);
-            if (newCenter) map.setCenter(newCenter);
-          }
-        } catch (e) {}
-      }
-
-      map.setLevel(clampedLevel, { animate: false });
-
-      // scale을 즉시 리셋 (새 타일이 로드되면서 자연스럽게 보임)
+    const resetScale = () => {
+      const wrapper = getWrapper();
+      if (!wrapper) return;
       currentScaleRef.current = 1;
       targetScaleRef.current = 1;
       wrapper.style.transform = 'scale(1)';
       wrapper.style.transformOrigin = 'center center';
-      isZoomingRef.current = false;
+    };
+
+    const applyZoomLevel = (newLevel: number, pivotX?: number, pivotY?: number) => {
+      const map = mapInstance.current;
+      if (!map) return;
+      const clamped = Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, newLevel));
+      map.setLevel(clamped, { animate: false });
+      resetScale();
       wheelAccumRef.current = 0;
     };
 
-    // ── 마우스 휠 핸들러 ──────────────────────────────────────────────
+    // ── 휠 ──
     const onWheel = (e: WheelEvent) => {
+      const container = getContainer();
+      if (!container || !container.contains(e.target as Node)) return;
       e.preventDefault();
       e.stopPropagation();
 
       const map = mapInstance.current;
-      if (!map) return;
+      const wrapper = getWrapper();
+      if (!map || !wrapper) return;
 
-      const now = Date.now();
-      lastWheelTimeRef.current = now;
+      lastWheelTimeRef.current = Date.now();
+      wheelAccumRef.current += e.deltaY * 0.001;
 
-      // 휠 델타 누적 (deltaY: 양수=아래=줌아웃, 음수=위=줌인)
-      const delta = e.deltaY;
-      const sensitivity = 0.0008;
-      wheelAccumRef.current += delta * sensitivity;
+      const lvl = map.getLevel();
 
-      const currentLevel = map.getLevel();
-
-      // 줌인: 누적이 -0.5 이하 → 레벨 -1 (더 확대)
-      if (wheelAccumRef.current <= -0.5) {
-        wheelAccumRef.current = 0;
-        applyZoomLevel(currentLevel - 1, e.clientX - (containerRef.current?.getBoundingClientRect().left ?? 0), e.clientY - (containerRef.current?.getBoundingClientRect().top ?? 0));
+      if (wheelAccumRef.current <= -0.4) {
+        applyZoomLevel(lvl - 1);
+        return;
+      }
+      if (wheelAccumRef.current >= 0.4) {
+        applyZoomLevel(lvl + 1);
         return;
       }
 
-      // 줌아웃: 누적이 0.5 이상 → 레벨 +1 (더 축소)
-      if (wheelAccumRef.current >= 0.5) {
-        wheelAccumRef.current = 0;
-        applyZoomLevel(currentLevel + 1, e.clientX - (containerRef.current?.getBoundingClientRect().left ?? 0), e.clientY - (containerRef.current?.getBoundingClientRect().top ?? 0));
-        return;
-      }
-
-      // 임계점 미달: CSS scale로 시각적 피드백
-      // 줌인 방향: scale > 1, 줌아웃 방향: scale < 1
-      const visualScale = 1 - wheelAccumRef.current * 0.6;
-      const clampedScale = Math.max(0.75, Math.min(1.4, visualScale));
-      targetScaleRef.current = clampedScale;
-
-      // 줌 중심점 설정
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        const px = ((e.clientX - rect.left) / rect.width) * 100;
-        const py = ((e.clientY - rect.top) / rect.height) * 100;
-        wrapper.style.transformOrigin = `${px}% ${py}%`;
-      }
-
+      const visualScale = Math.max(0.78, Math.min(1.35, 1 - wheelAccumRef.current * 0.7));
+      targetScaleRef.current = visualScale;
+      const rect = container.getBoundingClientRect();
+      wrapper.style.transformOrigin = `${((e.clientX - rect.left) / rect.width) * 100}% ${((e.clientY - rect.top) / rect.height) * 100}%`;
       startScaleAnim();
 
-      // 휠 멈춤 감지: 300ms 후 scale 리셋
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
       zoomResetTimerRef.current = setTimeout(() => {
         if (Date.now() - lastWheelTimeRef.current >= 280) {
           wheelAccumRef.current = 0;
           targetScaleRef.current = 1;
-          wrapper.style.transformOrigin = 'center center';
+          getWrapper()!.style.transformOrigin = 'center center';
           startScaleAnim();
         }
-      }, 300);
+      }, 320);
     };
 
-    // ── 핀치 줌 핸들러 ──────────────────────────────────────────────────
+    // ── 핀치 ──
     let pinchStartDist = 0;
-    let pinchStartLevel = 6;
     let pinchCenterX = 0;
     let pinchCenterY = 0;
     let isPinching = false;
-    let pinchAccum = 1; // 핀치 누적 비율
 
-    const getDistance = (touches: TouchList) => {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
+    const getDist = (t: TouchList) => {
+      const dx = t[0].clientX - t[1].clientX;
+      const dy = t[0].clientY - t[1].clientY;
       return Math.sqrt(dx * dx + dy * dy);
     };
 
-    const onTouchStartPinch = (e: TouchEvent) => {
+    const onTouchStart = (e: TouchEvent) => {
+      const container = getContainer();
+      if (!container || !container.contains(e.target as Node)) return;
       if (e.touches.length === 2) {
         isPinching = true;
-        pinchStartDist = getDistance(e.touches);
-        pinchStartLevel = mapInstance.current?.getLevel() ?? 6;
+        pinchStartDist = getDist(e.touches);
         pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         pinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        pinchAccum = 1;
 
-        const rect = containerRef.current?.getBoundingClientRect();
-        if (rect) {
-          const px = ((pinchCenterX - rect.left) / rect.width) * 100;
-          const py = ((pinchCenterY - rect.top) / rect.height) * 100;
-          wrapper.style.transformOrigin = `${px}% ${py}%`;
+        const wrapper = getWrapper();
+        const rect = container.getBoundingClientRect();
+        if (wrapper && rect) {
+          wrapper.style.transformOrigin = `${((pinchCenterX - rect.left) / rect.width) * 100}% ${((pinchCenterY - rect.top) / rect.height) * 100}%`;
         }
-      } else {
-        isPinching = false;
       }
     };
 
-    const onTouchMovePinch = (e: TouchEvent) => {
+    const onTouchMove = (e: TouchEvent) => {
+      const container = getContainer();
       if (!isPinching || e.touches.length !== 2) return;
+      if (!container || !container.contains(e.target as Node)) return;
+
       e.preventDefault();
       e.stopPropagation();
 
-      const currentDist = getDistance(e.touches);
-      if (pinchStartDist === 0) return;
-
-      const ratio = currentDist / pinchStartDist;
-      pinchAccum = ratio;
-
+      const wrapper = getWrapper();
       const map = mapInstance.current;
-      if (!map) return;
-      const currentLevel = map.getLevel();
+      if (!wrapper || !map || pinchStartDist === 0) return;
 
-      // CSS scale로 시각적 피드백 (핀치 비율 그대로 반영, 임계점 범위에 맞게 클램프)
-      const visualScale = Math.max(0.65, Math.min(1.6, ratio));
-      targetScaleRef.current = visualScale;
-      currentScaleRef.current = visualScale; // 핀치는 즉각 반응
-      wrapper.style.transform = `scale(${visualScale})`;
+      const ratio = getDist(e.touches) / pinchStartDist;
+      const lvl = map.getLevel();
 
-      // 임계점: 1.35배 이상 확대 → 줌인, 0.75배 이하 축소 → 줌아웃
-      if (ratio >= 1.35 && currentLevel > MIN_LEVEL) {
+      // CSS scale 즉각 반영
+      const clamped = Math.max(0.5, Math.min(2.2, ratio));
+      currentScaleRef.current = clamped;
+      targetScaleRef.current = clamped;
+      wrapper.style.transform = `scale(${clamped})`;
+
+      // 임계점 도달 → 레벨 변경 후 새 핀치 시작점 리셋
+      if (ratio >= 1.3 && lvl > MIN_LEVEL) {
+        applyZoomLevel(lvl - 1);
         isPinching = false;
-        pinchStartDist = 0;
-        const rect = containerRef.current?.getBoundingClientRect();
-        const px = rect ? pinchCenterX - rect.left : undefined;
-        const py = rect ? pinchCenterY - rect.top : undefined;
-        applyZoomLevel(currentLevel - 1, px, py);
-        // 새 핀치 시작점 리셋 (연속 핀치 지원)
         setTimeout(() => {
           if (e.touches.length === 2) {
             isPinching = true;
-            pinchStartDist = getDistance(e.touches);
-            pinchStartLevel = mapInstance.current?.getLevel() ?? 6;
-            pinchAccum = 1;
+            pinchStartDist = getDist(e.touches);
           }
-        }, 50);
-      } else if (ratio <= 0.75 && currentLevel < MAX_LEVEL) {
+        }, 80);
+      } else if (ratio <= 0.77 && lvl < MAX_LEVEL) {
+        applyZoomLevel(lvl + 1);
         isPinching = false;
-        pinchStartDist = 0;
-        const rect = containerRef.current?.getBoundingClientRect();
-        const px = rect ? pinchCenterX - rect.left : undefined;
-        const py = rect ? pinchCenterY - rect.top : undefined;
-        applyZoomLevel(currentLevel + 1, px, py);
         setTimeout(() => {
           if (e.touches.length === 2) {
             isPinching = true;
-            pinchStartDist = getDistance(e.touches);
-            pinchStartLevel = mapInstance.current?.getLevel() ?? 6;
-            pinchAccum = 1;
+            pinchStartDist = getDist(e.touches);
           }
-        }, 50);
+        }, 80);
       }
     };
 
-    const onTouchEndPinch = (e: TouchEvent) => {
-      if (isPinching && e.touches.length < 2) {
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) {
         isPinching = false;
         pinchStartDist = 0;
-        // scale 리셋
         targetScaleRef.current = 1;
-        wrapper.style.transformOrigin = 'center center';
+        getWrapper()!.style.transformOrigin = 'center center';
         startScaleAnim();
       }
     };
 
-    // 휠 이벤트: 카카오맵 기본 줌 완전 차단 후 직접 처리
-    container.addEventListener('wheel', onWheel, { passive: false });
-
-    // 핀치 이벤트
-    container.addEventListener('touchstart', onTouchStartPinch, { passive: true });
-    container.addEventListener('touchmove', onTouchMovePinch, { passive: false });
-    container.addEventListener('touchend', onTouchEndPinch, { passive: true });
-    container.addEventListener('touchcancel', onTouchEndPinch, { passive: true });
+    // capture: true → 카카오맵 내부 리스너보다 먼저 실행
+    document.addEventListener('wheel', onWheel, { passive: false, capture: true });
+    document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: false, capture: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+    document.addEventListener('touchcancel', onTouchEnd, { passive: true, capture: true });
 
     return () => {
-      container.removeEventListener('wheel', onWheel);
-      container.removeEventListener('touchstart', onTouchStartPinch);
-      container.removeEventListener('touchmove', onTouchMovePinch);
-      container.removeEventListener('touchend', onTouchEndPinch);
-      container.removeEventListener('touchcancel', onTouchEndPinch);
+      document.removeEventListener('wheel', onWheel, { capture: true } as any);
+      document.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
+      document.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
+      document.removeEventListener('touchend', onTouchEnd, { capture: true } as any);
+      document.removeEventListener('touchcancel', onTouchEnd, { capture: true } as any);
       if (scaleAnimFrameRef.current) cancelAnimationFrame(scaleAnimFrameRef.current);
       if (zoomResetTimerRef.current) clearTimeout(zoomResetTimerRef.current);
     };
-  }, [isMapReady]);
+  }, []);
 
   return (
     <div
