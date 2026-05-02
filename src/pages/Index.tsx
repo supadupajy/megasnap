@@ -953,19 +953,17 @@ const Index = () => {
 
   const handleCurrentLocation = () => moveToCurrentLocation(true);
 
-  // ── 앱 시작 시 현재 위치로 자동 이동 (최초 1회만) ──────────
+  // ── 앱 시작 시 현재 위치로 자동 이동 (마운트 1회만) ──────────
   // initialFocusRef가 있으면 (Profile 등에서 위치보기로 진입) geolocation 건너뜀
-  // 실제 지도 이동/마커 highlight는 아래 routeState useEffect에서 focusPostOnMap이 처리 (부드러운 이동 + 정확히 1번 핑)
-  // 하단 메뉴 지도 탭을 눌러 재진입할 때는 위치 이동 안 함 (sessionStorage 플래그로 구분)
+  const didAutoLocateRef = useRef(false);
   useEffect(() => {
+    if (didAutoLocateRef.current) return;
+    didAutoLocateRef.current = true;
+
     if (initialFocusRef.current) {
-      // sessionStorage 정리만 수행 (이동/highlight는 routeState useEffect에서)
       sessionStorage.removeItem('pendingMapFocus');
       return;
     }
-    const alreadyMoved = sessionStorage.getItem('initialLocationMoved');
-    if (alreadyMoved) return;
-    sessionStorage.setItem('initialLocationMoved', '1');
     moveToCurrentLocation(false);
   }, []);
 
