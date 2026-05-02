@@ -274,11 +274,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const isDummyUrl = (url: any) => {
     if (!url || typeof url !== 'string') return true;
     const clean = url.trim();
-    if (clean.includes('supabase.co/storage')) return false;
-    return clean.length < 10 || 
-           clean.toLowerCase().includes('post') || 
-           clean.toLowerCase().includes('content') || 
-           !clean.startsWith('http');
+    // supabase storage URL은 항상 유효한 것으로 처리
+    if (clean.includes('supabase.co')) return false;
+    // http(s)로 시작하는 URL은 유효한 것으로 처리
+    if (clean.startsWith('http')) return false;
+    // data URL (base64)도 유효
+    if (clean.startsWith('data:')) return false;
+    // 절대 경로도 유효
+    if (clean.startsWith('/')) return false;
+    return true;
   };
 
   const displayImage = (() => {
@@ -589,10 +593,21 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         {displayImages.map((img, index) => (
           <div
             key={index}
-            className="w-full h-full shrink-0 snap-center relative"
+            className="w-full h-full shrink-0 snap-center relative bg-gray-100"
             style={{ scrollSnapStop: 'always' }}
           >
-            <img src={img} alt={`Post content ${index + 1}`} className="w-full h-full object-cover pointer-events-none" draggable={false} />
+            <img
+              src={img}
+              alt={`Post content ${index + 1}`}
+              className="w-full h-full object-cover pointer-events-none"
+              draggable={false}
+              loading={index === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              onError={(e) => {
+                const target = e.currentTarget;
+                target.style.display = 'none';
+              }}
+            />
           </div>
         ))}
       </div>
@@ -610,7 +625,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   );
 
   const renderMediaArea = () => (
-    <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
+    <div className="relative aspect-square rounded-3xl overflow-hidden bg-gray-100 shadow-inner">
       {currentPost.videoUrl && !currentPost.isAd ? (
         <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
       ) : (
