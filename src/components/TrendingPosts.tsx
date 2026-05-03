@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, Sparkles, Mail } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, Sparkles, Mail, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
@@ -163,6 +163,42 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
   );
 };
 
+// ── 순위 변동 추적 유틸 ──────────────────────────────────────
+const RANK_STORAGE_KEY = 'trending_prev_ranks';
+const RANK_STORAGE_TS_KEY = 'trending_prev_ranks_ts';
+const RANK_REFRESH_INTERVAL = 5 * 60 * 1000; // 5분마다 이전 순위 갱신
+
+interface PrevRankMap {
+  [postId: string]: number;
+}
+
+const loadPrevRanks = (): PrevRankMap => {
+  try {
+    const raw = localStorage.getItem(RANK_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const savePrevRanks = (ranks: PrevRankMap) => {
+  try {
+    localStorage.setItem(RANK_STORAGE_KEY, JSON.stringify(ranks));
+    localStorage.setItem(RANK_STORAGE_TS_KEY, String(Date.now()));
+  } catch {}
+};
+
+const getPrevRankTimestamp = (): number => {
+  try {
+    return Number(localStorage.getItem(RANK_STORAGE_TS_KEY) || '0');
+  } catch {
+    return 0;
+  }
+};
+
+// rankChange: 양수 = 상승, 음수 = 하락, 0 = 유지, null = NEW
+type RankChange = number | null;
+
 interface TrendingPostsProps {
   posts: Post[];
   isExpanded: boolean;
@@ -175,9 +211,10 @@ interface TrendingPostItemProps {
   post: Post & { rank: number };
   onPostClick: (post: Post) => void;
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  rankChange: RankChange;
 }
 
-const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, handleImageError }) => {
+const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, handleImageError, rankChange }) => {
   const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
   const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
@@ -198,6 +235,42 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
     borderColor = 'border-slate-400';
     borderThickness = 'border-2';
   }
+
+  // 순위 변동 UI 렌더
+  const renderRankChange = () => {
+    if (rankChange === null) {
+      // NEW
+      return (
+        <div className="flex items-center justify-center shrink-0 w-9">
+          <span className="text-[9px] font-black text-white bg-rose-500 px-1.5 py-0.5 rounded-md leading-tight tracking-wide">
+            NEW
+          </span>
+        </div>
+      );
+    }
+    if (rankChange > 0) {
+      return (
+        <div className="flex flex-col items-center justify-center shrink-0 w-9 gap-0">
+          <ArrowUp className="w-3 h-3 text-emerald-500 shrink-0" />
+          <span className="text-[10px] font-black text-emerald-500 leading-none">{rankChange}</span>
+        </div>
+      );
+    }
+    if (rankChange < 0) {
+      return (
+        <div className="flex flex-col items-center justify-center shrink-0 w-9 gap-0">
+          <ArrowDown className="w-3 h-3 text-rose-400 shrink-0" />
+          <span className="text-[10px] font-black text-rose-400 leading-none">{Math.abs(rankChange)}</span>
+        </div>
+      );
+    }
+    // 유지 (0)
+    return (
+      <div className="flex items-center justify-center shrink-0 w-9">
+        <Minus className="w-3 h-3 text-gray-300" />
+      </div>
+    );
+  };
 
   return (
     <div
@@ -233,7 +306,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <p className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">
           {post.content}
         </p>
@@ -248,9 +321,12 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
         </div>
       </div>
 
+      {/* 순위 변동 표시 (HOT 아이콘 대신 항상 표시) */}
+      {renderRankChange()}
+
       {isHot && (
-        <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-          <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
+        <div className="w-6 h-6 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+          <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
         </div>
       )}
     </div>
@@ -368,6 +444,38 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [prevRanks, setPrevRanks] = useState<PrevRankMap>(() => loadPrevRanks());
+  const prevRanksRef = useRef<PrevRankMap>(prevRanks);
+
+  // posts가 바뀔 때마다 이전 순위 갱신 (5분 간격)
+  useEffect(() => {
+    if (posts.length === 0) return;
+    const now = Date.now();
+    const lastTs = getPrevRankTimestamp();
+    // 처음 로드이거나 5분이 지났으면 현재 순위를 이전 순위로 저장
+    if (lastTs === 0 || now - lastTs > RANK_REFRESH_INTERVAL) {
+      const newMap: PrevRankMap = {};
+      posts.forEach((p: any) => {
+        if (p.rank != null) newMap[p.id] = p.rank;
+      });
+      savePrevRanks(newMap);
+      setPrevRanks(newMap);
+      prevRanksRef.current = newMap;
+    } else {
+      // 저장된 이전 순위 로드
+      const loaded = loadPrevRanks();
+      setPrevRanks(loaded);
+      prevRanksRef.current = loaded;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts.length]);
+
+  // rankChange 계산 함수
+  const getRankChange = (post: Post & { rank: number }): RankChange => {
+    const prev = prevRanks[post.id];
+    if (prev == null) return null; // NEW
+    return prev - post.rank; // 양수 = 상승 (이전 순위가 더 낮았음)
+  };
 
   const isLoading = posts.length === 0;
 
@@ -549,6 +657,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               post={post as Post & { rank: number }}
               onPostClick={onPostClick}
               handleImageError={handleImageError}
+              rankChange={getRankChange(post as Post & { rank: number })}
             />
           ))}
         </div>
