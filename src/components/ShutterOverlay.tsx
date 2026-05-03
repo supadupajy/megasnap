@@ -22,38 +22,36 @@ const ShutterOverlay = forwardRef<ShutterOverlayHandle>((_, ref) => {
         return;
       }
 
-      const FLASH = 40;      // 팍 켜지는 시간
-      const FADE_OUT = 600;  // 스르륵 사라지는 시간
-      const STAGGER = 15;
-
-      // 모든 마커에 플래시 적용
-      markerEls.forEach((el, i) => {
-        const delay = i * STAGGER;
-        setTimeout(() => {
-          el.style.transition = `filter ${FLASH}ms ease-in`;
-          el.style.filter = 'brightness(10) saturate(0)';
-        }, delay);
+      // 1단계: transition 없이 즉시 흰색으로 팍
+      markerEls.forEach(el => {
+        el.style.transition = 'none';
+        el.style.filter = 'brightness(10) saturate(0)';
       });
 
-      // 플래시가 다 켜진 직후 onDone 호출 → 페이지 전환 시작
-      const flashPeak = markerEls.length * STAGGER + FLASH;
+      // 2단계: 다음 프레임에서 fade-out transition 설정 후 원래 값으로
+      // requestAnimationFrame 두 번 써서 브라우저가 흰색 상태를 확실히 렌더링하게 함
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          markerEls.forEach(el => {
+            el.style.transition = 'filter 700ms cubic-bezier(0.25, 0.1, 0.25, 1)';
+            el.style.filter = 'brightness(1) saturate(1)';
+          });
+
+          // transition 끝나면 스타일 정리
+          setTimeout(() => {
+            markerEls.forEach(el => {
+              el.style.transition = '';
+              el.style.filter = '';
+            });
+          }, 700);
+        });
+      });
+
+      // 페이지 전환은 흰색 팍 뜬 직후 바로 시작
       setTimeout(() => {
         isActiveRef.current = false;
         onDone();
-      }, flashPeak);
-
-      // fade-out은 onDone과 무관하게 계속 진행
-      markerEls.forEach((el, i) => {
-        const delay = i * STAGGER + FLASH;
-        setTimeout(() => {
-          el.style.transition = `filter ${FADE_OUT}ms cubic-bezier(0.0, 0.0, 0.2, 1)`;
-          el.style.filter = '';
-          setTimeout(() => {
-            el.style.transition = '';
-            el.style.filter = '';
-          }, FADE_OUT);
-        }, delay);
-      });
+      }, 50);
     }
   }));
 
