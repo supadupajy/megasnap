@@ -1418,8 +1418,8 @@ const Index = () => {
                     <span className="text-[9px] font-black tracking-widest text-white/60 relative z-10 leading-none">ALL</span>
                     <span className="text-[11px] font-black relative z-10 leading-tight">여기보기</span>
                     <div className="flex flex-col items-center gap-[3px] mt-0.5 relative z-10">
-                      <div className="w-[2px] h-3 bg-white/50 rounded-full" />
-                      <div className="w-[2px] h-2 bg-white/30 rounded-full" />
+                      <div className="w-8 h-[2px] bg-white/50 rounded-full" />
+                      <div className="w-5 h-[2px] bg-white/30 rounded-full" />
                     </div>
                   </button>
                   {displayedPostCount > 0 && currentZoom < 7 && (
