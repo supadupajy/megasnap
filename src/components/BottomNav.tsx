@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
+import { mapCache } from '@/utils/map-cache';
 
 const BottomNav = () => {
   const location = useLocation();
@@ -19,6 +20,16 @@ const BottomNav = () => {
     { icon: UsersRound, label: '친구', path: '/friends' },
     { icon: User, label: '내정보', path: '/profile' },
   ];
+
+  const handleNavClick = (path: string) => {
+    // 지도 탭으로 이동할 때는 현재 위치로 자동이동하지 않도록 keepPosition 설정
+    if (path === '/') {
+      // 이미 지도 탭에 있으면 아무것도 하지 않음
+      if (location.pathname === '/') return;
+      mapCache.keepPosition = true;
+    }
+    navigate(path);
+  };
 
   return (
     <nav
@@ -33,7 +44,7 @@ const BottomNav = () => {
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => handleNavClick(item.path)}
               className={cn(
                 "flex flex-col items-center gap-1 min-w-[64px] transition-all relative",
                 isActive ? "text-indigo-600 scale-110" : "text-gray-400 hover:text-gray-600"
