@@ -1355,9 +1355,9 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute left-4 z-20 flex flex-col gap-2 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Layers className="w-6 h-6" /></button>
-                <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Search className="w-6 h-6" /></button>
-                <button onClick={handleCurrentLocation} className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-indigo-500"><Navigation className="w-6 h-6 fill-white" /></button>
+                <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Layers className="w-6 h-6" /></button>
+                <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Search className="w-6 h-6" /></button>
+                <button onClick={handleCurrentLocation} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Navigation className="w-6 h-6 fill-indigo-600" /></button>
               </div>
 
               <div
