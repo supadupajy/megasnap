@@ -412,7 +412,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   return (
     <div
       className={cn(
-        "bg-white/95 backdrop-blur-xl rounded-[32px] shadow-2xl transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-white/50",
+        "bg-white/95 backdrop-blur-xl rounded-[32px] transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-white/50",
         isExpanded ? "max-h-[85vh]" : "max-h-[56px]"
       )}
       style={{ willChange: "max-height" }}
