@@ -47,11 +47,11 @@ const ShutterOverlay = forwardRef<ShutterOverlayHandle>((_, ref) => {
         });
       });
 
-      // 페이지 전환은 흰색 팍 뜬 직후 바로 시작
+      // 페이지 전환은 fade-out이 완전히 끝난 후 시작
       setTimeout(() => {
         isActiveRef.current = false;
         onDone();
-      }, 50);
+      }, 750);
     }
   }));
 
