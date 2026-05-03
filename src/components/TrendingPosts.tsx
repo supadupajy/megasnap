@@ -519,6 +519,36 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     }
   }, [isExpanded, posts.length, handleScroll]);
 
+  // non-passive touchmove 리스너: 맨 위에서 아래로 당기는 동작 완전 차단
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || !isExpanded) return;
+
+    let touchStartY = 0;
+
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const deltaY = e.touches[0].clientY - touchStartY;
+      const atTop = el.scrollTop <= 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+      if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+    };
+  }, [isExpanded]);
+
   return (
     <div
       className={cn(
@@ -641,7 +671,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         <div
           ref={listRef}
           className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 relative"
-          style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh' }}
+          style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'contain' }}
         >
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
