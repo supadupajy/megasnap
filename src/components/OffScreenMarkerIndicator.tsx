@@ -35,20 +35,16 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     ? (typeof topOffset === 'number' ? `${topOffset}px` : topOffset)
     : 'calc(env(safe-area-inset-top, 0px) + 74px + 56px + 8px)';
 
-  const Arrow = ({ dir }: { dir: Direction }) => {
+  // 삼각형 아이콘 (채워진 작은 삼각형)
+  const Triangle = ({ dir }: { dir: Direction }) => {
     const deg = { top: 0, right: 90, bottom: 180, left: 270 }[dir];
     return (
       <svg
-        width="10" height="10"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="rgb(79, 70, 229)"
-        strokeWidth="3.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        width="8" height="8"
+        viewBox="0 0 10 10"
         style={{ transform: `rotate(${deg}deg)`, flexShrink: 0, display: 'block' }}
       >
-        <polyline points="18 15 12 9 6 15" />
+        <polygon points="5,1 9,9 1,9" fill="rgb(79, 70, 229)" />
       </svg>
     );
   };
@@ -91,34 +87,33 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         style={{
           position: 'fixed',
           display: 'flex',
-          flexDirection: isVertical ? 'column' : 'row',
+          flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '2px',
-          minWidth: '48px',
-          height: '48px',
-          paddingLeft: '10px',
-          paddingRight: '10px',
-          background: 'white',
+          gap: '5px',
+          height: '32px',
+          paddingLeft: '14px',
+          paddingRight: '14px',
+          background: 'rgba(255, 255, 255, 0.55)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           color: 'rgb(79, 70, 229)',
-          borderRadius: '16px',
-          border: '2px solid rgb(79, 70, 229)',
-          boxShadow: '0 4px 14px rgba(79,70,229,0.25)',
+          borderRadius: '999px',
+          border: '1px solid rgba(200, 200, 210, 0.7)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
           cursor: 'pointer',
           zIndex: 9000,
           lineHeight: 1,
           pointerEvents: 'auto',
+          whiteSpace: 'nowrap',
           ...posStyle,
         }}
         onMouseDown={e => e.stopPropagation()}
       >
-        {dir === 'top' && <Arrow dir="top" />}
-        {dir === 'left' && <Arrow dir="left" />}
-        <span style={{ fontSize: '13px', fontWeight: 800, lineHeight: 1, color: 'rgb(79, 70, 229)' }}>
-          {count > 999 ? '999+' : count}
+        <Triangle dir={dir} />
+        <span style={{ fontSize: '13px', fontWeight: 700, lineHeight: 1, color: 'rgb(79, 70, 229)' }}>
+          {count > 999 ? '999+' : count}개
         </span>
-        {dir === 'bottom' && <Arrow dir="bottom" />}
-        {dir === 'right' && <Arrow dir="right" />}
       </button>
     );
   };
