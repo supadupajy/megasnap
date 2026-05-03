@@ -526,7 +526,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[60vh] relative"
+          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[51vh] relative"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {isExpanded && showScrollUpArrow && (
