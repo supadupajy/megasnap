@@ -264,8 +264,8 @@ const TrendingAdBanner: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="px-5 py-3 border-b border-gray-100">
-        <div className="h-32 rounded-2xl bg-gray-100 animate-pulse" />
+      <div className="px-5 py-2 border-b border-gray-100">
+        <div className="h-24 rounded-2xl bg-gray-100 animate-pulse" />
       </div>
     );
   }
@@ -276,13 +276,13 @@ const TrendingAdBanner: React.FC = () => {
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {
     return (
-      <div className="px-5 py-3 border-b border-gray-100">
+      <div className="px-5 py-2 border-b border-gray-100">
         <div
           onClick={(e) => {
             e.stopPropagation();
             window.open('mailto:chorasnap@gmail.com', '_blank');
           }}
-          className="w-full h-32 bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl shadow-lg shadow-indigo-100 cursor-pointer relative overflow-hidden px-4 py-3 flex flex-col justify-between"
+          className="w-full h-24 bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl shadow-lg shadow-indigo-100 cursor-pointer relative overflow-hidden px-4 py-3 flex flex-col justify-between"
         >
           {/* 장식 원형 */}
           <div className="absolute -top-5 -right-5 w-24 h-24 bg-white/10 rounded-full pointer-events-none" />
@@ -310,13 +310,13 @@ const TrendingAdBanner: React.FC = () => {
   }
 
   return (
-    <div className="px-5 py-3 border-b border-gray-100">
+    <div className="px-5 py-2 border-b border-gray-100">
       <div
         onClick={(e) => {
           e.stopPropagation();
           if (slot.link_url) window.open(normalizeUrl(slot.link_url), '_blank', 'noopener,noreferrer');
         }}
-        className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-32 flex cursor-pointer"
+        className="p-0 rounded-2xl bg-black text-white shadow-lg relative overflow-hidden group h-24 flex cursor-pointer"
       >
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
         <div className="absolute inset-0 z-0">
