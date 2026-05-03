@@ -527,11 +527,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </button>
             {renderCategoryBadge()}
             {lat !== undefined && lng !== undefined && (
-              <button 
-                onClick={(e) => onLocationClick(e, lat, lng)} 
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full hover:bg-indigo-100 active:scale-95 transition-all border border-indigo-100/50 shrink-0 whitespace-nowrap"
+              <button
+                onClick={(e) => onLocationClick(e, lat, lng)}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
+                style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid rgba(199,210,254,0.5)' }}
               >
-                <Navigation className="w-3.5 h-3.5 fill-indigo-600" />
+                <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5' }} />
                 <span className="text-[10px] font-black">위치보기</span>
               </button>
             )}
