@@ -572,36 +572,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   );
 
   const renderImageSlider = () => {
-    // [DEBUG] 슬라이더에 들어오는 이미지 데이터 진단
-    console.log('[PostDetail/DEBUG] renderImageSlider', {
-      postId: currentPost?.id,
-      isAd: currentPost?.isAd,
-      rawImages: currentPost?.images,
-      rawImagesLength: Array.isArray(currentPost?.images) ? currentPost.images.length : 'not-array',
-      image_url: currentPost?.image_url,
-      image: currentPost?.image,
-      displayImages,
-      displayImagesLength: displayImages.length,
-      firstImage: displayImages[0],
-      firstImageType: typeof displayImages[0],
-      firstImageLength: typeof displayImages[0] === 'string' ? displayImages[0].length : 'n/a',
-    });
-
     return (
     <div className="absolute inset-0 w-full h-full z-10">
       <div
         ref={(el) => {
           imageScrollRef.current = el;
-          if (el) {
-            // [DEBUG] 슬라이더 컨테이너 크기 측정
-            console.log('[PostDetail/DEBUG] slider container size', {
-              postId: currentPost?.id,
-              clientWidth: el.clientWidth,
-              clientHeight: el.clientHeight,
-              scrollLeft: el.scrollLeft,
-              scrollWidth: el.scrollWidth,
-            });
-          }
         }}
         className={cn(
           "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
@@ -624,56 +599,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               alt={`Post content ${index + 1}`}
               className="w-full h-full object-cover pointer-events-none"
               draggable={false}
-              onLoad={(e) => {
-                const t = e.currentTarget;
-                const cs = window.getComputedStyle(t);
-                const rect = t.getBoundingClientRect();
-                // [DEBUG2] img 자체 평면 로그
-                console.log(
-                  `[PostDetail/DEBUG2] img idx=${index} pid=${currentPost?.id?.slice(0,8)} ` +
-                  `rect={x:${rect.x.toFixed(1)},y:${rect.y.toFixed(1)},w:${rect.width.toFixed(1)},h:${rect.height.toFixed(1)}} ` +
-                  `client={${t.clientWidth},${t.clientHeight}} natural={${t.naturalWidth},${t.naturalHeight}} ` +
-                  `display=${cs.display} vis=${cs.visibility} opacity=${cs.opacity} ` +
-                  `transform=${cs.transform} objectFit=${cs.objectFit} ` +
-                  `complete=${t.complete} currentSrc=${t.currentSrc?.slice(-40)}`
-                );
-                // [DEBUG2] elementFromPoint로 첫 슬라이드 중심에 무엇이 그려지는지 확인
-                if (index === 0) {
-                  const cx = rect.x + rect.width / 2;
-                  const cy = rect.y + rect.height / 2;
-                  const topElem = document.elementFromPoint(cx, cy);
-                  const topElemsAll = (document as any).elementsFromPoint?.(cx, cy) || [];
-                  console.log(
-                    `[PostDetail/DEBUG2] elementFromPoint center=(${cx.toFixed(1)},${cy.toFixed(1)}) ` +
-                    `top=<${topElem?.tagName} class="${(topElem as HTMLElement)?.className?.toString?.().slice(0,80)}"> ` +
-                    `stack=[${topElemsAll.slice(0, 6).map((el: any) => `${el.tagName}.${(el.className?.toString?.()||'').slice(0,30)}`).join(' | ')}]`
-                  );
-                  // 모든 ancestor를 평면 로그로
-                  let node: HTMLElement | null = t;
-                  let level = 0;
-                  while (node && level < 8) {
-                    const r = node.getBoundingClientRect();
-                    const s = window.getComputedStyle(node);
-                    console.log(
-                      `[PostDetail/DEBUG2] anc[${level}] <${node.tagName} class="${node.className?.toString?.().slice(0, 80)}"> ` +
-                      `rect={x:${r.x.toFixed(1)},y:${r.y.toFixed(1)},w:${r.width.toFixed(1)},h:${r.height.toFixed(1)}} ` +
-                      `disp=${s.display} vis=${s.visibility} op=${s.opacity} z=${s.zIndex} pos=${s.position} ` +
-                      `bg=${s.backgroundColor} transform=${s.transform} clipPath=${s.clipPath}`
-                    );
-                    node = node.parentElement;
-                    level++;
-                  }
-                }
-              }}
               onError={(e) => {
                 const target = e.currentTarget;
-                console.error('[PostDetail/DEBUG] img onError', {
-                  postId: currentPost?.id,
-                  index,
-                  failedSrc: img,
-                  failedSrcLength: typeof img === 'string' ? img.length : 'n/a',
-                  currentSrc: target.src,
-                });
                 const fallback = getFallbackImage(currentPost.id);
                 if (target.src !== fallback) target.src = fallback;
               }}
