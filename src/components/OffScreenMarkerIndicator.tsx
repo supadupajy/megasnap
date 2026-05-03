@@ -99,7 +99,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           WebkitBackdropFilter: 'blur(16px)',
           color: 'rgb(79, 70, 229)',
           borderRadius: '999px',
-          border: '1px solid rgba(200, 200, 210, 0.7)',
+          border: '1px solid rgba(255, 255, 255, 0.5)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
           cursor: 'pointer',
           zIndex: 9000,
