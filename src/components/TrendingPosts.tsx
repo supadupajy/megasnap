@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, ChevronDown as ScrollDownIcon, ChevronUp as ScrollUpIcon, Sparkles, Mail } from 'lucide-react';
+import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, Sparkles, Mail } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
@@ -430,53 +430,86 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           </div>
         ) : (
           <>
-            {isExpanded ? (
-              <div className="flex items-center gap-0.5 shrink-0 mr-1">
-                <span className="text-indigo-600 font-black text-sm italic">HOT</span>
-                <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
-              </div>
-            ) : (
-              <span className={cn(
-                "text-indigo-600 font-black text-sm italic shrink-0",
-                currentPost?.rank >= 10 ? "w-6" : "w-4"
-              )}>
-                {currentPost?.rank}
-              </span>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              {isExpanded ? (
+                <motion.div
+                  key="expanded-header"
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="flex items-center gap-0.5 shrink-0 mr-1"
+                >
+                  <span className="text-indigo-600 font-black text-sm italic">HOT</span>
+                  <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
+                </motion.div>
+              ) : (
+                <motion.span
+                  key="collapsed-rank"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className={cn(
+                    "text-indigo-600 font-black text-sm italic shrink-0",
+                    currentPost?.rank >= 10 ? "w-6" : "w-4"
+                  )}
+                >
+                  {currentPost?.rank}
+                </motion.span>
+              )}
+            </AnimatePresence>
 
-            {!isExpanded ? (
-              <div className="flex flex-1 items-center gap-2 overflow-hidden">
-                <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                  <PostThumbnail post={currentPost!} onImgError={handleImageError} />
-                </div>
-                <div className="flex-1 overflow-hidden relative h-5">
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={`${currentPost?.id}-${currentIndex}`}
-                      initial={{ y: 15, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      exit={{ y: -15, opacity: 0 }}
-                      transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
-                      className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
-                    >
-                      {currentPost?.content}
-                    </motion.p>
-                  </AnimatePresence>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center min-w-0 overflow-hidden">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight truncate">
-                  Real-time HOT (Top 20)
-                </span>
-              </div>
-            )}
+            <AnimatePresence mode="wait" initial={false}>
+              {!isExpanded ? (
+                <motion.div
+                  key="collapsed-content"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -8 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="flex flex-1 items-center gap-2 overflow-hidden"
+                >
+                  <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                    <PostThumbnail post={currentPost!} onImgError={handleImageError} />
+                  </div>
+                  <div className="flex-1 overflow-hidden relative h-5">
+                    <AnimatePresence mode="wait">
+                      <motion.p
+                        key={`${currentPost?.id}-${currentIndex}`}
+                        initial={{ y: 15, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: -15, opacity: 0 }}
+                        transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
+                        className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
+                      >
+                        {currentPost?.content}
+                      </motion.p>
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="expanded-subtitle"
+                  initial={{ opacity: 0, x: 8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 8 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="flex-1 flex items-center min-w-0 overflow-hidden"
+                >
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-tight truncate">
+                    Real-time HOT (Top 20)
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
-            ) : (
+            <motion.div
+              animate={{ rotate: isExpanded ? 180 : 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
               <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors" />
-            )}
+            </motion.div>
           </>
         )}
       </div>
@@ -499,7 +532,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
               <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
-                <ScrollUpIcon className="w-5 h-5 text-indigo-600" />
+                <ChevronUp className="w-5 h-5 text-indigo-600" />
               </div>
             </div>
           )}
@@ -517,7 +550,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {isExpanded && posts.length > 5 && showScrollDownArrow && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
             <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
-              <ScrollDownIcon className="w-5 h-5 text-indigo-600" />
+              <ChevronDown className="w-5 h-5 text-indigo-600" />
             </div>
           </div>
         )}
