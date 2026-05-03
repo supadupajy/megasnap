@@ -264,7 +264,7 @@ const TrendingAdBanner: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="px-5 py-2 border-b border-gray-100">
+      <div className="px-5 py-1 border-b border-gray-100">
         <div className="h-24 rounded-2xl bg-gray-100 animate-pulse" />
       </div>
     );
@@ -276,13 +276,13 @@ const TrendingAdBanner: React.FC = () => {
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {
     return (
-      <div className="px-5 py-2 border-b border-gray-100">
+      <div className="px-5 py-1 border-b border-gray-100">
         <div
           onClick={(e) => {
             e.stopPropagation();
             window.open('mailto:chorasnap@gmail.com', '_blank');
           }}
-          className="w-full h-24 bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl shadow-lg shadow-indigo-100 cursor-pointer relative overflow-hidden px-4 py-3 flex flex-col justify-between"
+          className="w-full bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 rounded-2xl shadow-lg shadow-indigo-100 cursor-pointer relative overflow-hidden px-4 pt-2.5 pb-2.5 flex flex-col gap-1.5"
         >
           {/* 장식 원형 */}
           <div className="absolute -top-5 -right-5 w-24 h-24 bg-white/10 rounded-full pointer-events-none" />
@@ -291,10 +291,10 @@ const TrendingAdBanner: React.FC = () => {
           <span className="text-[10px] font-bold text-white/70 tracking-wide">광고 문의</span>
           {/* 메인 카피 */}
           <div>
-            <h2 className="text-[15px] font-black text-white leading-tight tracking-tight">
+            <h2 className="text-[14px] font-black text-white leading-tight tracking-tight">
               좋은 브랜드를 기다리고 있어요.
             </h2>
-            <p className="text-[11px] font-medium text-white/70 mt-0.5">광고 문의는 언제든 환영이에요.</p>
+            <p className="text-[10px] font-medium text-white/70 mt-0.5">광고 문의는 언제든 환영이에요.</p>
           </div>
           {/* 이메일 버튼 */}
           <div className="flex items-center gap-2 bg-white/15 rounded-xl px-2.5 py-1.5">
@@ -310,7 +310,7 @@ const TrendingAdBanner: React.FC = () => {
   }
 
   return (
-    <div className="px-5 py-2 border-b border-gray-100">
+    <div className="px-5 py-1 border-b border-gray-100">
       <div
         onClick={(e) => {
           e.stopPropagation();
