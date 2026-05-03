@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, forwardRef, useRef } from 'react';
+import { useImperativeHandle, forwardRef, useRef } from 'react';
 
 export interface ShutterOverlayHandle {
   trigger: (onDone: () => void) => void;
@@ -22,36 +22,38 @@ const ShutterOverlay = forwardRef<ShutterOverlayHandle>((_, ref) => {
         return;
       }
 
-      const FLASH = 40;      // 흰색으로 팍 켜지는 시간
-      const FADE_OUT = 500;  // 스르륵 사라지는 시간
-      const STAGGER = 15;    // 마커 간 딜레이
+      const FLASH = 40;      // 팍 켜지는 시간
+      const FADE_OUT = 600;  // 스르륵 사라지는 시간
+      const STAGGER = 15;
 
+      // 모든 마커에 플래시 적용
       markerEls.forEach((el, i) => {
         const delay = i * STAGGER;
         setTimeout(() => {
-          // 팍 흰색으로
           el.style.transition = `filter ${FLASH}ms ease-in`;
           el.style.filter = 'brightness(10) saturate(0)';
-
-          // 스르륵 원래대로
-          setTimeout(() => {
-            el.style.transition = `filter ${FADE_OUT}ms cubic-bezier(0.1, 0, 0.3, 1)`;
-            el.style.filter = '';
-
-            setTimeout(() => {
-              el.style.transition = '';
-              el.style.filter = '';
-            }, FADE_OUT);
-          }, FLASH);
         }, delay);
       });
 
-      const totalDuration = markerEls.length * STAGGER + FLASH + FADE_OUT + 80;
-
+      // 플래시가 다 켜진 직후 onDone 호출 → 페이지 전환 시작
+      const flashPeak = markerEls.length * STAGGER + FLASH;
       setTimeout(() => {
         isActiveRef.current = false;
         onDone();
-      }, totalDuration);
+      }, flashPeak);
+
+      // fade-out은 onDone과 무관하게 계속 진행
+      markerEls.forEach((el, i) => {
+        const delay = i * STAGGER + FLASH;
+        setTimeout(() => {
+          el.style.transition = `filter ${FADE_OUT}ms cubic-bezier(0.0, 0.0, 0.2, 1)`;
+          el.style.filter = '';
+          setTimeout(() => {
+            el.style.transition = '';
+            el.style.filter = '';
+          }, FADE_OUT);
+        }, delay);
+      });
     }
   }));
 
