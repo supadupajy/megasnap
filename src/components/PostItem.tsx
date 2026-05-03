@@ -529,10 +529,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             {lat !== undefined && lng !== undefined && (
               <button
                 onClick={(e) => onLocationClick(e, lat, lng)}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap !bg-indigo-50 !text-indigo-600 !border !border-indigo-200/50"
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
+                style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
               >
-                <Navigation className="w-3.5 h-3.5 !fill-indigo-600 !text-indigo-600" />
-                <span className="text-[10px] font-black !text-indigo-600">위치보기</span>
+                <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5' }}>위치보기</span>
               </button>
             )}
           </div>
