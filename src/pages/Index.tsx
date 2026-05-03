@@ -1466,7 +1466,7 @@ const Index = () => {
               onPostClick={handleTrendingPostClick}
               isExpanded={isTrendingExpanded}
               onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
-              maxHeight="calc(100dvh - env(safe-area-inset-top, 0px) - 74px - env(safe-area-inset-bottom, 0px) - 5.5rem - 12px)"
+              maxHeight="calc(100dvh - env(safe-area-inset-top, 0px) - 74px - env(safe-area-inset-bottom, 0px) - 5.5rem - 74px)"
             />
           </div>
         </div>
