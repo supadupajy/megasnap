@@ -935,29 +935,40 @@ const Index = () => {
         if (showToast) showError('이 브라우저는 위치 정보를 지원하지 않습니다.');
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setMapCenter(loc);
-          setUserLocation(loc);
-          if (toastId) dismissToast(toastId);
-          if (showToast) showSuccess('현재 위치로 이동했습니다.');
-        },
-        (err) => {
-          if (toastId) dismissToast(toastId);
-          if (showToast) {
-            if (err.code === 1) {
-              showError('위치 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘을 눌러 위치 권한을 허용해주세요.');
-            } else if (err.code === 3) {
-              showError('위치 확인 시간이 초과되었습니다. 다시 시도해주세요.');
-            } else {
-              showError('위치 정보를 가져올 수 없습니다. GPS 및 위치 권한을 확인해주세요.');
+      const tryGetPosition = (retryCount = 0) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            setMapCenter(loc);
+            setUserLocation(loc);
+            if (toastId) dismissToast(toastId);
+            if (showToast) showSuccess('현재 위치로 이동했습니다.');
+          },
+          (err) => {
+            // POSITION_UNAVAILABLE (code 2): iOS kCLErrorLocationUnknown 등 일시적 실패
+            // → 최대 2회 재시도 후 포기
+            if (err.code === 2 && retryCount < 2) {
+              setTimeout(() => tryGetPosition(retryCount + 1), 1500);
+              return;
             }
-          }
-          if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-      );
+            if (toastId) dismissToast(toastId);
+            if (showToast) {
+              if (err.code === 1) {
+                showError('위치 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘을 눌러 위치 권한을 허용해주세요.');
+              } else if (err.code === 2) {
+                showError('위치를 확인할 수 없습니다. GPS를 켜거나 잠시 후 다시 시도해주세요.');
+              } else if (err.code === 3) {
+                showError('위치 확인 시간이 초과되었습니다. 다시 시도해주세요.');
+              } else {
+                showError('위치 정보를 가져올 수 없습니다. GPS 및 위치 권한을 확인해주세요.');
+              }
+            }
+            if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+        );
+      };
+      tryGetPosition();
     }
   }, []);
 
