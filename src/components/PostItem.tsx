@@ -597,7 +597,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             {/* Media Section */}
             <div
               className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-              onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
             >
               {renderMedia()}
             </div>
@@ -701,7 +700,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           {/* Media Section */}
           <div
             className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
-            onClick={() => !post.videoUrl && lat != null && lng != null && onLocationClick?.({} as any, lat, lng)}
           >
             {renderMedia()}
           </div>
