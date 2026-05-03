@@ -168,6 +168,7 @@ interface TrendingPostsProps {
   isExpanded: boolean;
   onToggle: () => void;
   onPostClick: (post: Post) => void;
+  maxHeight?: string;
 }
 
 interface TrendingPostItemProps {
@@ -361,6 +362,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   isExpanded,
   onToggle,
   onPostClick,
+  maxHeight,
 }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
@@ -413,9 +415,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div
       className={cn(
         "bg-white/95 backdrop-blur-xl rounded-[32px] transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-white/50",
-        isExpanded ? "max-h-[85vh]" : "max-h-[56px]"
+        isExpanded ? (maxHeight ? "" : "max-h-[85vh]") : "max-h-[56px]"
       )}
-      style={{ willChange: "max-height" }}
+      style={{
+        willChange: "max-height",
+        ...(isExpanded && maxHeight ? { maxHeight } : {}),
+      }}
     >
       <div
         className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
@@ -516,9 +521,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
       <div
         className={cn(
-          "flex flex-col relative transition-opacity duration-300",
+          "flex flex-col relative transition-opacity duration-300 overflow-hidden",
           isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
+        style={maxHeight ? { maxHeight: `calc(${maxHeight} - 56px)` } : {}}
       >
         {/* 광고 구좌 (DB 연동) */}
         <TrendingAdBanner />
@@ -526,8 +532,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 max-h-[39vh] relative"
-          style={{ WebkitOverflowScrolling: 'touch' }}
+          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 relative"
+          style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh' }}
         >
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
