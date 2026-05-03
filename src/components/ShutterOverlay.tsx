@@ -1,84 +1,59 @@
-import React, { memo, useImperativeHandle, forwardRef, useRef } from 'react';
+import React, { useImperativeHandle, forwardRef, useRef } from 'react';
 
 export interface ShutterOverlayHandle {
   trigger: (onDone: () => void, markerPositions?: Array<{ x: number; y: number }>) => void;
 }
 
 const ShutterOverlay = forwardRef<ShutterOverlayHandle>((_, ref) => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const isActiveRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
-    trigger(onDone: () => void, markerPositions?: Array<{ x: number; y: number }>) {
+    trigger(onDone: () => void) {
       if (isActiveRef.current) { onDone(); return; }
       isActiveRef.current = true;
 
-      const container = containerRef.current;
-      if (!container || !markerPositions || markerPositions.length === 0) {
+      // 지도 마커 DOM 요소들을 직접 찾아서 흰색으로 깜빡임
+      const markerEls = Array.from(
+        document.querySelectorAll<HTMLElement>('.marker-content-wrapper')
+      );
+
+      if (markerEls.length === 0) {
         isActiveRef.current = false;
         onDone();
         return;
       }
 
-      // 기존 플래시 제거
-      container.innerHTML = '';
+      // 각 마커에 순차적으로 흰색 flash 적용
+      const FLASH_DURATION = 280; // ms
+      const STAGGER = 20; // 마커 간 딜레이
 
-      const MAX_FLASHES = 30;
-      const positions = markerPositions.slice(0, MAX_FLASHES);
-
-      positions.forEach((pos, i) => {
-        const flash = document.createElement('div');
-        const size = 56 + Math.random() * 24; // 56~80px
-        const delay = i * 18; // 각 마커마다 18ms 딜레이
-
-        flash.style.cssText = `
-          position: absolute;
-          left: ${pos.x}px;
-          top: ${pos.y}px;
-          width: ${size}px;
-          height: ${size}px;
-          transform: translate(-50%, -50%) scale(0);
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
-          pointer-events: none;
-          animation: marker-flash ${320}ms ease-out ${delay}ms forwards;
-        `;
-        container.appendChild(flash);
+      markerEls.forEach((el, i) => {
+        const delay = i * STAGGER;
+        setTimeout(() => {
+          el.style.transition = `filter ${FLASH_DURATION * 0.3}ms ease-out`;
+          el.style.filter = 'brightness(10) saturate(0)';
+          setTimeout(() => {
+            el.style.transition = `filter ${FLASH_DURATION * 0.7}ms ease-in`;
+            el.style.filter = '';
+            setTimeout(() => {
+              el.style.transition = '';
+              el.style.filter = '';
+            }, FLASH_DURATION * 0.7);
+          }, FLASH_DURATION * 0.3);
+        }, delay);
       });
 
-      const totalDuration = positions.length * 18 + 320 + 60;
+      const totalDuration = markerEls.length * STAGGER + FLASH_DURATION + 60;
 
-      const timer = setTimeout(() => {
-        if (container) container.innerHTML = '';
+      setTimeout(() => {
         isActiveRef.current = false;
         onDone();
       }, totalDuration);
-
-      return () => clearTimeout(timer);
     }
   }));
 
-  return (
-    <>
-      <style>{`
-        @keyframes marker-flash {
-          0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-          40%  { transform: translate(-50%, -50%) scale(1.1); opacity: 0.9; }
-          100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
-        }
-      `}</style>
-      <div
-        ref={containerRef}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          zIndex: 25,
-          overflow: 'hidden',
-        }}
-      />
-    </>
-  );
+  // 렌더링 없음 - DOM 직접 조작만 함
+  return null;
 });
 
 export default ShutterOverlay;

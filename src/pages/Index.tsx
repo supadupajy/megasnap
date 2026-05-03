@@ -1406,26 +1406,10 @@ const Index = () => {
                         });
                         setPostListInitialPosts(finalList);
 
-                        // 마커 위치를 화면 픽셀 좌표로 변환
-                        const mapEl = mapAreaRef.current;
-                        const b = mapData?.bounds;
-                        const markerPositions: Array<{ x: number; y: number }> = [];
-                        if (mapEl && b) {
-                          const rect = mapEl.getBoundingClientRect();
-                          const latRange = b.ne.lat - b.sw.lat;
-                          const lngRange = b.ne.lng - b.sw.lng;
-                          boundsFiltered.forEach(m => {
-                            if (m.lat == null || m.lng == null) return;
-                            const x = ((m.lng - b.sw.lng) / lngRange) * rect.width;
-                            const y = ((b.ne.lat - m.lat) / latRange) * rect.height;
-                            markerPositions.push({ x, y });
-                          });
-                        }
-
                         // 플래시 애니메이션 - state 변경 없이 ref로 직접 실행
                         shutterRef.current?.trigger(() => {
                           setIsPostListOpen(true);
-                        }, markerPositions);
+                        });
                       }
                     }}
                     disabled={currentZoom >= 7 || displayedPostCount === 0}
