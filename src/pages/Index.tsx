@@ -1145,6 +1145,21 @@ const Index = () => {
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);
 
+  // 트렌딩 패널 펼쳐질 때 body touch-action 차단 (iOS 오버스크롤 방지)
+  useEffect(() => {
+    if (isTrendingExpanded) {
+      document.body.style.touchAction = 'none';
+      document.documentElement.style.touchAction = 'none';
+    } else {
+      document.body.style.touchAction = '';
+      document.documentElement.style.touchAction = '';
+    }
+    return () => {
+      document.body.style.touchAction = '';
+      document.documentElement.style.touchAction = '';
+    };
+  }, [isTrendingExpanded]);
+
   const handleTrendingPostClick = useCallback((post: Post) => {
     setIsTrendingExpanded(false);
 
