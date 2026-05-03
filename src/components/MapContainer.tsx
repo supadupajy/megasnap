@@ -16,6 +16,7 @@ interface MapContainerProps {
   level?: number;
   searchResultLocation?: { lat: number; lng: number } | null;
   userLocation?: { lat: number; lng: number } | null;
+  draggable?: boolean;
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg";
@@ -24,16 +25,17 @@ const FALLBACK_IMAGE = "/placeholder.svg";
 const LONG_PRESS_DURATION = 1000; // 1초
 const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그 감지를 빠르게)
 
-const MapContainer = ({ 
-  posts, 
-  viewedPostIds, 
-  onMarkerClick, 
-  onMapChange, 
+const MapContainer = ({
+  posts,
+  viewedPostIds,
+  onMarkerClick,
+  onMapChange,
   onMapClick,
   center,
   level = 6,
   searchResultLocation,
   userLocation,
+  draggable = true,
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -79,6 +81,12 @@ const MapContainer = ({
   const levelRef = useRef(6);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
+
+  // draggable prop 변경 시 카카오맵 드래그 활성/비활성
+  useEffect(() => {
+    if (!isMapReady || !mapInstance.current) return;
+    mapInstance.current.setDraggable(draggable);
+  }, [draggable, isMapReady]);
 
   const { user: authUser } = useAuth();
 

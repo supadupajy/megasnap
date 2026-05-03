@@ -1247,6 +1247,7 @@ const Index = () => {
               searchResultLocation={searchResultLocation}
               onMapClick={() => setSearchResultLocation(null)}
               userLocation={userLocation}
+              draggable={!isTrendingExpanded}
             />
           </div>
 
