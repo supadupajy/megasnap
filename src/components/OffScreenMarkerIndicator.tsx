@@ -112,7 +112,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       >
         <Triangle dir={dir} />
         <span style={{ fontSize: '13px', fontWeight: 700, lineHeight: 1, color: 'rgb(79, 70, 229)' }}>
-          {count > 999 ? '999+' : count}개
+          {count > 999 ? '999+' : count}
         </span>
       </button>
     );
