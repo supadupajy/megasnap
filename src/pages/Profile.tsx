@@ -114,8 +114,8 @@ const Profile = () => {
       owner_id: p.user_id,
       user: {
         id: p.user_id,
-        name: p.user_id === authUser?.id ? displayName : (p.user_name || '탐험가'),
-        avatar: p.user_id === authUser?.id ? avatarUrl : (p.user_avatar || '/placeholder.svg')
+        name: p.user_id === authUser?.id ? displayName : (p.profiles?.nickname || p.user_name || '탐험가'),
+        avatar: p.user_id === authUser?.id ? avatarUrl : (p.profiles?.avatar_url || p.user_avatar || '/placeholder.svg')
       },
       content: p.content?.replace(/^\[AD\]\s*/, '') || '',
       location: p.location_name || '알 수 없는 장소',
@@ -146,7 +146,7 @@ const Profile = () => {
           .limit(50),
         supabase
           .from('saved_posts')
-          .select('post_id, posts(id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id)')
+          .select('post_id, posts(id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, profiles(nickname, avatar_url))')
           .eq('user_id', uid)
           .limit(20),
         supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
