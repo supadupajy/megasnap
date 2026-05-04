@@ -721,7 +721,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
               left: 0,
               right: 0,
-              bottom: 0,
+              bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
             }}
           >
             <VisuallyHidden.Root>
