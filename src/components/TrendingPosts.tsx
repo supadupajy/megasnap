@@ -166,7 +166,7 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
 // ── 순위 변동 추적 유틸 ──────────────────────────────────────
 const RANK_STORAGE_KEY = 'trending_prev_ranks';
 const RANK_STORAGE_TS_KEY = 'trending_prev_ranks_ts';
-const RANK_REFRESH_INTERVAL = 5 * 60 * 1000; // 5분마다 이전 순위 갱신
+const RANK_REFRESH_INTERVAL = 60 * 1000; // 1분마다 이전 순위 갱신
 
 interface PrevRankMap {
   [postId: string]: number;
@@ -477,7 +477,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 5분 주기로 현재 순위를 이전 순위로 갱신 (posts 내용이 바뀌어도 타이머 기준으로만 갱신)
+  // 1분 주기로 현재 순위를 이전 순위로 갱신 (posts 내용이 바뀌어도 타이머 기준으로만 갱신)
   useEffect(() => {
     if (posts.length === 0) return;
     const now = Date.now();
