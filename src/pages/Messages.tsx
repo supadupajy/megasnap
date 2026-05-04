@@ -9,10 +9,9 @@ import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { showError, showSuccess } from '@/utils/toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useAnimation } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import DeleteChatDialog from '@/components/DeleteChatDialog';
-
 import { searchProfilesByNickname } from '@/utils/profile-search';
 
 interface Conversation {
@@ -27,6 +26,113 @@ interface Conversation {
   };
 }
 
+const SWIPE_THRESHOLD = 40;
+const SNAP_OPEN = -80;
+
+interface SwipeConvItemProps {
+  conv: Conversation;
+  isOpen: boolean;
+  onOpen: (id: string) => void;
+  onClose: () => void;
+  onDeleteClick: (e: React.MouseEvent, id: string) => void;
+  onNavigate: (id: string) => void;
+  onProfileNavigate: (id: string) => void;
+}
+
+const SwipeConversationItem: React.FC<SwipeConvItemProps> = ({
+  conv,
+  isOpen,
+  onOpen,
+  onClose,
+  onDeleteClick,
+  onNavigate,
+  onProfileNavigate,
+}) => {
+  const x = useMotionValue(0);
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start({ x: isOpen ? SNAP_OPEN : 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+  }, [isOpen, controls]);
+
+  const handleDragEnd = (_: any, info: any) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+
+    if (offset < -SWIPE_THRESHOLD || velocity < -300) {
+      controls.start({ x: SNAP_OPEN, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      onOpen(conv.other_id);
+    } else {
+      controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      onClose();
+    }
+  };
+
+  const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 10;
+
+  return (
+    <div className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
+        <button
+          onClick={(e) => onDeleteClick(e, conv.other_id)}
+          className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"
+        >
+          <Trash2 className="w-6 h-6" />
+          <span className="text-[10px] font-bold">삭제</span>
+        </button>
+      </div>
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: SNAP_OPEN, right: 0 }}
+        dragElastic={0.05}
+        style={{ x }}
+        animate={controls}
+        onDragEnd={handleDragEnd}
+        onClick={() => { if (!isOpen) onNavigate(conv.other_id); }}
+        className="relative bg-white flex items-center gap-4 py-4 px-1 cursor-pointer z-10"
+      >
+        <div
+          className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm relative"
+          onClick={(e) => { e.stopPropagation(); onProfileNavigate(conv.other_id); }}
+        >
+          <img
+            src={conv.profile.avatar_url || '/placeholder.svg'}
+            alt="avatar"
+            className="w-full h-full rounded-full object-cover border-2 border-white"
+          />
+          <div className={cn(
+            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10 transition-colors duration-300",
+            isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"
+          )} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <p className={`text-sm truncate ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>
+                {conv.profile.nickname}
+              </p>
+              {isOnline && (
+                <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter leading-none px-1 py-0.5 bg-green-50 rounded-[4px] shrink-0">Online</span>
+              )}
+            </div>
+            <span className="text-[10px] text-gray-400 font-medium shrink-0">{time}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+              {conv.last_message}
+            </p>
+            {conv.unread_count > 0 && (
+              <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const Messages = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
@@ -38,12 +144,10 @@ const Messages = () => {
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const isDragging = useRef(false);
 
   const fetchConversations = async () => {
     if (!authUser) return;
     try {
-      // [Optimized] select('*') → 필요한 컬럼만 (id, content 텍스트는 마지막 메시지 표시용)
       const { data: messages } = await supabase
         .from('messages')
         .select('id, sender_id, receiver_id, content, created_at, is_read')
@@ -78,7 +182,6 @@ const Messages = () => {
       }
       const convList = Array.from(convMap.values());
 
-      // [Optimized] N+1 제거: profiles를 .in()으로 한 번에 일괄 조회
       const profileNeededIds = convList.filter(c => !c.profile).map(c => c.other_id);
       let profileMap = new Map<string, any>();
       if (profileNeededIds.length > 0) {
@@ -98,7 +201,6 @@ const Messages = () => {
       results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setConversations(results);
 
-      // ✅ [수정] 대화 목록을 불러온 후, 헤더의 메시지 뱃지 카운트도 갱신
       window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
     } catch (err) {} finally { setIsLoading(false); }
   };
@@ -108,28 +210,19 @@ const Messages = () => {
     if (!authUser) return;
     
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'activeChatId') {
-        fetchConversations();
-      }
+      if (e.key === 'activeChatId') fetchConversations();
     };
     window.addEventListener('storage', handleStorageChange);
 
-    const handleRefreshEvent = () => {
-      fetchConversations();
-    };
+    const handleRefreshEvent = () => fetchConversations();
     window.addEventListener('refresh-messages-list', handleRefreshEvent);
 
     const unsubscribeChatStore = chatStore.subscribe(fetchConversations);
     
-    // [Fixed] profiles UPDATE 실시간 구독 → polling으로 대체.
-    // 이유: 모든 사용자의 last_seen UPDATE가 모든 클라이언트에 fan-out 되어
-    // Realtime 서버 부하 폭증(thread killed by timeout)의 주요 원인이었음.
-    // 60초마다 현재 보이는 대화 상대들의 last_seen만 가볍게 폴링하여 동일한 UX 유지.
     const pollOnlineStatus = async () => {
       setConversations(prev => {
         if (prev.length === 0) return prev;
         const ids = prev.map(c => c.other_id);
-        // 비동기 fetch는 별도로 실행 (setState 콜백 안에서 await 불가)
         supabase
           .from('profiles')
           .select('id, last_seen')
@@ -190,8 +283,6 @@ const Messages = () => {
   };
 
   const handleBack = () => {
-    // Direct Message 창에서 뒤로가기는 항상 지도 화면('/')으로 이동
-    // direction state를 넘겨서 App.tsx에서 뒤로가기 애니메이션을 적용하게 함
     navigate('/', { 
       replace: true, 
       state: { direction: 'back' } 
@@ -205,7 +296,6 @@ const Messages = () => {
       onClick={() => setSwipedId(null)}
     >
       <div className="pt-16">
-        {/* 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
         <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
           <button
             onClick={handleBack}
@@ -242,46 +332,53 @@ const Messages = () => {
             <div className="space-y-4">
               <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">{query ? '대화 목록 검색 결과' : '최근 메시지'}</h2>
               <div className="divide-y divide-gray-50 border-t border-gray-50">
-                <AnimatePresence initial={false}>{filteredConversations.map((conv) => {
-                  const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                  const isSwiped = swipedId === conv.other_id;
-                  const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 10;
-                  
-                  return (
-                    <div key={conv.other_id} className="relative group overflow-hidden">
-                      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6"><button onClick={(e) => handleDeleteClick(e, conv.other_id)} className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"><Trash2 className="w-6 h-6" /><span className="text-[10px] font-bold">삭제</span></button></div>
-                      <motion.div drag="x" dragConstraints={{ left: -80, right: 0 }} dragElastic={0.1} animate={{ x: isSwiped ? -80 : 0 }} onDragEnd={(_, info) => { if (info.offset.x < -40) setSwipedId(conv.other_id); else setSwipedId(null); }} onClick={() => { if (!swipedId) navigate(`/chat/${conv.other_id}`); }} className="relative bg-white flex items-center gap-4 py-4 px-1 cursor-pointer z-10">
-                        <div className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm relative" onClick={(e) => { e.stopPropagation(); navigate(`/profile/${conv.other_id}`); }}>
-                          <img src={conv.profile.avatar_url || '/placeholder.svg'} alt="avatar" className="w-full h-full rounded-full object-cover border-2 border-white" />
-
-                          <div className={cn(
-                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white z-10 transition-colors duration-300",
-                            isOnline ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-gray-300"
-                          )} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between mb-0.5">
-                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <p className={`text-sm truncate ${conv.unread_count > 0 ? 'font-black text-gray-900' : 'font-bold text-gray-700'}`}>{conv.profile.nickname}</p>
-                              {isOnline && (
-                                <span className="text-[8px] font-black text-green-500 uppercase tracking-tighter leading-none px-1 py-0.5 bg-green-50 rounded-[4px] shrink-0">Online</span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-gray-400 font-medium shrink-0">{time}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <p className={`text-xs truncate flex-1 ${conv.unread_count > 0 ? 'font-bold text-gray-900' : 'text-gray-500'}`}>{conv.last_message}</p>
-                            {conv.unread_count > 0 && <div className="bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full">{conv.unread_count}</div>}
-                          </div>
-                        </div>
-                      </motion.div>
-                    </div>
-                  );
-                })}</AnimatePresence>
+                <AnimatePresence initial={false}>
+                  {filteredConversations.map((conv) => (
+                    <SwipeConversationItem
+                      key={conv.other_id}
+                      conv={conv}
+                      isOpen={swipedId === conv.other_id}
+                      onOpen={(id) => setSwipedId(id)}
+                      onClose={() => setSwipedId(null)}
+                      onDeleteClick={handleDeleteClick}
+                      onNavigate={(id) => navigate(`/chat/${id}`)}
+                      onProfileNavigate={(id) => navigate(`/profile/${id}`)}
+                    />
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
-            {query.trim() && globalSearchResults.length > 0 && (<div className="space-y-4 pt-2 border-t border-gray-50"><h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2"><UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기</h2><div className="space-y-1">{globalSearchResults.map((user) => (<div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"><div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0"><Avatar className="w-full h-full border-2 border-white"><AvatarImage src={user.avatar_url} /><AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback></Avatar></div><div className="flex-1 min-w-0"><p className="text-sm font-bold text-gray-900">{user.nickname}</p><p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p></div></div>))}</div></div>)}
-            {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (<div className="py-20 flex flex-col items-center justify-center text-center px-10"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4"><MessageSquare className="w-8 h-8 text-gray-200" /></div><p className="text-sm text-gray-400 font-bold leading-relaxed">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p></div>)}
+            {query.trim() && globalSearchResults.length > 0 && (
+              <div className="space-y-4 pt-2 border-t border-gray-50">
+                <h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2">
+                  <UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기
+                </h2>
+                <div className="space-y-1">
+                  {globalSearchResults.map((user) => (
+                    <div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all">
+                      <div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0">
+                        <Avatar className="w-full h-full border-2 border-white">
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900">{user.nickname}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (
+              <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                  <MessageSquare className="w-8 h-8 text-gray-200" />
+                </div>
+                <p className="text-sm text-gray-400 font-bold leading-relaxed">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

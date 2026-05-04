@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, Trash2, Loader2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useAnimation } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { formatDistanceToNow } from 'date-fns';
@@ -26,15 +26,102 @@ interface Notification {
   };
 }
 
+const SWIPE_THRESHOLD = 40;
+const SNAP_OPEN = -80;
+
+interface SwipeItemProps {
+  notif: Notification;
+  isOpen: boolean;
+  onOpen: (id: string) => void;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+  onClick: (notif: Notification) => void;
+  getNotificationText: (notif: Notification) => string;
+}
+
+const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
+  notif,
+  isOpen,
+  onOpen,
+  onClose,
+  onDelete,
+  onClick,
+  getNotificationText,
+}) => {
+  const x = useMotionValue(0);
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start({ x: isOpen ? SNAP_OPEN : 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+  }, [isOpen, controls]);
+
+  const handleDragEnd = (_: any, info: any) => {
+    const offset = info.offset.x;
+    const velocity = info.velocity.x;
+
+    if (offset < -SWIPE_THRESHOLD || velocity < -300) {
+      controls.start({ x: SNAP_OPEN, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      onOpen(notif.id);
+    } else {
+      controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      onClose();
+    }
+  };
+
+  return (
+    <div className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(notif.id);
+          }}
+          className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"
+        >
+          <Trash2 className="w-6 h-6" />
+          <span className="text-[10px] font-bold">삭제</span>
+        </button>
+      </div>
+
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: SNAP_OPEN, right: 0 }}
+        dragElastic={0.05}
+        style={{ x }}
+        animate={controls}
+        onDragEnd={handleDragEnd}
+        className={cn(
+          "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer bg-white active:bg-gray-50 transition-colors"
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick(notif);
+        }}
+      >
+        <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
+          <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
+          <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 text-sm leading-tight">
+          <span className="font-bold">{notif.actor?.nickname || '알 수 없는 사용자'}</span>
+          <span className="text-gray-700"> {getNotificationText(notif)}</span>
+          <span className="text-[10px] text-gray-400 ml-2 block mt-1">
+            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
+          </span>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const Notifications = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [swipedId, setSwipedId] = useState<string | null>(null);
-  const hasLoaded = useRef(false); // 데이터 초기 로딩 여부 플래그
+  const hasLoaded = useRef(false);
 
-  // 뒤로가기 핸들러 (애니메이션 포함)
   const handleBack = useCallback(() => {
     navigate('/', { 
       replace: true, 
@@ -43,7 +130,7 @@ const Notifications = () => {
   }, [navigate]);
 
   useEffect(() => {
-    const handleOpenWrite = () => {}; // Notifications 페이지에서는 WritePost를 열지 않음
+    const handleOpenWrite = () => {};
     window.addEventListener('open-write-post', handleOpenWrite);
     return () => window.removeEventListener('open-write-post', handleOpenWrite);
   }, []);
@@ -52,7 +139,6 @@ const Notifications = () => {
     if (!authUser) return;
     
     try {
-      // [Optimized] select('*') → 필요한 컬럼만 + limit 추가 (오래된 알림 무한 누적 방지)
       const { data: notifs, error: notifError } = await supabase
         .from('notifications')
         .select('id, type, actor_id, post_id, content, created_at, is_read')
@@ -83,7 +169,6 @@ const Notifications = () => {
 
         setNotifications(combinedNotifs);
 
-        // 읽음 처리: 초기 로딩 시에만 실행하여 무한 루프 방지
         if (!hasLoaded.current) {
           await supabase
             .from('notifications')
@@ -91,7 +176,6 @@ const Notifications = () => {
             .eq('user_id', authUser.id)
             .eq('is_read', false);
             
-          // ✅ [수정] 헤더의 알림 뱃지 카운트를 즉시 0으로 갱신하기 위한 이벤트 발생
           window.dispatchEvent(new CustomEvent('refresh-unread-counts'));
         }
       } else {
@@ -108,16 +192,8 @@ const Notifications = () => {
   useEffect(() => {
     if (!authUser) return;
 
-    // 초기 데이터 로딩
     fetchNotifications();
 
-    /**
-     * ✅ 전역 NotificationProvider(global-badge 채널)가 notifications 변경을 감지하면
-     *    'refresh-unread-counts' 이벤트를 발생시킴.
-     *    Notifications 페이지는 그 이벤트를 받아 목록을 다시 fetch.
-     *    → 별도 Realtime 채널 없이 동일한 실시간 효과 달성.
-     *    채널 수: 2개 → 1개 유지
-     */
     const handleRefresh = () => fetchNotifications();
     window.addEventListener('refresh-unread-counts', handleRefresh);
 
@@ -172,7 +248,6 @@ const Notifications = () => {
       onClick={() => setSwipedId(null)}
     >
       <div className="pt-16">
-        {/* 내부 헤더 - 글로벌 헤더 바로 아래에 위치 */}
         <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
           <button
             onClick={handleBack}
@@ -194,60 +269,18 @@ const Notifications = () => {
             <div className="py-4">
               <div className="flex flex-col">
                 <AnimatePresence initial={false}>
-                  {notifications.map((notif) => {
-                    const isSwiped = swipedId === notif.id;
-                    return (
-                      <div key={notif.id} className="relative group overflow-hidden">
-                        <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notif.id);
-                            }}
-                            className="text-white flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                          >
-                            <Trash2 className="w-6 h-6" />
-                            <span className="text-[10px] font-bold">삭제</span>
-                          </button>
-                        </div>
-
-                        <motion.div
-                          drag="x"
-                          dragConstraints={{ left: -80, right: 0 }}
-                          dragElastic={0.1}
-                          animate={{ x: isSwiped ? -80 : 0 }}
-                          onDragEnd={(_, info) => {
-                            if (info.offset.x < -40) {
-                              setSwipedId(notif.id);
-                            } else {
-                              setSwipedId(null);
-                            }
-                          }}
-                          className={cn(
-                            "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer active:bg-gray-50 transition-colors",
-                            notif.is_read ? "bg-white" : "bg-white"
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleNotifClick(notif);
-                          }}
-                        >
-                          <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
-                            <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
-
-                            <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 text-sm leading-tight">
-                            <span className="font-bold">{notif.actor?.nickname || '알 수 없는 사용자'}</span>
-                            <span className="text-gray-700"> {getNotificationText(notif)}</span>
-                            <span className="text-[10px] text-gray-400 ml-2 block mt-1">
-                              {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
-                            </span>
-                          </div>
-                        </motion.div>
-                      </div>
-                    );
-                  })}
+                  {notifications.map((notif) => (
+                    <SwipeNotificationItem
+                      key={notif.id}
+                      notif={notif}
+                      isOpen={swipedId === notif.id}
+                      onOpen={(id) => setSwipedId(id)}
+                      onClose={() => setSwipedId(null)}
+                      onDelete={deleteNotification}
+                      onClick={handleNotifClick}
+                      getNotificationText={getNotificationText}
+                    />
+                  ))}
                 </AnimatePresence>
                 {notifications.length === 0 && (
                   <div className="py-20 flex flex-col items-center justify-center text-center px-10">
