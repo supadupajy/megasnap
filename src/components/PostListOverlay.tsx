@@ -425,8 +425,8 @@ const PostListOverlay = ({
         duration: 0.35, 
         ease: [0.32, 0.72, 0, 1] 
       }}
-      style={{ willChange: 'transform' }}
-      className="fixed inset-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
+      style={{ willChange: 'transform', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
+      className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
     >
       {/* Header */}
       <div className="shrink-0 bg-white">
@@ -453,9 +453,13 @@ const PostListOverlay = ({
   
 
       {/* List Content */}
-      <div 
+      <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden bg-white pb-40 custom-scrollbar touch-pan-y"
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-white custom-scrollbar touch-pan-y overscroll-contain"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: '24px'
+        }}
       >
         {posts.length > 0 ? (
           <div className="flex flex-col">
