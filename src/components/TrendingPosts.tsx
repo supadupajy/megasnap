@@ -550,11 +550,19 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     }
   }, [isExpanded, posts.length, handleScroll]);
 
-  // isExpanded 전환 시 WebKit이 overscrollBehavior를 즉시 인식하도록 DOM에 직접 강제 적용
+  // isExpanded 전환 시 body/html 레벨 overscroll 잠금 (Chrome compositor 레벨 차단)
   useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    el.style.overscrollBehavior = 'none';
+    if (isExpanded) {
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overscrollBehavior = 'none';
+    } else {
+      document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overscrollBehavior = '';
+    }
+    return () => {
+      document.body.style.overscrollBehavior = '';
+      document.documentElement.style.overscrollBehavior = '';
+    };
   }, [isExpanded]);
 
   // 패널이 펼쳐졌을 때 패널 전체의 터치 이벤트가 맵으로 전파되지 않도록 차단
