@@ -242,7 +242,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
       // NEW
       return (
         <div className="flex items-center justify-center shrink-0 w-9">
-          <span className="text-[9px] font-black text-white bg-rose-500 px-1.5 py-0.5 rounded-md leading-tight tracking-wide">
+          <span className="inline-flex items-center justify-center text-[9px] font-black text-white bg-rose-500 px-1.5 rounded-md tracking-wide" style={{ height: '18px', lineHeight: 1 }}>
             NEW
           </span>
         </div>
@@ -250,17 +250,23 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
     }
     if (rankChange > 0) {
       return (
-        <div className="flex flex-col items-center justify-center shrink-0 w-9 gap-0">
-          <ArrowUp className="w-3 h-3 text-emerald-500 shrink-0" />
+        <div className="flex items-center justify-center shrink-0 w-9 gap-1">
+          {/* 위쪽 채워진 삼각형 */}
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 0L10 8H0L5 0Z" fill="#10b981"/>
+          </svg>
           <span className="text-[10px] font-black text-emerald-500 leading-none">{rankChange}</span>
         </div>
       );
     }
     if (rankChange < 0) {
       return (
-        <div className="flex flex-col items-center justify-center shrink-0 w-9 gap-0">
-          <ArrowDown className="w-3 h-3 text-rose-400 shrink-0" />
-          <span className="text-[10px] font-black text-rose-400 leading-none">{Math.abs(rankChange)}</span>
+        <div className="flex items-center justify-center shrink-0 w-9 gap-1">
+          {/* 아래쪽 채워진 삼각형 */}
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 8L0 0H10L5 8Z" fill="#f43f5e"/>
+          </svg>
+          <span className="text-[10px] font-black text-rose-500 leading-none">{Math.abs(rankChange)}</span>
         </div>
       );
     }
