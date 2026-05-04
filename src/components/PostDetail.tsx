@@ -731,18 +731,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             
             <div className="relative flex-1 flex flex-col min-h-0">
               <div
-                className="relative w-full h-full flex items-center justify-center pointer-events-none transition-all duration-500"
+                className="relative flex-1 min-h-0 flex flex-col pointer-events-none transition-all duration-500"
                 style={{
                   paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
                   transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
                 }}
               >
-                <div className="w-full h-full relative pointer-events-auto">
+                <div className="flex-1 min-h-0 relative pointer-events-auto">
                   {isAd ? (
                     /* ===== 광고 포스트 ===== */
                     <div className="ad-post-wrapper w-full h-full">
                       <div className="ad-post-inner w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-                        <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
+                        <div className="flex-1 min-h-0 flex flex-col relative bg-white">
                           {/* 헤더 */}
                           <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
@@ -767,7 +767,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             </div>
                           </div>
 
-                          <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
+                          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                             <div className="flex flex-col">
                               <div className="px-4 mt-2">
                                 {renderMediaArea()}
@@ -792,7 +792,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                   ) : (
                     /* ===== 일반 포스트 ===== */
                     <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-                      <div className="flex-1 h-full overflow-hidden flex flex-col relative bg-white">
+                      <div className="flex-1 min-h-0 flex flex-col relative bg-white">
                         {/* 헤더 */}
                         <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                           <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
@@ -816,7 +816,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           </div>
                         </div>
 
-                        <div ref={scrollContainerRef} className="flex-1 h-full overflow-y-auto no-scrollbar overscroll-contain">
+                        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                           <div className="flex flex-col">
                             <div className="px-4 mt-2">
                               {renderMediaArea()}
