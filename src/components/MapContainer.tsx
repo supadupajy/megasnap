@@ -1081,9 +1081,13 @@ const MapContainer = ({
         if (!pos) return;
         // containerPointFromCoords: 지도 컨테이너 기준 픽셀 좌표 (화면 픽셀과 1:1 대응)
         const pt = proj.containerPointFromCoords(pos);
-        if (!pt) return;
+        if (!pt) {
+          console.log('[MapContainer] containerPointFromCoords returned null for id:', id.slice(0,8));
+          return;
+        }
+        console.log('[MapContainer] marker coord id=' + id.slice(0,8) + ' px=' + Math.round(pt.x) + ' py=' + Math.round(pt.y));
         markerInfos.push({ id, overlay, px: pt.x, py: pt.y });
-      } catch (e) {}
+      } catch (e) { console.log('[MapContainer] coord error:', e); }
     });
 
     // Union-Find 기반 그룹핑: 실제로 겹치는(THRESHOLD 이내) 마커끼리만 같은 그룹으로 묶음
@@ -1124,7 +1128,8 @@ const MapContainer = ({
     console.log('[MapContainer] badge update - total markers:', markerInfos.length, 'groups:', groups.length);
     groups.forEach(g => {
       if (g.length >= 2) {
-        console.log('[MapContainer] overlap group size=' + g.length + ':', g.map(m => ({ id: m.id.slice(0,8), px: Math.round(m.px), py: Math.round(m.py) })));
+        const info = g.map(m => ({ id: m.id.slice(0,8), px: Math.round(m.px), py: Math.round(m.py) }));
+        console.log('[MapContainer] overlap group size=' + g.length + ':', JSON.stringify(info));
       }
     });
 
