@@ -678,7 +678,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           "flex flex-col relative transition-opacity duration-300 overflow-hidden",
           isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        style={maxHeight ? { maxHeight: `calc(${maxHeight} - 56px)` } : {}}
+        style={{ overscrollBehavior: 'none', ...(maxHeight ? { maxHeight: `calc(${maxHeight} - 56px)` } : {}) }}
       >
         {/* 광고 구좌 (DB 연동) */}
         <TrendingAdBanner />
@@ -686,8 +686,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 relative"
-          style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'contain', touchAction: 'pan-y' }}
+          className="flex-1 overflow-y-scroll no-scrollbar py-2 px-3 space-y-2 relative"
+          style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
         >
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
