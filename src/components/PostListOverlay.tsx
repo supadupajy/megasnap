@@ -429,19 +429,27 @@ const PostListOverlay = ({
       className="fixed inset-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
     >
       {/* Header */}
-<div className="relative flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0 bg-white sticky top-0 z-10">
-  <div />
-  <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-    <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
-    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
-  </div>
-  <button
-    onClick={onClose}
-    className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-  >
-    <ChevronDown className="w-6 h-6" />
-  </button>
-</div>
+      <div className="shrink-0 bg-white">
+        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                <LayoutGrid className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+            >
+              <ChevronDown className="w-5 h-5 text-indigo-600" />
+            </button>
+          </div>
+        </div>
+      </div>
   
 
       {/* List Content */}
