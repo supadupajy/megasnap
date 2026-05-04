@@ -33,8 +33,9 @@
     margin: 0;
     padding: 0;
     background-color: white;
-    /* iOS Safari가 user-scalable=no를 무시하므로 CSS로 페이지 줌 차단 */
-    touch-action: pan-x pan-y;
+    /* iOS Safari 페이지 전체 스크롤/bounce 완전 차단 */
+    touch-action: none;
+    overscroll-behavior: none;
   }
 }
 
@@ -80,6 +81,21 @@
 .map-container {
   /* 지도는 전체를 채우되 컨트롤들은 SafeArea 안으로 들어오게 설정 */
   height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+}
+
+/* 지도 영역: 터치 허용 (드래그/줌) */
+#kakao-map {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* 스크롤 가능한 영역: 수직 스크롤 허용 */
+.scroll-area-touch {
+  touch-action: pan-y;
+}
+
+/* 모든 요소 overscroll 차단 */
+* {
+  overscroll-behavior: none;
 }
 
 .marker-container {
@@ -331,7 +347,7 @@
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; touch-action: pan-y; }
 
 /* ── 롱프레스 마커 숨김 UI ─────────────────────────────── */
 
