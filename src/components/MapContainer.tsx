@@ -1057,12 +1057,29 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!map || !kakao?.maps) return;
 
-    const THRESHOLD = 65; // 마커 크기(60px) + 여유 5px
     const validPostIds = new Set(postsRef.current.map(p => p.id));
 
-    // pointFromCoords: 현재 뷰포트 기준 실제 화면 픽셀 좌표 반환
-    // (containerPointFromCoords는 지도 전체 타일 기준 절대 픽셀이라 드래그 후 좌표 오차 발생)
-    const proj = map.getProjection();
+    // getBounds() + 컨테이너 크기로 직접 픽셀 좌표 계산
+    // pointFromCoords/containerPointFromCoords는 메르카토르 절대 픽셀이라
+    // 드래그 후 뷰포트 오프셋 불일치 발생 → getBounds 방식이 항상 정확
+    const bounds = map.getBounds();
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const mapEl = containerRef.current;
+    if (!mapEl) return;
+
+    const mapW = mapEl.offsetWidth;
+    const mapH = mapEl.offsetHeight;
+    const latRange = ne.getLat() - sw.getLat();
+    const lngRange = ne.getLng() - sw.getLng();
+    if (latRange === 0 || lngRange === 0) return;
+
+    const toPixel = (lat: number, lng: number) => ({
+      x: ((lng - sw.getLng()) / lngRange) * mapW,
+      y: (1 - (lat - sw.getLat()) / latRange) * mapH,
+    });
+
+    const THRESHOLD = 65; // 마커 크기(60px) + 여유 5px
 
     type MarkerInfo = { id: string; overlay: any; px: number; py: number };
     const markerInfos: MarkerInfo[] = [];
@@ -1075,9 +1092,8 @@ const MapContainer = ({
       try {
         const pos = overlay.getPosition();
         if (!pos) return;
-        const pt = proj.pointFromCoords(pos);
-        if (!pt) return;
-        markerInfos.push({ id, overlay, px: pt.x, py: pt.y });
+        const { x, y } = toPixel(pos.getLat(), pos.getLng());
+        markerInfos.push({ id, overlay, px: x, py: y });
       } catch (e) {}
     });
 
