@@ -554,7 +554,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    el.style.overscrollBehavior = 'none';
+    el.style.overscrollBehavior = 'contain';
   }, [isExpanded]);
 
   // 패널이 펼쳐졌을 때 패널 전체의 터치 이벤트가 맵으로 전파되지 않도록 차단
@@ -562,53 +562,16 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
+    // passive: true — preventDefault 없이 stopPropagation만으로 맵 전파 차단
+    // 바운스 제어는 CSS overscrollBehavior: contain이 전담
     const blockTouch = (e: TouchEvent) => {
       if (!isExpandedRef.current) return;
       e.stopPropagation();
-
-      // 멀티터치(핀치줌 등) 차단
-      if (e.touches.length > 1) {
-        e.preventDefault();
-        return;
-      }
-
-      const listEl = listRef.current;
-      if (listEl && listEl.contains(e.target as Node)) {
-        const startY = (listEl as any)._touchStartY;
-        if (startY == null) return;
-
-        // 항상 touchstart 기준으로 delta 계산 (touchmove 내부에서 덮어쓰지 않음)
-        const deltaY = e.touches[0].clientY - startY;
-        const atTop = listEl.scrollTop <= 0;
-        const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
-
-        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
-          e.preventDefault();
-        }
-      } else {
-        // 리스트 외부(헤더, 광고 등)는 항상 preventDefault
-        e.preventDefault();
-      }
     };
 
-    // 어디서 터치를 시작하든 항상 저장 (헤더→리스트 슬라이드 대응)
-    const saveStartY = (e: TouchEvent) => {
-      (listRef.current as any)._touchStartY = e.touches[0].clientY;
-    };
-
-    const clearStartY = () => {
-      (listRef.current as any)._touchStartY = null;
-    };
-
-    container.addEventListener('touchstart', saveStartY, { passive: true });
-    container.addEventListener('touchend', clearStartY, { passive: true });
-    container.addEventListener('touchcancel', clearStartY, { passive: true });
-    container.addEventListener('touchmove', blockTouch, { passive: false });
+    container.addEventListener('touchmove', blockTouch, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', saveStartY);
-      container.removeEventListener('touchend', clearStartY);
-      container.removeEventListener('touchcancel', clearStartY);
       container.removeEventListener('touchmove', blockTouch);
     };
   }, []);
@@ -737,7 +700,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           ref={listRef}
           className="flex-1 overflow-y-scroll no-scrollbar py-2 px-3 space-y-2 relative"
           data-trending-scroll="true"
-          style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
+          style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'contain', touchAction: 'pan-y' }}
         >
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
