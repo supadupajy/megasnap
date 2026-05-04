@@ -54,6 +54,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
+  // X버튼으로 닫는 중임을 표시 (popstate 핸들러에서 중복 onClose 방지)
+  const isClosingByButtonRef = useRef(false);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -61,16 +64,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     history.pushState({ postDetailOpen: true }, '');
 
     const handlePopState = () => {
+      // X버튼으로 닫는 중이면 popstate 무시 (이미 onClose 호출됨)
+      if (isClosingByButtonRef.current) {
+        isClosingByButtonRef.current = false;
+        return;
+      }
       onCloseRef.current?.();
     };
+
+    // Index.tsx의 handleClosePostDetail에서 history.back() 호출 전에 이 이벤트를 발송
+    // → popstate 핸들러에서 중복 onClose 호출을 방지
+    const handleCloseByButton = () => {
+      isClosingByButtonRef.current = true;
+    };
+
     window.addEventListener('popstate', handlePopState);
+    window.addEventListener('post-detail-close-by-button', handleCloseByButton);
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      // cleanup에서는 history.back()을 절대 호출하지 않음
-      // → history.back()이 popstate를 트리거해 onClose가 재호출되는 무한루프 방지
-      // 더미 히스토리 항목은 사용자가 실제로 뒤로가기를 누를 때만 pop됨
-      // (모달을 X버튼으로 닫으면 더미 항목이 남지만, 다음 뒤로가기에서 자연스럽게 처리됨)
+      window.removeEventListener('post-detail-close-by-button', handleCloseByButton);
     };
   }, [isOpen]);
 
