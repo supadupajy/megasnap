@@ -1057,18 +1057,11 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!map || !kakao?.maps) return;
 
-    // 마커 이미지 크기(60px) 기준 - 두 마커의 지도 좌표 기준점(앵커) 간 거리가 이 이하면 겹침으로 판단
-    const THRESHOLD = 60; // px
-
-    // 현재 필터된 posts ID 집합 (카테고리/특수필터 적용 후 실제 표시해야 할 마커만)
+    // 현재 필터된 posts ID 집합
     const validPostIds = new Set(postsRef.current.map(p => p.id));
 
-    // 지도 컨테이너 기준 픽셀 좌표 변환 함수
-    // kakao.maps.Map.getProjection().containerPointFromCoords() 사용
-    // → 지도 컨테이너 내 픽셀 좌표 반환 (화면 스크롤/위치 무관)
-    const proj = map.getProjection();
-
-    type MarkerInfo = { id: string; overlay: any; px: number; py: number };
+    // 위경도 기반으로 마커 위치 수집 (픽셀 좌표는 줌 레벨/타일 기준 오차 발생)
+    type MarkerInfo = { id: string; overlay: any; lat: number; lng: number };
     const markerInfos: MarkerInfo[] = [];
 
     overlaysRef.current.forEach((overlay, id) => {
@@ -1079,22 +1072,16 @@ const MapContainer = ({
       try {
         const pos = overlay.getPosition();
         if (!pos) return;
-        // containerPointFromCoords: 지도 컨테이너 기준 픽셀 좌표 (화면 픽셀과 1:1 대응)
-        const pt = proj.containerPointFromCoords(pos);
-        if (!pt) return;
-        // 화면 밖 마커 제외: 컨테이너 영역(0~width, 0~height) 밖이면 겹침 계산 불필요
-        const mapEl = containerRef.current;
-        if (mapEl) {
-          const w = mapEl.offsetWidth;
-          const h = mapEl.offsetHeight;
-          if (pt.x < -60 || pt.x > w + 60 || pt.y < -60 || pt.y > h + 60) return;
-        }
-        markerInfos.push({ id, overlay, px: pt.x, py: pt.y });
+        markerInfos.push({ id, overlay, lat: pos.getLat(), lng: pos.getLng() });
       } catch (e) {}
     });
 
-    // Union-Find 기반 그룹핑: 실제로 겹치는(THRESHOLD 이내) 마커끼리만 같은 그룹으로 묶음
-    // 그리디 방식의 체이닝 문제(A-B 겹침 + B-C 겹침 → A,B,C 한 그룹) 방지
+    // 줌 레벨에 따른 위경도 겹침 임계값
+    // 레벨 3(가장 확대) → 작은 임계값, 레벨 6(축소) → 큰 임계값
+    const level = map.getLevel();
+    const LAT_LNG_THRESHOLD = 0.0003 * Math.pow(2, level - 3);
+
+    // Union-Find 기반 그룹핑
     const parent = new Map<string, string>();
     const find = (id: string): string => {
       if (parent.get(id) !== id) parent.set(id, find(parent.get(id)!));
@@ -1110,9 +1097,9 @@ const MapContainer = ({
       for (let j = i + 1; j < markerInfos.length; j++) {
         const a = markerInfos[i];
         const b = markerInfos[j];
-        const dx = a.px - b.px;
-        const dy = a.py - b.py;
-        if (Math.sqrt(dx * dx + dy * dy) <= THRESHOLD) {
+        const dLat = Math.abs(a.lat - b.lat);
+        const dLng = Math.abs(a.lng - b.lng);
+        if (dLat < LAT_LNG_THRESHOLD && dLng < LAT_LNG_THRESHOLD) {
           union(a.id, b.id);
         }
       }
@@ -1127,15 +1114,13 @@ const MapContainer = ({
     }
     const groups = Array.from(groupMap.values());
 
-
-    // 모든 마커에서 기존 배지 제거 (data-badge-count로 변경 여부 확인)
-    // 그룹별로 대표 마커(최소 Y) 선정 후 배지 추가
+    // 그룹별 대표 마커 선정: 위도가 가장 큰(화면 최상단) 마커
     const representativeIds = new Set<string>();
 
     for (const group of groups) {
       if (group.length < 2) continue;
-      // Y 픽셀이 가장 작은 마커 = 화면 최상단
-      const rep = group.reduce((a, b) => (a.py < b.py ? a : b));
+      // 위도가 가장 큰 마커 = 지도에서 가장 위쪽
+      const rep = group.reduce((a, b) => (a.lat > b.lat ? a : b));
       representativeIds.add(rep.id);
     }
 
