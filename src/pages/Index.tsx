@@ -1504,7 +1504,7 @@ const Index = () => {
             onClick={() => setIsTrendingExpanded(false)}
           >
             <div className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 7rem)' }}>              
-              <span className="text-white/80 text-sm font-bold tracking-tight drop-shadow-md">여기를 눌러 닫기</span>
+              <span className="text-white/80 text-sm font-bold tracking-tight drop-shadow-md">여기를 눌러도 닫힙니다</span>
             </div>
           </motion.div>
         )}
