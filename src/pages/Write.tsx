@@ -623,7 +623,7 @@ const Write = () => {
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                   </div>
                   <Textarea
-                    placeholder="이 장소에서의 추억을 기록해보세요..."
+                    placeholder="이 장소에서의 추억을 기록해보세요."
                     className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-bold placeholder:font-normal focus-visible:ring-2 focus-visible:ring-indigo-600"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
