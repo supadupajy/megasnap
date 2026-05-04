@@ -374,14 +374,17 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     setImgError(false);
   }, [post.image_url, post.image]);
 
-  // 컨텐츠가 실제로 잘렸는지 DOM 높이로 감지
+  // 컨텐츠가 실제로 잘렸는지 DOM 높이로 감지 (여러 타이밍에 측정)
   useEffect(() => {
     if (contentExpanded) return;
-    const el = contentRef.current;
-    if (!el) return;
-    requestAnimationFrame(() => {
+    const check = () => {
+      const el = contentRef.current;
+      if (!el) return;
       setIsContentClamped(el.scrollHeight > el.clientHeight + 2);
-    });
+    };
+    const t1 = setTimeout(check, 50);
+    const t2 = setTimeout(check, 200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [content, contentExpanded]);
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {

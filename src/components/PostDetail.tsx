@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
 import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,6 +103,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
   const contentRef = useRef<HTMLParagraphElement>(null);
+
+  // contentRef가 마운트된 후 실제로 잘렸는지 감지
+  const checkClamped = useCallback(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    setIsContentClamped(el.scrollHeight > el.clientHeight + 2);
+  }, []);
 
   useEffect(() => {
     if (!isOpen && !isDeleteDialogOpen) {
