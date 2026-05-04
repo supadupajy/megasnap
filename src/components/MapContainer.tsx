@@ -1062,12 +1062,17 @@ const MapContainer = ({
 
     const THRESHOLD = 62; // px - 마커 크기(60px) 기준
 
+    // 현재 필터된 posts ID 집합 (카테고리/특수필터 적용 후 실제 표시해야 할 마커만)
+    const validPostIds = new Set(postsRef.current.map(p => p.id));
+
     // 현재 지도에 표시된 마커들의 픽셀 좌표 수집
     type MarkerInfo = { id: string; overlay: any; px: number; py: number };
     const markerInfos: MarkerInfo[] = [];
 
     overlaysRef.current.forEach((overlay, id) => {
       if (overlay.getMap() === null) return;
+      // 현재 필터에 포함되지 않는 마커는 카운트에서 제외
+      if (!validPostIds.has(id)) return;
       // 사라지는 애니메이션 중인 마커는 카운트에서 제외
       const content = overlay.getContent() as HTMLElement;
       if (content && content.classList.contains('marker-disappear-animation')) return;
@@ -1118,8 +1123,8 @@ const MapContainer = ({
       if (overlay.getMap() === null) return;
       const content = overlay.getContent() as HTMLElement;
       if (!content) return;
-      // 사라지는 애니메이션 중인 마커는 배지 제거
-      if (content.classList.contains('marker-disappear-animation')) {
+      // 현재 필터에 포함되지 않거나 사라지는 애니메이션 중인 마커는 배지 제거
+      if (!validPostIds.has(id) || content.classList.contains('marker-disappear-animation')) {
         const existingBadge = Array.from(content.children).find(
           el => el.classList.contains('overlap-badge')
         ) as HTMLElement | undefined;
