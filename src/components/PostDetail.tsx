@@ -101,6 +101,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
+  const [isContentClamped, setIsContentClamped] = useState(false);
+  const contentRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
     if (!isOpen && !isDeleteDialogOpen) {
@@ -184,6 +186,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       setIsSaved(currentPost.isSaved || false);
       setShowComments(false);
       setContentExpanded(false);
+      setIsContentClamped(false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
 
       const checkSaveStatus = async () => {
@@ -222,6 +225,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (videoContainerRef.current) observer.observe(videoContainerRef.current);
     return () => observer.disconnect();
   }, [currentPostIndex, isOpen, posts]);
+
+  useEffect(() => {
+    if (!contentExpanded && contentRef.current) {
+      const el = contentRef.current;
+      // RAF로 렌더 후 측정
+      requestAnimationFrame(() => {
+        setIsContentClamped(el.scrollHeight > el.clientHeight + 2);
+      });
+    }
+  }, [currentPostIndex, contentExpanded, isOpen]);
 
   const isValidUrl = (url: any) => {
     if (typeof url !== 'string') return false;
@@ -796,8 +809,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <div className="flex gap-2 items-start">
                                   <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
                                   <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
-                                    <p className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
-                                    {!contentExpanded && currentPost.content && currentPost.content.length > 60 && (
+                                    <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
+                                    {!contentExpanded && isContentClamped && (
                                       <button
                                         onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
                                         className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
@@ -855,8 +868,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               <div className="flex gap-2 items-start">
                                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
                                 <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
-                                  <p className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
-                                  {!contentExpanded && currentPost.content && currentPost.content.length > 60 && (
+                                  <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
+                                  {!contentExpanded && isContentClamped && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
                                       className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"

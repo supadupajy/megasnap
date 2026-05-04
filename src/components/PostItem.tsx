@@ -79,6 +79,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [showComments, setShowComments] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
+  const [isContentClamped, setIsContentClamped] = useState(false);
+  const contentRef = useRef<HTMLParagraphElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -372,6 +374,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     setImgError(false);
   }, [post.image_url, post.image]);
 
+  // 컨텐츠가 실제로 잘렸는지 DOM 높이로 감지
+  useEffect(() => {
+    if (contentExpanded) return;
+    const el = contentRef.current;
+    if (!el) return;
+    requestAnimationFrame(() => {
+      setIsContentClamped(el.scrollHeight > el.clientHeight + 2);
+    });
+  }, [content, contentExpanded]);
+
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('[PostItem] Like button clicked for post:', post.id);
@@ -612,8 +624,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                   <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
-                  {!contentExpanded && content && content.length > 60 && (
+                  <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
+                  {!contentExpanded && isContentClamped && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
                       className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
@@ -725,8 +737,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
-                {!contentExpanded && content && content.length > 60 && (
+                <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
+                {!contentExpanded && isContentClamped && (
                   <button
                     onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
                     className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
