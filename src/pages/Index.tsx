@@ -1419,7 +1419,7 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/30 backdrop-blur-xl rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-lg active:scale-90 transition-all disabled:opacity-40 disabled:grayscale border border-white/50">
+                <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/20 backdrop-blur-2xl rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-lg shadow-black/10 active:scale-90 transition-all disabled:bg-white/10 disabled:text-indigo-400/60 disabled:shadow-none border border-white/60">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
                   <span className="text-[9px] font-black mt-1">새로고침</span>
                 </button>
