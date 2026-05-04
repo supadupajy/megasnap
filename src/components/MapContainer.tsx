@@ -1068,6 +1068,9 @@ const MapContainer = ({
 
     overlaysRef.current.forEach((overlay, id) => {
       if (overlay.getMap() === null) return;
+      // 사라지는 애니메이션 중인 마커는 카운트에서 제외
+      const content = overlay.getContent() as HTMLElement;
+      if (content && content.classList.contains('marker-disappear-animation')) return;
       try {
         const pos = overlay.getPosition();
         if (!pos) return;
@@ -1115,6 +1118,14 @@ const MapContainer = ({
       if (overlay.getMap() === null) return;
       const content = overlay.getContent() as HTMLElement;
       if (!content) return;
+      // 사라지는 애니메이션 중인 마커는 배지 제거
+      if (content.classList.contains('marker-disappear-animation')) {
+        const existingBadge = Array.from(content.children).find(
+          el => el.classList.contains('overlap-badge')
+        ) as HTMLElement | undefined;
+        if (existingBadge) existingBadge.remove();
+        return;
+      }
 
       // content 직접 자식 중 overlap-badge만 찾음 (querySelector는 하위 전체 탐색이라 제외)
       const existingBadge = Array.from(content.children).find(
@@ -1204,10 +1215,15 @@ const MapContainer = ({
   }, [isMapReady, scheduleOverlapBadgeUpdate]);
 
   // posts 변경(마커 추가/제거) 시에도 재계산
+  // 마커 제거 애니메이션(520ms) 완료 후 한 번 더 실행하여 카테고리 필터 변경 시 정확한 카운트 반영
   useEffect(() => {
     if (!isMapReady) return;
     scheduleOverlapBadgeUpdate();
-  }, [posts, isMapReady, scheduleOverlapBadgeUpdate]);
+    const timer = setTimeout(() => {
+      updateOverlapBadges();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [posts, isMapReady, scheduleOverlapBadgeUpdate, updateOverlapBadges]);
 
   // ── 비디오 마커 썸네일 비동기 추출 및 마커 img 교체 ──────────
   // ref에 함수를 저장해서 마커 생성 useEffect에서 항상 최신 함수를 참조할 수 있게 함
