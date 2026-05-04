@@ -33,7 +33,7 @@ const ShutterOverlay = forwardRef<ShutterOverlayHandle>((_, ref) => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           markerEls.forEach(el => {
-            el.style.transition = 'filter 700ms cubic-bezier(0.25, 0.1, 0.25, 1)';
+            el.style.transition = 'filter 350ms cubic-bezier(0.25, 0.1, 0.25, 1)';
             el.style.filter = 'brightness(1) saturate(1)';
           });
 
@@ -43,7 +43,7 @@ const ShutterOverlay = forwardRef<ShutterOverlayHandle>((_, ref) => {
               el.style.transition = '';
               el.style.filter = '';
             });
-          }, 700);
+          }, 350);
         });
       });
 
@@ -51,7 +51,7 @@ const ShutterOverlay = forwardRef<ShutterOverlayHandle>((_, ref) => {
       setTimeout(() => {
         isActiveRef.current = false;
         onDone();
-      }, 750);
+      }, 400);
     }
   }));
 
