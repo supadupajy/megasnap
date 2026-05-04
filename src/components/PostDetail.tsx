@@ -156,7 +156,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     const handleViewport = () => {
       const offsetTop = vp.offsetTop ?? 0;
       const heightDiff = window.innerHeight - vp.height - offsetTop;
-      setKeyboardHeight(heightDiff > 100 ? heightDiff : 0);
+      setKeyboardHeight(heightDiff > 50 ? heightDiff : 0);
     };
     vp.addEventListener('resize', handleViewport);
     vp.addEventListener('scroll', handleViewport);
@@ -756,7 +756,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
               left: 0,
               right: 0,
-              bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
+              bottom: keyboardHeight > 0
+                ? `${keyboardHeight}px`
+                : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
+              transition: 'bottom 0.2s ease-out',
             }}
           >
             <VisuallyHidden.Root>
@@ -765,13 +768,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             </VisuallyHidden.Root>
             
             <div className="relative flex-1 flex flex-col min-h-0">
-              <div
-                className="relative flex-1 min-h-0 flex flex-col pointer-events-none transition-all duration-500"
-                style={{
-                  paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
-                  transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
-                }}
-              >
+              <div className="relative flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 min-h-0 relative pointer-events-auto">
                   {isAd ? (
                     /* ===== 광고 포스트 ===== */
