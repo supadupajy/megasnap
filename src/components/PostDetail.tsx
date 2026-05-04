@@ -57,6 +57,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   // X버튼으로 닫는 중임을 표시 (popstate 핸들러에서 중복 onClose 방지)
   const isClosingByButtonRef = useRef(false);
 
+  // ── window 플래그: App.tsx Capacitor backButton 핸들러에서 참조 ──
+  useEffect(() => {
+    (window as any).__isPostDetailOpen = isOpen;
+    return () => {
+      if (isOpen) (window as any).__isPostDetailOpen = false;
+    };
+  }, [isOpen]);
+
+  // ── Capacitor 뒤로가기 버튼 이벤트 수신 (App.tsx에서 발송) ──
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleCloseByBack = () => {
+      onCloseRef.current?.();
+    };
+    window.addEventListener('close-post-detail-by-back', handleCloseByBack);
+    return () => window.removeEventListener('close-post-detail-by-back', handleCloseByBack);
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 

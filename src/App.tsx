@@ -132,22 +132,29 @@ const AnimatedRoutes = () => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       console.log('[App] Back button pressed. Path:', location.pathname);
 
-      // 1순위: window 플래그로 PostListOverlay 열림 여부를 즉시 확인 (타이밍 이슈 없음)
+      // 1순위: PostDetail이 열려 있으면 닫기
+      if ((window as any).__isPostDetailOpen === true) {
+        console.log('[App] Intercepting back button to close PostDetail');
+        window.dispatchEvent(new CustomEvent('close-post-detail-by-back'));
+        return;
+      }
+
+      // 2순위: window 플래그로 PostListOverlay 열림 여부를 즉시 확인 (타이밍 이슈 없음)
       if (location.pathname === '/' && (window as any).__isPostListOpen === true) {
         console.log('[App] Intercepting back button to close PostListOverlay');
         window.dispatchEvent(new CustomEvent('close-post-list-overlay'));
         return;
       }
 
-      // 2순위: 메인 페이지(지도)인 경우 종료 팝업
+      // 3순위: 메인 페이지(지도)인 경우 종료 팝업
       if (location.pathname === '/') {
         setShowExitDialog(true);
       } 
-      // 3순위: 그 외 페이지는 이전 페이지로
+      // 4순위: 그 외 페이지는 이전 페이지로
       else if (canGoBack) {
         window.history.back();
       } 
-      // 4순위: 히스토리가 없으면 메인으로
+      // 5순위: 히스토리가 없으면 메인으로
       else {
         navigate('/');
       }
