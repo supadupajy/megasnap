@@ -166,7 +166,7 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
 // ── 순위 변동 추적 유틸 ──────────────────────────────────────
 const RANK_STORAGE_KEY = 'trending_prev_ranks';
 const RANK_STORAGE_TS_KEY = 'trending_prev_ranks_ts';
-const RANK_REFRESH_INTERVAL = 60 * 1000; // 1분마다 이전 순위 갱신
+const RANK_REFRESH_INTERVAL = 5 * 60 * 1000; // 5분마다 이전 순위 갱신
 
 interface PrevRankMap {
   [postId: string]: number;
@@ -454,13 +454,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [prevRanks, setPrevRanks] = useState<PrevRankMap>(() => loadPrevRanks());
   const prevRanksRef = useRef<PrevRankMap>(prevRanks);
 
-  // posts가 바뀔 때마다 이전 순위 갱신 (5분 간격)
+  // 최초 마운트 시 이전 순위 초기화 (1회만)
   useEffect(() => {
     if (posts.length === 0) return;
     const now = Date.now();
     const lastTs = getPrevRankTimestamp();
-    // 처음 로드이거나 5분이 지났으면 현재 순위를 이전 순위로 저장
-    if (lastTs === 0 || now - lastTs > RANK_REFRESH_INTERVAL) {
+    // 처음 로드(lastTs === 0)이면 현재 순위를 이전 순위로 저장
+    if (lastTs === 0) {
       const newMap: PrevRankMap = {};
       posts.forEach((p: any) => {
         if (p.rank != null) newMap[p.id] = p.rank;
@@ -475,7 +475,25 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       prevRanksRef.current = loaded;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts.length]);
+  }, []);
+
+  // 5분 주기로 현재 순위를 이전 순위로 갱신 (posts 내용이 바뀌어도 타이머 기준으로만 갱신)
+  useEffect(() => {
+    if (posts.length === 0) return;
+    const now = Date.now();
+    const lastTs = getPrevRankTimestamp();
+    if (lastTs !== 0 && now - lastTs > RANK_REFRESH_INTERVAL) {
+      const newMap: PrevRankMap = {};
+      posts.forEach((p: any) => {
+        if (p.rank != null) newMap[p.id] = p.rank;
+      });
+      savePrevRanks(newMap);
+      setPrevRanks(newMap);
+      prevRanksRef.current = newMap;
+    }
+  // posts 배열 내용이 바뀔 때마다 체크 (length 변화 포함)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts]);
 
   // rankChange 계산 함수
   const getRankChange = (post: Post & { rank: number }): RankChange => {
