@@ -1057,31 +1057,32 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!map || !kakao?.maps) return;
 
-    const projection = map.getProjection();
-    if (!projection) return;
-
-    const THRESHOLD = 62; // px - 마커 크기(60px) 기준
+    // 마커 이미지 크기(60px) 기준 - 두 마커의 지도 좌표 기준점(앵커) 간 거리가 이 이하면 겹침으로 판단
+    const THRESHOLD = 60; // px
 
     // 현재 필터된 posts ID 집합 (카테고리/특수필터 적용 후 실제 표시해야 할 마커만)
     const validPostIds = new Set(postsRef.current.map(p => p.id));
 
-    // 현재 지도에 표시된 마커들의 픽셀 좌표 수집
+    // 지도 컨테이너 기준 픽셀 좌표 변환 함수
+    // kakao.maps.Map.getProjection().containerPointFromCoords() 사용
+    // → 지도 컨테이너 내 픽셀 좌표 반환 (화면 스크롤/위치 무관)
+    const proj = map.getProjection();
+
     type MarkerInfo = { id: string; overlay: any; px: number; py: number };
     const markerInfos: MarkerInfo[] = [];
 
     overlaysRef.current.forEach((overlay, id) => {
       if (overlay.getMap() === null) return;
-      // 현재 필터에 포함되지 않는 마커는 카운트에서 제외
       if (!validPostIds.has(id)) return;
-      // 사라지는 애니메이션 중인 마커는 카운트에서 제외
       const content = overlay.getContent() as HTMLElement;
       if (content && content.classList.contains('marker-disappear-animation')) return;
       try {
         const pos = overlay.getPosition();
         if (!pos) return;
-        const point = projection.pointFromCoords(pos);
-        if (!point) return;
-        markerInfos.push({ id, overlay, px: point.x, py: point.y });
+        // containerPointFromCoords: 지도 컨테이너 기준 픽셀 좌표 (화면 픽셀과 1:1 대응)
+        const pt = proj.containerPointFromCoords(pos);
+        if (!pt) return;
+        markerInfos.push({ id, overlay, px: pt.x, py: pt.y });
       } catch (e) {}
     });
 
@@ -1118,6 +1119,14 @@ const MapContainer = ({
       groupMap.get(root)!.push(m);
     }
     const groups = Array.from(groupMap.values());
+
+    // 디버그: 그룹 정보 로그 (겹침 여부 확인용)
+    console.log('[MapContainer] badge update - total markers:', markerInfos.length, 'groups:', groups.length);
+    groups.forEach(g => {
+      if (g.length >= 2) {
+        console.log('[MapContainer] overlap group size=' + g.length + ':', g.map(m => ({ id: m.id.slice(0,8), px: Math.round(m.px), py: Math.round(m.py) })));
+      }
+    });
 
     // 모든 마커에서 기존 배지 제거 (data-badge-count로 변경 여부 확인)
     // 그룹별로 대표 마커(최소 Y) 선정 후 배지 추가
