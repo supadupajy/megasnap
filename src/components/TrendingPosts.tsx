@@ -557,7 +557,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         const listEl = listRef.current;
         if (listEl && listEl.contains(e.target as Node)) {
           const touch = e.touches[0];
-          const startY = (listEl as any)._touchStartY ?? touch.clientY;
+          // _touchStartY가 없으면 현재 위치로 초기화 (첫 touchmove 대응)
+          if ((listEl as any)._touchStartY == null) {
+            (listEl as any)._touchStartY = touch.clientY;
+          }
+          const startY = (listEl as any)._touchStartY as number;
           const deltaY = touch.clientY - startY;
           const atTop = listEl.scrollTop <= 0;
           const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
@@ -579,11 +583,22 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       }
     };
 
+    const clearStartY = (e: TouchEvent) => {
+      const listEl = listRef.current;
+      if (listEl) {
+        (listEl as any)._touchStartY = null;
+      }
+    };
+
     container.addEventListener('touchstart', saveStartY, { passive: true });
+    container.addEventListener('touchend', clearStartY, { passive: true });
+    container.addEventListener('touchcancel', clearStartY, { passive: true });
     container.addEventListener('touchmove', blockTouch, { passive: false });
 
     return () => {
       container.removeEventListener('touchstart', saveStartY);
+      container.removeEventListener('touchend', clearStartY);
+      container.removeEventListener('touchcancel', clearStartY);
       container.removeEventListener('touchmove', blockTouch);
     };
   }, [isExpanded]);
