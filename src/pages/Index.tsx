@@ -10,7 +10,7 @@ import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
 import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
-import { RefreshCw, Navigation, Search, SlidersHorizontal, Check, X } from 'lucide-react';
+import { RefreshCw, Navigation, Search, Check, X } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getFallbackImage } from '@/lib/utils';
 
@@ -1398,7 +1398,19 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute left-4 z-20 flex flex-col gap-2 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
               >
-                <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><SlidersHorizontal className="w-6 h-6" /></button>
+                <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <line x1="4" y1="6" x2="11" y2="6" />
+                    <circle cx="13.5" cy="6" r="2" />
+                    <line x1="15.5" y1="6" x2="20" y2="6" />
+                    <line x1="4" y1="12" x2="7" y2="12" />
+                    <circle cx="9.5" cy="12" r="2" />
+                    <line x1="11.5" y1="12" x2="20" y2="12" />
+                    <line x1="4" y1="18" x2="15" y2="18" />
+                    <circle cx="17.5" cy="18" r="2" />
+                    <line x1="19.5" y1="18" x2="20" y2="18" />
+                  </svg>
+                </button>
                 <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Search className="w-6 h-6" /></button>
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-indigo-600 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Navigation className="w-6 h-6 fill-indigo-600" /></button>
               </div>
