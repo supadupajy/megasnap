@@ -10,8 +10,6 @@ import {
   ChevronRight,
   Languages,
   Database,
-  RefreshCw,
-  MapPin,
   Megaphone,
   Tv2,
   Bug,
@@ -34,7 +32,6 @@ import { useAuth } from '@/components/AuthProvider';
 import { showSuccess, showError, showLoading, dismissToast, showInfo } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { deletePostsInBounds } from '@/utils/post-admin';
 
 import {
   AlertDialog,
@@ -113,7 +110,6 @@ const Settings = () => {
   const navigate = useNavigate();
   const { signOut, user, profile } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showBugReport, setShowBugReport] = useState(false);
@@ -140,29 +136,6 @@ const Settings = () => {
     await signOut();
     showSuccess('로그아웃 되었습니다.');
     navigate('/login');
-  };
-
-
-  const handleDeleteInView = async () => {
-    const storedBounds = localStorage.getItem('map_bounds');
-    if (!storedBounds) {
-      showError('지도를 한 번 이상 확인해야 삭제 범위를 알 수 있습니다.');
-      return;
-    }
-    setIsProcessing(true);
-    const toastId = showLoading('현재 화면 내 포스팅을 삭제 중...');
-    try {
-      const bounds = JSON.parse(storedBounds);
-      const count = await deletePostsInBounds(bounds);
-      dismissToast(toastId);
-      showSuccess(`현재 화면 범위 내 ${count}개의 포스팅이 삭제되었습니다. 🗑️`);
-    } catch (err: any) {
-      dismissToast(toastId);
-      showError(`삭제 실패: ${err.message || '알 수 없는 오류'}`);
-    } finally {
-      setIsProcessing(false);
-      setShowDeleteConfirm(false);
-    }
   };
 
   const handleBugReport = async () => {
@@ -388,23 +361,6 @@ const Settings = () => {
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
               </button>
-
-              <button 
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={isProcessing}
-                className="w-full flex items-center justify-between py-3 px-4 hover:bg-rose-50 active:bg-rose-100 transition-colors last:border-none disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-100 text-rose-600">
-                    <RefreshCw className="w-5 h-5" />
-                  </div>
-                  <div className="flex flex-col items-start text-left">
-                    <span className="text-sm font-bold text-rose-600">현재 화면 내 포스팅 일괄 삭제</span>
-                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">지도의 현재 영역에 있는 모든 데이터를 DB에서 영구 삭제합니다.</span>
-                  </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
-              </button>
             </div>
           </div>
         )}
@@ -498,21 +454,6 @@ const Settings = () => {
           <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
             <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
             <AlertDialogAction onClick={handleSignOut} className="flex-1 h-12 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-600 shadow-lg shadow-red-100 transition-all m-0">로그아웃</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
-          <AlertDialogHeader className="space-y-3">
-            <AlertDialogTitle className="text-center text-xl font-black text-gray-900">데이터 일괄 삭제</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed">
-              현재 화면 범위 내의 모든 포스팅이 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-row gap-3 mt-6 sm:justify-center">
-            <AlertDialogCancel className="flex-1 h-12 rounded-2xl border-none bg-gray-100 text-gray-900 font-bold hover:bg-gray-200 transition-all m-0">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteInView} className="flex-1 h-12 rounded-2xl bg-rose-500 text-white font-bold hover:bg-rose-600 shadow-lg shadow-rose-100 transition-all m-0">삭제 실행</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
