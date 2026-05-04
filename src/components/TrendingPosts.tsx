@@ -242,7 +242,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
       // NEW
       return (
         <div className="flex items-center justify-center shrink-0 w-9">
-          <span className="inline-flex items-center justify-center text-[9px] font-black text-white bg-rose-500 px-1.5 rounded-md tracking-wide" style={{ height: '18px', lineHeight: 1 }}>
+          <span className="inline-flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 px-1.5 rounded-md tracking-wide" style={{ height: '18px', lineHeight: '18px' }}>
             NEW
           </span>
         </div>
