@@ -70,7 +70,8 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed bottom-[160px] left-4 z-[70] bg-white rounded-[28px] shadow-2xl border border-gray-100 p-4 w-60"
+            style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
+            className="fixed left-4 z-[70] bg-white rounded-[28px] shadow-2xl border border-gray-100 p-4 w-60"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest">필터 설정</span>
