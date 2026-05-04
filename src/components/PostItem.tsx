@@ -432,6 +432,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     commentInputRef.current?.focus({ preventScroll: true });
   };
 
+  const handleCommentInputFocus = () => {
+    // 키보드가 올라올 때 브라우저 기본 scrollIntoView를 'nearest'로 제한
+    // (기본값 'center'로 포스팅 전체가 위로 크게 밀리는 현상 방지)
+    setTimeout(() => {
+      commentInputRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    }, 100);
+  };
+
   const confirmDelete = () => {
     setIsDeleteDialogOpen(false);
     // 다음 tick에서 실행해 Radix AlertDialog cleanup이 먼저 완료되도록 함
@@ -639,7 +647,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 </div>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
+                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
                 <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                   <Send className="w-4 h-4" />
                 </button>
@@ -752,7 +760,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               </div>
             </div>
             <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
+              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
               <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                 <Send className="w-4 h-4" />
               </button>
