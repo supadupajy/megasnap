@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, Trash2, Loader2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { motion, AnimatePresence, useMotionValue, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { formatDistanceToNow } from 'date-fns';
@@ -28,6 +28,7 @@ interface Notification {
 
 const SWIPE_THRESHOLD = 40;
 const SNAP_OPEN = -80;
+const SPRING = { type: 'spring' as const, stiffness: 400, damping: 35 };
 
 interface SwipeItemProps {
   notif: Notification;
@@ -49,21 +50,28 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
   getNotificationText,
 }) => {
   const x = useMotionValue(0);
-  const controls = useAnimation();
+  const isMounted = useRef(false);
 
   useEffect(() => {
-    controls.start({ x: isOpen ? SNAP_OPEN : 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
-  }, [isOpen, controls]);
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  // isOpen 변경 시 스냅 애니메이션
+  useEffect(() => {
+    if (!isMounted.current) return;
+    animate(x, isOpen ? SNAP_OPEN : 0, SPRING);
+  }, [isOpen, x]);
 
   const handleDragEnd = (_: any, info: any) => {
     const offset = info.offset.x;
     const velocity = info.velocity.x;
 
     if (offset < -SWIPE_THRESHOLD || velocity < -300) {
-      controls.start({ x: SNAP_OPEN, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      animate(x, SNAP_OPEN, SPRING);
       onOpen(notif.id);
     } else {
-      controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      animate(x, 0, SPRING);
       onClose();
     }
   };
@@ -88,11 +96,8 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
         dragConstraints={{ left: SNAP_OPEN, right: 0 }}
         dragElastic={0.05}
         style={{ x }}
-        animate={controls}
         onDragEnd={handleDragEnd}
-        className={cn(
-          "relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer bg-white active:bg-gray-50 transition-colors"
-        )}
+        className="relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer bg-white active:bg-gray-50 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           onClick(notif);

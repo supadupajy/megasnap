@@ -3,13 +3,12 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, Search, Edit, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { showError, showSuccess } from '@/utils/toast';
-import { motion, AnimatePresence, useMotionValue, useAnimation } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import DeleteChatDialog from '@/components/DeleteChatDialog';
 import { searchProfilesByNickname } from '@/utils/profile-search';
@@ -28,6 +27,7 @@ interface Conversation {
 
 const SWIPE_THRESHOLD = 40;
 const SNAP_OPEN = -80;
+const SPRING = { type: 'spring' as const, stiffness: 400, damping: 35 };
 
 interface SwipeConvItemProps {
   conv: Conversation;
@@ -49,27 +49,35 @@ const SwipeConversationItem: React.FC<SwipeConvItemProps> = ({
   onProfileNavigate,
 }) => {
   const x = useMotionValue(0);
-  const controls = useAnimation();
+  const isMounted = useRef(false);
 
   useEffect(() => {
-    controls.start({ x: isOpen ? SNAP_OPEN : 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
-  }, [isOpen, controls]);
+    isMounted.current = true;
+    return () => { isMounted.current = false; };
+  }, []);
+
+  // isOpen 변경 시 스냅 애니메이션
+  useEffect(() => {
+    if (!isMounted.current) return;
+    animate(x, isOpen ? SNAP_OPEN : 0, SPRING);
+  }, [isOpen, x]);
 
   const handleDragEnd = (_: any, info: any) => {
     const offset = info.offset.x;
     const velocity = info.velocity.x;
 
     if (offset < -SWIPE_THRESHOLD || velocity < -300) {
-      controls.start({ x: SNAP_OPEN, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      animate(x, SNAP_OPEN, SPRING);
       onOpen(conv.other_id);
     } else {
-      controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 35 } });
+      animate(x, 0, SPRING);
       onClose();
     }
   };
 
   const time = new Date(conv.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const isOnline = conv.profile.last_seen && (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 10;
+  const isOnline = conv.profile.last_seen &&
+    (new Date().getTime() - new Date(conv.profile.last_seen).getTime()) / (1000 * 60) < 10;
 
   return (
     <div className="relative overflow-hidden">
@@ -88,7 +96,6 @@ const SwipeConversationItem: React.FC<SwipeConvItemProps> = ({
         dragConstraints={{ left: SNAP_OPEN, right: 0 }}
         dragElastic={0.05}
         style={{ x }}
-        animate={controls}
         onDragEnd={handleDragEnd}
         onClick={() => { if (!isOpen) onNavigate(conv.other_id); }}
         className="relative bg-white flex items-center gap-4 py-4 px-1 cursor-pointer z-10"
@@ -177,7 +184,13 @@ const Messages = () => {
       for (const room of localRooms) {
         if (!convMap.has(room.id) && room.messages.length > 0) {
           const lastMsg = room.messages[room.messages.length - 1];
-          convMap.set(room.id, { other_id: room.id, last_message: lastMsg.text, created_at: new Date().toISOString(), unread_count: room.unread ? 1 : 0, profile: { nickname: room.user.name, avatar_url: room.user.avatar } });
+          convMap.set(room.id, {
+            other_id: room.id,
+            last_message: lastMsg.text,
+            created_at: new Date().toISOString(),
+            unread_count: room.unread ? 1 : 0,
+            profile: { nickname: room.user.name, avatar_url: room.user.avatar }
+          });
         }
       }
       const convList = Array.from(convMap.values());
@@ -267,26 +280,42 @@ const Messages = () => {
   const filteredConversations = useMemo(() => {
     const lowerQuery = query.toLowerCase().trim();
     if (!lowerQuery) return conversations;
-    return conversations.filter(conv => conv.profile.nickname?.toLowerCase().includes(lowerQuery) || conv.last_message.toLowerCase().includes(lowerQuery));
+    return conversations.filter(conv =>
+      conv.profile.nickname?.toLowerCase().includes(lowerQuery) ||
+      conv.last_message.toLowerCase().includes(lowerQuery)
+    );
   }, [query, conversations]);
 
-  const handleStartChat = (user: any) => { chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url); navigate(`/chat/${user.id}`); };
-  const handleDeleteClick = (e: React.MouseEvent, otherId: string) => { e.stopPropagation(); setDeleteTargetId(otherId); setIsDeleteDialogOpen(true); };
+  const handleStartChat = (user: any) => {
+    chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
+    navigate(`/chat/${user.id}`);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, otherId: string) => {
+    e.stopPropagation();
+    setDeleteTargetId(otherId);
+    setIsDeleteDialogOpen(true);
+  };
+
   const confirmDelete = async () => {
     if (!authUser || !deleteTargetId) return;
     try {
-      await supabase.from('messages').delete().or(`and(sender_id.eq.${authUser.id},receiver_id.eq.${deleteTargetId}),and(sender_id.eq.${deleteTargetId},receiver_id.eq.${authUser.id})`);
+      await supabase.from('messages').delete().or(
+        `and(sender_id.eq.${authUser.id},receiver_id.eq.${deleteTargetId}),and(sender_id.eq.${deleteTargetId},receiver_id.eq.${authUser.id})`
+      );
       setConversations(prev => prev.filter(c => c.other_id !== deleteTargetId));
       setSwipedId(null);
       showSuccess('대화가 삭제되었습니다.');
-    } catch (err) { showError('대화 삭제 중 오류가 발생했습니다.'); } finally { setIsDeleteDialogOpen(false); setDeleteTargetId(null); }
+    } catch (err) {
+      showError('대화 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+    }
   };
 
   const handleBack = () => {
-    navigate('/', { 
-      replace: true, 
-      state: { direction: 'back' } 
-    });
+    navigate('/', { replace: true, state: { direction: 'back' } });
   };
 
   return (
@@ -324,13 +353,19 @@ const Messages = () => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
-              {isSearchingGlobal && <div className="absolute right-4 top-1/2 -translate-y-1/2"><Loader2 className="w-4 h-4 text-indigo-600 animate-spin" /></div>}
+              {isSearchingGlobal && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                </div>
+              )}
             </div>
           </div>
           
           <div className="space-y-6 px-4 pt-4">
             <div className="space-y-4">
-              <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">{query ? '대화 목록 검색 결과' : '최근 메시지'}</h2>
+              <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
+                {query ? '대화 목록 검색 결과' : '최근 메시지'}
+              </h2>
               <div className="divide-y divide-gray-50 border-t border-gray-50">
                 <AnimatePresence initial={false}>
                   {filteredConversations.map((conv) => (
@@ -348,6 +383,7 @@ const Messages = () => {
                 </AnimatePresence>
               </div>
             </div>
+
             {query.trim() && globalSearchResults.length > 0 && (
               <div className="space-y-4 pt-2 border-t border-gray-50">
                 <h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2">
@@ -355,7 +391,11 @@ const Messages = () => {
                 </h2>
                 <div className="space-y-1">
                   {globalSearchResults.map((user) => (
-                    <div key={user.id} onClick={() => handleStartChat(user)} className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all">
+                    <div
+                      key={user.id}
+                      onClick={() => handleStartChat(user)}
+                      className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"
+                    >
                       <div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0">
                         <Avatar className="w-full h-full border-2 border-white">
                           <AvatarImage src={user.avatar_url} />
@@ -371,18 +411,25 @@ const Messages = () => {
                 </div>
               </div>
             )}
+
             {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (
               <div className="py-20 flex flex-col items-center justify-center text-center px-10">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                   <MessageSquare className="w-8 h-8 text-gray-200" />
                 </div>
-                <p className="text-sm text-gray-400 font-bold leading-relaxed">{query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}</p>
+                <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                  {query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}
+                </p>
               </div>
             )}
           </div>
         </div>
       </div>
-      <DeleteChatDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
+      <DeleteChatDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 };
