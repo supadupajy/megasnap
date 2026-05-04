@@ -719,19 +719,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             </VisuallyHidden.Root>
             
             <div className="relative flex-1 flex flex-col min-h-0">
-              {/* 닫기 버튼 */}
-              <div className="absolute top-0 left-0 right-0 z-50 flex items-start justify-end px-4 pt-7 pointer-events-none">
-                <div className="flex items-center gap-2 pointer-events-auto">
-                  <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 active:scale-90 transition-all">
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-
               <div
                 className="relative w-full h-full flex items-center justify-center pointer-events-none transition-all duration-500"
                 style={{
-                  paddingTop: '0px',
+                  paddingTop: 'env(safe-area-inset-top, 0px)',
                   paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
                   transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
                 }}
@@ -757,9 +748,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}
+                              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
+                                <X className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
 
@@ -803,9 +797,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                             {renderDropdownMenu()}
+                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
 
