@@ -723,7 +723,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           )}
 
           {/* 상단 스톱바 (1위 위) */}
-          <div className="h-[3px] rounded-full mx-1 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
+          <div className="h-[3px] rounded-full mx-8 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
 
           {posts.map((post) => (
             <TrendingPostItem
@@ -736,7 +736,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           ))}
 
           {/* 하단 스톱바 (20위 아래) */}
-          <div className="h-[3px] rounded-full mx-1 mt-1" style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
+          <div className="h-[3px] rounded-full mx-8 mt-1" style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
         </div>
 
         {isExpanded && posts.length > 5 && showScrollDownArrow && (
