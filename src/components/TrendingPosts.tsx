@@ -219,7 +219,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
   const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
   const borderType = post.borderType || 'none';
-  let borderColor = 'border-gray-100';
+  let borderColor = 'border-white/40';
   let borderThickness = 'border';
 
   if (borderType === 'popular') {
@@ -282,7 +282,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
     <div
       key={post.id}
       onClick={() => onPostClick(post)}
-      className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
+      className="flex items-center gap-3 p-2 rounded-2xl hover:bg-white/30 active:scale-[0.98] transition-all cursor-pointer group"
     >
       <div className="w-6 text-center shrink-0">
         <span className={cn(
@@ -294,7 +294,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
       </div>
 
       <div className={cn(
-        "relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50",
+        "relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-white/30",
         borderThickness,
         borderColor
       )}>
@@ -331,7 +331,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
       {renderRankChange()}
 
       {isHot && (
-        <div className="w-6 h-6 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+        <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0">
           <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
         </div>
       )}
@@ -346,8 +346,8 @@ const TrendingAdBanner: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="px-5 py-1 border-b border-gray-100">
-        <div className="h-24 rounded-2xl bg-gray-100 animate-pulse" />
+      <div className="px-5 py-1 border-b border-white/30">
+        <div className="h-24 rounded-2xl bg-white/20 animate-pulse" />
       </div>
     );
   }
@@ -358,7 +358,7 @@ const TrendingAdBanner: React.FC = () => {
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {
     return (
-      <div className="px-5 py-1 border-b border-gray-100">
+      <div className="px-5 py-1 border-b border-white/30">
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -392,7 +392,7 @@ const TrendingAdBanner: React.FC = () => {
   }
 
   return (
-    <div className="px-5 py-1 border-b border-gray-100">
+    <div className="px-5 py-1 border-b border-white/30">
       <div
         onClick={(e) => {
           e.stopPropagation();
@@ -574,7 +574,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div
       ref={containerRef}
       className={cn(
-        "bg-white/95 backdrop-blur-xl rounded-[32px] transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-white/50",
+        "bg-white/30 backdrop-blur-2xl rounded-[32px] transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.6)]",
         isExpanded ? (maxHeight ? "" : "max-h-[85vh]") : "max-h-[56px]"
       )}
       style={{
@@ -583,7 +583,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       }}
     >
       <div
-        className="h-[56px] flex items-center px-5 cursor-pointer active:bg-gray-50 transition-colors shrink-0"
+        className="h-[56px] flex items-center px-5 cursor-pointer active:bg-white/20 transition-colors shrink-0"
         onClick={onToggle}
       >
         {isLoading ? (
@@ -698,7 +698,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         >
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
-              <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
+              <div className="bg-white/40 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-white/60 animate-bounce pointer-events-auto">
                 <ChevronUp className="w-5 h-5 text-indigo-600" />
               </div>
             </div>
@@ -717,7 +717,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
         {isExpanded && posts.length > 5 && showScrollDownArrow && (
           <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
-            <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
+            <div className="bg-white/40 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-white/60 animate-bounce pointer-events-auto">
               <ChevronDown className="w-5 h-5 text-indigo-600" />
             </div>
           </div>
