@@ -554,7 +554,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    el.style.overscrollBehavior = 'contain';
+    el.style.overscrollBehavior = 'none';
   }, [isExpanded]);
 
   // 패널이 펼쳐졌을 때 패널 전체의 터치 이벤트가 맵으로 전파되지 않도록 차단
@@ -700,7 +700,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           ref={listRef}
           className="flex-1 overflow-y-scroll no-scrollbar py-2 px-3 space-y-2 relative"
           data-trending-scroll="true"
-          style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'contain', touchAction: 'pan-y' }}
+          style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
         >
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
