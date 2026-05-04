@@ -711,8 +711,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogPortal>
-          <DialogOverlay className="bg-black/40" />
-          <DialogPrimitive.Content className="fixed inset-0 z-50 max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+          <DialogOverlay
+            className="bg-black/40"
+            style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
+          />
+          <DialogPrimitive.Content
+            className="fixed z-50 max-w-[100vw] w-full p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            style={{
+              top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
+          >
             <VisuallyHidden.Root>
               <DialogTitle>포스트 상세 보기</DialogTitle>
               <DialogDescription>선택한 포스트의 상세 내용과 댓글을 확인할 수 있는 화면입니다.</DialogDescription>
@@ -722,7 +733,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               <div
                 className="relative w-full h-full flex items-center justify-center pointer-events-none transition-all duration-500"
                 style={{
-                  paddingTop: 'env(safe-area-inset-top, 0px)',
                   paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : '0px',
                   transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight / 2.5}px)` : 'translateY(0)'
                 }}
