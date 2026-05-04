@@ -233,15 +233,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     return () => observer.disconnect();
   }, [currentPostIndex, isOpen, posts]);
 
+  // Dialog 애니메이션 완료 후 여러 타이밍에 걸쳐 clamp 감지
   useEffect(() => {
-    if (!contentExpanded && contentRef.current) {
-      const el = contentRef.current;
-      // RAF로 렌더 후 측정
-      requestAnimationFrame(() => {
-        setIsContentClamped(el.scrollHeight > el.clientHeight + 2);
-      });
-    }
-  }, [currentPostIndex, contentExpanded, isOpen]);
+    if (!isOpen || contentExpanded) return;
+    setIsContentClamped(false);
+    const t1 = setTimeout(checkClamped, 100);
+    const t2 = setTimeout(checkClamped, 300);
+    const t3 = setTimeout(checkClamped, 600);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, [currentPostIndex, isOpen, contentExpanded, checkClamped]);
 
   const isValidUrl = (url: any) => {
     if (typeof url !== 'string') return false;
