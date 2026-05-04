@@ -1079,7 +1079,7 @@ const MapContainer = ({
       y: (1 - (lat - sw.getLat()) / latRange) * mapH,
     });
 
-    const THRESHOLD = 65; // 마커 크기(60px) + 여유 5px
+    const THRESHOLD = 40; // 마커 아이콘이 의미있게 겹치는 거리 (60px 마커 기준)
 
     type MarkerInfo = { id: string; overlay: any; px: number; py: number };
     const markerInfos: MarkerInfo[] = [];
@@ -1095,20 +1095,11 @@ const MapContainer = ({
         const lat = pos.getLat();
         const lng = pos.getLng();
         const { x, y } = toPixel(lat, lng);
-        // 마커 DOM의 실제 화면 위치도 함께 로그 (비교용)
-        let domX = -1, domY = -1;
-        if (content) {
-          const r = content.getBoundingClientRect();
-          const mapR = mapEl.getBoundingClientRect();
-          domX = r.left + r.width / 2 - mapR.left;
-          domY = r.top + r.height / 2 - mapR.top;
-        }
-        console.log('[overlap] id=' + id.slice(0,8) + ' lat=' + lat.toFixed(5) + ' lng=' + lng.toFixed(5) + ' calcPx=(' + Math.round(x) + ',' + Math.round(y) + ') domPx=(' + Math.round(domX) + ',' + Math.round(domY) + ')');
+        // 화면 밖 마커는 제외 (드래그/줌 직후 음수 좌표 방지)
+        if (x < -100 || y < -100 || x > mapW + 100 || y > mapH + 100) return;
         markerInfos.push({ id, overlay, px: x, py: y });
       } catch (e) {}
     });
-
-    console.log('[overlap] mapSize=(' + mapW + ',' + mapH + ') latRange=' + latRange.toFixed(5) + ' lngRange=' + lngRange.toFixed(5));
 
     // Union-Find 기반 그룹핑
     const parent = new Map<string, string>();
@@ -1129,7 +1120,6 @@ const MapContainer = ({
         const dx = a.px - b.px;
         const dy = a.py - b.py;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        console.log('[overlap] pair ' + a.id.slice(0,8) + ' <-> ' + b.id.slice(0,8) + ' dist=' + dist.toFixed(1) + ' (threshold=' + THRESHOLD + ')');
         if (dist <= THRESHOLD) {
           union(a.id, b.id);
         }
@@ -1144,12 +1134,6 @@ const MapContainer = ({
       groupMap.get(root)!.push(m);
     }
     const groups = Array.from(groupMap.values());
-
-    groups.forEach(g => {
-      if (g.length >= 2) {
-        console.log('[overlap] GROUP size=' + g.length + ' ids=' + g.map(m => m.id.slice(0,8)).join(','));
-      }
-    });
 
     // 그룹별 대표 마커: py가 가장 작은(화면 최상단) 마커
     const representativeIds = new Set<string>();
