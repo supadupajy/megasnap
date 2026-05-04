@@ -1145,18 +1145,45 @@ const Index = () => {
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);
 
-  // 트렌딩 패널 펼쳐질 때 body touch-action 차단 (iOS 오버스크롤 방지)
+  // 트렌딩 패널 펼쳐질 때 document 레벨 touchmove 완전 차단 (iOS/Android 오버스크롤 방지)
   useEffect(() => {
-    if (isTrendingExpanded) {
-      document.body.style.touchAction = 'none';
-      document.documentElement.style.touchAction = 'none';
-    } else {
-      document.body.style.touchAction = '';
-      document.documentElement.style.touchAction = '';
-    }
+    if (!isTrendingExpanded) return;
+
+    const preventTouchMove = (e: TouchEvent) => {
+      // TrendingPosts 리스트 스크롤 영역 내부 터치는 허용
+      const target = e.target as HTMLElement;
+      const scrollable = target.closest('[data-trending-scroll]');
+      if (scrollable) {
+        const el = scrollable as HTMLElement;
+        const atTop = el.scrollTop <= 0;
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+        // 경계에서만 차단
+        if (!atTop && !atBottom) return;
+        const touch = e.touches[0];
+        const startY = (el as any)._tStartY ?? touch.clientY;
+        const deltaY = touch.clientY - startY;
+        if (atTop && deltaY > 0) { e.preventDefault(); return; }
+        if (atBottom && deltaY < 0) { e.preventDefault(); return; }
+        return;
+      }
+      // 그 외 모든 영역은 완전 차단
+      e.preventDefault();
+    };
+
+    const saveStartY = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      const scrollable = target.closest('[data-trending-scroll]') as HTMLElement | null;
+      if (scrollable) {
+        (scrollable as any)._tStartY = e.touches[0].clientY;
+      }
+    };
+
+    document.addEventListener('touchstart', saveStartY, { passive: true });
+    document.addEventListener('touchmove', preventTouchMove, { passive: false });
+
     return () => {
-      document.body.style.touchAction = '';
-      document.documentElement.style.touchAction = '';
+      document.removeEventListener('touchstart', saveStartY);
+      document.removeEventListener('touchmove', preventTouchMove);
     };
   }, [isTrendingExpanded]);
 

@@ -687,6 +687,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         <div
           ref={listRef}
           className="flex-1 overflow-y-scroll no-scrollbar py-2 px-3 space-y-2 relative"
+          data-trending-scroll="true"
           style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
         >
           {isExpanded && showScrollUpArrow && (
