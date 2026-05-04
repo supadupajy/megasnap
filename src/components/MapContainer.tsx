@@ -1085,26 +1085,39 @@ const MapContainer = ({
       } catch (e) {}
     });
 
-    // 그리디 그룹핑
-    const visited = new Set<string>();
-    const groups: MarkerInfo[][] = [];
+    // Union-Find 기반 그룹핑: 실제로 겹치는(THRESHOLD 이내) 마커끼리만 같은 그룹으로 묶음
+    // 그리디 방식의 체이닝 문제(A-B 겹침 + B-C 겹침 → A,B,C 한 그룹) 방지
+    const parent = new Map<string, string>();
+    const find = (id: string): string => {
+      if (parent.get(id) !== id) parent.set(id, find(parent.get(id)!));
+      return parent.get(id)!;
+    };
+    const union = (a: string, b: string) => {
+      parent.set(find(a), find(b));
+    };
 
-    for (const marker of markerInfos) {
-      if (visited.has(marker.id)) continue;
-      const group: MarkerInfo[] = [marker];
-      visited.add(marker.id);
+    for (const m of markerInfos) parent.set(m.id, m.id);
 
-      for (const other of markerInfos) {
-        if (visited.has(other.id)) continue;
-        const dx = marker.px - other.px;
-        const dy = marker.py - other.py;
+    for (let i = 0; i < markerInfos.length; i++) {
+      for (let j = i + 1; j < markerInfos.length; j++) {
+        const a = markerInfos[i];
+        const b = markerInfos[j];
+        const dx = a.px - b.px;
+        const dy = a.py - b.py;
         if (Math.sqrt(dx * dx + dy * dy) <= THRESHOLD) {
-          group.push(other);
-          visited.add(other.id);
+          union(a.id, b.id);
         }
       }
-      groups.push(group);
     }
+
+    // 루트별로 그룹 구성
+    const groupMap = new Map<string, MarkerInfo[]>();
+    for (const m of markerInfos) {
+      const root = find(m.id);
+      if (!groupMap.has(root)) groupMap.set(root, []);
+      groupMap.get(root)!.push(m);
+    }
+    const groups = Array.from(groupMap.values());
 
     // 모든 마커에서 기존 배지 제거 (data-badge-count로 변경 여부 확인)
     // 그룹별로 대표 마커(최소 Y) 선정 후 배지 추가
