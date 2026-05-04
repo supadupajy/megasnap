@@ -523,46 +523,44 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   // 패널이 펼쳐졌을 때 패널 전체의 터치 이벤트가 맵으로 전파되지 않도록 차단
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || !isExpanded) return;
+    if (!container) return;
 
-    let startY = 0;
-
-    const onTouchStart = (e: TouchEvent) => {
-      startY = e.touches[0].clientY;
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const deltaY = e.touches[0].clientY - startY;
-      const listEl = listRef.current;
-
-      if (listEl && listEl.contains(e.target as Node)) {
-        // 리스트 내부: 경계에서만 차단
-        const atTop = listEl.scrollTop <= 0;
-        const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
-
-        if (atTop && deltaY > 0) {
-          // 맨 위에서 아래로 당기기 → 완전 차단
-          e.preventDefault();
-          e.stopPropagation();
-        } else if (atBottom && deltaY < 0) {
-          // 맨 아래에서 위로 당기기 → 완전 차단
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        // 그 외(정상 스크롤)는 통과
-      } else {
-        // 헤더/광고 등 리스트 외부 → 항상 차단
-        e.preventDefault();
+    const blockTouch = (e: TouchEvent) => {
+      // 패널이 펼쳐진 상태에서는 모든 touchmove를 차단
+      if (isExpanded) {
         e.stopPropagation();
+        // 리스트 스크롤 영역 내부인지 확인
+        const listEl = listRef.current;
+        if (listEl && listEl.contains(e.target as Node)) {
+          const touch = e.touches[0];
+          const startY = (listEl as any)._touchStartY ?? touch.clientY;
+          const deltaY = touch.clientY - startY;
+          const atTop = listEl.scrollTop <= 0;
+          const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
+          // 스크롤 경계에서만 preventDefault
+          if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+            e.preventDefault();
+          }
+        } else {
+          // 리스트 외부(헤더, 광고 등)는 항상 preventDefault
+          e.preventDefault();
+        }
       }
     };
 
-    container.addEventListener('touchstart', onTouchStart, { passive: true });
-    container.addEventListener('touchmove', onTouchMove, { passive: false });
+    const saveStartY = (e: TouchEvent) => {
+      const listEl = listRef.current;
+      if (listEl && listEl.contains(e.target as Node)) {
+        (listEl as any)._touchStartY = e.touches[0].clientY;
+      }
+    };
+
+    container.addEventListener('touchstart', saveStartY, { passive: true });
+    container.addEventListener('touchmove', blockTouch, { passive: false });
 
     return () => {
-      container.removeEventListener('touchstart', onTouchStart);
-      container.removeEventListener('touchmove', onTouchMove);
+      container.removeEventListener('touchstart', saveStartY);
+      container.removeEventListener('touchmove', blockTouch);
     };
   }, [isExpanded]);
 
@@ -688,8 +686,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 relative scroll-area-touch"
-          style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none' }}
+          className="flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-2 relative"
+          style={{ WebkitOverflowScrolling: 'touch', maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'contain', touchAction: 'pan-y' }}
         >
           {isExpanded && showScrollUpArrow && (
             <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
