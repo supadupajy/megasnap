@@ -562,16 +562,50 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // passive: true — preventDefault 없이 stopPropagation만으로 맵 전파 차단
-    // 바운스 제어는 CSS overscrollBehavior: contain이 전담
+    const saveStartY = (e: TouchEvent) => {
+      // 어디서 시작하든 항상 저장
+      (listRef.current as any)._touchStartY = e.touches[0].clientY;
+    };
+
     const blockTouch = (e: TouchEvent) => {
       if (!isExpandedRef.current) return;
       e.stopPropagation();
+
+      const listEl = listRef.current;
+      if (listEl && listEl.contains(e.target as Node)) {
+        const startY = (listEl as any)._touchStartY;
+        if (startY == null) {
+          e.preventDefault();
+          return;
+        }
+        const deltaY = e.touches[0].clientY - startY;
+        const atTop = listEl.scrollTop <= 0;
+        const atBottom =
+          listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
+
+        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+          e.preventDefault(); // 경계에서만 브라우저 기본동작 차단
+        }
+        // 중간 스크롤은 건드리지 않음 → 정상 스크롤 유지
+      } else {
+        // 헤더, 광고 영역은 항상 차단
+        e.preventDefault();
+      }
     };
 
-    container.addEventListener('touchmove', blockTouch, { passive: true });
+    const clearStartY = () => {
+      (listRef.current as any)._touchStartY = null;
+    };
+
+    container.addEventListener('touchstart', saveStartY, { passive: true });
+    container.addEventListener('touchend', clearStartY, { passive: true });
+    container.addEventListener('touchcancel', clearStartY, { passive: true });
+    container.addEventListener('touchmove', blockTouch, { passive: false }); // 반드시 false
 
     return () => {
+      container.removeEventListener('touchstart', saveStartY);
+      container.removeEventListener('touchend', clearStartY);
+      container.removeEventListener('touchcancel', clearStartY);
       container.removeEventListener('touchmove', blockTouch);
     };
   }, []);
