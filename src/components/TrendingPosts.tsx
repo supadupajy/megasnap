@@ -453,6 +453,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [prevRanks, setPrevRanks] = useState<PrevRankMap>(() => loadPrevRanks());
   const prevRanksRef = useRef<PrevRankMap>(prevRanks);
+  const isExpandedRef = useRef(isExpanded);
+
+  // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
+  useEffect(() => {
+    isExpandedRef.current = isExpanded;
+  }, [isExpanded]);
 
   // 최초 마운트 시 이전 순위 초기화 (1회만)
   useEffect(() => {
@@ -549,7 +555,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     const el = listRef.current;
     if (!el) return;
     el.style.overscrollBehavior = 'none';
-    (el.style as any).webkitOverflowScrolling = 'auto';
   }, [isExpanded]);
 
   // 패널이 펼쳐졌을 때 패널 전체의 터치 이벤트가 맵으로 전파되지 않도록 차단
@@ -558,44 +563,41 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     if (!container) return;
 
     const blockTouch = (e: TouchEvent) => {
-      // 패널이 펼쳐진 상태에서는 모든 touchmove를 차단
-      if (isExpanded) {
-        e.stopPropagation();
-        // 리스트 스크롤 영역 내부인지 확인
-        const listEl = listRef.current;
-        if (listEl && listEl.contains(e.target as Node)) {
-          const touch = e.touches[0];
-          // _touchStartY가 없으면 현재 위치로 초기화 (첫 touchmove 대응)
-          if ((listEl as any)._touchStartY == null) {
-            (listEl as any)._touchStartY = touch.clientY;
-          }
-          const startY = (listEl as any)._touchStartY as number;
-          const deltaY = touch.clientY - startY;
-          const atTop = listEl.scrollTop <= 0;
-          const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
-          // 스크롤 경계에서만 preventDefault
-          if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
-            e.preventDefault();
-          }
-        } else {
-          // 리스트 외부(헤더, 광고 등)는 항상 preventDefault
-          e.preventDefault();
-        }
-      }
-    };
+      if (!isExpandedRef.current) return;
+      e.stopPropagation();
 
-    const saveStartY = (e: TouchEvent) => {
+      // 멀티터치(핀치줌 등) 차단
+      if (e.touches.length > 1) {
+        e.preventDefault();
+        return;
+      }
+
       const listEl = listRef.current;
       if (listEl && listEl.contains(e.target as Node)) {
-        (listEl as any)._touchStartY = e.touches[0].clientY;
+        const startY = (listEl as any)._touchStartY;
+        if (startY == null) return;
+
+        // 항상 touchstart 기준으로 delta 계산 (touchmove 내부에서 덮어쓰지 않음)
+        const deltaY = e.touches[0].clientY - startY;
+        const atTop = listEl.scrollTop <= 0;
+        const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
+
+        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
+          e.preventDefault();
+        }
+      } else {
+        // 리스트 외부(헤더, 광고 등)는 항상 preventDefault
+        e.preventDefault();
       }
     };
 
-    const clearStartY = (e: TouchEvent) => {
-      const listEl = listRef.current;
-      if (listEl) {
-        (listEl as any)._touchStartY = null;
-      }
+    // 어디서 터치를 시작하든 항상 저장 (헤더→리스트 슬라이드 대응)
+    const saveStartY = (e: TouchEvent) => {
+      (listRef.current as any)._touchStartY = e.touches[0].clientY;
+    };
+
+    const clearStartY = () => {
+      (listRef.current as any)._touchStartY = null;
     };
 
     container.addEventListener('touchstart', saveStartY, { passive: true });
@@ -609,7 +611,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       container.removeEventListener('touchcancel', clearStartY);
       container.removeEventListener('touchmove', blockTouch);
     };
-  }, [isExpanded]);
+  }, []);
 
   return (
     <div
