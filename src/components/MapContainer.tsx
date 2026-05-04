@@ -1081,13 +1081,16 @@ const MapContainer = ({
         if (!pos) return;
         // containerPointFromCoords: 지도 컨테이너 기준 픽셀 좌표 (화면 픽셀과 1:1 대응)
         const pt = proj.containerPointFromCoords(pos);
-        if (!pt) {
-          console.log('[MapContainer] containerPointFromCoords returned null for id:', id.slice(0,8));
-          return;
+        if (!pt) return;
+        // 화면 밖 마커 제외: 컨테이너 영역(0~width, 0~height) 밖이면 겹침 계산 불필요
+        const mapEl = containerRef.current;
+        if (mapEl) {
+          const w = mapEl.offsetWidth;
+          const h = mapEl.offsetHeight;
+          if (pt.x < -60 || pt.x > w + 60 || pt.y < -60 || pt.y > h + 60) return;
         }
-        console.log('[MapContainer] marker coord id=' + id.slice(0,8) + ' px=' + Math.round(pt.x) + ' py=' + Math.round(pt.y));
         markerInfos.push({ id, overlay, px: pt.x, py: pt.y });
-      } catch (e) { console.log('[MapContainer] coord error:', e); }
+      } catch (e) {}
     });
 
     // Union-Find 기반 그룹핑: 실제로 겹치는(THRESHOLD 이내) 마커끼리만 같은 그룹으로 묶음
@@ -1124,14 +1127,6 @@ const MapContainer = ({
     }
     const groups = Array.from(groupMap.values());
 
-    // 디버그: 그룹 정보 로그 (겹침 여부 확인용)
-    console.log('[MapContainer] badge update - total markers:', markerInfos.length, 'groups:', groups.length);
-    groups.forEach(g => {
-      if (g.length >= 2) {
-        const info = g.map(m => ({ id: m.id.slice(0,8), px: Math.round(m.px), py: Math.round(m.py) }));
-        console.log('[MapContainer] overlap group size=' + g.length + ':', JSON.stringify(info));
-      }
-    });
 
     // 모든 마커에서 기존 배지 제거 (data-badge-count로 변경 여부 확인)
     // 그룹별로 대표 마커(최소 Y) 선정 후 배지 추가
