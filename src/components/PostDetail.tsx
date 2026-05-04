@@ -99,6 +99,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [showComments, setShowComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [vpOffsetTop, setVpOffsetTop] = useState(0);
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
@@ -155,6 +156,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (!vp) return;
     const handleViewport = () => {
       const offsetTop = vp.offsetTop ?? 0;
+      // interactive-widget=resizes-content 환경에서는 window.innerHeight가 줄어들므로
+      // offsetTop으로 키보드 감지
+      setVpOffsetTop(offsetTop);
+      // 일반 환경 대비 fallback: innerHeight - vp.height 차이로도 감지
       const heightDiff = window.innerHeight - vp.height - offsetTop;
       setKeyboardHeight(heightDiff > 50 ? heightDiff : 0);
     };
@@ -756,10 +761,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
               left: 0,
               right: 0,
-              bottom: keyboardHeight > 0
-                ? `${keyboardHeight}px`
-                : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
-              transition: 'bottom 0.2s ease-out',
+              // visualViewport.offsetTop이 있으면 키보드가 올라온 것 → bottom을 0으로 (키보드가 레이아웃을 밀어냄)
+              // keyboardHeight가 있으면 (resizes-visual 환경) → bottom을 키보드 높이로
+              // 둘 다 없으면 기본값
+              bottom: vpOffsetTop > 10
+                ? '0px'
+                : keyboardHeight > 0
+                  ? `${keyboardHeight}px`
+                  : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
+              transition: 'bottom 0.15s ease-out',
             }}
           >
             <VisuallyHidden.Root>
