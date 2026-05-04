@@ -100,6 +100,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [avatarError, setAvatarError] = useState(false);
+  const [contentExpanded, setContentExpanded] = useState(false);
 
   useEffect(() => {
     if (!isOpen && !isDeleteDialogOpen) {
@@ -182,6 +183,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
       setShowComments(false);
+      setContentExpanded(false);
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
 
       const checkSaveStatus = async () => {
@@ -572,7 +574,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
         <div className="flex items-start justify-between gap-2 mt-1">
           <div className="flex gap-2 items-start flex-1 min-w-0">
             <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
-            <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+            <span className={`text-sm text-gray-500 ${showComments ? '' : 'line-clamp-1'}`}>{lastComment.text}</span>
           </div>
           {lastComment.createdAt && (
             <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
@@ -793,7 +795,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                                 <div className="flex gap-2 items-start">
                                   <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
-                                  <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
+                                  <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                                    <p className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
+                                    {!contentExpanded && currentPost.content && currentPost.content.length > 60 && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
+                                        className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
+                                      >
+                                        더 보기
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               {renderCommentSection()}
@@ -842,7 +854,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                               <div className="flex gap-2 items-start">
                                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
-                                <p className="text-gray-800 text-sm leading-snug">{currentPost.content}</p>
+                                <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                                  <p className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
+                                  {!contentExpanded && currentPost.content && currentPost.content.length > 60 && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
+                                      className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
+                                    >
+                                      더 보기
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             {renderCommentSection()}

@@ -78,6 +78,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [contentExpanded, setContentExpanded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -608,9 +609,19 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
               <div className="flex gap-2 items-start">
                 <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
-                  </div>
-                <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
+                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
+                  {!contentExpanded && content && content.length > 60 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
+                      className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
+                    >
+                      더 보기
+                    </button>
+                  )}
+                </div>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
                 <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
@@ -643,7 +654,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                     <div key={i} className="flex items-start justify-between gap-2">
                       <div className="flex gap-2 items-start flex-1 min-w-0">
                         <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
-                        <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                        <span className="text-sm text-gray-500">{c.text}</span>
                       </div>
                       {c.createdAt && (
                         <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
@@ -659,7 +670,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 <div ref={commentSectionRef} className="flex items-start justify-between gap-2 mt-1">
                   <div className="flex gap-2 items-start flex-1 min-w-0">
                     <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
-                    <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                    <span className={`text-sm text-gray-500 ${showComments ? '' : 'line-clamp-1'}`}>{lastComment.text}</span>
                   </div>
                   {lastComment.createdAt && (
                     <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
@@ -713,7 +724,17 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
               </div>
-              <p className="text-sm text-gray-800 leading-snug line-clamp-2">{content}</p>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
+                {!contentExpanded && content && content.length > 60 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
+                    className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
+                  >
+                    더 보기
+                  </button>
+                )}
+              </div>
             </div>
             <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
               <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} />
@@ -746,7 +767,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                   <div key={i} className="flex items-start justify-between gap-2">
                     <div className="flex gap-2 items-start flex-1 min-w-0">
                       <span className="font-bold text-sm text-gray-900 shrink-0">{c.user}</span>
-                      <span className="text-sm text-gray-500 line-clamp-1">{c.text}</span>
+                      <span className="text-sm text-gray-500">{c.text}</span>
                     </div>
                     {c.createdAt && (
                       <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
@@ -762,7 +783,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               <div ref={commentSectionRef} className="flex items-start justify-between gap-2 mt-1">
                 <div className="flex gap-2 items-start flex-1 min-w-0">
                   <span className="font-bold text-sm text-gray-900 shrink-0">{lastComment.user}</span>
-                  <span className="text-sm text-gray-500 line-clamp-1">{lastComment.text}</span>
+                  <span className={`text-sm text-gray-500 ${showComments ? '' : 'line-clamp-1'}`}>{lastComment.text}</span>
                 </div>
                 {lastComment.createdAt && (
                   <span className="text-[10px] text-gray-400 shrink-0 mt-0.5">
