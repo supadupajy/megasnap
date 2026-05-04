@@ -1057,11 +1057,14 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!map || !kakao?.maps) return;
 
-    // 현재 필터된 posts ID 집합
+    const THRESHOLD = 65; // 마커 크기(60px) + 여유 5px
     const validPostIds = new Set(postsRef.current.map(p => p.id));
 
-    // 위경도 기반으로 마커 위치 수집 (픽셀 좌표는 줌 레벨/타일 기준 오차 발생)
-    type MarkerInfo = { id: string; overlay: any; lat: number; lng: number };
+    // pointFromCoords: 현재 뷰포트 기준 실제 화면 픽셀 좌표 반환
+    // (containerPointFromCoords는 지도 전체 타일 기준 절대 픽셀이라 드래그 후 좌표 오차 발생)
+    const proj = map.getProjection();
+
+    type MarkerInfo = { id: string; overlay: any; px: number; py: number };
     const markerInfos: MarkerInfo[] = [];
 
     overlaysRef.current.forEach((overlay, id) => {
@@ -1072,14 +1075,11 @@ const MapContainer = ({
       try {
         const pos = overlay.getPosition();
         if (!pos) return;
-        markerInfos.push({ id, overlay, lat: pos.getLat(), lng: pos.getLng() });
+        const pt = proj.pointFromCoords(pos);
+        if (!pt) return;
+        markerInfos.push({ id, overlay, px: pt.x, py: pt.y });
       } catch (e) {}
     });
-
-    // 줌 레벨에 따른 위경도 겹침 임계값
-    // 레벨 3(가장 확대) → 작은 임계값, 레벨 6(축소) → 큰 임계값
-    const level = map.getLevel();
-    const LAT_LNG_THRESHOLD = 0.0003 * Math.pow(2, level - 3);
 
     // Union-Find 기반 그룹핑
     const parent = new Map<string, string>();
@@ -1097,9 +1097,9 @@ const MapContainer = ({
       for (let j = i + 1; j < markerInfos.length; j++) {
         const a = markerInfos[i];
         const b = markerInfos[j];
-        const dLat = Math.abs(a.lat - b.lat);
-        const dLng = Math.abs(a.lng - b.lng);
-        if (dLat < LAT_LNG_THRESHOLD && dLng < LAT_LNG_THRESHOLD) {
+        const dx = a.px - b.px;
+        const dy = a.py - b.py;
+        if (Math.sqrt(dx * dx + dy * dy) <= THRESHOLD) {
           union(a.id, b.id);
         }
       }
@@ -1114,13 +1114,12 @@ const MapContainer = ({
     }
     const groups = Array.from(groupMap.values());
 
-    // 그룹별 대표 마커 선정: 위도가 가장 큰(화면 최상단) 마커
+    // 그룹별 대표 마커: py가 가장 작은(화면 최상단) 마커
     const representativeIds = new Set<string>();
 
     for (const group of groups) {
       if (group.length < 2) continue;
-      // 위도가 가장 큰 마커 = 지도에서 가장 위쪽
-      const rep = group.reduce((a, b) => (a.lat > b.lat ? a : b));
+      const rep = group.reduce((a, b) => (a.py < b.py ? a : b));
       representativeIds.add(rep.id);
     }
 
