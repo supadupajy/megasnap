@@ -1092,10 +1092,23 @@ const MapContainer = ({
       try {
         const pos = overlay.getPosition();
         if (!pos) return;
-        const { x, y } = toPixel(pos.getLat(), pos.getLng());
+        const lat = pos.getLat();
+        const lng = pos.getLng();
+        const { x, y } = toPixel(lat, lng);
+        // 마커 DOM의 실제 화면 위치도 함께 로그 (비교용)
+        let domX = -1, domY = -1;
+        if (content) {
+          const r = content.getBoundingClientRect();
+          const mapR = mapEl.getBoundingClientRect();
+          domX = r.left + r.width / 2 - mapR.left;
+          domY = r.top + r.height / 2 - mapR.top;
+        }
+        console.log('[overlap] id=' + id.slice(0,8) + ' lat=' + lat.toFixed(5) + ' lng=' + lng.toFixed(5) + ' calcPx=(' + Math.round(x) + ',' + Math.round(y) + ') domPx=(' + Math.round(domX) + ',' + Math.round(domY) + ')');
         markerInfos.push({ id, overlay, px: x, py: y });
       } catch (e) {}
     });
+
+    console.log('[overlap] mapSize=(' + mapW + ',' + mapH + ') latRange=' + latRange.toFixed(5) + ' lngRange=' + lngRange.toFixed(5));
 
     // Union-Find 기반 그룹핑
     const parent = new Map<string, string>();
@@ -1115,7 +1128,9 @@ const MapContainer = ({
         const b = markerInfos[j];
         const dx = a.px - b.px;
         const dy = a.py - b.py;
-        if (Math.sqrt(dx * dx + dy * dy) <= THRESHOLD) {
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        console.log('[overlap] pair ' + a.id.slice(0,8) + ' <-> ' + b.id.slice(0,8) + ' dist=' + dist.toFixed(1) + ' (threshold=' + THRESHOLD + ')');
+        if (dist <= THRESHOLD) {
           union(a.id, b.id);
         }
       }
@@ -1129,6 +1144,12 @@ const MapContainer = ({
       groupMap.get(root)!.push(m);
     }
     const groups = Array.from(groupMap.values());
+
+    groups.forEach(g => {
+      if (g.length >= 2) {
+        console.log('[overlap] GROUP size=' + g.length + ' ids=' + g.map(m => m.id.slice(0,8)).join(','));
+      }
+    });
 
     // 그룹별 대표 마커: py가 가장 작은(화면 최상단) 마커
     const representativeIds = new Set<string>();
