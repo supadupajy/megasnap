@@ -433,7 +433,7 @@ const PostListOverlay = ({
   <div />
   <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
     <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
-    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} Posts</p>
+    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
   </div>
   <button
     onClick={onClose}
