@@ -1188,29 +1188,25 @@ const Index = () => {
       e.preventDefault();
     };
 
+    let wSeq = 0;
     const preventWheel = (e: WheelEvent) => {
       if (!isTrendingExpandedRef.current) return;
       const scrollable = getTrendingScrollEl(e.target);
+      wSeq++;
       if (scrollable) {
         const st = scrollable.scrollTop;
         const atTop = st <= 0;
         const atBottom = st + scrollable.clientHeight >= scrollable.scrollHeight - 1;
-
-        if (atTop && e.deltaY < 0) { e.preventDefault(); return; } // 최상단에서 위로 → 차단
-        if (atBottom && e.deltaY > 0) { e.preventDefault(); return; } // 최하단에서 아래로 → 차단
-
-        // macOS 관성: scrollTop=0에서 deltaY>0(아래로)이지만
-        // 실제로 스크롤이 안 움직이면 overscroll context가 잡힌 것 → 차단
-        if (atTop && e.deltaY > 0) {
-          // 실제로 스크롤 가능한지 확인 (scrollHeight > clientHeight)
-          if (scrollable.scrollHeight <= scrollable.clientHeight) {
-            e.preventDefault(); return;
-          }
-          // 스크롤 가능하면 통과 (정상 스크롤 허용)
-          return;
-        }
+        let action = 'pass';
+        if (atTop && e.deltaY < 0) action = 'block(atTop+neg)';
+        else if (atBottom && e.deltaY > 0) action = 'block(atBottom+pos)';
+        else if (atTop && e.deltaY > 0) action = 'pass(atTop+pos=normal-scroll)';
+        console.log(`[W#${wSeq}] ${action} deltaY=${e.deltaY} scrollTop=${st}`);
+        if (atTop && e.deltaY < 0) { e.preventDefault(); return; }
+        if (atBottom && e.deltaY > 0) { e.preventDefault(); return; }
         return;
       }
+      console.log(`[W#${wSeq}] block(outside) deltaY=${e.deltaY}`);
       e.preventDefault();
     };
 
