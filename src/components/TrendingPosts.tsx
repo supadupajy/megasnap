@@ -748,7 +748,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
         {/* 스크롤 위 화살표 - listRef 형제로 absolute 배치 (scrollHeight 변동 방지) */}
         {isExpanded && showScrollUpArrow && (
-          <div className="absolute left-0 right-0 flex justify-center pointer-events-none z-30 animate-in fade-in slide-in-from-top-1 duration-300" style={{ top: '120px' }}>
+          <div className="absolute left-0 right-0 flex justify-center pointer-events-none z-30 animate-in fade-in slide-in-from-top-1 duration-300" style={{ top: '140px' }}>
             <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
               <ChevronUp className="w-5 h-5 text-indigo-600" />
             </div>
