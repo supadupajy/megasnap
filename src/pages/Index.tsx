@@ -1188,47 +1188,16 @@ const Index = () => {
       e.preventDefault();
     };
 
-    let wheelSeq = 0;
     const preventWheel = (e: WheelEvent) => {
-      wheelSeq++;
-      const seq = wheelSeq;
-      const expanded = isTrendingExpandedRef.current;
+      if (!isTrendingExpandedRef.current) return;
       const scrollable = getTrendingScrollEl(e.target);
-      const scrollTop = scrollable?.scrollTop ?? null;
-      const scrollHeight = scrollable?.scrollHeight ?? null;
-      const clientHeight = scrollable?.clientHeight ?? null;
-      const atTop = scrollable ? scrollable.scrollTop <= 0 : null;
-      const atBottom = scrollable ? scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1 : null;
-
-      let action = 'pass';
-      if (!expanded) {
-        action = 'skip(not-expanded)';
-      } else if (scrollable) {
-        if (atTop && e.deltaY < 0) action = 'preventDefault(atTop+up)';
-        else if (atBottom && e.deltaY > 0) action = 'preventDefault(atBottom+down)';
-        else action = 'pass(mid-scroll)';
-      } else {
-        action = 'preventDefault(outside)';
-      }
-
-      if (seq <= 3 || action.startsWith('preventDefault')) {
-        console.log(`[WHEEL #${seq}]`, {
-          action,
-          deltaY: e.deltaY,
-          expanded,
-          scrollTop,
-          scrollHeight,
-          clientHeight,
-          atTop,
-          atBottom,
-          target: (e.target as HTMLElement)?.dataset?.trendingScroll ?? (e.target as HTMLElement)?.className?.slice(0, 40),
-        });
-      }
-
-      if (!expanded) return;
       if (scrollable) {
-        if (atTop && e.deltaY < 0) { e.preventDefault(); return; }
-        if (atBottom && e.deltaY > 0) { e.preventDefault(); return; }
+        const atTop = scrollable.scrollTop <= 0;
+        const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
+        // scrollTop === 0이면 deltaY 부호 무관하게 차단
+        // (macOS 관성 스크롤: deltaY 양수→음수 전환 시 Chrome이 이미 overscroll 시작)
+        if (atTop) { e.preventDefault(); return; }
+        if (atBottom) { e.preventDefault(); return; }
         return;
       }
       e.preventDefault();
