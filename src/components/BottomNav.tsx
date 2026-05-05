@@ -20,7 +20,7 @@ const BottomNav = () => {
   const navigate = useNavigate();
   const navRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0 });
 
   const activeIndex = navItems.findIndex((item) => item.path === location.pathname);
   const safeIndex = activeIndex === -1 ? 0 : activeIndex;
@@ -31,10 +31,11 @@ const BottomNav = () => {
     if (btn && nav) {
       const navRect = nav.getBoundingClientRect();
       const btnRect = btn.getBoundingClientRect();
-      const indicatorWidth = 32;
-      setIndicatorStyle({
-        left: btnRect.left - navRect.left + btnRect.width / 2 - indicatorWidth / 2,
-        width: indicatorWidth,
+      const pillWidth = 52;
+      const pillHeight = 36;
+      setPillStyle({
+        left: btnRect.left - navRect.left + btnRect.width / 2 - pillWidth / 2,
+        width: pillWidth,
       });
     }
   }, [safeIndex]);
@@ -53,12 +54,12 @@ const BottomNav = () => {
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
-        {/* Sliding indicator bar */}
+        {/* Sliding pill background */}
         <motion.div
-          className="absolute top-0 h-[3px] bg-indigo-600 rounded-full"
-          animate={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+          className="absolute top-1/2 -translate-y-[calc(50%+6px)] h-9 bg-gray-100 rounded-full pointer-events-none"
+          animate={{ left: pillStyle.left, width: pillStyle.width }}
           transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-          style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
+          style={{ left: pillStyle.left, width: pillStyle.width }}
         />
 
         {navItems.map((item, index) => {
@@ -71,8 +72,8 @@ const BottomNav = () => {
               ref={(el) => { buttonRefs.current[index] = el; }}
               onClick={() => handleNavClick(item.path)}
               className={cn(
-                'flex flex-col items-center gap-1 min-w-[64px] transition-colors duration-200',
-                isActive ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-500'
+                'relative flex flex-col items-center gap-1 min-w-[64px] transition-colors duration-200',
+                isActive ? 'text-gray-900' : 'text-gray-400 hover:text-gray-500'
               )}
             >
               <Icon
