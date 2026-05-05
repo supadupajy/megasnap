@@ -57,7 +57,7 @@ const BottomNav = () => {
         {/* Sliding pill background — positioned to cover icon only */}
         {ready && (
           <motion.div
-            className="absolute rounded-full bg-gray-100 pointer-events-none"
+            className="absolute rounded-full bg-gray-700 pointer-events-none"
             style={{ top: '50%', y: '-72%', height: PILL_HEIGHT, width: PILL_WIDTH }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
@@ -75,7 +75,7 @@ const BottomNav = () => {
               onClick={() => handleNavClick(item.path)}
               className={cn(
                 'relative flex flex-col items-center gap-1 min-w-[64px] transition-colors duration-200',
-                isActive ? 'text-gray-900' : 'text-gray-400 hover:text-gray-500'
+                isActive ? 'text-white' : 'text-gray-400 hover:text-gray-500'
               )}
             >
               {/* Icon wrapper — pill aligns to this */}
