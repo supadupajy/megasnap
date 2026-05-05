@@ -1192,12 +1192,23 @@ const Index = () => {
       if (!isTrendingExpandedRef.current) return;
       const scrollable = getTrendingScrollEl(e.target);
       if (scrollable) {
-        const atTop = scrollable.scrollTop <= 0;
-        const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
-        // scrollTop === 0이면 deltaY 부호 무관하게 차단
-        // (macOS 관성 스크롤: deltaY 양수→음수 전환 시 Chrome이 이미 overscroll 시작)
-        if (atTop) { e.preventDefault(); return; }
-        if (atBottom) { e.preventDefault(); return; }
+        const st = scrollable.scrollTop;
+        const atTop = st <= 0;
+        const atBottom = st + scrollable.clientHeight >= scrollable.scrollHeight - 1;
+
+        if (atTop && e.deltaY < 0) { e.preventDefault(); return; } // 최상단에서 위로 → 차단
+        if (atBottom && e.deltaY > 0) { e.preventDefault(); return; } // 최하단에서 아래로 → 차단
+
+        // macOS 관성: scrollTop=0에서 deltaY>0(아래로)이지만
+        // 실제로 스크롤이 안 움직이면 overscroll context가 잡힌 것 → 차단
+        if (atTop && e.deltaY > 0) {
+          // 실제로 스크롤 가능한지 확인 (scrollHeight > clientHeight)
+          if (scrollable.scrollHeight <= scrollable.clientHeight) {
+            e.preventDefault(); return;
+          }
+          // 스크롤 가능하면 통과 (정상 스크롤 허용)
+          return;
+        }
         return;
       }
       e.preventDefault();
