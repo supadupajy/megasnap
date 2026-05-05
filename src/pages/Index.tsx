@@ -1152,41 +1152,53 @@ const Index = () => {
   useEffect(() => {
     if (!isTrendingExpanded) return;
 
-    const preventTouchMove = (e: TouchEvent) => {
-      // TrendingPosts 리스트 스크롤 영역 내부 터치는 허용
-      const target = e.target as HTMLElement;
-      const scrollable = target.closest('[data-trending-scroll]');
-      if (scrollable) {
-        const el = scrollable as HTMLElement;
-        const atTop = el.scrollTop <= 0;
-        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-        // 경계에서만 차단
-        if (!atTop && !atBottom) return;
-        const touch = e.touches[0];
-        const startY = (el as any)._tStartY ?? touch.clientY;
-        const deltaY = touch.clientY - startY;
-        if (atTop && deltaY > 0) { e.preventDefault(); return; }
-        if (atBottom && deltaY < 0) { e.preventDefault(); return; }
-        return;
-      }
-      // 그 외 모든 영역은 완전 차단
-      e.preventDefault();
-    };
-
     const saveStartY = (e: TouchEvent) => {
-      const target = e.target as HTMLElement;
-      const scrollable = target.closest('[data-trending-scroll]') as HTMLElement | null;
+      const scrollable = (e.target as HTMLElement).closest('[data-trending-scroll]') as HTMLElement | null;
       if (scrollable) {
         (scrollable as any)._tStartY = e.touches[0].clientY;
       }
     };
 
-    document.addEventListener('touchstart', saveStartY, { passive: true });
-    document.addEventListener('touchmove', preventTouchMove, { passive: false });
+    const clearStartY = () => {
+      const el = document.querySelector('[data-trending-scroll]') as HTMLElement | null;
+      if (el) (el as any)._tStartY = null;
+    };
+
+    const preventTouchMove = (e: TouchEvent) => {
+      const scrollable = (e.target as HTMLElement).closest('[data-trending-scroll]');
+      if (scrollable) {
+        const el = scrollable as HTMLElement;
+        const startY = (el as any)._tStartY;
+
+        if (startY == null) {
+          e.preventDefault(); // startY 없으면 안전하게 차단
+          return;
+        }
+
+        const deltaY = e.touches[0].clientY - startY;
+        const atTop = el.scrollTop <= 0;
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+
+        if (!atTop && !atBottom) return; // 중간 → 정상 스크롤 허용
+        if (atTop && deltaY > 0) { e.preventDefault(); return; }
+        if (atBottom && deltaY < 0) { e.preventDefault(); return; }
+        return;
+      }
+      // 헤더, 광고, 배경 등 → 완전 차단
+      e.preventDefault();
+    };
+
+    // capture: true → 맵 포함 모든 핸들러보다 먼저 실행
+    document.addEventListener('touchstart', saveStartY, { passive: true, capture: true });
+    document.addEventListener('touchend', clearStartY, { passive: true, capture: true });
+    document.addEventListener('touchcancel', clearStartY, { passive: true, capture: true });
+    document.addEventListener('touchmove', preventTouchMove, { passive: false, capture: true });
 
     return () => {
-      document.removeEventListener('touchstart', saveStartY);
-      document.removeEventListener('touchmove', preventTouchMove);
+      document.removeEventListener('touchstart', saveStartY, { capture: true } as any);
+      document.removeEventListener('touchend', clearStartY, { capture: true } as any);
+      document.removeEventListener('touchcancel', clearStartY, { capture: true } as any);
+      document.removeEventListener('touchmove', preventTouchMove, { capture: true } as any);
     };
   }, [isTrendingExpanded]);
 

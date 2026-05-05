@@ -576,55 +576,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     };
   }, [isExpanded]);
 
-  // document capture 레벨에서 터치 차단 — 맵/라이브러리 리스너보다 먼저 실행
-  useEffect(() => {
-    const handleDocumentTouch = (e: TouchEvent) => {
-      if (!isExpandedRef.current) return;
-      const container = containerRef.current;
-      const listEl = listRef.current;
-      if (!container || !container.contains(e.target as Node)) return;
-
-      // 리스트 내부
-      if (listEl && listEl.contains(e.target as Node)) {
-        const startY = (listEl as any)._touchStartY;
-        if (startY == null) {
-          e.preventDefault();
-          return;
-        }
-        const deltaY = e.touches[0].clientY - startY;
-        const atTop = listEl.scrollTop <= 0;
-        const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
-        if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
-          e.preventDefault(); // 경계에서만 차단
-        }
-        // 중간 스크롤은 통과 → 정상 스크롤 유지
-      } else {
-        // 헤더, 광고 영역
-        e.preventDefault();
-      }
-    };
-
-    const saveStartY = (e: TouchEvent) => {
-      (listRef.current as any)._touchStartY = e.touches[0].clientY;
-    };
-
-    const clearStartY = () => {
-      (listRef.current as any)._touchStartY = null;
-    };
-
-    // capture: true → 다른 모든 핸들러보다 먼저 실행
-    document.addEventListener('touchmove', handleDocumentTouch, { passive: false, capture: true });
-    document.addEventListener('touchstart', saveStartY, { passive: true, capture: true });
-    document.addEventListener('touchend', clearStartY, { passive: true, capture: true });
-    document.addEventListener('touchcancel', clearStartY, { passive: true, capture: true });
-
-    return () => {
-      document.removeEventListener('touchmove', handleDocumentTouch, { capture: true } as any);
-      document.removeEventListener('touchstart', saveStartY, { capture: true } as any);
-      document.removeEventListener('touchend', clearStartY, { capture: true } as any);
-      document.removeEventListener('touchcancel', clearStartY, { capture: true } as any);
-    };
-  }, []);
+  // 터치 이벤트 처리는 Index.tsx의 document capture 레벨 핸들러가 전담
+  // (TrendingPosts 내부 중복 핸들러 제거)
 
   return (
     <div
