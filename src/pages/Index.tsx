@@ -1188,12 +1188,45 @@ const Index = () => {
       e.preventDefault();
     };
 
+    let wheelSeq = 0;
     const preventWheel = (e: WheelEvent) => {
-      if (!isTrendingExpandedRef.current) return;
+      wheelSeq++;
+      const seq = wheelSeq;
+      const expanded = isTrendingExpandedRef.current;
       const scrollable = getTrendingScrollEl(e.target);
+      const scrollTop = scrollable?.scrollTop ?? null;
+      const scrollHeight = scrollable?.scrollHeight ?? null;
+      const clientHeight = scrollable?.clientHeight ?? null;
+      const atTop = scrollable ? scrollable.scrollTop <= 0 : null;
+      const atBottom = scrollable ? scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1 : null;
+
+      let action = 'pass';
+      if (!expanded) {
+        action = 'skip(not-expanded)';
+      } else if (scrollable) {
+        if (atTop && e.deltaY < 0) action = 'preventDefault(atTop+up)';
+        else if (atBottom && e.deltaY > 0) action = 'preventDefault(atBottom+down)';
+        else action = 'pass(mid-scroll)';
+      } else {
+        action = 'preventDefault(outside)';
+      }
+
+      if (seq <= 3 || action.startsWith('preventDefault')) {
+        console.log(`[WHEEL #${seq}]`, {
+          action,
+          deltaY: e.deltaY,
+          expanded,
+          scrollTop,
+          scrollHeight,
+          clientHeight,
+          atTop,
+          atBottom,
+          target: (e.target as HTMLElement)?.dataset?.trendingScroll ?? (e.target as HTMLElement)?.className?.slice(0, 40),
+        });
+      }
+
+      if (!expanded) return;
       if (scrollable) {
-        const atTop = scrollable.scrollTop <= 0;
-        const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
         if (atTop && e.deltaY < 0) { e.preventDefault(); return; }
         if (atBottom && e.deltaY > 0) { e.preventDefault(); return; }
         return;
