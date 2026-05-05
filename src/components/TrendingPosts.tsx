@@ -576,21 +576,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     };
   }, [isExpanded]);
 
-  // 패널이 펼쳐졌을 때 패널 전체의 터치 이벤트가 맵으로 전파되지 않도록 차단
+  // document capture 레벨에서 터치 차단 — 맵/라이브러리 리스너보다 먼저 실행
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const saveStartY = (e: TouchEvent) => {
-      // 어디서 시작하든 항상 저장
-      (listRef.current as any)._touchStartY = e.touches[0].clientY;
-    };
-
-    const blockTouch = (e: TouchEvent) => {
+    const handleDocumentTouch = (e: TouchEvent) => {
       if (!isExpandedRef.current) return;
-      e.stopPropagation();
-
+      const container = containerRef.current;
       const listEl = listRef.current;
+      if (!container || !container.contains(e.target as Node)) return;
+
+      // 리스트 내부
       if (listEl && listEl.contains(e.target as Node)) {
         const startY = (listEl as any)._touchStartY;
         if (startY == null) {
@@ -599,33 +593,36 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         }
         const deltaY = e.touches[0].clientY - startY;
         const atTop = listEl.scrollTop <= 0;
-        const atBottom =
-          listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
-
+        const atBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 1;
         if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
-          e.preventDefault(); // 경계에서만 브라우저 기본동작 차단
+          e.preventDefault(); // 경계에서만 차단
         }
-        // 중간 스크롤은 건드리지 않음 → 정상 스크롤 유지
+        // 중간 스크롤은 통과 → 정상 스크롤 유지
       } else {
-        // 헤더, 광고 영역은 항상 차단
+        // 헤더, 광고 영역
         e.preventDefault();
       }
+    };
+
+    const saveStartY = (e: TouchEvent) => {
+      (listRef.current as any)._touchStartY = e.touches[0].clientY;
     };
 
     const clearStartY = () => {
       (listRef.current as any)._touchStartY = null;
     };
 
-    container.addEventListener('touchstart', saveStartY, { passive: true });
-    container.addEventListener('touchend', clearStartY, { passive: true });
-    container.addEventListener('touchcancel', clearStartY, { passive: true });
-    container.addEventListener('touchmove', blockTouch, { passive: false }); // 반드시 false
+    // capture: true → 다른 모든 핸들러보다 먼저 실행
+    document.addEventListener('touchmove', handleDocumentTouch, { passive: false, capture: true });
+    document.addEventListener('touchstart', saveStartY, { passive: true, capture: true });
+    document.addEventListener('touchend', clearStartY, { passive: true, capture: true });
+    document.addEventListener('touchcancel', clearStartY, { passive: true, capture: true });
 
     return () => {
-      container.removeEventListener('touchstart', saveStartY);
-      container.removeEventListener('touchend', clearStartY);
-      container.removeEventListener('touchcancel', clearStartY);
-      container.removeEventListener('touchmove', blockTouch);
+      document.removeEventListener('touchmove', handleDocumentTouch, { capture: true } as any);
+      document.removeEventListener('touchstart', saveStartY, { capture: true } as any);
+      document.removeEventListener('touchend', clearStartY, { capture: true } as any);
+      document.removeEventListener('touchcancel', clearStartY, { capture: true } as any);
     };
   }, []);
 
