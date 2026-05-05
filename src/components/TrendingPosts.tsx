@@ -592,29 +592,61 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   // 터치 이벤트 처리는 Index.tsx의 document capture 레벨 핸들러가 전담
   // (TrendingPosts 내부 중복 핸들러 제거)
 
-  // 패널 열릴 때 scrollTop을 1로 초기화 (native overscroll bounce 방지 트릭)
-  // scrollTop이 정확히 0이면 안드로이드 WebView가 rubber-band 효과를 발동시킴
+  // 패널 열릴 때 scrollTop 초기화
   useEffect(() => {
     if (isExpanded && listRef.current) {
-      requestAnimationFrame(() => {
-        if (listRef.current) {
-          listRef.current.scrollTop = 1;
-        }
-      });
+      listRef.current.scrollTop = 0;
     }
   }, [isExpanded]);
 
-  // scroll 이벤트에서 scrollTop이 0이 되지 않도록 유지 (native bounce 차단)
+  // ⚠️ 진단 로그: 무엇이 움직이는지 추적
   useEffect(() => {
-    const el = listRef.current;
-    if (!el || !isExpanded) return;
-    const keepNonZero = () => {
-      if (el.scrollTop === 0) el.scrollTop = 1;
-      const max = el.scrollHeight - el.clientHeight;
-      if (max > 1 && el.scrollTop >= max) el.scrollTop = max - 1;
+    if (!isExpanded) return;
+
+    const containerEl = containerRef.current;
+    const listEl = listRef.current;
+    const trendingFixedEl = containerEl?.parentElement?.parentElement; // .fixed div
+
+    let snapshot: any = {};
+
+    const onTouchStart = (e: TouchEvent) => {
+      snapshot = {
+        touchStartY: e.touches[0].clientY,
+        listScrollTop: listEl?.scrollTop ?? 'n/a',
+        containerTransform: containerEl ? getComputedStyle(containerEl).transform : 'n/a',
+        containerTop: containerEl?.getBoundingClientRect().top ?? 'n/a',
+        trendingFixedTop: trendingFixedEl?.getBoundingClientRect().top ?? 'n/a',
+        trendingFixedTransform: trendingFixedEl ? getComputedStyle(trendingFixedEl).transform : 'n/a',
+        windowScrollY: window.scrollY,
+        bodyScrollTop: document.body.scrollTop,
+      };
+      console.log('[TRENDING-DIAG] touchstart:', snapshot);
     };
-    el.addEventListener('scroll', keepNonZero, { passive: true });
-    return () => el.removeEventListener('scroll', keepNonZero);
+
+    const onTouchMove = (e: TouchEvent) => {
+      const now = {
+        deltaY: e.touches[0].clientY - snapshot.touchStartY,
+        listScrollTop: listEl?.scrollTop ?? 'n/a',
+        listScrollTopChange: (listEl?.scrollTop ?? 0) - (snapshot.listScrollTop || 0),
+        containerTransform: containerEl ? getComputedStyle(containerEl).transform : 'n/a',
+        containerTop: containerEl?.getBoundingClientRect().top ?? 'n/a',
+        containerTopChange: (containerEl?.getBoundingClientRect().top ?? 0) - (snapshot.containerTop || 0),
+        trendingFixedTop: trendingFixedEl?.getBoundingClientRect().top ?? 'n/a',
+        trendingFixedTopChange: (trendingFixedEl?.getBoundingClientRect().top ?? 0) - (snapshot.trendingFixedTop || 0),
+        trendingFixedTransform: trendingFixedEl ? getComputedStyle(trendingFixedEl).transform : 'n/a',
+        windowScrollY: window.scrollY,
+        bodyScrollTop: document.body.scrollTop,
+      };
+      console.log('[TRENDING-DIAG] touchmove:', now);
+    };
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true, capture: true });
+
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
+      document.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
+    };
   }, [isExpanded]);
 
   return (
