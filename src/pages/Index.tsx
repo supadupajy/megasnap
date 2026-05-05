@@ -1193,44 +1193,30 @@ const Index = () => {
     };
 
     let wSeq = 0;
+    let lastScrollTop = -1;
     const preventWheel = (e: WheelEvent) => {
       if (!isTrendingExpandedRef.current) return;
 
-      // 패널 내부인지 확인 (target이 어디든 패널 안이면 처리)
       const panel = (e.target as HTMLElement).closest?.('[data-trending-panel]');
-      if (!panel) return; // 패널 밖이면 무시
+      if (!panel) return;
 
       wSeq++;
       const scrollEl = panel.querySelector('[data-trending-scroll]') as HTMLElement | null;
 
-      // 실제로 스크롤 가능한 조상 요소 찾기 (브라우저가 실제 스크롤시키는 요소)
-      let actualScrollEl: HTMLElement | null = null;
-      let node = e.target as HTMLElement | null;
-      while (node && node !== panel.parentElement) {
-        const overflow = getComputedStyle(node).overflowY;
-        if ((overflow === 'scroll' || overflow === 'auto') && node.scrollHeight > node.clientHeight) {
-          actualScrollEl = node;
-          break;
-        }
-        node = node.parentElement;
-      }
-
-      const listST = scrollEl?.scrollTop ?? -1;
-      const actualST = actualScrollEl?.scrollTop ?? -1;
-      const isSame = scrollEl === actualScrollEl;
-      console.log(`[W#${wSeq}] deltaY=${e.deltaY} listST=${listST} actualST=${actualST} same=${isSame} actualTag=${actualScrollEl?.tagName} actualData=${actualScrollEl?.dataset?.trendingScroll ?? 'none'}`);
-
       if (scrollEl) {
         const st = scrollEl.scrollTop;
+        const jump = lastScrollTop >= 0 ? st - lastScrollTop : 0;
+        const maxH = scrollEl.scrollHeight;
+        const clientH = scrollEl.clientHeight;
+        console.log(`[W#${wSeq}] dY=${e.deltaY} st=${st} jump=${jump} sH=${maxH} cH=${clientH}`);
+
         const atTop = st <= 0;
-        // rubber-band 방지: scrollTop이 작을 때 위로 스크롤하면 미리 차단
-        const nearTop = st < 8;
-        const atBottom = st + scrollEl.clientHeight >= scrollEl.scrollHeight - 1;
-        if ((atTop || nearTop) && e.deltaY < 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED atTop(st=${st})`); return; }
-        if (atBottom && e.deltaY > 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED atBottom`); return; }
-        return; // 중간 스크롤은 통과
+        const atBottom = st + clientH >= maxH - 1;
+        if (atTop && e.deltaY < 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED top`); lastScrollTop = st; return; }
+        if (atBottom && e.deltaY > 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED bot`); lastScrollTop = st; return; }
+        lastScrollTop = st;
+        return;
       }
-      // scrollEl이 없으면(헤더 등) 차단
       e.preventDefault();
     };
 
