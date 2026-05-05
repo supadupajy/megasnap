@@ -1,6 +1,7 @@
 package com.chorasnap.chorasnap;
 
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import com.getcapacitor.BridgeActivity;
@@ -9,6 +10,12 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // WebView 네이티브 overscroll(rubber-band) 완전 비활성화
+        WebView webView = getBridge().getWebView();
+        if (webView != null) {
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        }
     }
 
     @Override
