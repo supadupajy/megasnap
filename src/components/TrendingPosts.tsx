@@ -284,13 +284,16 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
       onClick={() => onPostClick(post)}
       className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
     >
-      <div className="w-6 text-center shrink-0">
-        <span className={cn(
-          "text-sm font-black italic",
-          post.rank <= 3 ? "text-indigo-600" : "text-gray-300"
-        )}>
-          {post.rank}
-        </span>
+      <div className="w-6 text-center shrink-0 flex items-center justify-center">
+        {post.rank <= 3 ? (
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-white text-[11px] font-black">
+            {post.rank}
+          </span>
+        ) : (
+          <span className="text-sm font-black italic text-gray-700">
+            {post.rank}
+          </span>
+        )}
       </div>
 
       <div className={cn(
