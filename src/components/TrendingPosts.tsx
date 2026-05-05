@@ -672,16 +672,38 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       console.log('[DIAG] 🔴 touchend, total moves:', moveCount);
     };
 
+    let wheelCount = 0;
+    const onWheel = (e: WheelEvent) => {
+      wheelCount++;
+      if (wheelCount !== 1 && wheelCount !== 5 && wheelCount !== 15) return;
+      const now = grabSnapshot();
+      console.log(`[DIAG] 🟣 wheel #${wheelCount}`, {
+        deltaY: e.deltaY,
+        deltaX: e.deltaX,
+        target: (e.target as HTMLElement)?.tagName + '.' + (e.target as HTMLElement)?.className?.substring(0, 30),
+        listScrollTop: now.listScrollTop,
+        listScrollHeight: now.listScrollHeight,
+        listClientHeight: now.listClientHeight,
+        windowScrollY: now.windowScrollY,
+        bodyScrollTop: now.bodyScrollTop,
+        documentScrollTop: now.documentScrollTop,
+        visualViewportOffsetTop: now.visualViewportOffsetTop,
+        containerTop: now.containerRect?.top,
+      });
+    };
+
     document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
     document.addEventListener('touchmove', onTouchMove, { passive: true, capture: true });
     document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+    document.addEventListener('wheel', onWheel, { passive: true, capture: true });
 
-    console.log('[DIAG] ✅ Diagnostic listeners installed');
+    console.log('[DIAG] ✅ Diagnostic listeners installed (touch + wheel)');
 
     return () => {
       document.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
       document.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
       document.removeEventListener('touchend', onTouchEnd, { capture: true } as any);
+      document.removeEventListener('wheel', onWheel, { capture: true } as any);
     };
   }, []);
 

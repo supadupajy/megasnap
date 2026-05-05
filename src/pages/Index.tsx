@@ -1148,7 +1148,8 @@ const Index = () => {
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);
 
-  // 트렌딩 패널 펼쳐질 때 document 레벨 touchmove 완전 차단 (iOS/Android 오버스크롤 방지)
+  // 트렌딩 패널 펼쳐질 때 document 레벨 touchmove + wheel 차단
+  // (모바일 오버스크롤 + 데스크톱 트랙패드 wheel bounce 모두 방지)
   useEffect(() => {
     if (!isTrendingExpanded) return;
 
@@ -1171,7 +1172,7 @@ const Index = () => {
         const startY = (el as any)._tStartY;
 
         if (startY == null) {
-          e.preventDefault(); // startY 없으면 안전하게 차단
+          e.preventDefault();
           return;
         }
 
@@ -1179,12 +1180,29 @@ const Index = () => {
         const atTop = el.scrollTop <= 1;
         const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
 
-        if (!atTop && !atBottom) return; // 중간 → 정상 스크롤 허용
+        if (!atTop && !atBottom) return;
         if (atTop && deltaY > 0) { e.preventDefault(); return; }
         if (atBottom && deltaY < 0) { e.preventDefault(); return; }
         return;
       }
-      // 헤더, 광고, 배경 등 → 완전 차단
+      e.preventDefault();
+    };
+
+    // wheel 이벤트 처리 (데스크톱 트랙패드 / 마우스 휠)
+    const preventWheel = (e: WheelEvent) => {
+      const scrollable = (e.target as HTMLElement).closest('[data-trending-scroll]');
+      if (scrollable) {
+        const el = scrollable as HTMLElement;
+        const atTop = el.scrollTop <= 0;
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+        // wheel deltaY: 양수 = 아래로 스크롤, 음수 = 위로 스크롤
+        // atTop인데 위로 더 스크롤(deltaY < 0) → 차단
+        // atBottom인데 아래로 더 스크롤(deltaY > 0) → 차단
+        if (atTop && e.deltaY < 0) { e.preventDefault(); return; }
+        if (atBottom && e.deltaY > 0) { e.preventDefault(); return; }
+        return; // 중간은 통과
+      }
+      // 리스트 외부(헤더, 광고, 배경) → 완전 차단
       e.preventDefault();
     };
 
@@ -1193,12 +1211,14 @@ const Index = () => {
     document.addEventListener('touchend', clearStartY, { passive: true, capture: true });
     document.addEventListener('touchcancel', clearStartY, { passive: true, capture: true });
     document.addEventListener('touchmove', preventTouchMove, { passive: false, capture: true });
+    document.addEventListener('wheel', preventWheel, { passive: false, capture: true });
 
     return () => {
       document.removeEventListener('touchstart', saveStartY, { capture: true } as any);
       document.removeEventListener('touchend', clearStartY, { capture: true } as any);
       document.removeEventListener('touchcancel', clearStartY, { capture: true } as any);
       document.removeEventListener('touchmove', preventTouchMove, { capture: true } as any);
+      document.removeEventListener('wheel', preventWheel, { capture: true } as any);
     };
   }, [isTrendingExpanded]);
 
