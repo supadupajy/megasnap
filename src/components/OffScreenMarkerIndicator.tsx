@@ -110,10 +110,11 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         }}
         onMouseDown={e => e.stopPropagation()}
       >
-        <Triangle dir={dir} />
+        {dir !== 'right' && <Triangle dir={dir} />}
         <span style={{ fontSize: '13px', fontWeight: 700, lineHeight: 1, color: '#374151' }}>
           {count > 999 ? '999+' : count}
         </span>
+        {dir === 'right' && <Triangle dir={dir} />}
       </button>
     );
   };
