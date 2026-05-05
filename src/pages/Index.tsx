@@ -1176,8 +1176,8 @@ const Index = () => {
         }
 
         const deltaY = e.touches[0].clientY - startY;
-        const atTop = el.scrollTop <= 0;
-        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+        const atTop = el.scrollTop <= 10;
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 10;
 
         if (!atTop && !atBottom) return; // 중간 → 정상 스크롤 허용
         if (atTop && deltaY > 0) { e.preventDefault(); return; }

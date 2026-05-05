@@ -579,6 +579,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   // 터치 이벤트 처리는 Index.tsx의 document capture 레벨 핸들러가 전담
   // (TrendingPosts 내부 중복 핸들러 제거)
 
+  // 패널 열릴 때 항상 최상단으로 초기화 (scrollTop이 0이 진짜 최상단이 되도록)
+  useEffect(() => {
+    if (isExpanded && listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+  }, [isExpanded]);
+
   return (
     <div
       ref={containerRef}
@@ -726,7 +733,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 스크롤 가능한 포스팅 리스트 */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-scroll no-scrollbar py-2 px-3 space-y-2 relative"
+          className="flex-1 overflow-y-scroll no-scrollbar pb-2 px-3 space-y-2 relative"
           data-trending-scroll="true"
           style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
         >
