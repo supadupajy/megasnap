@@ -57,7 +57,7 @@ const BottomNav = () => {
         {/* Sliding pill background */}
         {ready && (
           <motion.div
-            className="absolute bg-gray-700 pointer-events-none"
+            className="absolute bg-gray-300 pointer-events-none"
             style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
