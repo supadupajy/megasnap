@@ -97,7 +97,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           background: 'rgba(255, 255, 255, 0.55)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          color: 'rgb(79, 70, 229)',
+          color: '#374151',
           borderRadius: '999px',
           border: '1px solid rgba(255, 255, 255, 0.5)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
@@ -111,7 +111,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         onMouseDown={e => e.stopPropagation()}
       >
         <Triangle dir={dir} />
-        <span style={{ fontSize: '13px', fontWeight: 700, lineHeight: 1, color: 'rgb(79, 70, 229)' }}>
+        <span style={{ fontSize: '13px', fontWeight: 700, lineHeight: 1, color: '#374151' }}>
           {count > 999 ? '999+' : count}
         </span>
       </button>
