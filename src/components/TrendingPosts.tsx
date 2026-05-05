@@ -769,7 +769,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
         >
           {isExpanded && showScrollUpArrow && (
-            <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-1 animate-in fade-in slide-in-from-top-1 duration-300">
+            <div className="sticky top-0 left-0 right-0 flex justify-center pointer-events-none z-30 pt-3 animate-in fade-in slide-in-from-top-1 duration-300">
               <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
                 <ChevronUp className="w-5 h-5 text-indigo-600" />
               </div>
