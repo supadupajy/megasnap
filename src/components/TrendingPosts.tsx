@@ -592,11 +592,29 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   // 터치 이벤트 처리는 Index.tsx의 document capture 레벨 핸들러가 전담
   // (TrendingPosts 내부 중복 핸들러 제거)
 
-  // 패널 열릴 때 항상 최상단으로 초기화 (scrollTop이 0이 진짜 최상단이 되도록)
+  // 패널 열릴 때 scrollTop을 1로 초기화 (native overscroll bounce 방지 트릭)
+  // scrollTop이 정확히 0이면 안드로이드 WebView가 rubber-band 효과를 발동시킴
   useEffect(() => {
     if (isExpanded && listRef.current) {
-      listRef.current.scrollTop = 0;
+      requestAnimationFrame(() => {
+        if (listRef.current) {
+          listRef.current.scrollTop = 1;
+        }
+      });
     }
+  }, [isExpanded]);
+
+  // scroll 이벤트에서 scrollTop이 0이 되지 않도록 유지 (native bounce 차단)
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || !isExpanded) return;
+    const keepNonZero = () => {
+      if (el.scrollTop === 0) el.scrollTop = 1;
+      const max = el.scrollHeight - el.clientHeight;
+      if (max > 1 && el.scrollTop >= max) el.scrollTop = max - 1;
+    };
+    el.addEventListener('scroll', keepNonZero, { passive: true });
+    return () => el.removeEventListener('scroll', keepNonZero);
   }, [isExpanded]);
 
   return (
