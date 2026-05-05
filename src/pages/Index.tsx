@@ -1221,9 +1221,12 @@ const Index = () => {
       console.log(`[W#${wSeq}] deltaY=${e.deltaY} listST=${listST} actualST=${actualST} same=${isSame} actualTag=${actualScrollEl?.tagName} actualData=${actualScrollEl?.dataset?.trendingScroll ?? 'none'}`);
 
       if (scrollEl) {
-        const atTop = scrollEl.scrollTop <= 0;
-        const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 1;
-        if (atTop && e.deltaY < 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED atTop`); return; }
+        const st = scrollEl.scrollTop;
+        const atTop = st <= 0;
+        // rubber-band 방지: scrollTop이 작을 때 위로 스크롤하면 미리 차단
+        const nearTop = st < 8;
+        const atBottom = st + scrollEl.clientHeight >= scrollEl.scrollHeight - 1;
+        if ((atTop || nearTop) && e.deltaY < 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED atTop(st=${st})`); return; }
         if (atBottom && e.deltaY > 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED atBottom`); return; }
         return; // 중간 스크롤은 통과
       }
