@@ -561,18 +561,31 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     }
   }, [isExpanded, posts.length, handleScroll]);
 
-  // isExpanded 전환 시 body/html 레벨 overscroll 잠금 (Chrome compositor 레벨 차단)
+  // isExpanded 전환 시 body/html 레벨 overscroll + 스크롤 자체 잠금
+  // (Android WebView가 페이지를 끌어당기는 현상까지 차단)
   useEffect(() => {
     if (isExpanded) {
       document.body.style.overscrollBehavior = 'none';
       document.documentElement.style.overscrollBehavior = 'none';
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      document.documentElement.style.touchAction = 'none';
     } else {
       document.body.style.overscrollBehavior = '';
       document.documentElement.style.overscrollBehavior = '';
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.touchAction = '';
     }
     return () => {
       document.body.style.overscrollBehavior = '';
       document.documentElement.style.overscrollBehavior = '';
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.documentElement.style.touchAction = '';
     };
   }, [isExpanded]);
 
@@ -590,7 +603,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div
       ref={containerRef}
       className={cn(
-        "bg-white/95 backdrop-blur-xl rounded-[32px] transition-[max-height,transform,opacity] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80",
+        "bg-white/95 backdrop-blur-xl rounded-[32px] transition-[max-height] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80",
         isExpanded ? (maxHeight ? "" : "max-h-[85vh]") : "max-h-[56px]"
       )}
       style={{

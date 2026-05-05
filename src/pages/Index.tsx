@@ -1529,6 +1529,7 @@ const Index = () => {
             "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-all duration-300",
             isCategoryOpen && "opacity-50 blur-[1px]",
           )}
+          style={{ touchAction: isTrendingExpanded ? 'none' : 'auto' }}
         >
           <div className="max-w-md mx-auto pointer-events-auto">
             <TrendingPosts
