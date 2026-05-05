@@ -604,6 +604,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   return (
     <div
       ref={containerRef}
+      data-trending-panel="true"
       className={cn(
         "bg-white/95 backdrop-blur-xl rounded-[32px] transition-[max-height] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80",
         isExpanded ? (maxHeight ? "" : "max-h-[85vh]") : "max-h-[56px]"

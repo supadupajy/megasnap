@@ -1173,13 +1173,17 @@ const Index = () => {
 
     const preventTouchMove = (e: TouchEvent) => {
       if (!isTrendingExpandedRef.current) return;
-      const scrollable = getTrendingScrollEl(e.target);
-      if (scrollable) {
-        const startY = (scrollable as any)._tStartY;
+
+      const panel = (e.target as HTMLElement).closest('[data-trending-panel]');
+      if (!panel) return;
+
+      const scrollEl = panel.querySelector('[data-trending-scroll]') as HTMLElement | null;
+      if (scrollEl) {
+        const startY = (scrollEl as any)._tStartY;
         if (startY == null) { e.preventDefault(); return; }
         const deltaY = e.touches[0].clientY - startY;
-        const atTop = scrollable.scrollTop <= 1;
-        const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
+        const atTop = scrollEl.scrollTop <= 0;
+        const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 1;
         if (!atTop && !atBottom) return;
         if (atTop && deltaY > 0) { e.preventDefault(); return; }
         if (atBottom && deltaY < 0) { e.preventDefault(); return; }
@@ -1188,25 +1192,23 @@ const Index = () => {
       e.preventDefault();
     };
 
-    let wSeq = 0;
     const preventWheel = (e: WheelEvent) => {
       if (!isTrendingExpandedRef.current) return;
-      const scrollable = getTrendingScrollEl(e.target);
-      wSeq++;
-      if (scrollable) {
-        const st = scrollable.scrollTop;
-        const atTop = st <= 0;
-        const atBottom = st + scrollable.clientHeight >= scrollable.scrollHeight - 1;
-        let action = 'pass';
-        if (atTop && e.deltaY < 0) action = 'block(atTop+neg)';
-        else if (atBottom && e.deltaY > 0) action = 'block(atBottom+pos)';
-        else if (atTop && e.deltaY > 0) action = 'pass(atTop+pos=normal-scroll)';
-        console.log(`[W#${wSeq}] ${action} deltaY=${e.deltaY} scrollTop=${st}`);
+
+      // 패널 내부인지 확인 (target이 어디든 패널 안이면 처리)
+      const panel = (e.target as HTMLElement).closest('[data-trending-panel]');
+      if (!panel) return; // 패널 밖이면 무시
+
+      // 패널 내부면 항상 listRef(실제 스크롤 컨테이너)를 직접 찾아서 처리
+      const scrollEl = panel.querySelector('[data-trending-scroll]') as HTMLElement | null;
+      if (scrollEl) {
+        const atTop = scrollEl.scrollTop <= 0;
+        const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 1;
         if (atTop && e.deltaY < 0) { e.preventDefault(); return; }
         if (atBottom && e.deltaY > 0) { e.preventDefault(); return; }
-        return;
+        return; // 중간 스크롤은 통과
       }
-      console.log(`[W#${wSeq}] block(outside) deltaY=${e.deltaY}`);
+      // scrollEl이 없으면(헤더 등) 차단
       e.preventDefault();
     };
 
