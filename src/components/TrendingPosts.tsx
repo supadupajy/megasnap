@@ -746,23 +746,22 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
         {/* 광고 구좌 (DB 연동) */}
         <TrendingAdBanner />
 
-        {/* 스크롤 가능한 포스팅 리스트 (relative 부모로 화살표를 띄움) */}
-        <div className="flex-1 relative overflow-hidden">
-          {/* 스크롤 위 화살표 - listRef 위에 absolute로 띄움 (scrollHeight 변동 방지) */}
-          {isExpanded && showScrollUpArrow && (
-            <div className="absolute top-2 left-0 right-0 flex justify-center pointer-events-none z-30 animate-in fade-in slide-in-from-top-1 duration-300">
-              <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
-                <ChevronUp className="w-5 h-5 text-indigo-600" />
-              </div>
+        {/* 스크롤 위 화살표 - listRef 형제로 absolute 배치 (scrollHeight 변동 방지) */}
+        {isExpanded && showScrollUpArrow && (
+          <div className="absolute left-0 right-0 flex justify-center pointer-events-none z-30 animate-in fade-in slide-in-from-top-1 duration-300" style={{ top: 'calc(var(--ad-banner-bottom, 96px) + 8px)' }}>
+            <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
+              <ChevronUp className="w-5 h-5 text-indigo-600" />
             </div>
-          )}
+          </div>
+        )}
 
-          <div
-            ref={listRef}
-            className="h-full overflow-y-scroll no-scrollbar pb-2 px-3 space-y-2"
-            data-trending-scroll="true"
-            style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
-          >
+        {/* 스크롤 가능한 포스팅 리스트 */}
+        <div
+          ref={listRef}
+          className="flex-1 overflow-y-scroll no-scrollbar pb-2 px-3 space-y-2 relative"
+          data-trending-scroll="true"
+          style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
+        >
           {/* 상단 스톱바 (1위 위) */}
           <div className="h-[3px] rounded-full mx-8 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
 
@@ -778,7 +777,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
           {/* 하단 스톱바 (20위 아래) */}
           <div className="h-[3px] rounded-full mx-8 mt-1" style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
-          </div>
         </div>
 
         {isExpanded && posts.length > 5 && showScrollDownArrow && (
