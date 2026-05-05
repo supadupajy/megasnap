@@ -164,9 +164,8 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
 };
 
 // ── 순위 변동 추적 유틸 ──────────────────────────────────────
-const RANK_STORAGE_KEY = 'trending_prev_ranks';
-const RANK_STORAGE_TS_KEY = 'trending_prev_ranks_ts';
-const RANK_REFRESH_INTERVAL = 60 * 1000; // 1분마다 이전 순위 갱신
+// localStorage에 직전 fetch의 순위 스냅샷을 저장 → 새 데이터와 비교
+const RANK_STORAGE_KEY = 'trending_prev_ranks_v2';
 
 interface PrevRankMap {
   [postId: string]: number;
@@ -184,16 +183,7 @@ const loadPrevRanks = (): PrevRankMap => {
 const savePrevRanks = (ranks: PrevRankMap) => {
   try {
     localStorage.setItem(RANK_STORAGE_KEY, JSON.stringify(ranks));
-    localStorage.setItem(RANK_STORAGE_TS_KEY, String(Date.now()));
   } catch {}
-};
-
-const getPrevRankTimestamp = (): number => {
-  try {
-    return Number(localStorage.getItem(RANK_STORAGE_TS_KEY) || '0');
-  } catch {
-    return 0;
-  }
 };
 
 // rankChange: 양수 = 상승, 음수 = 하락, 0 = 유지, null = NEW
@@ -462,8 +452,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  // 비교 기준이 되는 "이전 순위" 스냅샷 — localStorage에서 1회 로드
+  // 현재 posts와 비교해 변동을 표시
   const [prevRanks, setPrevRanks] = useState<PrevRankMap>(() => loadPrevRanks());
-  const prevRanksRef = useRef<PrevRankMap>(prevRanks);
+  // 첫 진입 시(localStorage가 비어있던 사용자) 신규 표시를 억제하기 위한 플래그
+  const [isFirstSnapshot, setIsFirstSnapshot] = useState<boolean>(() => {
+    const loaded = loadPrevRanks();
+    return Object.keys(loaded).length === 0;
+  });
   const isExpandedRef = useRef(isExpanded);
 
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
@@ -471,52 +467,58 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     isExpandedRef.current = isExpanded;
   }, [isExpanded]);
 
-  // 최초 마운트 시 이전 순위 초기화 (1회만)
-  useEffect(() => {
-    if (posts.length === 0) return;
-    const now = Date.now();
-    const lastTs = getPrevRankTimestamp();
-    // 처음 로드(lastTs === 0)이면 현재 순위를 이전 순위로 저장
-    if (lastTs === 0) {
-      const newMap: PrevRankMap = {};
-      posts.forEach((p: any) => {
-        if (p.rank != null) newMap[p.id] = p.rank;
-      });
-      savePrevRanks(newMap);
-      setPrevRanks(newMap);
-      prevRanksRef.current = newMap;
-    } else {
-      // 저장된 이전 순위 로드
-      const loaded = loadPrevRanks();
-      setPrevRanks(loaded);
-      prevRanksRef.current = loaded;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // posts ID:rank 시그니처가 바뀌면 다음 비교의 기준을 갱신
+  // - 이전 시그니처가 비어있던 경우: 현재 posts를 첫 스냅샷으로 저장(첫 비교 기준 마련)
+  // - 이전 시그니처가 있던 경우: 직전 시그니처의 순위를 prevRanks로 사용
+  const postsSignature = posts.map((p: any) => `${p.id}:${p.rank}`).join('|');
+  const prevSignatureRef = useRef<string>('');
 
-  // 1분 주기로 현재 순위를 이전 순위로 갱신 (posts 내용이 바뀌어도 타이머 기준으로만 갱신)
   useEffect(() => {
     if (posts.length === 0) return;
-    const now = Date.now();
-    const lastTs = getPrevRankTimestamp();
-    if (lastTs !== 0 && now - lastTs > RANK_REFRESH_INTERVAL) {
-      const newMap: PrevRankMap = {};
-      posts.forEach((p: any) => {
-        if (p.rank != null) newMap[p.id] = p.rank;
+    if (prevSignatureRef.current === postsSignature) return;
+
+    // 다음 비교용 스냅샷을 localStorage에 저장
+    const newMap: PrevRankMap = {};
+    posts.forEach((p: any) => {
+      if (p.rank != null) newMap[p.id] = p.rank;
+    });
+    savePrevRanks(newMap);
+
+    if (prevSignatureRef.current === '') {
+      // 컴포넌트 마운트 후 첫 시그니처 등록
+      // - localStorage에 이전 순위가 있었으면(prevRanks 비어있지 않음) 그대로 비교 사용
+      // - 신규 사용자(localStorage 비었음)는 isFirstSnapshot=true 상태에서
+      //   현재 posts를 prevRanks로 박아 모두 "유지(0)"로 표시
+      if (Object.keys(prevRanks).length === 0) {
+        setPrevRanks(newMap);
+      }
+    } else {
+      // 두 번째 갱신부터는 직전 시그니처의 순위를 새 비교 기준으로 사용
+      const updated: PrevRankMap = {};
+      prevSignatureRef.current.split('|').forEach(seg => {
+        const idx = seg.lastIndexOf(':');
+        if (idx > 0) {
+          const id = seg.slice(0, idx);
+          const rank = Number(seg.slice(idx + 1));
+          if (Number.isFinite(rank)) updated[id] = rank;
+        }
       });
-      savePrevRanks(newMap);
-      setPrevRanks(newMap);
-      prevRanksRef.current = newMap;
+      setPrevRanks(updated);
+      // 첫 갱신이 일어났으니 이제부터는 정상적으로 NEW 표시 가능
+      if (isFirstSnapshot) setIsFirstSnapshot(false);
     }
-  // posts 배열 내용이 바뀔 때마다 체크 (length 변화 포함)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posts]);
+
+    prevSignatureRef.current = postsSignature;
+  }, [postsSignature, posts]);
 
   // rankChange 계산 함수
   const getRankChange = (post: Post & { rank: number }): RankChange => {
     const prev = prevRanks[post.id];
-    if (prev == null) return null; // NEW
-    return prev - post.rank; // 양수 = 상승 (이전 순위가 더 낮았음)
+    if (prev == null) {
+      // 이전 데이터가 전혀 없는 신규 사용자의 첫 렌더에서는 NEW 대신 유지(0)로 표시
+      return isFirstSnapshot ? 0 : null;
+    }
+    return prev - post.rank; // 양수 = 상승 (이전 순위 숫자가 더 컸음 = 더 낮은 순위였음)
   };
 
   const isLoading = posts.length === 0;
