@@ -58,7 +58,7 @@ const BottomNav = () => {
         {ready && (
           <motion.div
             className="absolute rounded-full bg-gray-100 pointer-events-none"
-            style={{ top: '50%', y: '-62%', height: PILL_HEIGHT, width: PILL_WIDTH }}
+            style={{ top: '50%', y: '-72%', height: PILL_HEIGHT, width: PILL_WIDTH }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
