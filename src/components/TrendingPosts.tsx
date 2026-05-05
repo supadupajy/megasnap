@@ -285,12 +285,20 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
       className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
     >
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
-        {post.rank <= 3 ? (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-white text-[11px] font-black">
-            {post.rank}
+        {post.rank === 1 ? (
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+            1
+          </span>
+        ) : post.rank === 2 ? (
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black" style={{ background: 'linear-gradient(135deg, #9ca3af, #6b7280)' }}>
+            2
+          </span>
+        ) : post.rank === 3 ? (
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black" style={{ background: 'linear-gradient(135deg, #cd7f32, #a0522d)' }}>
+            3
           </span>
         ) : (
-          <span className="text-sm font-black italic text-gray-700">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-white text-[11px] font-black">
             {post.rank}
           </span>
         )}
