@@ -16,7 +16,7 @@ const navItems = [
 ];
 
 const PILL_WIDTH = 64;
-const PILL_HEIGHT = 56;
+const PILL_HEIGHT = 60;
 
 const BottomNav = () => {
   const location = useLocation();
@@ -58,7 +58,7 @@ const BottomNav = () => {
         {ready && (
           <motion.div
             className="absolute bg-gray-700 pointer-events-none"
-            style={{ top: '50%', y: '-50%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
+            style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
