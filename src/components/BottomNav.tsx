@@ -54,7 +54,7 @@ const BottomNav = () => {
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
-        {/* Sliding pill background — positioned to cover icon only */}
+        {/* Sliding pill background */}
         {ready && (
           <motion.div
             className="absolute rounded-full bg-gray-700 pointer-events-none"
@@ -73,12 +73,9 @@ const BottomNav = () => {
             <button
               key={item.path}
               onClick={() => handleNavClick(item.path)}
-              className={cn(
-                'relative flex flex-col items-center gap-1 min-w-[64px] transition-colors duration-200',
-                isActive ? 'text-white' : 'text-gray-400 hover:text-gray-500'
-              )}
+              className="relative flex flex-col items-center gap-1 min-w-[64px]"
             >
-              {/* Icon wrapper — pill aligns to this */}
+              {/* Icon wrapper */}
               <div
                 ref={(el) => { iconRefs.current[index] = el; }}
                 className="flex items-center justify-center w-[52px] h-9"
@@ -86,14 +83,15 @@ const BottomNav = () => {
                 <Icon
                   className={cn(
                     'w-6 h-6 transition-all duration-200',
-                    isActive ? 'scale-110' : 'scale-100'
+                    isActive ? 'scale-110 text-white' : 'scale-100 text-gray-400'
                   )}
                 />
               </div>
+              {/* Label */}
               <span
                 className={cn(
-                  'text-[10px] tracking-tighter transition-all duration-200 leading-none',
-                  isActive ? 'font-bold' : 'font-medium'
+                  'text-[10px] tracking-tighter leading-none transition-all duration-200',
+                  isActive ? 'font-bold text-gray-700' : 'font-medium text-gray-400'
                 )}
               >
                 {item.label}
