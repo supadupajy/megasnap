@@ -599,55 +599,91 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     }
   }, [isExpanded]);
 
-  // ⚠️ 진단 로그: 무엇이 움직이는지 추적
+  // ⚠️ 진단 로그: 항상 활성화 — 모든 터치 이벤트를 캡처
   useEffect(() => {
-    if (!isExpanded) return;
+    let snapshotY = 0;
+    let snapshotData: any = {};
+    let moveCount = 0;
 
-    const containerEl = containerRef.current;
-    const listEl = listRef.current;
-    const trendingFixedEl = containerEl?.parentElement?.parentElement; // .fixed div
-
-    let snapshot: any = {};
-
-    const onTouchStart = (e: TouchEvent) => {
-      snapshot = {
-        touchStartY: e.touches[0].clientY,
-        listScrollTop: listEl?.scrollTop ?? 'n/a',
-        containerTransform: containerEl ? getComputedStyle(containerEl).transform : 'n/a',
-        containerTop: containerEl?.getBoundingClientRect().top ?? 'n/a',
-        trendingFixedTop: trendingFixedEl?.getBoundingClientRect().top ?? 'n/a',
-        trendingFixedTransform: trendingFixedEl ? getComputedStyle(trendingFixedEl).transform : 'n/a',
+    const grabSnapshot = () => {
+      const containerEl = containerRef.current;
+      const listEl = listRef.current;
+      // 트렌딩 패널의 fixed 부모 div 찾기
+      let fixedParent: HTMLElement | null = containerEl;
+      while (fixedParent && fixedParent !== document.body) {
+        const pos = getComputedStyle(fixedParent).position;
+        if (pos === 'fixed') break;
+        fixedParent = fixedParent.parentElement;
+      }
+      return {
+        isExpanded: isExpandedRef.current,
+        listScrollTop: listEl?.scrollTop,
+        listClientHeight: listEl?.clientHeight,
+        listScrollHeight: listEl?.scrollHeight,
+        containerRect: containerEl ? containerEl.getBoundingClientRect() : null,
+        containerTransform: containerEl ? getComputedStyle(containerEl).transform : null,
+        fixedParentRect: fixedParent ? fixedParent.getBoundingClientRect() : null,
+        fixedParentTransform: fixedParent ? getComputedStyle(fixedParent).transform : null,
         windowScrollY: window.scrollY,
         bodyScrollTop: document.body.scrollTop,
+        documentScrollTop: document.documentElement.scrollTop,
+        visualViewportOffsetTop: window.visualViewport?.offsetTop,
+        visualViewportPageTop: window.visualViewport?.pageTop,
       };
-      console.log('[TRENDING-DIAG] touchstart:', snapshot);
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      snapshotY = e.touches[0].clientY;
+      snapshotData = grabSnapshot();
+      moveCount = 0;
+      console.log('[DIAG] 🟢 touchstart', {
+        startY: snapshotY,
+        target: (e.target as HTMLElement)?.tagName + '.' + (e.target as HTMLElement)?.className?.substring(0, 30),
+        ...snapshotData,
+      });
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      const now = {
-        deltaY: e.touches[0].clientY - snapshot.touchStartY,
-        listScrollTop: listEl?.scrollTop ?? 'n/a',
-        listScrollTopChange: (listEl?.scrollTop ?? 0) - (snapshot.listScrollTop || 0),
-        containerTransform: containerEl ? getComputedStyle(containerEl).transform : 'n/a',
-        containerTop: containerEl?.getBoundingClientRect().top ?? 'n/a',
-        containerTopChange: (containerEl?.getBoundingClientRect().top ?? 0) - (snapshot.containerTop || 0),
-        trendingFixedTop: trendingFixedEl?.getBoundingClientRect().top ?? 'n/a',
-        trendingFixedTopChange: (trendingFixedEl?.getBoundingClientRect().top ?? 0) - (snapshot.trendingFixedTop || 0),
-        trendingFixedTransform: trendingFixedEl ? getComputedStyle(trendingFixedEl).transform : 'n/a',
-        windowScrollY: window.scrollY,
-        bodyScrollTop: document.body.scrollTop,
-      };
-      console.log('[TRENDING-DIAG] touchmove:', now);
+      moveCount++;
+      // 처음 1, 5, 10, 20번째만 로그 (너무 많으면 안되니까)
+      if (moveCount !== 1 && moveCount !== 5 && moveCount !== 10 && moveCount !== 20) return;
+      const now = grabSnapshot();
+      const containerTopDelta = now.containerRect && snapshotData.containerRect
+        ? now.containerRect.top - snapshotData.containerRect.top : 'n/a';
+      const fixedTopDelta = now.fixedParentRect && snapshotData.fixedParentRect
+        ? now.fixedParentRect.top - snapshotData.fixedParentRect.top : 'n/a';
+      const listScrollDelta = (now.listScrollTop ?? 0) - (snapshotData.listScrollTop ?? 0);
+      console.log(`[DIAG] 🟡 touchmove #${moveCount}`, {
+        deltaY: e.touches[0].clientY - snapshotY,
+        containerTopDelta,
+        fixedTopDelta,
+        listScrollDelta,
+        windowScrollY: now.windowScrollY,
+        bodyScrollTop: now.bodyScrollTop,
+        documentScrollTop: now.documentScrollTop,
+        visualViewportOffsetTop: now.visualViewportOffsetTop,
+        visualViewportPageTop: now.visualViewportPageTop,
+        containerTransform: now.containerTransform,
+        fixedParentTransform: now.fixedParentTransform,
+      });
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      console.log('[DIAG] 🔴 touchend, total moves:', moveCount);
     };
 
     document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
     document.addEventListener('touchmove', onTouchMove, { passive: true, capture: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+
+    console.log('[DIAG] ✅ Diagnostic listeners installed');
 
     return () => {
       document.removeEventListener('touchstart', onTouchStart, { capture: true } as any);
       document.removeEventListener('touchmove', onTouchMove, { capture: true } as any);
+      document.removeEventListener('touchend', onTouchEnd, { capture: true } as any);
     };
-  }, [isExpanded]);
+  }, []);
 
   return (
     <div
