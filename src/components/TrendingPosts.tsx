@@ -668,19 +668,24 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   <Flame className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
                 </motion.div>
               ) : (
-                <motion.span
+                <motion.div
                   key="collapsed-rank"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
-                  className={cn(
-                    "text-indigo-600 font-black text-sm italic shrink-0",
-                    currentPost?.rank >= 10 ? "w-6" : "w-4"
-                  )}
+                  className="shrink-0 flex items-center justify-center mr-1"
                 >
-                  {currentPost?.rank}
-                </motion.span>
+                  {currentPost?.rank === 1 ? (
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>1</span>
+                  ) : currentPost?.rank === 2 ? (
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black" style={{ background: 'linear-gradient(135deg, #9ca3af, #6b7280)' }}>2</span>
+                  ) : currentPost?.rank === 3 ? (
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black" style={{ background: 'linear-gradient(135deg, #cd7f32, #a0522d)' }}>3</span>
+                  ) : (
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-white text-[11px] font-black">{currentPost?.rank}</span>
+                  )}
+                </motion.div>
               )}
             </AnimatePresence>
 
@@ -711,6 +716,26 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                       </motion.p>
                     </AnimatePresence>
                   </div>
+                  {/* 순위 변동 */}
+                  {(() => {
+                    const rc = currentPost ? getRankChange(currentPost) : undefined;
+                    if (rc === null) return (
+                      <span className="inline-flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 px-1.5 rounded-md tracking-wide shrink-0" style={{ height: '18px', lineHeight: '18px' }}>NEW</span>
+                    );
+                    if (rc !== undefined && rc > 0) return (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M5 0L10 8H0L5 0Z" fill="#10b981"/></svg>
+                        <span className="text-[10px] font-black text-emerald-500 leading-none">{rc}</span>
+                      </div>
+                    );
+                    if (rc !== undefined && rc < 0) return (
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M5 8L0 0H10L5 8Z" fill="#f43f5e"/></svg>
+                        <span className="text-[10px] font-black text-rose-500 leading-none">{Math.abs(rc)}</span>
+                      </div>
+                    );
+                    return <Minus className="w-3 h-3 text-gray-300 shrink-0" />;
+                  })()}
                 </motion.div>
               ) : (
                 <motion.div
