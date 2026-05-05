@@ -15,28 +15,28 @@ const navItems = [
   { icon: User, label: '내정보', path: '/profile' },
 ];
 
+const PILL_WIDTH = 52;
+const PILL_HEIGHT = 36;
+
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const navRef = useRef<HTMLDivElement>(null);
-  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const [pillStyle, setPillStyle] = useState({ left: 0, width: 0 });
+  const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [pillLeft, setPillLeft] = useState(0);
+  const [ready, setReady] = useState(false);
 
   const activeIndex = navItems.findIndex((item) => item.path === location.pathname);
   const safeIndex = activeIndex === -1 ? 0 : activeIndex;
 
   useEffect(() => {
-    const btn = buttonRefs.current[safeIndex];
+    const iconEl = iconRefs.current[safeIndex];
     const nav = navRef.current;
-    if (btn && nav) {
+    if (iconEl && nav) {
       const navRect = nav.getBoundingClientRect();
-      const btnRect = btn.getBoundingClientRect();
-      const pillWidth = 52;
-      const pillHeight = 36;
-      setPillStyle({
-        left: btnRect.left - navRect.left + btnRect.width / 2 - pillWidth / 2,
-        width: pillWidth,
-      });
+      const iconRect = iconEl.getBoundingClientRect();
+      setPillLeft(iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2);
+      setReady(true);
     }
   }, [safeIndex]);
 
@@ -54,13 +54,16 @@ const BottomNav = () => {
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
-        {/* Sliding pill background */}
-        <motion.div
-          className="absolute top-1/2 -translate-y-[calc(50%+6px)] h-9 bg-gray-100 rounded-full pointer-events-none"
-          animate={{ left: pillStyle.left, width: pillStyle.width }}
-          transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-          style={{ left: pillStyle.left, width: pillStyle.width }}
-        />
+        {/* Sliding pill background — positioned to cover icon only */}
+        {ready && (
+          <motion.div
+            className="absolute rounded-full bg-gray-100 pointer-events-none"
+            style={{ top: '50%', y: '-62%', height: PILL_HEIGHT, width: PILL_WIDTH }}
+            animate={{ left: pillLeft }}
+            initial={{ left: pillLeft }}
+            transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+          />
+        )}
 
         {navItems.map((item, index) => {
           const Icon = item.icon;
@@ -69,22 +72,27 @@ const BottomNav = () => {
           return (
             <button
               key={item.path}
-              ref={(el) => { buttonRefs.current[index] = el; }}
               onClick={() => handleNavClick(item.path)}
               className={cn(
                 'relative flex flex-col items-center gap-1 min-w-[64px] transition-colors duration-200',
                 isActive ? 'text-gray-900' : 'text-gray-400 hover:text-gray-500'
               )}
             >
-              <Icon
-                className={cn(
-                  'w-6 h-6 transition-all duration-200',
-                  isActive ? 'scale-110' : 'scale-100'
-                )}
-              />
+              {/* Icon wrapper — pill aligns to this */}
+              <div
+                ref={(el) => { iconRefs.current[index] = el; }}
+                className="flex items-center justify-center w-[52px] h-9"
+              >
+                <Icon
+                  className={cn(
+                    'w-6 h-6 transition-all duration-200',
+                    isActive ? 'scale-110' : 'scale-100'
+                  )}
+                />
+              </div>
               <span
                 className={cn(
-                  'text-[10px] tracking-tighter transition-all duration-200',
+                  'text-[10px] tracking-tighter transition-all duration-200 leading-none',
                   isActive ? 'font-bold' : 'font-medium'
                 )}
               >
