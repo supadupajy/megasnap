@@ -220,8 +220,20 @@ const Popular = () => {
               let adCount = 0;
 
               filteredPosts.forEach((post, index) => {
+                const rank = index + 1;
+                const isTop3 = rank <= 3;
                 items.push(
-                  <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
+                  <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white relative">
+                    {/* 순위 배지 */}
+                    <div className="absolute top-4 left-4 z-10">
+                      {isTop3 ? (
+                        <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center shadow-sm">
+                          <span className="text-white text-xs font-black leading-none">{rank}</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-black text-gray-700 leading-none">{rank}</span>
+                      )}
+                    </div>
                     <PostItem
                       post={post}
                       onLikeToggle={() => handleLikeToggle(post.id)}
