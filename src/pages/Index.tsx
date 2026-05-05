@@ -1192,29 +1192,19 @@ const Index = () => {
       e.preventDefault();
     };
 
-    let wSeq = 0;
-    let lastScrollTop = -1;
     const preventWheel = (e: WheelEvent) => {
       if (!isTrendingExpandedRef.current) return;
 
       const panel = (e.target as HTMLElement).closest?.('[data-trending-panel]');
       if (!panel) return;
 
-      wSeq++;
       const scrollEl = panel.querySelector('[data-trending-scroll]') as HTMLElement | null;
-
       if (scrollEl) {
         const st = scrollEl.scrollTop;
-        const jump = lastScrollTop >= 0 ? st - lastScrollTop : 0;
-        const maxH = scrollEl.scrollHeight;
-        const clientH = scrollEl.clientHeight;
-        console.log(`[W#${wSeq}] dY=${e.deltaY} st=${st} jump=${jump} sH=${maxH} cH=${clientH}`);
-
         const atTop = st <= 0;
-        const atBottom = st + clientH >= maxH - 1;
-        if (atTop && e.deltaY < 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED top`); lastScrollTop = st; return; }
-        if (atBottom && e.deltaY > 0) { e.preventDefault(); console.log(`[W#${wSeq}] BLOCKED bot`); lastScrollTop = st; return; }
-        lastScrollTop = st;
+        const atBottom = st + scrollEl.clientHeight >= scrollEl.scrollHeight - 1;
+        if (atTop && e.deltaY < 0) { e.preventDefault(); return; }
+        if (atBottom && e.deltaY > 0) { e.preventDefault(); return; }
         return;
       }
       e.preventDefault();
