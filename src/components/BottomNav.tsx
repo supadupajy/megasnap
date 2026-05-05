@@ -15,8 +15,8 @@ const navItems = [
   { icon: User, label: '내정보', path: '/profile' },
 ];
 
-const PILL_WIDTH = 52;
-const PILL_HEIGHT = 36;
+const PILL_WIDTH = 60;
+const PILL_HEIGHT = 56;
 
 const BottomNav = () => {
   const location = useLocation();
@@ -58,7 +58,7 @@ const BottomNav = () => {
         {ready && (
           <motion.div
             className="absolute rounded-full bg-gray-700 pointer-events-none"
-            style={{ top: '50%', y: '-72%', height: PILL_HEIGHT, width: PILL_WIDTH }}
+            style={{ top: '50%', y: '-50%', height: PILL_HEIGHT, width: PILL_WIDTH }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
@@ -90,8 +90,8 @@ const BottomNav = () => {
               {/* Label */}
               <span
                 className={cn(
-                  'text-[10px] tracking-tighter leading-none transition-all duration-200',
-                  isActive ? 'font-bold text-gray-700' : 'font-medium text-gray-400'
+                  'relative text-[10px] tracking-tighter leading-none transition-all duration-200',
+                  isActive ? 'font-bold text-white' : 'font-medium text-gray-400'
                 )}
               >
                 {item.label}
