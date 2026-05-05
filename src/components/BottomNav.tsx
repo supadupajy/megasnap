@@ -83,7 +83,7 @@ const BottomNav = () => {
                 <Icon
                   className={cn(
                     'w-6 h-6 transition-all duration-200',
-                    isActive ? 'scale-110 text-white' : 'scale-100 text-gray-400'
+                    isActive ? 'scale-110 text-gray-900' : 'scale-100 text-gray-400'
                   )}
                 />
               </div>
@@ -91,7 +91,7 @@ const BottomNav = () => {
               <span
                 className={cn(
                   'relative text-[10px] tracking-tighter leading-none transition-all duration-200',
-                  isActive ? 'font-bold text-white' : 'font-medium text-gray-400'
+                  isActive ? 'font-bold text-gray-900' : 'font-medium text-gray-400'
                 )}
               >
                 {item.label}
