@@ -209,6 +209,7 @@ const Index = () => {
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
+  const isTrendingExpandedRef = useRef(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
@@ -1148,16 +1149,21 @@ const Index = () => {
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);
 
-  // 트렌딩 패널 펼쳐질 때 document 레벨 touchmove + wheel 차단
-  // (모바일 오버스크롤 + 데스크톱 트랙패드 wheel bounce 모두 방지)
+  // isTrendingExpanded → ref 동기화 (핸들러 클로저에서 최신값 참조)
   useEffect(() => {
-    if (!isTrendingExpanded) return;
+    isTrendingExpandedRef.current = isTrendingExpanded;
+  }, [isTrendingExpanded]);
+
+  // 마운트 시 한 번만 등록 — isTrendingExpandedRef로 활성 여부 체크
+  // (useEffect deps에 isTrendingExpanded를 넣으면 등록/해제 타이밍 gap에서 이벤트 누락)
+  useEffect(() => {
+    const getTrendingScrollEl = (target: EventTarget | null): HTMLElement | null =>
+      (target as HTMLElement)?.closest?.('[data-trending-scroll]') as HTMLElement | null;
 
     const saveStartY = (e: TouchEvent) => {
-      const scrollable = (e.target as HTMLElement).closest('[data-trending-scroll]') as HTMLElement | null;
-      if (scrollable) {
-        (scrollable as any)._tStartY = e.touches[0].clientY;
-      }
+      if (!isTrendingExpandedRef.current) return;
+      const el = getTrendingScrollEl(e.target);
+      if (el) (el as any)._tStartY = e.touches[0].clientY;
     };
 
     const clearStartY = () => {
@@ -1166,20 +1172,14 @@ const Index = () => {
     };
 
     const preventTouchMove = (e: TouchEvent) => {
-      const scrollable = (e.target as HTMLElement).closest('[data-trending-scroll]');
+      if (!isTrendingExpandedRef.current) return;
+      const scrollable = getTrendingScrollEl(e.target);
       if (scrollable) {
-        const el = scrollable as HTMLElement;
-        const startY = (el as any)._tStartY;
-
-        if (startY == null) {
-          e.preventDefault();
-          return;
-        }
-
+        const startY = (scrollable as any)._tStartY;
+        if (startY == null) { e.preventDefault(); return; }
         const deltaY = e.touches[0].clientY - startY;
-        const atTop = el.scrollTop <= 1;
-        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-
+        const atTop = scrollable.scrollTop <= 1;
+        const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
         if (!atTop && !atBottom) return;
         if (atTop && deltaY > 0) { e.preventDefault(); return; }
         if (atBottom && deltaY < 0) { e.preventDefault(); return; }
@@ -1188,25 +1188,19 @@ const Index = () => {
       e.preventDefault();
     };
 
-    // wheel 이벤트 처리 (데스크톱 트랙패드 / 마우스 휠)
     const preventWheel = (e: WheelEvent) => {
-      const scrollable = (e.target as HTMLElement).closest('[data-trending-scroll]');
+      if (!isTrendingExpandedRef.current) return;
+      const scrollable = getTrendingScrollEl(e.target);
       if (scrollable) {
-        const el = scrollable as HTMLElement;
-        const atTop = el.scrollTop <= 0;
-        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
-        // wheel deltaY: 양수 = 아래로 스크롤, 음수 = 위로 스크롤
-        // atTop인데 위로 더 스크롤(deltaY < 0) → 차단
-        // atBottom인데 아래로 더 스크롤(deltaY > 0) → 차단
+        const atTop = scrollable.scrollTop <= 0;
+        const atBottom = scrollable.scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 1;
         if (atTop && e.deltaY < 0) { e.preventDefault(); return; }
         if (atBottom && e.deltaY > 0) { e.preventDefault(); return; }
-        return; // 중간은 통과
+        return;
       }
-      // 리스트 외부(헤더, 광고, 배경) → 완전 차단
       e.preventDefault();
     };
 
-    // capture: true → 맵 포함 모든 핸들러보다 먼저 실행
     document.addEventListener('touchstart', saveStartY, { passive: true, capture: true });
     document.addEventListener('touchend', clearStartY, { passive: true, capture: true });
     document.addEventListener('touchcancel', clearStartY, { passive: true, capture: true });
@@ -1220,7 +1214,7 @@ const Index = () => {
       document.removeEventListener('touchmove', preventTouchMove, { capture: true } as any);
       document.removeEventListener('wheel', preventWheel, { capture: true } as any);
     };
-  }, [isTrendingExpanded]);
+  }, []);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
     setIsTrendingExpanded(false);
