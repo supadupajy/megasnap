@@ -15,7 +15,7 @@ const navItems = [
   { icon: User, label: '내정보', path: '/profile' },
 ];
 
-const PILL_WIDTH = 60;
+const PILL_WIDTH = 64;
 const PILL_HEIGHT = 56;
 
 const BottomNav = () => {
@@ -57,8 +57,8 @@ const BottomNav = () => {
         {/* Sliding pill background */}
         {ready && (
           <motion.div
-            className="absolute rounded-full bg-gray-700 pointer-events-none"
-            style={{ top: '50%', y: '-50%', height: PILL_HEIGHT, width: PILL_WIDTH }}
+            className="absolute bg-gray-700 pointer-events-none"
+            style={{ top: '50%', y: '-50%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
