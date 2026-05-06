@@ -26,11 +26,10 @@ function useWindowSize() {
   return size;
 }
 
-// 삼각형 크기
-const TRI_BASE = 56;
-const TRI_H    = 48;
+// 삼각형은 정사각형 뷰박스 안에서 위쪽을 향하는 기본 모양 → rotate로 방향 조정
+const TRI_SIZE = 56; // 버튼 크기 (px)
 const EDGE_MARGIN = 16;
-const MIN_GAP = 12; // 인디케이터 간 최소 간격 (px)
+const MIN_GAP = 12;
 
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bounds,
@@ -61,17 +60,15 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const leftBtnBottom = bottomSafeY + 168;
   const rightBtnBottom = bottomSafeY + 144;
 
-  const lngToRatioX = (lng: number) => (lng - sw.lng) / lngRange;
-  const latToRatioY = (lat: number) => 1 - (lat - sw.lat) / latRange;
+  // 위도/경도 → 화면 픽셀 비율
+  const lngToX = (lng: number) => ((lng - sw.lng) / lngRange) * screenW;
+  const latToY = (lat: number) => (1 - (lat - sw.lat) / latRange) * screenH;
 
-  // 각 인디케이터의 실제 픽셀 위치(절대 top/left)를 계산
   interface IndicatorInfo {
     dir: Direction;
-    // 실제 화면 절대 좌표 (top-left 기준)
-    absX: number; // left edge
-    absY: number; // top edge
-    svgW: number;
-    svgH: number;
+    absX: number; // 버튼 left edge
+    absY: number; // 버튼 top edge
+    angleDeg: number; // 삼각형 꼭지점이 향하는 각도 (0 = 위, 시계방향)
     count: number;
   }
 
@@ -90,53 +87,67 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     if (!hasMarker || count === 0) continue;
 
-    const isVertical = dir === 'top' || dir === 'bottom';
-    const svgW = isVertical ? TRI_BASE : TRI_H;
-    const svgH = isVertical ? TRI_H    : TRI_BASE;
+    // 마커 평균 위치의 화면 픽셀 좌표
+    const avgLng = dir === 'top' ? (counts.topAvgLng ?? centerLng)
+                 : dir === 'bottom' ? (counts.bottomAvgLng ?? centerLng)
+                 : centerLng;
+    const avgLat = dir === 'left' ? (counts.leftAvgLat ?? centerLat)
+                 : dir === 'right' ? (counts.rightAvgLat ?? centerLat)
+                 : centerLat;
 
+    const markerScreenX = lngToX(avgLng);
+    const markerScreenY = latToY(avgLat);
+
+    // 인디케이터 초기 위치 (화면 가장자리에 고정)
     let absX = 0;
     let absY = 0;
 
-    if (dir === 'top' || dir === 'bottom') {
-      const avgLng = dir === 'top' ? (counts.topAvgLng ?? centerLng) : (counts.bottomAvgLng ?? centerLng);
-      let cx = lngToRatioX(avgLng) * screenW;
-
-      if (dir === 'bottom') {
-        const leftExclude = 80 + svgW / 2 + EDGE_MARGIN;
-        const rightExclude = screenW - 80 - svgW / 2 - EDGE_MARGIN;
-        cx = Math.max(leftExclude, Math.min(rightExclude, cx));
-      } else {
-        cx = Math.max(svgW / 2 + EDGE_MARGIN, Math.min(screenW - svgW / 2 - EDGE_MARGIN, cx));
-      }
-
-      absX = cx - svgW / 2;
-      absY = dir === 'top'
-        ? topSafeY
-        : screenH - bottomSafeY - svgH; // bottom을 절대 top 좌표로 변환
+    if (dir === 'top') {
+      // 상단 가장자리: X는 마커 평균 경도 기준, Y는 topSafeY
+      let cx = markerScreenX;
+      cx = Math.max(TRI_SIZE / 2 + EDGE_MARGIN, Math.min(screenW - TRI_SIZE / 2 - EDGE_MARGIN, cx));
+      absX = cx - TRI_SIZE / 2;
+      absY = topSafeY;
+    } else if (dir === 'bottom') {
+      // 하단 가장자리
+      const leftExclude = 80 + TRI_SIZE / 2 + EDGE_MARGIN;
+      const rightExclude = screenW - 80 - TRI_SIZE / 2 - EDGE_MARGIN;
+      let cx = markerScreenX;
+      cx = Math.max(leftExclude, Math.min(rightExclude, cx));
+      absX = cx - TRI_SIZE / 2;
+      absY = screenH - bottomSafeY - TRI_SIZE;
+    } else if (dir === 'left') {
+      // 좌측 가장자리
+      const btnTopY = screenH - leftBtnBottom;
+      let cy = markerScreenY;
+      if (cy + TRI_SIZE / 2 > btnTopY) cy = btnTopY - TRI_SIZE / 2 - 8;
+      cy = Math.max(topSafeY + TRI_SIZE / 2, Math.min(screenH - bottomSafeY - TRI_SIZE / 2, cy));
+      absX = EDGE_MARGIN;
+      absY = cy - TRI_SIZE / 2;
     } else {
-      const avgLat = dir === 'left' ? (counts.leftAvgLat ?? centerLat) : (counts.rightAvgLat ?? centerLat);
-      let cy = latToRatioY(avgLat) * screenH;
-
-      if (dir === 'left') {
-        const btnTopY = screenH - leftBtnBottom;
-        if (cy + svgH / 2 > btnTopY) cy = btnTopY - svgH / 2 - 8;
-        cy = Math.max(topSafeY + svgH / 2, Math.min(screenH - bottomSafeY - svgH / 2, cy));
-        absX = EDGE_MARGIN;
-        absY = cy - svgH / 2;
-      } else {
-        const btnTopY = screenH - rightBtnBottom;
-        if (cy + svgH / 2 > btnTopY) cy = btnTopY - svgH / 2 - 8;
-        cy = Math.max(topSafeY + svgH / 2, Math.min(screenH - bottomSafeY - svgH / 2, cy));
-        absX = screenW - EDGE_MARGIN - svgW; // right를 절대 left 좌표로 변환
-        absY = cy - svgH / 2;
-      }
+      // 우측 가장자리
+      const btnTopY = screenH - rightBtnBottom;
+      let cy = markerScreenY;
+      if (cy + TRI_SIZE / 2 > btnTopY) cy = btnTopY - TRI_SIZE / 2 - 8;
+      cy = Math.max(topSafeY + TRI_SIZE / 2, Math.min(screenH - bottomSafeY - TRI_SIZE / 2, cy));
+      absX = screenW - EDGE_MARGIN - TRI_SIZE;
+      absY = cy - TRI_SIZE / 2;
     }
 
-    indicators.push({ dir, absX, absY, svgW, svgH, count });
+    // 인디케이터 중심에서 마커 화면 좌표까지의 각도 계산
+    const indicatorCx = absX + TRI_SIZE / 2;
+    const indicatorCy = absY + TRI_SIZE / 2;
+    const dx = markerScreenX - indicatorCx;
+    const dy = markerScreenY - indicatorCy;
+    // atan2: 오른쪽=0, 아래=90, 왼쪽=180, 위=-90 (라디안)
+    // SVG 삼각형 기본 방향이 "위쪽"이므로 -90도 오프셋
+    const angleRad = Math.atan2(dy, dx);
+    const angleDeg = (angleRad * 180) / Math.PI + 90; // +90 = 위쪽 기준으로 변환
+
+    indicators.push({ dir, absX, absY, angleDeg, count });
   }
 
   // ── 겹침 방지: 모든 쌍에 대해 실제 픽셀 겹침 체크 후 분리 ──────────
-  // 최대 10회 반복하여 수렴
   for (let iter = 0; iter < 10; iter++) {
     let anyOverlap = false;
 
@@ -145,79 +156,78 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         const a = indicators[i];
         const b = indicators[j];
 
-        // AABB 겹침 체크 (MIN_GAP 포함)
-        const overlapX = a.absX < b.absX + b.svgW + MIN_GAP && a.absX + a.svgW + MIN_GAP > b.absX;
-        const overlapY = a.absY < b.absY + b.svgH + MIN_GAP && a.absY + a.svgH + MIN_GAP > b.absY;
+        const overlapX = a.absX < b.absX + TRI_SIZE + MIN_GAP && a.absX + TRI_SIZE + MIN_GAP > b.absX;
+        const overlapY = a.absY < b.absY + TRI_SIZE + MIN_GAP && a.absY + TRI_SIZE + MIN_GAP > b.absY;
 
         if (!overlapX || !overlapY) continue;
 
         anyOverlap = true;
 
-        // 두 인디케이터의 중심점
-        const aCx = a.absX + a.svgW / 2;
-        const aCy = a.absY + a.svgH / 2;
-        const bCx = b.absX + b.svgW / 2;
-        const bCy = b.absY + b.svgH / 2;
-
-        // 분리 방향 결정: 각 인디케이터의 고정 축을 유지하면서 자유 축으로만 이동
-        // top/bottom → X축으로만 이동 가능
-        // left/right → Y축으로만 이동 가능
         const aIsHoriz = a.dir === 'top' || a.dir === 'bottom';
         const bIsHoriz = b.dir === 'top' || b.dir === 'bottom';
 
         if (aIsHoriz && bIsHoriz) {
-          // 둘 다 수평 → X축으로 분리
+          // 둘 다 top/bottom → X축으로 분리
+          const aCx = a.absX + TRI_SIZE / 2;
+          const bCx = b.absX + TRI_SIZE / 2;
           const dx = aCx - bCx;
-          const needed = (a.svgW / 2 + b.svgW / 2 + MIN_GAP);
-          const current = Math.abs(dx);
-          const push = (needed - current) / 2 + 1;
-          const dir = dx >= 0 ? 1 : -1;
-
-          a.absX += push * dir;
-          b.absX -= push * dir;
-
-          // 화면 경계 클램핑
-          a.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - a.svgW, a.absX));
-          b.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - b.svgW, b.absX));
+          const needed = TRI_SIZE + MIN_GAP;
+          const push = (needed - Math.abs(dx)) / 2 + 1;
+          const pushDir = dx >= 0 ? 1 : -1;
+          a.absX += push * pushDir;
+          b.absX -= push * pushDir;
+          a.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - TRI_SIZE, a.absX));
+          b.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - TRI_SIZE, b.absX));
         } else if (!aIsHoriz && !bIsHoriz) {
-          // 둘 다 수직 → Y축으로 분리
+          // 둘 다 left/right → Y축으로 분리
+          const aCy = a.absY + TRI_SIZE / 2;
+          const bCy = b.absY + TRI_SIZE / 2;
           const dy = aCy - bCy;
-          const needed = (a.svgH / 2 + b.svgH / 2 + MIN_GAP);
-          const current = Math.abs(dy);
-          const push = (needed - current) / 2 + 1;
-          const dir = dy >= 0 ? 1 : -1;
-
-          a.absY += push * dir;
-          b.absY -= push * dir;
-
-          // 화면 경계 클램핑
-          a.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - a.svgH, a.absY));
-          b.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - b.svgH, b.absY));
+          const needed = TRI_SIZE + MIN_GAP;
+          const push = (needed - Math.abs(dy)) / 2 + 1;
+          const pushDir = dy >= 0 ? 1 : -1;
+          a.absY += push * pushDir;
+          b.absY -= push * pushDir;
+          a.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, a.absY));
+          b.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, b.absY));
         } else {
-          // 수평+수직 혼합 (top+left, top+right, bottom+left, bottom+right)
-          // 수평(top/bottom)은 X축으로만 이동, 수직(left/right)은 Y축으로만 이동
+          // 혼합 (top+left, top+right, bottom+left, bottom+right)
           const horiz = aIsHoriz ? a : b;
           const vert  = aIsHoriz ? b : a;
 
-          // X축: horiz를 vert로부터 멀어지는 방향으로 밀기
-          const xOverlap = Math.min(horiz.absX + horiz.svgW, vert.absX + vert.svgW)
+          // X축: horiz를 vert 반대 방향으로 밀기
+          const xOverlap = Math.min(horiz.absX + TRI_SIZE, vert.absX + TRI_SIZE)
                          - Math.max(horiz.absX, vert.absX);
           if (xOverlap > 0) {
-            // vert가 left면 horiz 오른쪽으로, vert가 right면 horiz 왼쪽으로
             const pushX = vert.dir === 'left' ? xOverlap + MIN_GAP : -(xOverlap + MIN_GAP);
             horiz.absX += pushX;
-            horiz.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - horiz.svgW, horiz.absX));
+            horiz.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - TRI_SIZE, horiz.absX));
           }
 
-          // Y축: vert를 horiz로부터 멀어지는 방향으로 밀기
-          const yOverlap = Math.min(horiz.absY + horiz.svgH, vert.absY + vert.svgH)
+          // Y축: vert를 horiz 반대 방향으로 밀기
+          const yOverlap = Math.min(horiz.absY + TRI_SIZE, vert.absY + TRI_SIZE)
                          - Math.max(horiz.absY, vert.absY);
           if (yOverlap > 0) {
-            // horiz가 top이면 vert 아래로, horiz가 bottom이면 vert 위로
             const pushY = horiz.dir === 'top' ? yOverlap + MIN_GAP : -(yOverlap + MIN_GAP);
             vert.absY += pushY;
-            vert.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - vert.svgH, vert.absY));
+            vert.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, vert.absY));
           }
+        }
+
+        // 위치가 바뀌었으므로 각도 재계산
+        for (const ind of [a, b]) {
+          const avgLng = ind.dir === 'top' ? (counts.topAvgLng ?? centerLng)
+                       : ind.dir === 'bottom' ? (counts.bottomAvgLng ?? centerLng)
+                       : centerLng;
+          const avgLat = ind.dir === 'left' ? (counts.leftAvgLat ?? centerLat)
+                       : ind.dir === 'right' ? (counts.rightAvgLat ?? centerLat)
+                       : centerLat;
+          const mX = lngToX(avgLng);
+          const mY = latToY(avgLat);
+          const cx = ind.absX + TRI_SIZE / 2;
+          const cy = ind.absY + TRI_SIZE / 2;
+          const angleRad = Math.atan2(mY - cy, mX - cx);
+          ind.angleDeg = (angleRad * 180) / Math.PI + 90;
         }
       }
     }
@@ -227,24 +237,23 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
   // ── 렌더링 ──────────────────────────────────────────────────────────
   const Btn = ({ info }: { info: IndicatorInfo }) => {
-    const { dir, absX, absY, svgW, svgH, count } = info;
-
-    const points = {
-      top:    `${TRI_BASE / 2},0 0,${TRI_H} ${TRI_BASE},${TRI_H}`,
-      bottom: `0,0 ${TRI_BASE},0 ${TRI_BASE / 2},${TRI_H}`,
-      left:   `0,${TRI_BASE / 2} ${TRI_H},0 ${TRI_H},${TRI_BASE}`,
-      right:  `0,0 0,${TRI_BASE} ${TRI_H},${TRI_BASE / 2}`,
-    }[dir];
-
-    const textPos = {
-      top:    { x: TRI_BASE / 2, y: TRI_H * 0.68 },
-      bottom: { x: TRI_BASE / 2, y: TRI_H * 0.42 },
-      left:   { x: TRI_H * 0.62, y: TRI_BASE / 2 },
-      right:  { x: TRI_H * 0.38, y: TRI_BASE / 2 },
-    }[dir];
+    const { dir, absX, absY, angleDeg, count } = info;
 
     const label = count > 999 ? '999+' : String(count);
-    const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
+    const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 10 : 12;
+
+    // 삼각형: 위쪽을 향하는 기본 모양, rotate로 방향 조정
+    // 뷰박스 56x56, 꼭지점이 위(중앙 상단)를 향함
+    const cx = TRI_SIZE / 2;
+    const cy = TRI_SIZE / 2;
+    const tipY = 4;           // 꼭지점 Y (위쪽)
+    const baseY = TRI_SIZE - 4; // 밑변 Y (아래쪽)
+    const halfBase = 22;      // 밑변 반폭
+
+    const triPoints = `${cx},${tipY} ${cx - halfBase},${baseY} ${cx + halfBase},${baseY}`;
+
+    // 숫자는 삼각형 무게중심 근처 (위쪽 꼭지점 기준으로 아래 2/3 지점)
+    const textY = tipY + (baseY - tipY) * 0.62;
 
     return (
       <button
@@ -258,36 +267,44 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           cursor: 'pointer',
           zIndex: 9000,
           pointerEvents: 'auto',
-          width: `${svgW}px`,
-          height: `${svgH}px`,
+          width: `${TRI_SIZE}px`,
+          height: `${TRI_SIZE}px`,
+          left: `${absX}px`,
+          top: `${absY}px`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          left: `${absX}px`,
-          top: `${absY}px`,
         }}
       >
         <svg
-          width={svgW}
-          height={svgH}
-          viewBox={`0 0 ${svgW} ${svgH}`}
-          style={{ display: 'block', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' }}
+          width={TRI_SIZE}
+          height={TRI_SIZE}
+          viewBox={`0 0 ${TRI_SIZE} ${TRI_SIZE}`}
+          style={{
+            display: 'block',
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.22))',
+            transform: `rotate(${angleDeg}deg)`,
+            transformOrigin: `${cx}px ${cy}px`,
+          }}
         >
           <polygon
-            points={points}
-            fill="rgba(255,255,255,0.82)"
-            stroke="rgba(255,255,255,0.9)"
+            points={triPoints}
+            fill="rgba(255,255,255,0.88)"
+            stroke="rgba(255,255,255,0.95)"
             strokeWidth="1.5"
+            strokeLinejoin="round"
           />
+          {/* 숫자는 회전 반대 방향으로 보정해서 항상 읽기 쉽게 */}
           <text
-            x={textPos.x}
-            y={textPos.y}
+            x={cx}
+            y={textY}
             textAnchor="middle"
             dominantBaseline="middle"
             fontSize={fontSize}
             fontWeight="800"
             fill="rgb(79,70,229)"
             fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+            transform={`rotate(${-angleDeg}, ${cx}, ${textY})`}
           >
             {label}
           </text>
