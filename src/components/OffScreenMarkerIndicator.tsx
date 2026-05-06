@@ -278,6 +278,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          clipPath: `polygon(50% ${4 / TRI_SIZE * 100}%, ${(TRI_SIZE / 2 - 22) / TRI_SIZE * 100}% ${(TRI_SIZE - 4) / TRI_SIZE * 100}%, ${(TRI_SIZE / 2 + 22) / TRI_SIZE * 100}% ${(TRI_SIZE - 4) / TRI_SIZE * 100}%)`,
+          transform: `rotate(${angleDeg}deg)`,
         }}
       >
         <svg
@@ -286,15 +290,14 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           viewBox={`0 0 ${TRI_SIZE} ${TRI_SIZE}`}
           style={{
             display: 'block',
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.22))',
-            transform: `rotate(${angleDeg}deg)`,
-            transformOrigin: `${cx}px ${cy}px`,
+            filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.10))',
+            transform: `rotate(0deg)`,
           }}
         >
           <polygon
             points={triPoints}
-            fill="rgba(255,255,255,0.88)"
-            stroke="rgba(255,255,255,0.95)"
+            fill="rgba(255,255,255,0.30)"
+            stroke="rgba(255,255,255,0.50)"
             strokeWidth="1.5"
             strokeLinejoin="round"
           />
