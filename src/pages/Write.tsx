@@ -565,13 +565,26 @@ const Write = () => {
                   </div>
                 )}
 
-                <Button
-                  className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100"
-                  onClick={() => setCurrentPage(2)}
+                <button
+                  className={cn(
+                    "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
+                    mediaFiles.length === 0
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-indigo-600 text-white shadow-xl shadow-indigo-100 active:scale-[0.98]"
+                  )}
+                  onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
                   disabled={mediaFiles.length === 0}
                 >
-                  다음 단계로
-                </Button>
+                  <span className="flex-1 text-left pl-1">다음 단계로</span>
+                  <div className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                    mediaFiles.length === 0
+                      ? "bg-gray-200 text-gray-400"
+                      : "bg-white/20 text-white"
+                  )}>
+                    <ChevronRight className="w-5 h-5" />
+                  </div>
+                </button>
               </div>
             ) : (
               <div className="space-y-5">
