@@ -400,7 +400,7 @@ const Write = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       {/* 고정 헤더(Header.tsx) 높이만큼만 정확히 공간 확보 - pt-16으로 통일 */}
-      <div className="pt-16">
+      <div className="pt-16 flex flex-col flex-1 min-h-0">
         <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
           <div className="bg-gray-50/50 border-y border-gray-100">
             <div className="px-5 py-4">
@@ -430,7 +430,7 @@ const Write = () => {
             </div>
           </div>
 
-          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: '6rem' }}>
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
@@ -568,27 +568,6 @@ const Write = () => {
                     </div>
                   </div>
                 )}
-
-                <button
-                  className={cn(
-                    "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
-                    mediaFiles.length === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
-                  )}
-                  onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
-                  disabled={mediaFiles.length === 0}
-                >
-                  <span className="flex-1 text-left font-normal pl-1">다음 단계로</span>
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                    mediaFiles.length === 0
-                      ? "bg-gray-200 text-gray-400"
-                      : "bg-indigo-500 text-white"
-                  )}>
-                    <ChevronRight className="w-5 h-5" />
-                  </div>
-                </button>
               </div>
             ) : (
               <div className="space-y-5">
@@ -646,46 +625,75 @@ const Write = () => {
                     onChange={(e) => setContent(e.target.value)}
                   />
                 </div>
-
-                <div className="flex flex-col gap-2">
-                  <button
-                    className={cn(
-                      "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
-                      isSubmitting
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
-                    )}
-                    onClick={handlePost}
-                    disabled={isSubmitting}
-                  >
-                    <span className="flex-1 text-left font-normal pl-1">게시물 등록하기</span>
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                      isSubmitting
-                        ? "bg-gray-200 text-gray-400"
-                        : "bg-indigo-500 text-white"
-                    )}>
-                      {isSubmitting
-                        ? <Loader2 className="w-5 h-5 animate-spin" />
-                        : <Check className="w-5 h-5" />
-                      }
-                    </div>
-                  </button>
-                  {!content.trim() && (
-                    <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                      내용을 입력해주세요
-                    </p>
-                  )}
-                  {mediaFiles.length === 0 && (
-                    <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                      사진이나 동영상을 선택해주세요
-                    </p>
-                  )}
-                </div>
               </div>
             )}
           </div>
         </main>
+
+        {/* 하단 고정 버튼 영역 - BottomNav 위에 위치 */}
+        <div
+          className="shrink-0 bg-white border-t border-gray-100 px-5 pt-3 pb-2"
+          style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          {currentPage === 1 ? (
+            <button
+              className={cn(
+                "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
+                mediaFiles.length === 0
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
+              )}
+              onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
+              disabled={mediaFiles.length === 0}
+            >
+              <span className="flex-1 text-left font-normal pl-1">다음 단계로</span>
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                mediaFiles.length === 0
+                  ? "bg-gray-200 text-gray-400"
+                  : "bg-indigo-500 text-white"
+              )}>
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </button>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              {!content.trim() && (
+                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                  내용을 입력해주세요
+                </p>
+              )}
+              {mediaFiles.length === 0 && (
+                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                  사진이나 동영상을 선택해주세요
+                </p>
+              )}
+              <button
+                className={cn(
+                  "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
+                  isSubmitting
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
+                )}
+                onClick={handlePost}
+                disabled={isSubmitting}
+              >
+                <span className="flex-1 text-left font-normal pl-1">게시물 등록하기</span>
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                  isSubmitting
+                    ? "bg-gray-200 text-gray-400"
+                    : "bg-indigo-500 text-white"
+                )}>
+                  {isSubmitting
+                    ? <Loader2 className="w-5 h-5 animate-spin" />
+                    : <Check className="w-5 h-5" />
+                  }
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
