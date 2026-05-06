@@ -101,23 +101,17 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     let absY = 0;
 
     if (edge === 'top') {
-      let cx = markerX;
-      cx = Math.max(DROP_W / 2 + EDGE_MARGIN, Math.min(screenW - DROP_W / 2 - EDGE_MARGIN, cx));
-      absX = cx - DROP_W / 2;
+      absX = screenW / 2 - DROP_W / 2;
       absY = topSafeY;
     } else if (edge === 'bottom') {
-      let cx = markerX;
-      cx = Math.max(80 + DROP_W / 2 + EDGE_MARGIN, Math.min(screenW - 80 - DROP_W / 2 - EDGE_MARGIN, cx));
-      absX = cx - DROP_W / 2;
+      absX = screenW / 2 - DROP_W / 2;
       absY = screenH - bottomSafeY - DROP_H;
     } else if (edge === 'left') {
       absX = EDGE_MARGIN;
-      absY = screenCy - DROP_H / 2;
-      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - DROP_H, absY));
+      absY = (topSafeY + (screenH - bottomSafeY)) / 2 - DROP_H / 2;
     } else {
       absX = screenW - EDGE_MARGIN - DROP_W;
-      absY = screenCy - DROP_H / 2;
-      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - DROP_H, absY));
+      absY = (topSafeY + (screenH - bottomSafeY)) / 2 - DROP_H / 2;
     }
 
     // 인디케이터 원 중심 → 마커 방향 각도 (위=0, 시계방향)
