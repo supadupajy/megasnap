@@ -29,83 +29,6 @@ function useWindowSize() {
 const S = 52;
 const EDGE_MARGIN = 14;
 
-// 화면 중심 기준으로 각 마커 포인트를 4방향 + 코너 재분류
-// 각도가 45도 이내면 해당 방향, 초과하면 인접 방향으로 재분류
-function reclassifyPoints(
-  points: { lat: number; lng: number }[],
-  centerLat: number,
-  centerLng: number,
-  latRange: number,
-  lngRange: number,
-  screenW: number,
-  screenH: number,
-  topSafeY: number,
-  bottomSafeY: number,
-): Record<Direction, { lat: number; lng: number }[]> {
-  const result: Record<Direction, { lat: number; lng: number }[]> = {
-    top: [], bottom: [], left: [], right: [],
-  };
-
-  // 화면 가용 영역 중앙 (인디케이터가 놓일 위치의 중심)
-  const midX = screenW / 2;
-  const midY = (topSafeY + (screenH - bottomSafeY)) / 2;
-
-  const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + screenW / 2;
-  const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
-
-  // 각 방향 인디케이터 중심 좌표
-  const indCenter: Record<Direction, { x: number; y: number }> = {
-    top:    { x: midX, y: topSafeY + S / 2 },
-    bottom: { x: midX, y: screenH - bottomSafeY - S / 2 },
-    left:   { x: EDGE_MARGIN + S / 2, y: midY },
-    right:  { x: screenW - EDGE_MARGIN - S / 2, y: midY },
-  };
-
-  for (const p of points) {
-    const px = toScreenX(p.lng);
-    const py = toScreenY(p.lat);
-
-    // 화면 중심 기준 dx, dy
-    const dx = px - screenW / 2;
-    const dy = py - screenH / 2;
-
-    // 1차 분류: 45도 섹터 (기존과 동일)
-    let primary: Direction;
-    if (Math.abs(dy) >= Math.abs(dx)) {
-      primary = dy < 0 ? 'top' : 'bottom';
-    } else {
-      primary = dx < 0 ? 'left' : 'right';
-    }
-
-    // 2차 검증: 해당 방향 인디케이터 중심 → 마커까지의 각도가 45도 초과인지 확인
-    const ind = indCenter[primary];
-    const adx = px - ind.x;
-    const ady = py - ind.y;
-
-    let finalDir = primary;
-
-    if (primary === 'top' || primary === 'bottom') {
-      // top/bottom: 좌우 각도 확인 (수직 기준 ±45도)
-      const angleFromVertical = Math.abs(Math.atan2(adx, Math.abs(ady)) * 180 / Math.PI);
-      if (angleFromVertical > 45) {
-        // 좌우로 치우침 → left 또는 right로 재분류
-        finalDir = adx < 0 ? 'left' : 'right';
-      }
-    } else {
-      // left/right: 상하 각도 확인 (수평 기준 ±45도)
-      const angleFromHorizontal = Math.abs(Math.atan2(ady, Math.abs(adx)) * 180 / Math.PI);
-      if (angleFromHorizontal > 45) {
-        // 상하로 치우침 → top 또는 bottom으로 재분류
-        finalDir = ady < 0 ? 'top' : 'bottom';
-      }
-    }
-
-    result[finalDir].push(p);
-  }
-
-  return result;
-}
-
 const avg = (pts: { lat: number; lng: number }[], axis: 'lat' | 'lng', fallback: number) =>
   pts.length > 0 ? pts.reduce((s, p) => s + p[axis], 0) / pts.length : fallback;
 
@@ -137,14 +60,12 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const topSafeY = typeof topOffset === 'number' ? topOffset : 140;
   const bottomSafeY = bottomOffset + 8;
 
-  // 모든 화면 밖 마커를 재분류
-  const reclassified = reclassifyPoints(
-    allPoints, centerLat, centerLng, latRange, lngRange,
-    screenW, screenH, topSafeY, bottomSafeY,
-  );
-
   const midX = screenW / 2;
   const midY = (topSafeY + (screenH - bottomSafeY)) / 2;
+
+  // 위도/경도 → 화면 픽셀
+  const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + midX;
+  const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
 
   // 인디케이터 고정 위치 (항상 가장자리 정중앙)
   const positions: Record<Direction, { left: number; top: number }> = {
@@ -154,8 +75,78 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     right:  { left: screenW - EDGE_MARGIN - S, top: midY - S / 2 },
   };
 
-  const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + screenW / 2;
-  const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
+  // 인디케이터 중심 좌표
+  const indCenter: Record<Direction, { x: number; y: number }> = {
+    top:    { x: midX, y: topSafeY + S / 2 },
+    bottom: { x: midX, y: screenH - bottomSafeY - S / 2 },
+    left:   { x: EDGE_MARGIN + S / 2, y: midY },
+    right:  { x: screenW - EDGE_MARGIN - S / 2, y: midY },
+  };
+
+  // 각 마커를 인디케이터 위치 기준으로 분류
+  // - 인디케이터에서 마커까지의 각도가 45도 이내인 방향으로 배정
+  // - 각 방향 인디케이터의 "정면" 방향: top=위, bottom=아래, left=왼쪽, right=오른쪽
+  // - 정면 기준 ±45도 이내면 해당 방향, 초과하면 인접 방향으로 재배정
+  const classified: Record<Direction, { lat: number; lng: number }[]> = {
+    top: [], bottom: [], left: [], right: [],
+  };
+
+  for (const p of allPoints) {
+    const px = toScreenX(p.lng);
+    const py = toScreenY(p.lat);
+
+    // 각 방향 인디케이터에서 마커까지의 각도 계산 (정면 방향 기준)
+    // top 인디케이터: 정면=위(↑), 각도=0이면 정면
+    // bottom 인디케이터: 정면=아래(↓)
+    // left 인디케이터: 정면=왼쪽(←)
+    // right 인디케이터: 정면=오른쪽(→)
+
+    const scores: Record<Direction, number> = {
+      top:    0,
+      bottom: 0,
+      left:   0,
+      right:  0,
+    };
+
+    // top: 인디케이터에서 마커까지 벡터의 "위쪽 정렬도" = -dy (위쪽이 음수 y)
+    const topInd = indCenter.top;
+    const botInd = indCenter.bottom;
+    const leftInd = indCenter.left;
+    const rightInd = indCenter.right;
+
+    // 각 인디케이터에서 마커까지의 각도 (정면 방향 기준 절대값)
+    const angleFromFront = (indX: number, indY: number, dir: Direction): number => {
+      const dx = px - indX;
+      const dy = py - indY;
+      // 정면 방향 벡터
+      const frontVec = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] }[dir];
+      // 내적으로 각도 계산
+      const dot = dx * frontVec[0] + dy * frontVec[1];
+      const mag = Math.sqrt(dx * dx + dy * dy);
+      if (mag === 0) return 0;
+      const cosA = Math.max(-1, Math.min(1, dot / mag));
+      return Math.acos(cosA) * 180 / Math.PI; // 0~180도
+    };
+
+    scores.top    = angleFromFront(topInd.x,   topInd.y,   'top');
+    scores.bottom = angleFromFront(botInd.x,   botInd.y,   'bottom');
+    scores.left   = angleFromFront(leftInd.x,  leftInd.y,  'left');
+    scores.right  = angleFromFront(rightInd.x, rightInd.y, 'right');
+
+    // 각도가 가장 작은 방향 = 해당 인디케이터의 정면에 가장 가까운 방향
+    // 단, 45도 이내인 방향만 후보로 삼음
+    const candidates = (Object.keys(scores) as Direction[]).filter(d => scores[d] <= 45);
+
+    let bestDir: Direction;
+    if (candidates.length > 0) {
+      bestDir = candidates.reduce((a, b) => scores[a] < scores[b] ? a : b);
+    } else {
+      // 45도 이내인 방향이 없으면 가장 각도가 작은 방향
+      bestDir = (Object.keys(scores) as Direction[]).reduce((a, b) => scores[a] < scores[b] ? a : b);
+    }
+
+    classified[bestDir].push(p);
+  }
 
   // 물방울 SVG (뾰족한 끝이 위↑ 기본)
   const cx = S / 2;
@@ -175,19 +166,19 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   return (
     <>
       {dirs.map(dir => {
-        const pts = reclassified[dir];
+        const pts = classified[dir];
         if (pts.length === 0) return null;
 
         const pos = positions[dir];
-        const indCx = pos.left + S / 2;
-        const indCy = pos.top + S / 2;
+        const ind = indCenter[dir];
 
         // 재분류된 마커들의 평균 위치 → 물방울 각도
         const avgLat = avg(pts, 'lat', centerLat);
         const avgLng = avg(pts, 'lng', centerLng);
         const mX = toScreenX(avgLng);
         const mY = toScreenY(avgLat);
-        const rad = Math.atan2(mX - indCx, -(mY - indCy));
+        // 인디케이터 중심 → 마커 방향 (위쪽=0, 시계방향)
+        const rad = Math.atan2(mX - ind.x, -(mY - ind.y));
         const angleDeg = (rad * 180) / Math.PI;
 
         const count = pts.length;
