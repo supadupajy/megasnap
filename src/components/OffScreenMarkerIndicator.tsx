@@ -194,34 +194,31 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           a.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - a.svgH, a.absY));
           b.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - b.svgH, b.absY));
         } else {
-          // 수평+수직 혼합 → 겹침이 더 작은 축으로 분리
-          const overlapAmtX = Math.min(a.absX + a.svgW, b.absX + b.svgW) - Math.max(a.absX, b.absX) + MIN_GAP;
-          const overlapAmtY = Math.min(a.absY + a.svgH, b.absY + b.svgH) - Math.max(a.absY, b.absY) + MIN_GAP;
+          // 수평+수직 혼합 (예: top+left, top+right, bottom+left, bottom+right)
+          // → 수평 인디케이터는 X축으로, 수직 인디케이터는 Y축으로 각각 이동
+          const horiz = aIsHoriz ? a : b;
+          const vert  = aIsHoriz ? b : a;
 
-          if (overlapAmtX <= overlapAmtY) {
-            // X축으로 분리 (수평 인디케이터만 이동)
-            const dx = aCx - bCx;
-            const push = overlapAmtX / 2 + 1;
-            const pushDir = dx >= 0 ? 1 : -1;
-            if (aIsHoriz) {
-              a.absX += push * pushDir;
-              a.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - a.svgW, a.absX));
-            } else {
-              b.absX -= push * pushDir;
-              b.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - b.svgW, b.absX));
-            }
-          } else {
-            // Y축으로 분리 (수직 인디케이터만 이동)
-            const dy = aCy - bCy;
-            const push = overlapAmtY / 2 + 1;
-            const pushDir = dy >= 0 ? 1 : -1;
-            if (!aIsHoriz) {
-              a.absY += push * pushDir;
-              a.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - a.svgH, a.absY));
-            } else {
-              b.absY -= push * pushDir;
-              b.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - b.svgH, b.absY));
-            }
+          // 수평 인디케이터(top/bottom)를 X축으로 밀기
+          // left 인디케이터는 화면 왼쪽 끝에 붙어 있으므로 top을 오른쪽으로 밀기
+          // right 인디케이터는 화면 오른쪽 끝에 붙어 있으므로 top을 왼쪽으로 밀기
+          const overlapAmtX = Math.min(horiz.absX + horiz.svgW, vert.absX + vert.svgW)
+                            - Math.max(horiz.absX, vert.absX) + MIN_GAP;
+          const overlapAmtY = Math.min(horiz.absY + horiz.svgH, vert.absY + vert.svgH)
+                            - Math.max(horiz.absY, vert.absY) + MIN_GAP;
+
+          if (overlapAmtX > 0) {
+            // vert(left/right)가 horiz(top/bottom)의 어느 쪽에 있는지에 따라 방향 결정
+            const pushRight = vert.dir === 'left'; // left 인디케이터면 top을 오른쪽으로
+            horiz.absX += pushRight ? overlapAmtX : -overlapAmtX;
+            horiz.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - horiz.svgW, horiz.absX));
+          }
+
+          if (overlapAmtY > 0) {
+            // horiz(top/bottom)가 vert(left/right)의 어느 쪽에 있는지에 따라 방향 결정
+            const pushDown = horiz.dir === 'top'; // top 인디케이터면 left/right를 아래로
+            vert.absY += pushDown ? overlapAmtY : -overlapAmtY;
+            vert.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - vert.svgH, vert.absY));
           }
         }
       }
