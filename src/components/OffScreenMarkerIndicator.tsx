@@ -262,12 +262,29 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
               viewBox={`0 0 ${S} ${S}`}
               style={{ display: 'block', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.22))' }}
             >
+              {/* 원형 몸통 (흰색 반투명) */}
+              <circle
+                cx={cx}
+                cy={circleCy}
+                r={r}
+                fill="rgba(255,255,255,0.85)"
+                stroke="rgba(255,255,255,0.9)"
+                strokeWidth="1.5"
+              />
+              {/* 팁 삼각형 (인디고) */}
               <path
                 d={dropPath}
-                fill="rgba(255,255,255,0.35)"
-                stroke="rgba(255,255,255,0.65)"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
+                fill="rgb(79,70,229)"
+                stroke="none"
+              />
+              {/* 원형 몸통 다시 그려서 팁 위에 덮기 */}
+              <circle
+                cx={cx}
+                cy={circleCy}
+                r={r}
+                fill="rgba(255,255,255,0.85)"
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="1"
               />
               <text
                 x={cx}
@@ -276,7 +293,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
                 dominantBaseline="central"
                 fontSize={fontSize}
                 fontWeight="800"
-                fill="rgb(79,70,229)"
+                fill="rgb(17,24,39)"
                 fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
                 transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
               >
