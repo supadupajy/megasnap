@@ -557,11 +557,15 @@ const Write = () => {
                 ) : (
                   <div
                     onClick={() => mediaInputRef.current?.click()}
-                    className="w-full rounded-[32px] overflow-hidden bg-gray-100 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors"
+                    className="w-full rounded-[32px] bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-4"
                     style={{ aspectRatio: '1 / 1' }}
                   >
-                    <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
-                    <span className="text-gray-400 font-black font-normal text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-20 h-20 bg-indigo-50 rounded-[20px] flex items-center justify-center shadow-sm">
+                        <ImageIcon className="w-10 h-10 text-indigo-500" />
+                      </div>
+                      <span className="text-gray-700 font-bold text-base tracking-tight">사진 / 동영상 선택</span>
+                    </div>
                   </div>
                 )}
 
