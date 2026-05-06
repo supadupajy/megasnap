@@ -79,6 +79,7 @@ export interface MarkerCluster {
   count: number;
   avgLat: number;
   avgLng: number;
+  points: { lat: number; lng: number }[]; // 클러스터에 속한 개별 마커 좌표
 }
 
 export interface DirectionCounts {
@@ -145,7 +146,7 @@ function clusterByAngle(
 
     const avgLat = group.reduce((s, p) => s + p.lat, 0) / group.length;
     const avgLng = group.reduce((s, p) => s + p.lng, 0) / group.length;
-    clusters.push({ count: group.length, avgLat, avgLng });
+    clusters.push({ count: group.length, avgLat, avgLng, points: group.map(p => ({ lat: p.lat, lng: p.lng })) });
   }
 
   return clusters;

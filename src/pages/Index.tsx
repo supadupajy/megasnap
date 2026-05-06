@@ -68,6 +68,7 @@ function clusterByAngleClient(
       count: group.length,
       avgLat: group.reduce((s, p) => s + p.lat, 0) / group.length,
       avgLng: group.reduce((s, p) => s + p.lng, 0) / group.length,
+      points: group.map(p => ({ lat: p.lat, lng: p.lng })),
     });
   }
   return clusters;
@@ -1314,8 +1315,19 @@ const Index = () => {
             <OffScreenMarkerIndicator
               bounds={mapData?.bounds || null}
               onClickCluster={(cluster) => {
-                // 클러스터의 평균 위치로 바로 이동
-                setMapCenter({ lat: cluster.avgLat, lng: cluster.avgLng });
+                // 클러스터 내 마커 중 현재 화면 중심에서 가장 가까운 마커로 이동
+                const c = mapDataRef.current?.center || mapCenter;
+                if (!c || cluster.points.length === 0) {
+                  setMapCenter({ lat: cluster.avgLat, lng: cluster.avgLng });
+                  return;
+                }
+                let nearest = cluster.points[0];
+                let minDist = Infinity;
+                for (const p of cluster.points) {
+                  const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
+                  if (d < minDist) { minDist = d; nearest = p; }
+                }
+                setMapCenter({ lat: nearest.lat, lng: nearest.lng });
               }}
               bottomOffset={bottomNavHeight}
               dbCounts={offScreenCounts}
