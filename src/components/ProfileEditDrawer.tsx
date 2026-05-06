@@ -368,22 +368,19 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
           {/* Fixed Bottom Button Area */}
           <div className="px-8 pt-4 pb-14 bg-white shrink-0 border-t border-gray-50">
-            <Button 
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[20px] text-lg font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+            <Button
+              className="w-full h-16 bg-gray-900 hover:bg-gray-800 text-white rounded-[20px] text-lg font-black shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between px-6"
               onClick={handleSave}
               disabled={isSubmitting || isTakingPhoto}
             >
-              {isSubmitting ? (
-                <>
+              <span>{isSubmitting ? '저장 중...' : '변경사항 저장하기'}</span>
+              <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+                {isSubmitting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  저장 중...
-                </>
-              ) : (
-                <>
+                ) : (
                   <Check className="w-5 h-5 stroke-[3px]" />
-                  변경사항 저장하기
-                </>
-              )}
+                )}
+              </div>
             </Button>
           </div>
         </div>
