@@ -604,7 +604,7 @@ const Write = () => {
                     <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                       <MapPin className="w-6 h-6 text-indigo-600" />
                     </div>
-                    <p className={cn("font-bold truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
+                    <p className={cn("font-normal truncate", address === '위치 미지정' ? "text-gray-400" : "text-gray-900")}>
                       {address || '위치 미지정'}
                     </p>
                   </div>
@@ -625,7 +625,7 @@ const Write = () => {
                           category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
                         )}
                       >
-                        <cat.Icon className={cn("w-4 h-4", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
+                        <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
                         <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
                           {cat.label}
                         </span>
