@@ -1317,22 +1317,17 @@ const Index = () => {
           <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
             <OffScreenMarkerIndicator
               bounds={mapData?.bounds || null}
-              onClickDirection={(dir) => {
+              onClickDirection={(dir, pts) => {
                 const c = mapDataRef.current?.center || mapCenter;
-                const counts = offScreenCounts;
-                if (!c || !counts) return;
-
-                // 해당 방향의 points에서 현재 중심에 가장 가까운 마커로 이동
-                const pts = counts[`${dir}Points` as keyof typeof counts] as { lat: number; lng: number }[] | undefined;
-                if (pts && pts.length > 0) {
-                  let nearest = pts[0];
-                  let minDist = Infinity;
-                  for (const p of pts) {
-                    const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
-                    if (d < minDist) { minDist = d; nearest = p; }
-                  }
-                  setMapCenter({ lat: nearest.lat, lng: nearest.lng });
+                if (!c || pts.length === 0) return;
+                // 재분류된 pts에서 현재 중심에 가장 가까운 마커로 이동
+                let nearest = pts[0];
+                let minDist = Infinity;
+                for (const p of pts) {
+                  const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
+                  if (d < minDist) { minDist = d; nearest = p; }
                 }
+                setMapCenter({ lat: nearest.lat, lng: nearest.lng });
               }}
               bottomOffset={bottomNavHeight}
               dbCounts={offScreenCounts}
