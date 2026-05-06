@@ -2,17 +2,29 @@ import { showSuccess } from './toast';
 
 // 앱 스킴 및 스토어 링크 (실제 앱 출시 시 변경 필요)
 const APP_SCHEME = 'chorasnap';
-const ANDROID_PACKAGE = 'com.chorasnap.app';
+const ANDROID_PACKAGE = 'com.chorasnap.chorasnap';
 const IOS_APP_ID = '0000000000'; // 실제 App Store ID로 교체 필요
-const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
-const APP_STORE_URL = `https://apps.apple.com/app/id${IOS_APP_ID}`;
+export const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
+export const APP_STORE_URL = `https://apps.apple.com/app/id${IOS_APP_ID}`;
 
 // 프로덕션 배포 URL (VITE_APP_URL 환경변수로 설정, 없으면 현재 origin 사용)
 const getBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_APP_URL;
   if (envUrl) return envUrl.replace(/\/$/, ''); // 끝 슬래시 제거
-  // 개발 환경(localhost)이면 경고 표시용으로 origin 그대로 반환
   return window.location.origin;
+};
+
+/**
+ * Capacitor 네이티브 앱 내부에서 실행 중인지 감지
+ * - window.Capacitor 객체가 있고 isNativePlatform()이 true이면 네이티브 앱
+ */
+const isNativeApp = (): boolean => {
+  try {
+    const cap = (window as any).Capacitor;
+    return cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform();
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -65,7 +77,6 @@ export const handleShare = async (
         title: 'ChoraSnap 포스팅',
         url: shareUrl,
       });
-      // 공유 시트에서 어떤 항목을 선택했든 성공이면 토스트 표시
       showSuccess('포스팅 주소가 복사되었습니다.');
     } catch (err: any) {
       // AbortError: 사용자가 공유 시트를 닫은 경우 → 아무것도 하지 않음
@@ -81,11 +92,18 @@ export const handleShare = async (
 };
 
 /**
- * /post/:id 페이지 진입 시 딥링크 처리
- * - 앱 설치 여부를 감지하여 앱 실행 시도
- * - 일정 시간 내 앱이 열리지 않으면 스토어로 이동
+ * 외부 브라우저에서 /post/:id 접근 시 딥링크 처리
+ * - 네이티브 앱 내부에서는 실행하지 않음 (이미 앱 안에 있으므로)
+ * - 모바일 브라우저에서만 앱 실행 시도
+ * - 앱이 없으면 스토어로 이동
+ *
+ * ⚠️ 이 함수는 PostDeepLinkLanding 컴포넌트에서 직접 처리하므로
+ *    PostDetail에서는 더 이상 호출하지 않습니다.
  */
 export const handleDeepLink = (postId: string): void => {
+  // 네이티브 앱 내부에서는 딥링크 처리 불필요
+  if (isNativeApp()) return;
+
   const isAndroid = /android/i.test(navigator.userAgent);
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 
@@ -100,7 +118,6 @@ export const handleDeepLink = (postId: string): void => {
 
   // 앱이 없으면 페이지가 그대로 남아있으므로 타이머로 스토어 이동
   const timer = setTimeout(() => {
-    // 앱이 열렸다면 페이지가 blur 되어 시간이 많이 지났을 것
     if (Date.now() - start < 2000) {
       window.location.href = storeUrl;
     }

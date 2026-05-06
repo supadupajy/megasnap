@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { showError, showSuccess } from '@/utils/toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // Supabase 에러 메시지 → 한국어 매핑 (User Enumeration 방지)
 const getAuthErrorMessage = (message: string): string => {
@@ -40,6 +40,8 @@ const getAuthErrorMessage = (message: string): string => {
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as any)?.redirectTo || '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -111,7 +113,7 @@ const Login = () => {
 
         if (data.user && data.session) {
           showSuccess('회원가입이 완료되었습니다! ✨');
-          navigate('/', { replace: true });
+          navigate(redirectTo, { replace: true });
         } else {
           showSuccess('인증 이메일이 발송되었습니다. 메일함을 확인해주세요!');
         }
@@ -130,7 +132,7 @@ const Login = () => {
           localStorage.setItem('chora_remember_me_pref', 'false');
         }
 
-        navigate('/', { replace: true });
+        navigate(redirectTo, { replace: true });
       }
     } catch (err: any) {
       console.error('Auth error:', err);

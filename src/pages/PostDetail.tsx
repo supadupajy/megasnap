@@ -7,22 +7,21 @@ import { ChevronLeft, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import PostItem from '@/components/PostItem';
+import PostDeepLinkLanding from '@/components/PostDeepLinkLanding';
 import { Post } from '@/types';
 import { getFallbackImage } from '@/lib/utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
-import { handleDeepLink } from '@/utils/share';
 
 const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar';
 
 const PostDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
+  const { user: authUser, profile, loading: authLoading } = useAuth();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
   const avatarUrl = useMemo(() => profile?.avatar_url || '/placeholder.svg', [profile]);
 
@@ -84,18 +83,12 @@ const PostDetail = () => {
     };
   };
 
-  // 딥링크 처리: 모바일에서 앱 실행 시도, 없으면 스토어로 이동
-  useEffect(() => {
-    if (id) handleDeepLink(id);
-  }, [id]);
-
   useEffect(() => {
     const fetchAllPosts = async () => {
       if (!authUser?.id || !id) return;
 
       setLoading(true);
       try {
-        // [Optimized] 단일 쿼리로 target post 조회 (필요한 컬럼만)
         const { data: targetPost, error: targetError } = await supabase
           .from('posts')
           .select(POST_COLUMNS)
@@ -109,8 +102,6 @@ const PostDetail = () => {
         let postsToFormat: any[] = [];
 
         if (targetPost) {
-          // [Optimized] 클라이언트 필터링 제거 → 서버사이드 user_id 필터 사용
-          // (idx_posts_user_id 인덱스가 있으므로 매우 빠름)
           const { data, error } = await supabase
             .from('posts')
             .select(POST_COLUMNS)
@@ -120,7 +111,6 @@ const PostDetail = () => {
 
           if (error) {
             console.error("[PostDetail] Error fetching user's posts:", error);
-            // Fallback: 단일 포스트만 표시
             postsToFormat = [targetPost];
           } else {
             postsToFormat = data || [targetPost];
@@ -132,7 +122,6 @@ const PostDetail = () => {
           return;
         }
 
-        // [Optimized] likes/saved_posts를 .in()으로 일괄 조회 (N+1 제거)
         const postIds = postsToFormat.map(p => p.id);
         let likedSet = new Set<string>();
         let savedSet = new Set<string>();
@@ -208,6 +197,20 @@ const PostDetail = () => {
       showError('게시물 삭제 중 오류가 발생했습니다.');
     }
   };
+
+  // 비로그인 유저: 딥링크 랜딩 페이지 표시 (hooks 이후에 조건부 렌더링)
+  if (!authLoading && !authUser && id) {
+    return <PostDeepLinkLanding postId={id} />;
+  }
+
+  // 인증 로딩 중
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
