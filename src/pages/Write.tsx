@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Send } from 'lucide-react';
+import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Send, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -648,14 +648,29 @@ const Write = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Button
-                    className="w-full h-16 bg-indigo-600 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 disabled:opacity-50"
+                  <button
+                    className={cn(
+                      "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
+                      isSubmitting
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
+                    )}
                     onClick={handlePost}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
-                    게시물 등록하기
-                  </Button>
+                    <span className="flex-1 text-left font-normal pl-1">게시물 등록하기</span>
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                      isSubmitting
+                        ? "bg-gray-200 text-gray-400"
+                        : "bg-indigo-500 text-white"
+                    )}>
+                      {isSubmitting
+                        ? <Loader2 className="w-5 h-5 animate-spin" />
+                        : <Check className="w-5 h-5" />
+                      }
+                    </div>
+                  </button>
                   {!content.trim() && (
                     <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
                       내용을 입력해주세요
