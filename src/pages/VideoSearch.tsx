@@ -28,7 +28,7 @@ interface SearchPost {
 const CACHE_KEY_QUERY = 'videoSearch_query';
 const CACHE_KEY_RESULTS = 'videoSearch_results';
 
-const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar';
+const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(nickname, avatar_url)';
 
 // ── 인라인 PostDetail 오버레이 ──────────────────────────────────────
 const PostDetailOverlay = ({
@@ -67,7 +67,7 @@ const PostDetailOverlay = ({
       isAd,
       isGif: false,
       isInfluencer: false,
-      user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar || '/placeholder.svg' },
+      user: { id: p.user_id, name: p.profiles?.nickname || p.user_name || '탐험가', avatar: p.profiles?.avatar_url || p.user_avatar || '/placeholder.svg' },
       content: p.content?.replace(/^\[AD\]\s*/, '') || '',
       location: p.location_name || '알 수 없는 장소',
       lat: p.latitude,
