@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Flame, TrendingUp } from 'lucide-react';
+import { Loader2, Flame, TrendingUp, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Post } from '@/types';
 import { getFallbackImage } from '@/lib/utils';
@@ -198,9 +198,13 @@ const Popular = () => {
                 <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Trending Now</p>
               </div>
             </div>
-            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
-              <TrendingUp className="w-5 h-5 text-indigo-600" />
-            </div>
+            <button
+              onClick={() => navigate('/search')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+            >
+              <Search className="w-4 h-4 text-gray-900" />
+              <span className="text-sm font-normal text-gray-900">영상 검색</span>
+            </button>
           </div>
         </div>
       </div>
