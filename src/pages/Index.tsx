@@ -432,6 +432,7 @@ const Index = () => {
     const lngRange = ne.lng - sw.lng;
 
     let top = 0, bottom = 0, left = 0, right = 0;
+    let topSumLng = 0, bottomSumLng = 0, leftSumLat = 0, rightSumLat = 0;
 
     displayedMarkers.forEach(post => {
       if (post.lat == null || post.lng == null) return;
@@ -445,10 +446,10 @@ const Index = () => {
       // 45도 섹터로 독점 분류 (각 마커는 정확히 하나의 방향에만 속함)
       const dLat = (lat - centerLat) / latRange;
       const dLng = (lng - centerLng) / lngRange;
-      if      (dLat >= 0 && dLat >= Math.abs(dLng))           top++;
-      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottom++;
-      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) left++;
-      else                                                      right++;
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           { top++;    topSumLng    += lng; }
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  { bottom++; bottomSumLng += lng; }
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) { left++;   leftSumLat   += lat; }
+      else                                                      { right++;  rightSumLat  += lat; }
     });
 
     return {
@@ -457,6 +458,10 @@ const Index = () => {
       hasBottom: bottom > 0,
       hasLeft: left > 0,
       hasRight: right > 0,
+      topAvgLng:    top    > 0 ? topSumLng    / top    : centerLng,
+      bottomAvgLng: bottom > 0 ? bottomSumLng / bottom : centerLng,
+      leftAvgLat:   left   > 0 ? leftSumLat   / left   : centerLat,
+      rightAvgLat:  right  > 0 ? rightSumLat  / right  : centerLat,
     };
   }, [displayedMarkers, mapData?.bounds, currentZoom, useClientSideCounts]);
 
