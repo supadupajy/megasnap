@@ -574,17 +574,17 @@ const Write = () => {
                     "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
                     mediaFiles.length === 0
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-indigo-600 text-white shadow-xl shadow-indigo-100 active:scale-[0.98]"
+                      : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
                   )}
                   onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
                   disabled={mediaFiles.length === 0}
                 >
                   <span className="flex-1 text-left font-normal pl-1">다음 단계로</span>
                   <div className={cn(
-                    "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                    "w-10 h-10 rounded-full flex items-center justify-center transition-all",
                     mediaFiles.length === 0
                       ? "bg-gray-200 text-gray-400"
-                      : "bg-white/20 text-white"
+                      : "bg-indigo-500 text-white"
                   )}>
                     <ChevronRight className="w-5 h-5" />
                   </div>
