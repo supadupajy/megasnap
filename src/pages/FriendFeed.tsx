@@ -215,9 +215,10 @@ const FriendFeed = () => {
             </div>
             <button
               onClick={() => navigate('/search')}
-              className="p-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
             >
-              <Search className="w-5 h-5 text-indigo-600" />
+              <Search className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-semibold text-indigo-600">친구 검색</span>
             </button>
           </div>
         </div>
