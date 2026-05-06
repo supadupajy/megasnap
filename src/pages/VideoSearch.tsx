@@ -35,7 +35,7 @@ const VideoSearch = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2">
-            <h2 className="text-lg font-black text-gray-900 font-semibold tracking-tight">영상 검색</h2>
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">영상 검색</h2>
           </div>
         </div>
       </div>
