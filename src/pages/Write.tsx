@@ -680,16 +680,18 @@ const Write = () => {
                   }
                 </div>
               </button>
-              {!content.trim() && (
-                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                  내용을 입력해주세요
-                </p>
-              )}
-              {mediaFiles.length === 0 && (
-                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                  사진이나 동영상을 선택해주세요
-                </p>
-              )}
+              <div className="h-5 flex items-center justify-center">
+                {!content.trim() && (
+                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                    내용을 입력해주세요
+                  </p>
+                )}
+                {content.trim() && mediaFiles.length === 0 && (
+                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                    사진이나 동영상을 선택해주세요
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
