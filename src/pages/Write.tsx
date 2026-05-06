@@ -621,7 +621,7 @@ const Write = () => {
                         key={cat.key}
                         onClick={() => setCategory(cat.key)}
                         className={cn(
-                          "flex flex-col items-center justify-center h-20 rounded-2xl border-2 transition-all",
+                          "flex flex-col items-center justify-center h-14 rounded-2xl border-2 transition-all",
                           category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
                         )}
                       >
