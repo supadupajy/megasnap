@@ -51,8 +51,8 @@ const FriendList = () => {
     <div className="fixed inset-0 bg-white flex flex-col pt-[88px] overflow-hidden">
       {/* 고정 영역: 검색창 + 광고 배너 + 타이틀 */}
       <div className="shrink-0 bg-white z-40">
-        <div className="px-4 pt-4 pb-2">
-          <div className="relative mb-4">
+        <div className="px-4 pt-4 pb-0">
+          <div className="relative mb-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="닉네임으로 친구 찾기"
@@ -67,31 +67,6 @@ const FriendList = () => {
             )}
           </div>
 
-          {/* THE NORTH FACE 광고 배너 */}
-          <div className="relative h-24 rounded-2xl overflow-hidden group cursor-pointer shadow-md border border-gray-100 bg-zinc-900 mb-4">
-            <img 
-              src="/assets/northface-ad-banner.png" 
-              alt="The North Face Ad" 
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
-            <div className="absolute inset-0 p-4 flex flex-col justify-between">
-              <div className="flex items-center gap-2">
-                <span className="bg-white/90 backdrop-blur-sm text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest text-gray-800 shadow-sm">AD</span>
-                <span className="text-[10px] font-black text-white tracking-widest uppercase drop-shadow-md flex items-center gap-1">
-                  THE NORTH FACE
-                </span>
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-white italic tracking-tighter drop-shadow-lg uppercase">Never Stop Exploring.</h3>
-                <p className="text-[9px] font-bold text-white/80 drop-shadow-md">Summit Series: Outperform the Cold</p>
-              </div>
-            </div>
-          </div>
-
-          <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
-            {searchQuery ? '검색 결과' : '대화할 상대를 검색해보세요'}
-          </h2>
         </div>
       </div>
 
