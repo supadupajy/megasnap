@@ -70,15 +70,19 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   }
 
   // 각 클러스터를 어느 가장자리에 배치할지 결정
-  // → 화면 중심 → 마커 방향 벡터를 4방향 중 가장 가까운 쪽으로 분류
+  // → 마커 방향 각도를 기준으로 4방향 분류
+  // → 삼각형이 향하는 방향 = 배치되는 가장자리
   const assignEdge = (avgLat: number, avgLng: number): Direction => {
-    const dx = (avgLng - (sw.lng + ne.lng) / 2) / lngRange;
-    const dy = -((avgLat - (sw.lat + ne.lat) / 2) / latRange); // 화면 Y 반전
-    // 절대값 비교로 4방향 분류
+    const markerX = lngToX(avgLng);
+    const markerY = latToY(avgLat);
+    // 화면 중심 → 마커 방향 벡터
+    const dx = markerX - screenCx;
+    const dy = markerY - screenCy; // 화면 Y: 아래가 양수
+    // |dy| vs |dx| 비교로 상하/좌우 결정
     if (Math.abs(dy) >= Math.abs(dx)) {
-      return dy < 0 ? 'bottom' : 'top';
+      return dy > 0 ? 'bottom' : 'top';
     } else {
-      return dx < 0 ? 'left' : 'right';
+      return dx > 0 ? 'right' : 'left';
     }
   };
 
