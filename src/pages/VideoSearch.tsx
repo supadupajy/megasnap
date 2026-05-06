@@ -167,10 +167,10 @@ const PostDetailOverlay = ({
     : '포스팅';
 
   return (
-    <div className="fixed inset-0 z-[200] bg-white flex flex-col overflow-hidden">
-      {/* 헤더 */}
-      <div className="pt-[env(safe-area-inset-top,0px)] shrink-0">
-        <div className="pt-16 flex items-center px-4 h-14 border-b border-gray-50 relative bg-white">
+    <div className="fixed inset-0 z-[9999] bg-white flex flex-col overflow-hidden">
+      {/* 앱 헤더 높이만큼 safe-area + 64px 확보 */}
+      <div className="shrink-0 bg-white border-b border-gray-50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}>
+        <div className="flex items-center px-4 h-14 relative">
           <button
             onClick={onClose}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
