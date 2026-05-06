@@ -295,6 +295,29 @@ const Index = () => {
   const trendingFetchedAtRef = useRef<number>(0);
   const lastBoundsKeyRef = useRef<string>('');
 
+  // safe-area-inset-bottom을 JS로 읽기
+  const [safeAreaBottom, setSafeAreaBottom] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      const val = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0', 10);
+      // CSS 변수가 없으면 env() 직접 계산
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';
+      document.body.appendChild(el);
+      const h = el.getBoundingClientRect().height;
+      document.body.removeChild(el);
+      setSafeAreaBottom(h || 0);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  // 인디케이터 상단 오프셋: 트렌딩 패널 하단 + 여유
+  const indicatorTopOffset = trendingBottom + 8;
+  // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 여유
+  const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 8;
+
   // ── 포스트 매핑 헬퍼 ────────────────────────────────────────
   const mapRawToPost = (p: any, prev?: Post | null): Post => {
     const content = p.content !== undefined ? (p.content || '') : (prev?.content ?? '');
@@ -1329,7 +1352,8 @@ const Index = () => {
                 }
                 setMapCenter({ lat: nearest.lat, lng: nearest.lng });
               }}
-              bottomOffset={bottomNavHeight}
+              topOffset={indicatorTopOffset}
+              bottomOffset={indicatorBottomOffset}
               dbCounts={offScreenCounts}
             />
           </div>

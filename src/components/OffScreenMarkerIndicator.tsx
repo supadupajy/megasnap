@@ -57,8 +57,9 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const centerLat = (sw.lat + ne.lat) / 2;
   const centerLng = (sw.lng + ne.lng) / 2;
 
-  const topSafeY = typeof topOffset === 'number' ? topOffset : 140;
-  const bottomSafeY = bottomOffset + 8;
+  const topSafeY = typeof topOffset === 'number' ? topOffset : 160;
+  // bottomSafeY: 화면 하단에서 이 픽셀만큼 위에 인디케이터 하단이 위치
+  const bottomSafeY = bottomOffset;
 
   const midX = screenW / 2;
   const midY = (topSafeY + (screenH - bottomSafeY)) / 2;
