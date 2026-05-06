@@ -26,7 +26,7 @@ function useWindowSize() {
   return size;
 }
 
-const S = 28;
+const S = 52;
 const EDGE_MARGIN = 14;
 
 const avg = (pts: { lat: number; lng: number }[], axis: 'lat' | 'lng', fallback: number) =>
@@ -198,13 +198,19 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     if (!didMerge) break;
   }
 
-  // 작은 화살표 삼각형 (방향만 표시)
+  // 팁(뾰족한 삼각형)만 - 원 없음
   const cx = S / 2;
-  const circleCy = S / 2;
-  const r = 0; // 미사용
-  const tipY = 0; // 미사용
-  // 위쪽을 향하는 단순 삼각형
-  const tipPath = `M ${cx} 2 L ${S - 2} ${S - 2} L ${2} ${S - 2} Z`;
+  const circleCy = S / 2 + 6;
+  const r = 15;
+  const tipY = 3;
+  // 팁: 원의 아래쪽 두 접점에서 뾰족한 끝까지만
+  const tipPath = [
+    `M ${cx} ${tipY}`,
+    `C ${cx - 9} ${tipY + 12}, ${cx - r * 0.6} ${circleCy - r * 0.1}, ${cx - r * 0.55} ${circleCy + r * 0.3}`,
+    `L ${cx + r * 0.55} ${circleCy + r * 0.3}`,
+    `C ${cx + r * 0.6} ${circleCy - r * 0.1}, ${cx + 9} ${tipY + 12}, ${cx} ${tipY}`,
+    'Z',
+  ].join(' ');
 
   const dirs: Direction[] = ['top', 'bottom', 'left', 'right'];
 
@@ -225,6 +231,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         // 인디케이터 중심 → 마커 방향 (위쪽=0, 시계방향)
         const rad = Math.atan2(mX - ind.x, -(mY - ind.y));
         const angleDeg = (rad * 180) / Math.PI;
+
+        const count = pts.length;
+        const label = count > 999 ? '999+' : String(count);
+        const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
 
         return (
           <button
@@ -253,14 +263,42 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
               viewBox={`0 0 ${S} ${S}`}
               style={{ display: 'block', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.22))' }}
             >
-              {/* 방향 삼각형만 */}
+              {/* 팁(뾰족한 삼각형)만 인디고 */}
               <path
                 d={tipPath}
                 fill="rgb(79,70,229)"
-                stroke="white"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
+                stroke="none"
               />
+              {/* 텍스트 외곽선 (가독성) */}
+              <text
+                x={cx}
+                y={circleCy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={fontSize}
+                fontWeight="800"
+                fill="none"
+                stroke="white"
+                strokeWidth="3"
+                strokeLinejoin="round"
+                fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
+              >
+                {label}
+              </text>
+              <text
+                x={cx}
+                y={circleCy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={fontSize}
+                fontWeight="800"
+                fill="rgb(17,24,39)"
+                fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
+              >
+                {label}
+              </text>
             </svg>
           </button>
         );
