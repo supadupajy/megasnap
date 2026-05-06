@@ -16,7 +16,6 @@ interface OffScreenMarkerIndicatorProps {
 
 export type Direction = 'top' | 'bottom' | 'left' | 'right';
 
-// 화면 크기를 실시간으로 읽는 훅
 function useWindowSize() {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   useEffect(() => {
@@ -26,6 +25,11 @@ function useWindowSize() {
   }, []);
   return size;
 }
+
+// 삼각형 크기
+const TRI_BASE = 56;  // 밑변 길이 (px)
+const TRI_H    = 48;  // 높이 (px)
+const EDGE_MARGIN = 16;
 
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bounds,
@@ -48,132 +52,19 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const latRange = ne.lat - sw.lat;
   const lngRange = ne.lng - sw.lng;
 
-  // ── safe zone 정의 (UI 겹침 방지) ──────────────────────────
-  // topOffset: 트렌딩 패널 하단 (뱃지가 이 위로 올라가지 않음)
+  // safe zone
   const topSafeY = topOffset !== undefined
     ? (typeof topOffset === 'number' ? topOffset : 140)
     : 140;
+  const bottomSafeY = bottomOffset + 8;
 
-  // 하단: 바텀 네비(64px) + safe-area + 여백
-  const bottomSafeY = bottomOffset + 8; // px from bottom of viewport
-
-  // 좌측 버튼 영역: left=16px, 버튼 3개(48px each) + gap(8px)*2 = 160px 높이
-  // 버튼 bottom 기준: bottomSafeY + 160px ~ bottomSafeY
-  const leftBtnBottom = bottomSafeY + 168; // 버튼 영역 상단 (화면 하단 기준)
-  const leftBtnTop = bottomSafeY;          // 버튼 영역 하단 (화면 하단 기준)
-
-  // 우측 버튼 영역: right=16px, 새로고침(56px) + gap(16px) + 여기보기(64px) = 136px 높이
+  // 좌측 버튼 영역 (필터+검색+위치 3개, 각 48px + gap 8px*2 = 160px)
+  const leftBtnBottom = bottomSafeY + 168;
+  // 우측 버튼 영역 (새로고침 56px + gap 16px + 여기보기 64px = 136px)
   const rightBtnBottom = bottomSafeY + 144;
-  const rightBtnTop = bottomSafeY;
 
-  // 뱃지 크기 (대략)
-  const BADGE_W = 72;
-  const BADGE_H = 32;
-  const EDGE_MARGIN = 16; // 화면 테두리에서 뱃지까지 여백
-
-  // ── 경도/위도 → 화면 비율(0~1) 변환 ──────────────────────────
-  // bounds 기준으로 화면 내 상대 위치를 계산
   const lngToRatioX = (lng: number) => (lng - sw.lng) / lngRange;
-  const latToRatioY = (lat: number) => 1 - (lat - sw.lat) / latRange; // 위도는 위가 크므로 반전
-
-  // ── 방향별 뱃지 위치 계산 ──────────────────────────────────
-  const calcBtnStyle = (dir: Direction): React.CSSProperties => {
-    const posStyle: React.CSSProperties = {
-      position: 'fixed',
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: '5px',
-      height: `${BADGE_H}px`,
-      paddingLeft: '14px',
-      paddingRight: '14px',
-      background: 'rgba(255, 255, 255, 0.55)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      color: '#374151',
-      borderRadius: '999px',
-      border: '1px solid rgba(255, 255, 255, 0.5)',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-      cursor: 'pointer',
-      zIndex: 9000,
-      lineHeight: 1,
-      pointerEvents: 'auto',
-      whiteSpace: 'nowrap',
-      transition: 'top 0.3s ease, bottom 0.3s ease, left 0.3s ease, right 0.3s ease',
-    };
-
-    if (dir === 'top' || dir === 'bottom') {
-      // 평균 경도 → 화면 X 비율 → 픽셀
-      const avgLng = dir === 'top' ? (counts.topAvgLng ?? centerLng) : (counts.bottomAvgLng ?? centerLng);
-      const ratioX = lngToRatioX(avgLng);
-      // 화면 픽셀 X (뱃지 중심)
-      let centerX = ratioX * screenW;
-      // 좌우 여백 클램프 (뱃지가 화면 밖으로 나가지 않도록)
-      centerX = Math.max(BADGE_W / 2 + EDGE_MARGIN, Math.min(screenW - BADGE_W / 2 - EDGE_MARGIN, centerX));
-
-      posStyle.left = `${centerX - BADGE_W / 2}px`;
-
-      if (dir === 'top') {
-        posStyle.top = `${topSafeY}px`;
-      } else {
-        posStyle.bottom = `${bottomSafeY}px`;
-        // 하단 중앙 영역만 허용 (좌측 버튼 영역, 우측 버튼 영역 제외)
-        // 좌측 버튼: left 0~80px, 우측 버튼: right 0~80px
-        const leftExcludeRight = 80 + BADGE_W / 2 + EDGE_MARGIN;
-        const rightExcludeLeft = screenW - 80 - BADGE_W / 2 - EDGE_MARGIN;
-        centerX = Math.max(leftExcludeRight, Math.min(rightExcludeLeft, centerX));
-        posStyle.left = `${centerX - BADGE_W / 2}px`;
-      }
-    } else {
-      // 평균 위도 → 화면 Y 비율 → 픽셀
-      const avgLat = dir === 'left' ? (counts.leftAvgLat ?? centerLat) : (counts.rightAvgLat ?? centerLat);
-      const ratioY = latToRatioY(avgLat);
-      // 화면 픽셀 Y (뱃지 중심)
-      let centerY = ratioY * screenH;
-
-      if (dir === 'left') {
-        posStyle.left = `${EDGE_MARGIN}px`;
-        // 좌측 버튼 영역 회피: 버튼이 화면 하단 leftBtnTop ~ leftBtnBottom 구간에 있음
-        const btnTopY = screenH - leftBtnBottom;
-        const btnBottomY = screenH - leftBtnTop;
-        // 뱃지가 버튼 영역과 겹치면 버튼 위로 밀어올림
-        if (centerY + BADGE_H / 2 > btnTopY && centerY - BADGE_H / 2 < btnBottomY) {
-          centerY = btnTopY - BADGE_H / 2 - 8;
-        }
-        // 상하 클램프
-        centerY = Math.max(topSafeY + BADGE_H / 2, Math.min(screenH - bottomSafeY - BADGE_H / 2, centerY));
-        posStyle.top = `${centerY - BADGE_H / 2}px`;
-      } else {
-        posStyle.right = `${EDGE_MARGIN}px`;
-        // 우측 버튼 영역 회피
-        const btnTopY = screenH - rightBtnBottom;
-        const btnBottomY = screenH - rightBtnTop;
-        if (centerY + BADGE_H / 2 > btnTopY && centerY - BADGE_H / 2 < btnBottomY) {
-          centerY = btnTopY - BADGE_H / 2 - 8;
-        }
-        // 상하 클램프
-        centerY = Math.max(topSafeY + BADGE_H / 2, Math.min(screenH - bottomSafeY - BADGE_H / 2, centerY));
-        posStyle.top = `${centerY - BADGE_H / 2}px`;
-      }
-    }
-
-    return posStyle;
-  };
-
-  // ── 삼각형 아이콘 ──────────────────────────────────────────
-  const Triangle = ({ dir }: { dir: Direction }) => {
-    const deg = { top: 0, right: 90, bottom: 180, left: 270 }[dir];
-    return (
-      <svg
-        width="8" height="8"
-        viewBox="0 0 10 10"
-        style={{ transform: `rotate(${deg}deg)`, flexShrink: 0, display: 'block' }}
-      >
-        <polygon points="5,1 9,9 1,9" fill="rgb(79, 70, 229)" />
-      </svg>
-    );
-  };
+  const latToRatioY = (lat: number) => 1 - (lat - sw.lat) / latRange;
 
   const Btn = ({ dir }: { dir: Direction }) => {
     const count = counts[dir];
@@ -186,17 +77,135 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     if (!hasMarker || count === 0) return null;
 
+    const isVertical = dir === 'top' || dir === 'bottom';
+    // 삼각형 SVG viewBox: 가로 TRI_BASE, 세로 TRI_H (top/bottom) 또는 반전 (left/right)
+    const svgW = isVertical ? TRI_BASE : TRI_H;
+    const svgH = isVertical ? TRI_H    : TRI_BASE;
+
+    // 뾰족한 끝이 마커 방향을 향하도록 polygon points 정의
+    // top:    뾰족한 끝 → 위 (0,0 꼭짓점)
+    // bottom: 뾰족한 끝 → 아래 (밑변이 위)
+    // left:   뾰족한 끝 → 왼쪽
+    // right:  뾰족한 끝 → 오른쪽
+    const points = {
+      top:    `${TRI_BASE / 2},0 0,${TRI_H} ${TRI_BASE},${TRI_H}`,
+      bottom: `0,0 ${TRI_BASE},0 ${TRI_BASE / 2},${TRI_H}`,
+      left:   `0,${TRI_BASE / 2} ${TRI_H},0 ${TRI_H},${TRI_BASE}`,
+      right:  `0,0 0,${TRI_BASE} ${TRI_H},${TRI_BASE / 2}`,
+    }[dir];
+
+    // 숫자 텍스트 위치 (삼각형 무게중심 근처)
+    const textPos = {
+      top:    { x: TRI_BASE / 2, y: TRI_H * 0.68 },
+      bottom: { x: TRI_BASE / 2, y: TRI_H * 0.42 },
+      left:   { x: TRI_H * 0.62, y: TRI_BASE / 2 },
+      right:  { x: TRI_H * 0.38, y: TRI_BASE / 2 },
+    }[dir];
+
+    // ── 위치 계산 ──────────────────────────────────────────
+    let styleLeft: number | undefined;
+    let styleTop: number | undefined;
+    let styleRight: number | undefined;
+    let styleBottom: number | undefined;
+
+    if (dir === 'top' || dir === 'bottom') {
+      const avgLng = dir === 'top' ? (counts.topAvgLng ?? centerLng) : (counts.bottomAvgLng ?? centerLng);
+      let cx = lngToRatioX(avgLng) * screenW;
+
+      if (dir === 'bottom') {
+        // 하단: 좌측 버튼(0~80px), 우측 버튼(screenW-80~screenW) 영역 회피
+        const leftExclude = 80 + svgW / 2 + EDGE_MARGIN;
+        const rightExclude = screenW - 80 - svgW / 2 - EDGE_MARGIN;
+        cx = Math.max(leftExclude, Math.min(rightExclude, cx));
+      } else {
+        cx = Math.max(svgW / 2 + EDGE_MARGIN, Math.min(screenW - svgW / 2 - EDGE_MARGIN, cx));
+      }
+
+      styleLeft = cx - svgW / 2;
+      if (dir === 'top') {
+        styleTop = topSafeY;
+      } else {
+        styleBottom = bottomSafeY;
+      }
+    } else {
+      const avgLat = dir === 'left' ? (counts.leftAvgLat ?? centerLat) : (counts.rightAvgLat ?? centerLat);
+      let cy = latToRatioY(avgLat) * screenH;
+
+      if (dir === 'left') {
+        // 좌측 버튼 영역 회피
+        const btnTopY = screenH - leftBtnBottom;
+        if (cy + svgH / 2 > btnTopY) {
+          cy = btnTopY - svgH / 2 - 8;
+        }
+        cy = Math.max(topSafeY + svgH / 2, Math.min(screenH - bottomSafeY - svgH / 2, cy));
+        styleLeft = EDGE_MARGIN;
+        styleTop = cy - svgH / 2;
+      } else {
+        // 우측 버튼 영역 회피
+        const btnTopY = screenH - rightBtnBottom;
+        if (cy + svgH / 2 > btnTopY) {
+          cy = btnTopY - svgH / 2 - 8;
+        }
+        cy = Math.max(topSafeY + svgH / 2, Math.min(screenH - bottomSafeY - svgH / 2, cy));
+        styleRight = EDGE_MARGIN;
+        styleTop = cy - svgH / 2;
+      }
+    }
+
+    const label = count > 999 ? '999+' : String(count);
+    const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
+
     return (
       <button
         onClick={() => onClickDirection(dir)}
-        style={calcBtnStyle(dir)}
         onMouseDown={e => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          padding: 0,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          zIndex: 9000,
+          pointerEvents: 'auto',
+          width: `${svgW}px`,
+          height: `${svgH}px`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'top 0.3s ease, bottom 0.3s ease, left 0.3s ease, right 0.3s ease',
+          ...(styleLeft   !== undefined && { left:   `${styleLeft}px`   }),
+          ...(styleTop    !== undefined && { top:    `${styleTop}px`    }),
+          ...(styleRight  !== undefined && { right:  `${styleRight}px`  }),
+          ...(styleBottom !== undefined && { bottom: `${styleBottom}px` }),
+        }}
       >
-        {dir !== 'right' && <Triangle dir={dir} />}
-        <span style={{ fontSize: '13px', fontWeight: 700, lineHeight: 1, color: '#374151' }}>
-          {count > 999 ? '999+' : count}
-        </span>
-        {dir === 'right' && <Triangle dir={dir} />}
+        <svg
+          width={svgW}
+          height={svgH}
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          style={{ display: 'block', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' }}
+        >
+          {/* 삼각형 배경 */}
+          <polygon
+            points={points}
+            fill="rgba(255,255,255,0.82)"
+            stroke="rgba(255,255,255,0.9)"
+            strokeWidth="1.5"
+          />
+          {/* 숫자 */}
+          <text
+            x={textPos.x}
+            y={textPos.y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize={fontSize}
+            fontWeight="800"
+            fill="rgb(79,70,229)"
+            fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          >
+            {label}
+          </text>
+        </svg>
       </button>
     );
   };
