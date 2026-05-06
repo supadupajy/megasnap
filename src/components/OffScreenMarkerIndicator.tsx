@@ -26,9 +26,9 @@ function useWindowSize() {
   return size;
 }
 
-const TRI_SIZE = 56;  // 겹침 방지용 충돌 크기 (정사각형 기준)
-const DROP_W = 48;    // 물방울 너비
-const DROP_H = 60;    // 물방울 높이
+const TRI_SIZE = 56;  // 겹침 방지용 충돌 크기
+const DROP_W = 56;    // 물방울 뷰박스 크기 (정사각형)
+const DROP_H = 56;
 const EDGE_MARGIN = 16;
 const MIN_GAP = 10;
 
@@ -120,9 +120,10 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - DROP_H, absY));
     }
 
-    // 인디케이터 중심(원 중심) → 마커 방향 각도
+    // 인디케이터 원 중심 → 마커 방향 각도 (위=0, 시계방향)
+    // 물방울 원 중심: absX + DROP_W/2, absY + DROP_H/2 + 6
     const indCx = absX + DROP_W / 2;
-    const indCy = absY + DROP_H / 2 - 6; // 원 중심은 물방울 위쪽에 치우침
+    const indCy = absY + DROP_H / 2 + 6;
     const angleRad = Math.atan2(markerX - indCx, -(markerY - indCy));
     const angleDeg = (angleRad * 180) / Math.PI;
 
@@ -171,7 +172,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           // 위치 변경 후 각도 재계산
           for (const ind of [a, b]) {
             const cx = ind.absX + DROP_W / 2;
-            const cy = ind.absY + DROP_H / 2 - 6;
+            const cy = ind.absY + DROP_H / 2 + 6;
             const mX = lngToX(ind.cluster.avgLng);
             const mY = latToY(ind.cluster.avgLat);
             const ar = Math.atan2(mX - cx, -(mY - cy));
@@ -190,35 +191,26 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const { cluster, absX, absY, angleDeg } = info;
     const count = cluster.count;
     const label = count > 999 ? '999+' : String(count);
-    const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 10 : 12;
+    const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
 
-    // 물방울 모양: 뷰박스 48x60
-    // 위쪽 원형 부분 + 아래쪽 뾰족한 꼭지점
-    // 기본 방향: 뾰족한 끝이 아래(↓) → rotate로 실제 방향으로 회전
-    const W = 48;
-    const H = 60;
-    const cx = W / 2;       // 24
-    const r = 18;           // 원 반지름
-    const circleCy = r + 2; // 원 중심 Y = 20
-    const tipY = H - 2;     // 뾰족한 끝 Y = 58
+    // 물방울: 원 지름 36px + 꼬리 길이 20px → 전체 56x56 뷰박스
+    // 기본 방향: 뾰족한 끝이 위(↑) → angleDeg 회전으로 실제 마커 방향을 가리킴
+    const S = 56;          // 뷰박스 크기
+    const cx = S / 2;      // 28
+    const cy = S / 2;      // 28
+    const r = 16;          // 원 반지름
+    // 원 중심: 뷰박스 하단 쪽에 배치 (꼬리가 위로 나옴)
+    const circleCy = cy + 6;   // 34
+    const tipY = 4;            // 뾰족한 끝 (위쪽)
 
-    // 물방울 path: 원 하단에서 뾰족한 끝으로 이어지는 곡선
-    // 원의 좌하단(tangent)에서 tip으로, 원의 우하단(tangent)에서 tip으로
+    // 물방울 path: 꼬리(tip)가 위, 원이 아래
     const dropPath = [
-      `M ${cx} ${circleCy - r}`,                          // 원 최상단
-      `A ${r} ${r} 0 1 1 ${cx - r * 0.6} ${circleCy + r * 0.8}`, // 원 좌하단 근처
-      `Q ${cx - r * 0.15} ${tipY - 4} ${cx} ${tipY}`,    // 왼쪽 곡선 → 뾰족한 끝
-      `Q ${cx + r * 0.15} ${tipY - 4} ${cx + r * 0.6} ${circleCy + r * 0.8}`, // 뾰족한 끝 → 오른쪽
-      `A ${r} ${r} 0 0 1 ${cx} ${circleCy - r}`,          // 원 우측 → 최상단
+      `M ${cx} ${tipY}`,
+      `C ${cx - 10} ${tipY + 14}, ${cx - r} ${circleCy - r * 0.6}, ${cx - r} ${circleCy}`,
+      `A ${r} ${r} 0 1 0 ${cx + r} ${circleCy}`,
+      `C ${cx + r} ${circleCy - r * 0.6}, ${cx + 10} ${tipY + 14}, ${cx} ${tipY}`,
       'Z'
     ].join(' ');
-
-    // 숫자는 원 중심에 표시
-    const textY = circleCy;
-
-    // 버튼 회전 중심: 물방울 시각적 중심 (원 중심 기준)
-    const pivotX = cx;
-    const pivotY = circleCy;
 
     return (
       <button
@@ -232,42 +224,48 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           cursor: 'pointer',
           zIndex: 9000,
           pointerEvents: 'auto',
-          width: `${W}px`,
-          height: `${H}px`,
+          width: `${S}px`,
+          height: `${S}px`,
           left: `${absX}px`,
           top: `${absY}px`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           transform: `rotate(${angleDeg}deg)`,
-          transformOrigin: `${pivotX}px ${pivotY}px`,
+          transformOrigin: `${cx}px ${cy}px`,
         }}
       >
         <svg
-          width={W}
-          height={H}
-          viewBox={`0 0 ${W} ${H}`}
-          style={{ display: 'block', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.18))' }}
+          width={S}
+          height={S}
+          viewBox={`0 0 ${S} ${S}`}
+          style={{ display: 'block', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.20))' }}
         >
           {/* 물방울 배경 */}
           <path
             d={dropPath}
             fill="rgba(255,255,255,0.35)"
-            stroke="rgba(255,255,255,0.60)"
+            stroke="rgba(255,255,255,0.65)"
             strokeWidth="1.5"
             strokeLinejoin="round"
           />
-          {/* 숫자 — 회전 역방향 보정으로 항상 읽기 쉽게 */}
+          {/* 원 테두리 강조 */}
+          <circle
+            cx={cx}
+            cy={circleCy}
+            r={r}
+            fill="rgba(255,255,255,0.20)"
+            stroke="rgba(255,255,255,0.50)"
+            strokeWidth="1"
+          />
+          {/* 숫자 — 원 중심에 배치, 회전 역방향 보정 */}
           <text
             x={cx}
-            y={textY}
+            y={circleCy}
             textAnchor="middle"
-            dominantBaseline="middle"
+            dominantBaseline="central"
             fontSize={fontSize}
             fontWeight="800"
             fill="rgb(79,70,229)"
             fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-            transform={`rotate(${-angleDeg}, ${cx}, ${textY})`}
+            transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
           >
             {label}
           </text>
