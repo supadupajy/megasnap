@@ -95,30 +95,27 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     let absY = 0;
 
     if (edge === 'top') {
-      // X: 마커 평균 경도 기준, Y: 상단 고정
+      // 상단 고정: X는 마커 경도 기준, Y는 상단 고정
       let cx = markerX;
       cx = Math.max(TRI_SIZE / 2 + EDGE_MARGIN, Math.min(screenW - TRI_SIZE / 2 - EDGE_MARGIN, cx));
       absX = cx - TRI_SIZE / 2;
       absY = topSafeY;
     } else if (edge === 'bottom') {
-      // X: 마커 평균 경도 기준, Y: 하단 고정
+      // 하단 고정: X는 마커 경도 기준, Y는 하단 고정
       let cx = markerX;
-      // 좌측 버튼(~80px), 우측 버튼(~80px) 영역 회피
       cx = Math.max(80 + TRI_SIZE / 2 + EDGE_MARGIN, Math.min(screenW - 80 - TRI_SIZE / 2 - EDGE_MARGIN, cx));
       absX = cx - TRI_SIZE / 2;
       absY = screenH - bottomSafeY - TRI_SIZE;
     } else if (edge === 'left') {
-      // X: 좌측 고정, Y: 마커 평균 위도 기준
-      let cy = markerY;
-      cy = Math.max(topSafeY + TRI_SIZE / 2, Math.min(screenH - bottomSafeY - TRI_SIZE / 2, cy));
+      // 좌측 고정: X는 좌측 고정, Y는 화면 세로 중앙 기준
       absX = EDGE_MARGIN;
-      absY = cy - TRI_SIZE / 2;
+      absY = screenCy - TRI_SIZE / 2;
+      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, absY));
     } else {
-      // X: 우측 고정, Y: 마커 평균 위도 기준
-      let cy = markerY;
-      cy = Math.max(topSafeY + TRI_SIZE / 2, Math.min(screenH - bottomSafeY - TRI_SIZE / 2, cy));
+      // 우측 고정: X는 우측 고정, Y는 화면 세로 중앙 기준
       absX = screenW - EDGE_MARGIN - TRI_SIZE;
-      absY = cy - TRI_SIZE / 2;
+      absY = screenCy - TRI_SIZE / 2;
+      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, absY));
     }
 
     // 인디케이터 중심 → 마커 방향 각도 (위=0, 시계방향)
