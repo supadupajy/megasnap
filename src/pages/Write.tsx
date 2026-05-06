@@ -657,16 +657,6 @@ const Write = () => {
             </button>
           ) : (
             <div className="flex flex-col gap-1.5">
-              {!content.trim() && (
-                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                  내용을 입력해주세요
-                </p>
-              )}
-              {mediaFiles.length === 0 && (
-                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                  사진이나 동영상을 선택해주세요
-                </p>
-              )}
               <button
                 className={cn(
                   "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
@@ -690,6 +680,16 @@ const Write = () => {
                   }
                 </div>
               </button>
+              {!content.trim() && (
+                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                  내용을 입력해주세요
+                </p>
+              )}
+              {mediaFiles.length === 0 && (
+                <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                  사진이나 동영상을 선택해주세요
+                </p>
+              )}
             </div>
           )}
         </div>
