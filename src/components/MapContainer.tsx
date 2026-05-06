@@ -1174,36 +1174,45 @@ const MapContainer = ({
         if (existingBadge) {
           if (existingBadge.getAttribute('data-count') !== countStr) {
             existingBadge.setAttribute('data-count', countStr);
-            existingBadge.textContent = countStr;
+            // Update inner number span
+            const numSpan = existingBadge.querySelector('.overlap-badge-num') as HTMLElement | null;
+            if (numSpan) numSpan.textContent = countStr;
           }
         } else {
           const badge = document.createElement('div');
           badge.className = 'overlap-badge';
           badge.setAttribute('data-count', countStr);
-          badge.textContent = countStr;
+          badge.innerHTML = `<span class="overlap-badge-num" style="
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-width:28px;
+            height:28px;
+            padding:0 8px;
+            background:#4f46e5;
+            color:#ffffff;
+            font-size:13px;
+            font-weight:800;
+            border-radius:10px;
+            letter-spacing:-0.03em;
+            line-height:1;
+          ">${countStr}</span>`;
           badge.style.cssText = [
             'position:absolute',
-            'top:-8px',
+            'top:-44px',
             'left:50%',
             'transform:translateX(-50%)',
-            'min-width:20px',
-            'height:20px',
-            'padding:0 5px',
-            'background:#f97316',
-            'color:#ffffff',
-            'font-size:11px',
-            'font-weight:800',
-            'border-radius:10px',
+            'background:#ffffff',
+            'border-radius:16px',
+            'padding:5px 7px',
+            'box-shadow:0 4px 16px rgba(0,0,0,0.13)',
             'display:flex',
             'align-items:center',
             'justify-content:center',
-            'border:2px solid #ffffff',
-            'box-shadow:0 2px 8px rgba(249,115,22,0.45)',
             'z-index:9999',
             'pointer-events:none',
-            'letter-spacing:-0.02em',
-            'line-height:1',
             'box-sizing:border-box',
+            'white-space:nowrap',
             markersHiddenRef.current ? 'opacity:0' : 'opacity:1',
           ].join(';');
           content.style.position = 'relative';
