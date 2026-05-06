@@ -625,7 +625,7 @@ const Write = () => {
                           category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
                         )}
                       >
-                        <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
+                        <cat.Icon className={cn("w-4 h-4", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
                         <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
                           {cat.label}
                         </span>
