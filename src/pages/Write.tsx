@@ -600,12 +600,12 @@ const Write = () => {
                         key={cat.key}
                         onClick={() => setCategory(cat.key)}
                         className={cn(
-                          "flex flex-col items-center justify-center h-14 rounded-2xl border-2 transition-all",
+                          "flex flex-col items-center justify-center h-16 rounded-2xl border-2 transition-all",
                           category === cat.key ? "border-indigo-600 bg-indigo-50" : "border-gray-100 bg-white"
                         )}
                       >
                         <cat.Icon className={cn("w-6 h-6", category === cat.key ? "text-indigo-600" : "text-gray-400")} />
-                        <span className={cn("text-[10px] font-black mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
+                        <span className={cn("text-[10px] font-normal mt-2", category === cat.key ? "text-indigo-600" : "text-gray-500")}>
                           {cat.label}
                         </span>
                       </button>
