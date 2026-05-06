@@ -62,7 +62,7 @@ const VideoSearch = () => {
           <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4">
             <Video className="w-8 h-8 text-orange-300" />
           </div>
-          <p className="text-sm text-gray-400 font-bold leading-relaxed">
+          <p className="text-sm text-gray-400 font-normal leading-relaxed">
             {searchQuery ? '검색 결과가 없습니다.' : '원하는 영상을 검색해 보세요.'}
           </p>
         </div>
