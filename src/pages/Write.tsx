@@ -575,7 +575,7 @@ const Write = () => {
                   onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
                   disabled={mediaFiles.length === 0}
                 >
-                  <span className="flex-1 text-left pl-1">다음 단계로</span>
+                  <span className="flex-1 text-left font-normal pl-1">다음 단계로</span>
                   <div className={cn(
                     "w-9 h-9 rounded-full flex items-center justify-center transition-all",
                     mediaFiles.length === 0
