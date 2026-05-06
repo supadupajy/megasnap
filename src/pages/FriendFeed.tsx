@@ -218,7 +218,7 @@ const FriendFeed = () => {
               className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
             >
               <Search className="w-4 h-4 text-grey-900" />
-              <span className="text-sm font-normal text-grey-900">친구 검색</span>
+              <span className="text-sm font-semibold text-grey-900">친구 검색</span>
             </button>
           </div>
         </div>
