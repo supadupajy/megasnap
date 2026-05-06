@@ -84,6 +84,11 @@ export interface DirectionCounts {
   hasBottom: boolean;
   hasLeft: boolean;
   hasRight: boolean;
+  // 각 방향 마커들의 평균 위치 (동적 뱃지 위치 계산용)
+  topAvgLng?: number;
+  bottomAvgLng?: number;
+  leftAvgLat?: number;
+  rightAvgLat?: number;
 }
 
 /**
@@ -127,6 +132,9 @@ export const fetchOffScreenCounts = async (
     let top = 0, bottom = 0, left = 0, right = 0;
     let hasTop = false, hasBottom = false, hasLeft = false, hasRight = false;
 
+    // 평균 좌표 계산용 누적값
+    let topSumLng = 0, bottomSumLng = 0, leftSumLat = 0, rightSumLat = 0;
+
     (res.data || []).forEach((p: any) => {
       if (p.latitude == null || p.longitude == null) return;
       // 화면 안이면 제외
@@ -146,13 +154,20 @@ export const fetchOffScreenCounts = async (
       // 가장 주된 방향 1개에만 카운트 (45도 섹터 독점 분류)
       const dLat = (p.latitude - centerLat) / latRange;
       const dLng = (p.longitude - centerLng) / lngRange;
-      if      (dLat >= 0 && dLat >= Math.abs(dLng))           top++;
-      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottom++;
-      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) left++;
-      else                                                      right++;
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           { top++;    topSumLng    += p.longitude; }
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  { bottom++; bottomSumLng += p.longitude; }
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) { left++;   leftSumLat   += p.latitude; }
+      else                                                      { right++;  rightSumLat  += p.latitude; }
     });
 
-    return { top, bottom, left, right, hasTop, hasBottom, hasLeft, hasRight };
+    return {
+      top, bottom, left, right,
+      hasTop, hasBottom, hasLeft, hasRight,
+      topAvgLng:    top    > 0 ? topSumLng    / top    : centerLng,
+      bottomAvgLng: bottom > 0 ? bottomSumLng / bottom : centerLng,
+      leftAvgLat:   left   > 0 ? leftSumLat   / left   : centerLat,
+      rightAvgLat:  right  > 0 ? rightSumLat  / right  : centerLat,
+    };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
     return { top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false };
