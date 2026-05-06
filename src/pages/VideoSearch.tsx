@@ -33,13 +33,15 @@ const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, l
 // ── 인라인 PostDetail 오버레이 ──────────────────────────────────────
 const PostDetailOverlay = ({
   postId,
+  searchResults,
   onClose,
 }: {
   postId: string;
+  searchResults: SearchPost[];
   onClose: () => void;
 }) => {
   const navigate = useNavigate();
-  const { user: authUser, profile } = useAuth();
+  const { user: authUser } = useAuth();
   const [allPosts, setAllPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -93,27 +95,23 @@ const PostDetailOverlay = ({
       if (!authUser?.id || !postId) return;
       setLoading(true);
       try {
-        const { data: targetPost } = await supabase
+        // 검색 결과 목록에서 상세 데이터 조회 (user 전체 포스팅 X)
+        const postIds = searchResults.map((p) => p.id);
+
+        const { data: postsData } = await supabase
           .from('posts')
           .select(POST_COLUMNS)
-          .eq('id', postId)
-          .maybeSingle();
-
-        if (!targetPost) { setAllPosts([]); return; }
-
-        const { data } = await supabase
-          .from('posts')
-          .select(POST_COLUMNS)
-          .eq('user_id', targetPost.user_id)
-          .order('created_at', { ascending: false })
+          .in('id', postIds)
+          .order('likes', { ascending: false })
           .limit(100);
 
-        const postsToFormat = data || [targetPost];
-        const postIds = postsToFormat.map((p: any) => p.id);
+        const postsToFormat = postsData || [];
+        if (postsToFormat.length === 0) { setAllPosts([]); return; }
 
+        const allIds = postsToFormat.map((p: any) => p.id);
         const [{ data: likesData }, { data: savedData }] = await Promise.all([
-          supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', postIds),
-          supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', postIds),
+          supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', allIds),
+          supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', allIds),
         ]);
 
         const likedSet = new Set((likesData || []).map((l: any) => l.post_id));
@@ -125,7 +123,7 @@ const PostDetailOverlay = ({
       }
     };
     fetch();
-  }, [authUser?.id, postId]);
+  }, [authUser?.id, postId, searchResults]);
 
   useEffect(() => {
     if (postId && allPosts.length > 0) {
@@ -162,10 +160,6 @@ const PostDetailOverlay = ({
     }
   };
 
-  const title = allPosts.length > 0
-    ? (allPosts[0].user.id === authUser?.id ? '내 포스팅' : `${allPosts[0].user.name}의 포스팅`)
-    : '포스팅';
-
   return (
     <div className="fixed inset-0 z-[9999] bg-white flex flex-col overflow-hidden">
       {/* 앱 헤더 높이만큼 safe-area + 64px 확보 */}
@@ -178,7 +172,7 @@ const PostDetailOverlay = ({
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">{title}</h2>
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">검색 결과</h2>
           </div>
         </div>
       </div>
@@ -400,6 +394,7 @@ const VideoSearch = () => {
       {overlayPostId && (
         <PostDetailOverlay
           postId={overlayPostId}
+          searchResults={results}
           onClose={() => setOverlayPostId(null)}
         />
       )}
