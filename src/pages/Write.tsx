@@ -561,7 +561,7 @@ const Write = () => {
                     style={{ aspectRatio: '1 / 1' }}
                   >
                     <ImageIcon className="w-10 h-10 text-gray-400 mb-3" />
-                    <span className="text-gray-400 font-black text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
+                    <span className="text-gray-400 font-black font-normal text-sm uppercase tracking-widest">사진 / 동영상 선택</span>
                   </div>
                 )}
 
