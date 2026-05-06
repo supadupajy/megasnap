@@ -8,7 +8,7 @@ interface Bounds {
 
 interface OffScreenMarkerIndicatorProps {
   bounds: Bounds | null;
-  onClickCluster: (cluster: MarkerCluster) => void;
+  onClickCluster: (cluster: MarkerCluster, edge: Direction) => void;
   topOffset?: string | number;
   bottomOffset: number;
   dbCounts?: DirectionCounts | null;
@@ -208,7 +208,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
     return (
       <button
-        onClick={() => onClickCluster(cluster)}
+        onClick={() => onClickCluster(cluster, info.edge)}
         onMouseDown={e => e.stopPropagation()}
         style={{
           position: 'fixed',

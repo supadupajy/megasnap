@@ -1314,16 +1314,36 @@ const Index = () => {
           <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
             <OffScreenMarkerIndicator
               bounds={mapData?.bounds || null}
-              onClickCluster={(cluster) => {
-                // 클러스터 내 마커 중 현재 화면 중심에서 가장 가까운 마커로 이동
+              onClickCluster={(cluster, edge) => {
                 const c = mapDataRef.current?.center || mapCenter;
+                const b = mapDataRef.current?.bounds || mapData?.bounds;
                 if (!c || cluster.points.length === 0) {
                   setMapCenter({ lat: cluster.avgLat, lng: cluster.avgLng });
                   return;
                 }
-                let nearest = cluster.points[0];
+                // edge 방향에 실제로 속하는 마커만 필터링
+                // (클러스터에 여러 방향 마커가 섞일 수 있으므로)
+                let candidates = cluster.points;
+                if (b) {
+                  const { sw, ne } = b;
+                  const centerLat = (sw.lat + ne.lat) / 2;
+                  const centerLng = (sw.lng + ne.lng) / 2;
+                  const filtered = cluster.points.filter(p => {
+                    const dx = p.lng - centerLng;
+                    const dy = p.lat - centerLat;
+                    // 화면 픽셀 기준 방향 (dy는 위도라 부호 반전)
+                    if (edge === 'top')    return Math.abs(dy) >= Math.abs(dx) && dy > 0;
+                    if (edge === 'bottom') return Math.abs(dy) >= Math.abs(dx) && dy < 0;
+                    if (edge === 'left')   return Math.abs(dx) > Math.abs(dy) && dx < 0;
+                    if (edge === 'right')  return Math.abs(dx) > Math.abs(dy) && dx > 0;
+                    return true;
+                  });
+                  if (filtered.length > 0) candidates = filtered;
+                }
+                // 현재 중심에서 가장 가까운 마커로 이동
+                let nearest = candidates[0];
                 let minDist = Infinity;
-                for (const p of cluster.points) {
+                for (const p of candidates) {
                   const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
                   if (d < minDist) { minDist = d; nearest = p; }
                 }
