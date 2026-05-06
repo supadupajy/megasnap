@@ -30,7 +30,7 @@ const VideoSearch = () => {
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
             onClick={() => navigate(-1)}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center font-semibold text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
