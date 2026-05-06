@@ -262,11 +262,29 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
               viewBox={`0 0 ${S} ${S}`}
               style={{ display: 'block', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.22))' }}
             >
-              {/* 팁(뾰족한 끝)만 인디고로 */}
+              {/* 원형 몸통 (흰색 반투명) */}
+              <circle
+                cx={cx}
+                cy={circleCy}
+                r={r}
+                fill="rgba(255,255,255,0.85)"
+                stroke="rgba(255,255,255,0.9)"
+                strokeWidth="1.5"
+              />
+              {/* 팁 삼각형 (인디고) */}
               <path
                 d={dropPath}
                 fill="rgb(79,70,229)"
                 stroke="none"
+              />
+              {/* 원형 몸통 다시 그려서 팁 위에 덮기 */}
+              <circle
+                cx={cx}
+                cy={circleCy}
+                r={r}
+                fill="rgba(255,255,255,0.85)"
+                stroke="rgba(255,255,255,0.5)"
+                strokeWidth="1"
               />
               <text
                 x={cx}
