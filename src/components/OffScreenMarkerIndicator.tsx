@@ -88,12 +88,14 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     if (!hasMarker || count === 0) continue;
 
     // 마커 평균 위치의 화면 픽셀 좌표
-    const avgLng = dir === 'top' ? (counts.topAvgLng ?? centerLng)
+    const avgLng = dir === 'top'    ? (counts.topAvgLng    ?? centerLng)
                  : dir === 'bottom' ? (counts.bottomAvgLng ?? centerLng)
-                 : centerLng;
-    const avgLat = dir === 'left' ? (counts.leftAvgLat ?? centerLat)
-                 : dir === 'right' ? (counts.rightAvgLat ?? centerLat)
-                 : centerLat;
+                 : dir === 'left'   ? (counts.leftAvgLng   ?? centerLng)
+                 :                    (counts.rightAvgLng  ?? centerLng);
+    const avgLat = dir === 'top'    ? (counts.topAvgLat    ?? centerLat)
+                 : dir === 'bottom' ? (counts.bottomAvgLat ?? centerLat)
+                 : dir === 'left'   ? (counts.leftAvgLat   ?? centerLat)
+                 :                    (counts.rightAvgLat  ?? centerLat);
 
     const markerScreenX = lngToX(avgLng);
     const markerScreenY = latToY(avgLat);
@@ -216,14 +218,16 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
         // 위치가 바뀌었으므로 각도 재계산
         for (const ind of [a, b]) {
-          const avgLng = ind.dir === 'top' ? (counts.topAvgLng ?? centerLng)
-                       : ind.dir === 'bottom' ? (counts.bottomAvgLng ?? centerLng)
-                       : centerLng;
-          const avgLat = ind.dir === 'left' ? (counts.leftAvgLat ?? centerLat)
-                       : ind.dir === 'right' ? (counts.rightAvgLat ?? centerLat)
-                       : centerLat;
-          const mX = lngToX(avgLng);
-          const mY = latToY(avgLat);
+          const mLng = ind.dir === 'top'    ? (counts.topAvgLng    ?? centerLng)
+                     : ind.dir === 'bottom' ? (counts.bottomAvgLng ?? centerLng)
+                     : ind.dir === 'left'   ? (counts.leftAvgLng   ?? centerLng)
+                     :                        (counts.rightAvgLng  ?? centerLng);
+          const mLat = ind.dir === 'top'    ? (counts.topAvgLat    ?? centerLat)
+                     : ind.dir === 'bottom' ? (counts.bottomAvgLat ?? centerLat)
+                     : ind.dir === 'left'   ? (counts.leftAvgLat   ?? centerLat)
+                     :                        (counts.rightAvgLat  ?? centerLat);
+          const mX = lngToX(mLng);
+          const mY = latToY(mLat);
           const cx = ind.absX + TRI_SIZE / 2;
           const cy = ind.absY + TRI_SIZE / 2;
           const angleRad = Math.atan2(mY - cy, mX - cx);
