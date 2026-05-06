@@ -400,8 +400,8 @@ const Write = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
       {/* 고정 헤더(Header.tsx) 높이만큼만 정확히 공간 확보 - pt-16으로 통일 */}
-      <div className="pt-16 flex flex-col flex-1 min-h-0">
-        <main className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+      <div className="pt-16">
+        <main className="overflow-y-auto no-scrollbar overscroll-contain bg-white">
           <div className="bg-gray-50/50 border-y border-gray-100">
             <div className="px-5 py-4">
               <div className="flex items-center justify-between">
@@ -430,7 +430,7 @@ const Write = () => {
             </div>
           </div>
 
-          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: '6rem' }}>
+          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
@@ -630,10 +630,9 @@ const Write = () => {
           </div>
         </main>
 
-        {/* 하단 고정 버튼 영역 - BottomNav 위에 위치 */}
+        {/* 하단 고정 버튼 영역 - BottomNav(h-16) 위에 fixed로 위치 */}
         <div
-          className="shrink-0 bg-white border-t border-gray-100 px-5 pt-3 pb-2"
-          style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
+          className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-5 pt-3 pb-3 z-[1000]"
         >
           {currentPage === 1 ? (
             <button
