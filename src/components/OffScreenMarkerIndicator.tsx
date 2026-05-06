@@ -26,9 +26,11 @@ function useWindowSize() {
   return size;
 }
 
-const TRI_SIZE = 56;
+const TRI_SIZE = 56;  // 겹침 방지용 충돌 크기 (정사각형 기준)
+const DROP_W = 48;    // 물방울 너비
+const DROP_H = 60;    // 물방울 높이
 const EDGE_MARGIN = 16;
-const MIN_GAP = 12;
+const MIN_GAP = 10;
 
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bounds,
@@ -99,32 +101,28 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     let absY = 0;
 
     if (edge === 'top') {
-      // 상단 고정: X는 마커 경도 기준, Y는 상단 고정
       let cx = markerX;
-      cx = Math.max(TRI_SIZE / 2 + EDGE_MARGIN, Math.min(screenW - TRI_SIZE / 2 - EDGE_MARGIN, cx));
-      absX = cx - TRI_SIZE / 2;
+      cx = Math.max(DROP_W / 2 + EDGE_MARGIN, Math.min(screenW - DROP_W / 2 - EDGE_MARGIN, cx));
+      absX = cx - DROP_W / 2;
       absY = topSafeY;
     } else if (edge === 'bottom') {
-      // 하단 고정: X는 마커 경도 기준, Y는 하단 고정
       let cx = markerX;
-      cx = Math.max(80 + TRI_SIZE / 2 + EDGE_MARGIN, Math.min(screenW - 80 - TRI_SIZE / 2 - EDGE_MARGIN, cx));
-      absX = cx - TRI_SIZE / 2;
-      absY = screenH - bottomSafeY - TRI_SIZE;
+      cx = Math.max(80 + DROP_W / 2 + EDGE_MARGIN, Math.min(screenW - 80 - DROP_W / 2 - EDGE_MARGIN, cx));
+      absX = cx - DROP_W / 2;
+      absY = screenH - bottomSafeY - DROP_H;
     } else if (edge === 'left') {
-      // 좌측 고정: X는 좌측 고정, Y는 화면 세로 중앙 기준
       absX = EDGE_MARGIN;
-      absY = screenCy - TRI_SIZE / 2;
-      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, absY));
+      absY = screenCy - DROP_H / 2;
+      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - DROP_H, absY));
     } else {
-      // 우측 고정: X는 우측 고정, Y는 화면 세로 중앙 기준
-      absX = screenW - EDGE_MARGIN - TRI_SIZE;
-      absY = screenCy - TRI_SIZE / 2;
-      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, absY));
+      absX = screenW - EDGE_MARGIN - DROP_W;
+      absY = screenCy - DROP_H / 2;
+      absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - DROP_H, absY));
     }
 
-    // 인디케이터 중심 → 마커 방향 각도 (위=0, 시계방향)
-    const indCx = absX + TRI_SIZE / 2;
-    const indCy = absY + TRI_SIZE / 2;
+    // 인디케이터 중심(원 중심) → 마커 방향 각도
+    const indCx = absX + DROP_W / 2;
+    const indCy = absY + DROP_H / 2 - 6; // 원 중심은 물방울 위쪽에 치우침
     const angleRad = Math.atan2(markerX - indCx, -(markerY - indCy));
     const angleDeg = (angleRad * 180) / Math.PI;
 
@@ -152,28 +150,28 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
           if (edge === 'top' || edge === 'bottom') {
             // X축으로 분리
-            const aCx = a.absX + TRI_SIZE / 2;
-            const bCx = b.absX + TRI_SIZE / 2;
+            const aCx = a.absX + DROP_W / 2;
+            const bCx = b.absX + DROP_W / 2;
             const dx = aCx - bCx;
-            const push = (TRI_SIZE + MIN_GAP - Math.abs(dx)) / 2 + 1;
+            const push = (DROP_W + MIN_GAP - Math.abs(dx)) / 2 + 1;
             const dir = dx >= 0 ? 1 : -1;
-            a.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - TRI_SIZE, a.absX + push * dir));
-            b.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - TRI_SIZE, b.absX - push * dir));
+            a.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - DROP_W, a.absX + push * dir));
+            b.absX = Math.max(EDGE_MARGIN, Math.min(screenW - EDGE_MARGIN - DROP_W, b.absX - push * dir));
           } else {
             // Y축으로 분리
-            const aCy = a.absY + TRI_SIZE / 2;
-            const bCy = b.absY + TRI_SIZE / 2;
+            const aCy = a.absY + DROP_H / 2;
+            const bCy = b.absY + DROP_H / 2;
             const dy = aCy - bCy;
-            const push = (TRI_SIZE + MIN_GAP - Math.abs(dy)) / 2 + 1;
+            const push = (DROP_H + MIN_GAP - Math.abs(dy)) / 2 + 1;
             const dir = dy >= 0 ? 1 : -1;
-            a.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, a.absY + push * dir));
-            b.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - TRI_SIZE, b.absY - push * dir));
+            a.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - DROP_H, a.absY + push * dir));
+            b.absY = Math.max(topSafeY, Math.min(screenH - bottomSafeY - DROP_H, b.absY - push * dir));
           }
 
           // 위치 변경 후 각도 재계산
           for (const ind of [a, b]) {
-            const cx = ind.absX + TRI_SIZE / 2;
-            const cy = ind.absY + TRI_SIZE / 2;
+            const cx = ind.absX + DROP_W / 2;
+            const cy = ind.absY + DROP_H / 2 - 6;
             const mX = lngToX(ind.cluster.avgLng);
             const mY = latToY(ind.cluster.avgLat);
             const ar = Math.atan2(mX - cx, -(mY - cy));
@@ -194,12 +192,33 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const label = count > 999 ? '999+' : String(count);
     const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 10 : 12;
 
-    const cx = TRI_SIZE / 2;
-    const tipY = 4;
-    const baseY = TRI_SIZE - 4;
-    const halfBase = 22;
-    const triPoints = `${cx},${tipY} ${cx - halfBase},${baseY} ${cx + halfBase},${baseY}`;
-    const textY = tipY + (baseY - tipY) * 0.62;
+    // 물방울 모양: 뷰박스 48x60
+    // 위쪽 원형 부분 + 아래쪽 뾰족한 꼭지점
+    // 기본 방향: 뾰족한 끝이 아래(↓) → rotate로 실제 방향으로 회전
+    const W = 48;
+    const H = 60;
+    const cx = W / 2;       // 24
+    const r = 18;           // 원 반지름
+    const circleCy = r + 2; // 원 중심 Y = 20
+    const tipY = H - 2;     // 뾰족한 끝 Y = 58
+
+    // 물방울 path: 원 하단에서 뾰족한 끝으로 이어지는 곡선
+    // 원의 좌하단(tangent)에서 tip으로, 원의 우하단(tangent)에서 tip으로
+    const dropPath = [
+      `M ${cx} ${circleCy - r}`,                          // 원 최상단
+      `A ${r} ${r} 0 1 1 ${cx - r * 0.6} ${circleCy + r * 0.8}`, // 원 좌하단 근처
+      `Q ${cx - r * 0.15} ${tipY - 4} ${cx} ${tipY}`,    // 왼쪽 곡선 → 뾰족한 끝
+      `Q ${cx + r * 0.15} ${tipY - 4} ${cx + r * 0.6} ${circleCy + r * 0.8}`, // 뾰족한 끝 → 오른쪽
+      `A ${r} ${r} 0 0 1 ${cx} ${circleCy - r}`,          // 원 우측 → 최상단
+      'Z'
+    ].join(' ');
+
+    // 숫자는 원 중심에 표시
+    const textY = circleCy;
+
+    // 버튼 회전 중심: 물방울 시각적 중심 (원 중심 기준)
+    const pivotX = cx;
+    const pivotY = circleCy;
 
     return (
       <button
@@ -213,32 +232,32 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           cursor: 'pointer',
           zIndex: 9000,
           pointerEvents: 'auto',
-          width: `${TRI_SIZE}px`,
-          height: `${TRI_SIZE}px`,
+          width: `${W}px`,
+          height: `${H}px`,
           left: `${absX}px`,
           top: `${absY}px`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          clipPath: `polygon(50% ${(tipY / TRI_SIZE) * 100}%, ${((cx - halfBase) / TRI_SIZE) * 100}% ${(baseY / TRI_SIZE) * 100}%, ${((cx + halfBase) / TRI_SIZE) * 100}% ${(baseY / TRI_SIZE) * 100}%)`,
           transform: `rotate(${angleDeg}deg)`,
+          transformOrigin: `${pivotX}px ${pivotY}px`,
         }}
       >
         <svg
-          width={TRI_SIZE}
-          height={TRI_SIZE}
-          viewBox={`0 0 ${TRI_SIZE} ${TRI_SIZE}`}
-          style={{ display: 'block', filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.10))' }}
+          width={W}
+          height={H}
+          viewBox={`0 0 ${W} ${H}`}
+          style={{ display: 'block', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.18))' }}
         >
-          <polygon
-            points={triPoints}
-            fill="rgba(255,255,255,0.30)"
-            stroke="rgba(255,255,255,0.50)"
+          {/* 물방울 배경 */}
+          <path
+            d={dropPath}
+            fill="rgba(255,255,255,0.35)"
+            stroke="rgba(255,255,255,0.60)"
             strokeWidth="1.5"
             strokeLinejoin="round"
           />
+          {/* 숫자 — 회전 역방향 보정으로 항상 읽기 쉽게 */}
           <text
             x={cx}
             y={textY}
