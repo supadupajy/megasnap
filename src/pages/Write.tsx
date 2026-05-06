@@ -584,7 +584,7 @@ const Write = () => {
                     "w-10 h-10 rounded-full flex items-center justify-center transition-all",
                     mediaFiles.length === 0
                       ? "bg-gray-200 text-gray-400"
-                      : "bg-indigo-500 text-white"
+                      : "bg-green-500 text-white"
                   )}>
                     <ChevronRight className="w-5 h-5" />
                   </div>
@@ -663,7 +663,7 @@ const Write = () => {
                       "w-10 h-10 rounded-full flex items-center justify-center transition-all",
                       isSubmitting
                         ? "bg-gray-200 text-gray-400"
-                        : "bg-indigo-500 text-white"
+                        : "bg-green-500 text-white"
                     )}>
                       {isSubmitting
                         ? <Loader2 className="w-5 h-5 animate-spin" />
