@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, ChevronLeft, Video, Play, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/components/AuthProvider';
 import { getFallbackImage } from '@/lib/utils';
 
 interface SearchPost {
@@ -20,14 +19,28 @@ interface SearchPost {
   profiles?: { nickname: string | null; avatar_url: string | null };
 }
 
+const CACHE_KEY_QUERY = 'videoSearch_query';
+const CACHE_KEY_RESULTS = 'videoSearch_results';
+
 const VideoSearch = () => {
   const navigate = useNavigate();
-  const { user: authUser } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<SearchPost[]>([]);
+
+  // sessionStorage에서 이전 검색어/결과 복원
+  const [searchQuery, setSearchQuery] = useState<string>(() => {
+    try { return sessionStorage.getItem(CACHE_KEY_QUERY) || ''; } catch { return ''; }
+  });
+  const [results, setResults] = useState<SearchPost[]>(() => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY_RESULTS);
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [hasSearched, setHasSearched] = useState<boolean>(() => {
+    try { return !!sessionStorage.getItem(CACHE_KEY_QUERY); } catch { return false; }
+  });
+
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     document.documentElement.style.overflow = 'hidden';
@@ -46,9 +59,14 @@ const VideoSearch = () => {
 
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
+
+    // sessionStorage에 검색어 저장
+    try { sessionStorage.setItem(CACHE_KEY_QUERY, trimmed); } catch {}
+
     if (!trimmed) {
       setResults([]);
       setHasSearched(false);
+      try { sessionStorage.removeItem(CACHE_KEY_RESULTS); } catch {}
       return;
     }
 
@@ -64,7 +82,10 @@ const VideoSearch = () => {
         .limit(50);
 
       if (error) throw error;
-      setResults((data as any[]) || []);
+      const fetched = (data as any[]) || [];
+      setResults(fetched);
+      // 결과도 sessionStorage에 저장
+      try { sessionStorage.setItem(CACHE_KEY_RESULTS, JSON.stringify(fetched)); } catch {}
     } catch (err) {
       console.error('[VideoSearch] search error:', err);
       setResults([]);
@@ -73,8 +94,13 @@ const VideoSearch = () => {
     }
   }, []);
 
-  // 디바운스 검색
+  // 첫 렌더 시 캐시된 검색어가 있으면 검색 스킵 (이미 결과 복원됨)
+  // 이후 searchQuery 변경 시에만 디바운스 검색
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     const timer = setTimeout(() => handleSearch(searchQuery), 400);
     return () => clearTimeout(timer);
   }, [searchQuery, handleSearch]);
@@ -110,12 +136,11 @@ const VideoSearch = () => {
           <div className="relative">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
-              ref={inputRef}
               placeholder="원하는 영상을 검색해 보세요"
               className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-semibold placeholder:text-gray-400 placeholder:font-semibold shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              autoFocus
+              autoFocus={!searchQuery}
             />
             {isSearching && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">

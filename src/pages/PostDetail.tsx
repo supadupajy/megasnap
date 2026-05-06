@@ -227,10 +227,10 @@ const PostDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="pt-16">
-        {/* Header */}
-        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
+    <div className="h-screen bg-white flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="pt-16 shrink-0">
+        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50 relative">
           <button
             onClick={() => navigate(-1)}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
@@ -247,22 +247,25 @@ const PostDetail = () => {
             </h2>
           </div>
         </div>
+      </div>
 
-        {/* Scrollable Content Area */}
-        <main style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}>
-          {allPosts.map((p) => (
-            <div key={p.id} id={`post-${p.id}`} className="scroll-mt-[144px]">
-              <PostItem
-                post={p}
-                disablePulse={true}
-                autoPlayVideo={true}
-                onLikeToggle={() => handleLikeToggle(p.id)}
-                onDelete={() => handlePostDelete(p.id)}
-                onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
-              />
-            </div>
-          ))}
-        </main>
+      {/* Scrollable Content Area */}
+      <div
+        className="flex-1 overflow-y-auto no-scrollbar"
+        style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        {allPosts.map((p) => (
+          <div key={p.id} id={`post-${p.id}`} className="scroll-mt-4">
+            <PostItem
+              post={p}
+              disablePulse={true}
+              autoPlayVideo={true}
+              onLikeToggle={() => handleLikeToggle(p.id)}
+              onDelete={() => handlePostDelete(p.id)}
+              onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
