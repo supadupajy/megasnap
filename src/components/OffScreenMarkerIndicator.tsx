@@ -198,17 +198,16 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     if (!didMerge) break;
   }
 
-  // 팁(뾰족한 삼각형)만 - 원 없음
+  // 물방울 SVG (뾰족한 끝이 위↑ 기본)
   const cx = S / 2;
   const circleCy = S / 2 + 6;
   const r = 15;
   const tipY = 3;
-  // 팁: 원의 아래쪽 두 접점에서 뾰족한 끝까지만
-  const tipPath = [
+  const dropPath = [
     `M ${cx} ${tipY}`,
-    `C ${cx - 9} ${tipY + 12}, ${cx - r * 0.6} ${circleCy - r * 0.1}, ${cx - r * 0.55} ${circleCy + r * 0.3}`,
-    `L ${cx + r * 0.55} ${circleCy + r * 0.3}`,
-    `C ${cx + r * 0.6} ${circleCy - r * 0.1}, ${cx + 9} ${tipY + 12}, ${cx} ${tipY}`,
+    `C ${cx - 9} ${tipY + 12}, ${cx - r} ${circleCy - r * 0.55}, ${cx - r} ${circleCy}`,
+    `A ${r} ${r} 0 1 0 ${cx + r} ${circleCy}`,
+    `C ${cx + r} ${circleCy - r * 0.55}, ${cx + 9} ${tipY + 12}, ${cx} ${tipY}`,
     'Z',
   ].join(' ');
 
@@ -263,29 +262,12 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
               viewBox={`0 0 ${S} ${S}`}
               style={{ display: 'block', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.22))' }}
             >
-              {/* 팁(뾰족한 삼각형)만 인디고 */}
+              {/* 팁(뾰족한 끝)만 인디고로 */}
               <path
-                d={tipPath}
+                d={dropPath}
                 fill="rgb(79,70,229)"
                 stroke="none"
               />
-              {/* 텍스트 외곽선 (가독성) */}
-              <text
-                x={cx}
-                y={circleCy}
-                textAnchor="middle"
-                dominantBaseline="central"
-                fontSize={fontSize}
-                fontWeight="800"
-                fill="none"
-                stroke="white"
-                strokeWidth="3"
-                strokeLinejoin="round"
-                fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-                transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
-              >
-                {label}
-              </text>
               <text
                 x={cx}
                 y={circleCy}
