@@ -1425,7 +1425,7 @@ const MapContainer = ({
     if (isAd) animationClass = '';
     else if (!isMine && (isInfluencer || isPopular)) animationClass = 'animate-marker-float';
 
-    const isSpecialPost = isMine || isAd || borderType !== 'none';
+    const isSpecialPost = !isAd && (isInfluencer || isPopular);
     const shineClass = isSpecialPost ? 'shine-overlay' : '';
 
     let inlineBorderStyle = "border: 3px solid #ffffff;";
