@@ -472,7 +472,7 @@ const Index = () => {
     let leftSumLat = 0, leftSumLng = 0, rightSumLat = 0, rightSumLng = 0;
     const offScreenPoints: { lat: number; lng: number }[] = [];
 
-    displayedMarkers.forEach(post => {
+    displayedMarkers.forEach((post: any) => {
       if (post.lat == null || post.lng == null) return;
       if (post.isAd) return;
       const lat = post.lat;
@@ -483,13 +483,12 @@ const Index = () => {
 
       const dLat = (lat - centerLat) / latRange;
       const dLng = (lng - centerLng) / lngRange;
-      if      (dLat >= 0 && dLat >= Math.abs(dLng))           { top++;    topSumLat += lat;    topSumLng    += lng; }
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           { top++;    topSumLat    += lat; topSumLng    += lng; }
       else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  { bottom++; bottomSumLat += lat; bottomSumLng += lng; }
       else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) { left++;   leftSumLat   += lat; leftSumLng   += lng; }
       else                                                      { right++;  rightSumLat  += lat; rightSumLng  += lng; }
     });
 
-    // 각도 기반 클러스터링
     const clusters = clusterByAngleClient(offScreenPoints, centerLat, centerLng, latRange, lngRange);
 
     return {
@@ -504,6 +503,10 @@ const Index = () => {
       leftAvgLng:   left   > 0 ? leftSumLng   / left   : centerLng,
       rightAvgLat:  right  > 0 ? rightSumLat  / right  : centerLat,
       rightAvgLng:  right  > 0 ? rightSumLng  / right  : centerLng,
+      topPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLat>=0&&dLat>=Math.abs(dLng); }),
+      bottomPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLat<0&&Math.abs(dLat)>Math.abs(dLng); }),
+      leftPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLng<0&&Math.abs(dLng)>=Math.abs(dLat); }),
+      rightPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLng>=0&&dLng>Math.abs(dLat); }),
     };
   }, [displayedMarkers, mapData?.bounds, currentZoom, useClientSideCounts]);
 
@@ -1314,40 +1317,22 @@ const Index = () => {
           <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
             <OffScreenMarkerIndicator
               bounds={mapData?.bounds || null}
-              onClickCluster={(cluster, edge) => {
+              onClickDirection={(dir) => {
                 const c = mapDataRef.current?.center || mapCenter;
-                const b = mapDataRef.current?.bounds || mapData?.bounds;
-                if (!c || cluster.points.length === 0) {
-                  setMapCenter({ lat: cluster.avgLat, lng: cluster.avgLng });
-                  return;
+                const counts = offScreenCounts;
+                if (!c || !counts) return;
+
+                // 해당 방향의 points에서 현재 중심에 가장 가까운 마커로 이동
+                const pts = counts[`${dir}Points` as keyof typeof counts] as { lat: number; lng: number }[] | undefined;
+                if (pts && pts.length > 0) {
+                  let nearest = pts[0];
+                  let minDist = Infinity;
+                  for (const p of pts) {
+                    const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
+                    if (d < minDist) { minDist = d; nearest = p; }
+                  }
+                  setMapCenter({ lat: nearest.lat, lng: nearest.lng });
                 }
-                // edge 방향에 실제로 속하는 마커만 필터링
-                // (클러스터에 여러 방향 마커가 섞일 수 있으므로)
-                let candidates = cluster.points;
-                if (b) {
-                  const { sw, ne } = b;
-                  const centerLat = (sw.lat + ne.lat) / 2;
-                  const centerLng = (sw.lng + ne.lng) / 2;
-                  const filtered = cluster.points.filter(p => {
-                    const dx = p.lng - centerLng;
-                    const dy = p.lat - centerLat;
-                    // 화면 픽셀 기준 방향 (dy는 위도라 부호 반전)
-                    if (edge === 'top')    return Math.abs(dy) >= Math.abs(dx) && dy > 0;
-                    if (edge === 'bottom') return Math.abs(dy) >= Math.abs(dx) && dy < 0;
-                    if (edge === 'left')   return Math.abs(dx) > Math.abs(dy) && dx < 0;
-                    if (edge === 'right')  return Math.abs(dx) > Math.abs(dy) && dx > 0;
-                    return true;
-                  });
-                  if (filtered.length > 0) candidates = filtered;
-                }
-                // 현재 중심에서 가장 가까운 마커로 이동
-                let nearest = candidates[0];
-                let minDist = Infinity;
-                for (const p of candidates) {
-                  const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
-                  if (d < minDist) { minDist = d; nearest = p; }
-                }
-                setMapCenter({ lat: nearest.lat, lng: nearest.lng });
               }}
               bottomOffset={bottomNavHeight}
               dbCounts={offScreenCounts}

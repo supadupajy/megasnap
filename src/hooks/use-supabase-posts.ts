@@ -79,28 +79,34 @@ export interface MarkerCluster {
   count: number;
   avgLat: number;
   avgLng: number;
-  points: { lat: number; lng: number }[]; // 클러스터에 속한 개별 마커 좌표
+  points: { lat: number; lng: number }[];
 }
 
 export interface DirectionCounts {
-  clusters: MarkerCluster[];
-  // 하위 호환 (fetchNearestInDirection용 — 방향 클릭 시 사용)
   top: number;
   bottom: number;
   left: number;
   right: number;
+  // 각 방향 마커들의 평균 위치 (물방울 방향 계산용)
+  topAvgLat: number;
+  topAvgLng: number;
+  bottomAvgLat: number;
+  bottomAvgLng: number;
+  leftAvgLat: number;
+  leftAvgLng: number;
+  rightAvgLat: number;
+  rightAvgLng: number;
+  // 각 방향 마커 좌표 목록 (클릭 시 가장 가까운 마커로 이동용)
+  topPoints: { lat: number; lng: number }[];
+  bottomPoints: { lat: number; lng: number }[];
+  leftPoints: { lat: number; lng: number }[];
+  rightPoints: { lat: number; lng: number }[];
+  // 하위 호환
+  clusters: MarkerCluster[];
   hasTop: boolean;
   hasBottom: boolean;
   hasLeft: boolean;
   hasRight: boolean;
-  topAvgLat?: number;
-  topAvgLng?: number;
-  bottomAvgLat?: number;
-  bottomAvgLng?: number;
-  leftAvgLat?: number;
-  leftAvgLng?: number;
-  rightAvgLat?: number;
-  rightAvgLng?: number;
 }
 
 /** 각도 기반 클러스터링: 비슷한 방향의 마커를 하나로 묶음 */
@@ -193,59 +199,51 @@ export const fetchOffScreenCounts = async (
     let top = 0, bottom = 0, left = 0, right = 0;
     let hasTop = false, hasBottom = false, hasLeft = false, hasRight = false;
 
-    // 평균 좌표 계산용 누적값 (lat/lng 모두)
-    let topSumLat = 0, topSumLng = 0;
-    let bottomSumLat = 0, bottomSumLng = 0;
-    let leftSumLat = 0, leftSumLng = 0;
-    let rightSumLat = 0, rightSumLng = 0;
-
     const offScreenPoints: { lat: number; lng: number }[] = [];
+
+    const topPts: { lat: number; lng: number }[] = [];
+    const bottomPts: { lat: number; lng: number }[] = [];
+    const leftPts: { lat: number; lng: number }[] = [];
+    const rightPts: { lat: number; lng: number }[] = [];
 
     (res.data || []).forEach((p: any) => {
       if (p.latitude == null || p.longitude == null) return;
-      // 화면 안이면 제외
       if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
 
       offScreenPoints.push({ lat: p.latitude, lng: p.longitude });
 
-      // 실제로 벗어난 방향 판별 (has* 용 — 중복 허용)
-      const outTop    = p.latitude > ne.lat;
-      const outBottom = p.latitude < sw.lat;
-      const outLeft   = p.longitude < sw.lng;
-      const outRight  = p.longitude > ne.lng;
-
-      if (outTop)    hasTop    = true;
-      if (outBottom) hasBottom = true;
-      if (outLeft)   hasLeft   = true;
-      if (outRight)  hasRight  = true;
-
-      // 가장 주된 방향 1개에만 카운트 (45도 섹터 독점 분류)
+      // 45도 섹터로 독점 분류
       const dLat = (p.latitude - centerLat) / latRange;
       const dLng = (p.longitude - centerLng) / lngRange;
-      if      (dLat >= 0 && dLat >= Math.abs(dLng))           { top++;    topSumLat    += p.latitude;  topSumLng    += p.longitude; }
-      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  { bottom++; bottomSumLat += p.latitude;  bottomSumLng += p.longitude; }
-      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) { left++;   leftSumLat   += p.latitude;  leftSumLng   += p.longitude; }
-      else                                                      { right++;  rightSumLat  += p.latitude;  rightSumLng  += p.longitude; }
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           topPts.push({ lat: p.latitude, lng: p.longitude });
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  bottomPts.push({ lat: p.latitude, lng: p.longitude });
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) leftPts.push({ lat: p.latitude, lng: p.longitude });
+      else                                                      rightPts.push({ lat: p.latitude, lng: p.longitude });
     });
 
-    const clusters = clusterByAngle(offScreenPoints, centerLat, centerLng, latRange, lngRange);
+    const avg = (pts: { lat: number; lng: number }[], axis: 'lat' | 'lng', fallback: number) =>
+      pts.length > 0 ? pts.reduce((s, p) => s + p[axis], 0) / pts.length : fallback;
+
+    // 클러스터는 4방향 그대로 (하위 호환)
+    const clusters: MarkerCluster[] = [];
+    if (topPts.length > 0)    clusters.push({ count: topPts.length,    avgLat: avg(topPts, 'lat', centerLat),    avgLng: avg(topPts, 'lng', centerLng),    points: topPts });
+    if (bottomPts.length > 0) clusters.push({ count: bottomPts.length, avgLat: avg(bottomPts, 'lat', centerLat), avgLng: avg(bottomPts, 'lng', centerLng), points: bottomPts });
+    if (leftPts.length > 0)   clusters.push({ count: leftPts.length,   avgLat: avg(leftPts, 'lat', centerLat),   avgLng: avg(leftPts, 'lng', centerLng),   points: leftPts });
+    if (rightPts.length > 0)  clusters.push({ count: rightPts.length,  avgLat: avg(rightPts, 'lat', centerLat),  avgLng: avg(rightPts, 'lng', centerLng),  points: rightPts });
 
     return {
       clusters,
-      top, bottom, left, right,
-      hasTop, hasBottom, hasLeft, hasRight,
-      topAvgLat:    top    > 0 ? topSumLat    / top    : centerLat,
-      topAvgLng:    top    > 0 ? topSumLng    / top    : centerLng,
-      bottomAvgLat: bottom > 0 ? bottomSumLat / bottom : centerLat,
-      bottomAvgLng: bottom > 0 ? bottomSumLng / bottom : centerLng,
-      leftAvgLat:   left   > 0 ? leftSumLat   / left   : centerLat,
-      leftAvgLng:   left   > 0 ? leftSumLng   / left   : centerLng,
-      rightAvgLat:  right  > 0 ? rightSumLat  / right  : centerLat,
-      rightAvgLng:  right  > 0 ? rightSumLng  / right  : centerLng,
+      top: topPts.length, bottom: bottomPts.length, left: leftPts.length, right: rightPts.length,
+      hasTop: topPts.length > 0, hasBottom: bottomPts.length > 0, hasLeft: leftPts.length > 0, hasRight: rightPts.length > 0,
+      topAvgLat:    avg(topPts, 'lat', centerLat),    topAvgLng:    avg(topPts, 'lng', centerLng),
+      bottomAvgLat: avg(bottomPts, 'lat', centerLat), bottomAvgLng: avg(bottomPts, 'lng', centerLng),
+      leftAvgLat:   avg(leftPts, 'lat', centerLat),   leftAvgLng:   avg(leftPts, 'lng', centerLng),
+      rightAvgLat:  avg(rightPts, 'lat', centerLat),  rightAvgLng:  avg(rightPts, 'lng', centerLng),
+      topPoints: topPts, bottomPoints: bottomPts, leftPoints: leftPts, rightPoints: rightPts,
     };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
-    return { clusters: [], top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false };
+    return { clusters: [], top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false, topAvgLat: 0, topAvgLng: 0, bottomAvgLat: 0, bottomAvgLng: 0, leftAvgLat: 0, leftAvgLng: 0, rightAvgLat: 0, rightAvgLng: 0, topPoints: [], bottomPoints: [], leftPoints: [], rightPoints: [] };
   }
 };
 
