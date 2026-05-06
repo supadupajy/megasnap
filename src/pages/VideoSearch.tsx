@@ -5,6 +5,12 @@ import { Search as SearchIcon, ChevronLeft, Video, Play, Heart } from 'lucide-re
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
+import PostItem from '@/components/PostItem';
+import { Post } from '@/types';
+import { Loader2 } from 'lucide-react';
+import { toggleLikeInDb } from '@/utils/like-utils';
+import { showSuccess, showError } from '@/utils/toast';
 
 interface SearchPost {
   id: string;
@@ -22,10 +28,200 @@ interface SearchPost {
 const CACHE_KEY_QUERY = 'videoSearch_query';
 const CACHE_KEY_RESULTS = 'videoSearch_results';
 
+const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar';
+
+// ── 인라인 PostDetail 오버레이 ──────────────────────────────────────
+const PostDetailOverlay = ({
+  postId,
+  onClose,
+}: {
+  postId: string;
+  onClose: () => void;
+}) => {
+  const navigate = useNavigate();
+  const { user: authUser, profile } = useAuth();
+  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isValidUrl = (url: any) => {
+    if (!url || typeof url !== 'string') return false;
+    const clean = url.trim();
+    if (/post\s*content/i.test(clean)) return false;
+    if (!clean.startsWith('http')) return false;
+    return true;
+  };
+
+  const mapDbToPost = (p: any, likedSet: Set<string>, savedSet: Set<string>): Post => {
+    const fallbackImage = getFallbackImage(String(p.id));
+    const rawImage = isValidUrl(p.image_url) ? p.image_url : fallbackImage;
+    const rawImages =
+      Array.isArray(p.images) && p.images.length > 0
+        ? p.images.filter(isValidUrl)
+        : [rawImage];
+    const isAd = p.content?.trim().startsWith('[AD]');
+    const finalImage = isValidUrl(rawImage) ? rawImage : fallbackImage;
+    const finalImages = rawImages.length > 0 ? rawImages.filter(isValidUrl) : [finalImage];
+
+    return {
+      id: p.id,
+      isAd,
+      isGif: false,
+      isInfluencer: false,
+      user: { id: p.user_id, name: p.user_name || '탐험가', avatar: p.user_avatar || '/placeholder.svg' },
+      content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+      location: p.location_name || '알 수 없는 장소',
+      lat: p.latitude,
+      lng: p.longitude,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      likes: Number(p.likes || 0),
+      commentsCount: 0,
+      comments: [],
+      image: finalImage,
+      image_url: finalImage,
+      images: finalImages,
+      videoUrl: p.video_url,
+      isLiked: likedSet.has(p.id),
+      isSaved: savedSet.has(p.id),
+      createdAt: new Date(p.created_at),
+      category: p.category || 'none',
+    };
+  };
+
+  useEffect(() => {
+    const fetch = async () => {
+      if (!authUser?.id || !postId) return;
+      setLoading(true);
+      try {
+        const { data: targetPost } = await supabase
+          .from('posts')
+          .select(POST_COLUMNS)
+          .eq('id', postId)
+          .maybeSingle();
+
+        if (!targetPost) { setAllPosts([]); return; }
+
+        const { data } = await supabase
+          .from('posts')
+          .select(POST_COLUMNS)
+          .eq('user_id', targetPost.user_id)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        const postsToFormat = data || [targetPost];
+        const postIds = postsToFormat.map((p: any) => p.id);
+
+        const [{ data: likesData }, { data: savedData }] = await Promise.all([
+          supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', postIds),
+          supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', postIds),
+        ]);
+
+        const likedSet = new Set((likesData || []).map((l: any) => l.post_id));
+        const savedSet = new Set((savedData || []).map((s: any) => s.post_id));
+
+        setAllPosts(postsToFormat.map((p: any) => mapDbToPost(p, likedSet, savedSet)));
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetch();
+  }, [authUser?.id, postId]);
+
+  useEffect(() => {
+    if (postId && allPosts.length > 0) {
+      setTimeout(() => {
+        document.getElementById(`overlay-post-${postId}`)?.scrollIntoView({ behavior: 'auto', block: 'start' });
+      }, 100);
+    }
+  }, [postId, allPosts]);
+
+  const handleLikeToggle = (pid: string) => {
+    if (!authUser?.id) return;
+    let currentlyLiked = false;
+    setAllPosts(prev => prev.map(post => {
+      if (post.id !== pid) return post;
+      currentlyLiked = post.isLiked;
+      return { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 };
+    }));
+    toggleLikeInDb(pid, authUser.id, currentlyLiked).then(ok => {
+      if (!ok) setAllPosts(prev => prev.map(post => post.id !== pid ? post
+        : { ...post, isLiked: currentlyLiked, likes: currentlyLiked ? post.likes + 1 : post.likes - 1 }
+      ));
+    });
+  };
+
+  const handlePostDelete = async (pid: string) => {
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', pid);
+      if (error) throw error;
+      setAllPosts(prev => prev.filter(p => p.id !== pid));
+      showSuccess('게시물이 삭제되었습니다.');
+      if (allPosts.length <= 1) onClose();
+    } catch {
+      showError('게시물 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
+  const title = allPosts.length > 0
+    ? (allPosts[0].user.id === authUser?.id ? '내 포스팅' : `${allPosts[0].user.name}의 포스팅`)
+    : '포스팅';
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-white flex flex-col overflow-hidden">
+      {/* 헤더 */}
+      <div className="pt-[env(safe-area-inset-top,0px)] shrink-0">
+        <div className="pt-16 flex items-center px-4 h-14 border-b border-gray-50 relative bg-white">
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">{title}</h2>
+          </div>
+        </div>
+      </div>
+
+      {/* 콘텐츠 */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        </div>
+      ) : allPosts.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <p className="text-gray-500 font-bold mb-4">게시물을 찾을 수 없습니다.</p>
+          <button onClick={onClose} className="text-indigo-600 font-black">뒤로 가기</button>
+        </div>
+      ) : (
+        <div
+          className="flex-1 overflow-y-auto no-scrollbar"
+          style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          {allPosts.map((p) => (
+            <div key={p.id} id={`overlay-post-${p.id}`} className="scroll-mt-4">
+              <PostItem
+                post={p}
+                disablePulse={true}
+                autoPlayVideo={true}
+                onLikeToggle={() => handleLikeToggle(p.id)}
+                onDelete={() => handlePostDelete(p.id)}
+                onLocationClick={(e, lat, lng) =>
+                  navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })
+                }
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── 메인 VideoSearch ────────────────────────────────────────────────
 const VideoSearch = () => {
   const navigate = useNavigate();
 
-  // sessionStorage에서 이전 검색어/결과 복원
   const [searchQuery, setSearchQuery] = useState<string>(() => {
     try { return sessionStorage.getItem(CACHE_KEY_QUERY) || ''; } catch { return ''; }
   });
@@ -40,27 +236,13 @@ const VideoSearch = () => {
     try { return !!sessionStorage.getItem(CACHE_KEY_QUERY); } catch { return false; }
   });
 
-  const isFirstRender = useRef(true);
+  // 오버레이로 열 postId (null이면 닫힘)
+  const [overlayPostId, setOverlayPostId] = useState<string | null>(null);
 
-  useEffect(() => {
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.height = '100%';
-    return () => {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.height = '';
-    };
-  }, []);
+  const isFirstRender = useRef(true);
 
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
-
-    // sessionStorage에 검색어 저장
     try { sessionStorage.setItem(CACHE_KEY_QUERY, trimmed); } catch {}
 
     if (!trimmed) {
@@ -84,7 +266,6 @@ const VideoSearch = () => {
       if (error) throw error;
       const fetched = (data as any[]) || [];
       setResults(fetched);
-      // 결과도 sessionStorage에 저장
       try { sessionStorage.setItem(CACHE_KEY_RESULTS, JSON.stringify(fetched)); } catch {}
     } catch (err) {
       console.error('[VideoSearch] search error:', err);
@@ -94,8 +275,6 @@ const VideoSearch = () => {
     }
   }, []);
 
-  // 첫 렌더 시 캐시된 검색어가 있으면 검색 스킵 (이미 결과 복원됨)
-  // 이후 searchQuery 변경 시에만 디바운스 검색
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
@@ -110,8 +289,6 @@ const VideoSearch = () => {
     if (post.image_url) return post.image_url;
     return getFallbackImage(post.id);
   };
-
-  const hasVideo = (post: SearchPost) => !!post.video_url;
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
@@ -154,7 +331,6 @@ const VideoSearch = () => {
       {/* 결과 영역 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         {!hasSearched ? (
-          /* 초기 상태 */
           <div className="px-4 py-20 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4">
               <Video className="w-8 h-8 text-orange-300" />
@@ -164,14 +340,12 @@ const VideoSearch = () => {
             </p>
           </div>
         ) : isSearching ? (
-          /* 로딩 스켈레톤 */
           <div className="px-3 pt-3 grid grid-cols-2 gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="aspect-square rounded-2xl bg-gray-100 animate-pulse" />
             ))}
           </div>
         ) : results.length === 0 ? (
-          /* 결과 없음 */
           <div className="px-4 py-20 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
               <SearchIcon className="w-8 h-8 text-gray-200" />
@@ -181,7 +355,6 @@ const VideoSearch = () => {
             </p>
           </div>
         ) : (
-          /* 2열 그리드 결과 */
           <div
             className="px-3 pt-3 grid grid-cols-2 gap-2"
             style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}
@@ -189,10 +362,9 @@ const VideoSearch = () => {
             {results.map((post) => (
               <div
                 key={post.id}
-                onClick={() => navigate(`/post/${post.id}`)}
+                onClick={() => setOverlayPostId(post.id)}
                 className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 cursor-pointer active:scale-[0.97] transition-transform shadow-sm"
               >
-                {/* 썸네일 */}
                 <img
                   src={getThumbnail(post)}
                   alt=""
@@ -201,15 +373,11 @@ const VideoSearch = () => {
                     (e.target as HTMLImageElement).src = getFallbackImage(post.id);
                   }}
                 />
-
-                {/* 영상 뱃지 */}
-                {hasVideo(post) && (
+                {post.video_url && (
                   <div className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm">
                     <Play className="w-3.5 h-3.5 text-white fill-white" />
                   </div>
                 )}
-
-                {/* 하단 그라디언트 + 좋아요 */}
                 <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
                   <p className="text-white text-[11px] font-semibold truncate max-w-[70%] drop-shadow">
@@ -227,6 +395,14 @@ const VideoSearch = () => {
           </div>
         )}
       </div>
+
+      {/* 포스팅 상세 오버레이 (navigate 없이 같은 페이지 내에서 렌더) */}
+      {overlayPostId && (
+        <PostDetailOverlay
+          postId={overlayPostId}
+          onClose={() => setOverlayPostId(null)}
+        />
+      )}
     </div>
   );
 };
