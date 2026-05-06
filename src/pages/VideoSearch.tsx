@@ -46,7 +46,7 @@ const VideoSearch = () => {
           <div className="relative mb-4">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
-              placeholder="원하는 영상을 검색해 보세요"
+              placeholder="키워드를 입력하세요."
               className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-semibold placeholder:text-gray-400 placeholder:font-semibold shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
