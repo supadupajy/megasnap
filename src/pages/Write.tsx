@@ -632,7 +632,7 @@ const Write = () => {
 
         {/* 하단 고정 버튼 영역 - BottomNav(h-16) 위에 fixed로 위치 */}
         <div
-          className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-5 pt-3 pb-3 z-[1000]"
+          className="fixed bottom-24 left-0 right-0 bg-transparent px-5 z-[1000]"
         >
           {currentPage === 1 ? (
             <button
