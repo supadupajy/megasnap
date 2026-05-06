@@ -50,6 +50,7 @@ import AppearanceSettings from "./pages/AppearanceSettings";
 import StorageSettings from "./pages/StorageSettings";
 import DeleteAccount from "./pages/DeleteAccount";
 import AuthCallback from "./pages/AuthCallback";
+import VideoSearch from "./pages/VideoSearch";
 
 const queryClient = new QueryClient();
 
@@ -195,6 +196,7 @@ const AnimatedRoutes = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+              <Route path="/video-search" element={<ProtectedRoute><VideoSearch /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
