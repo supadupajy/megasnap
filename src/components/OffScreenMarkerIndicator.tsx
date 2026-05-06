@@ -246,15 +246,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
             strokeWidth="1.5"
             strokeLinejoin="round"
           />
-          {/* 원 테두리 강조 */}
-          <circle
-            cx={cx}
-            cy={circleCy}
-            r={r}
-            fill="rgba(255,255,255,0.20)"
-            stroke="rgba(255,255,255,0.50)"
-            strokeWidth="1"
-          />
           {/* 숫자 — 원 중심에 배치, 회전 역방향 보정 */}
           <text
             x={cx}
