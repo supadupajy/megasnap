@@ -148,6 +148,56 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     classified[bestDir].push(p);
   }
 
+  // ── 병합 로직: 물방울 각도가 비슷한 인디케이터끼리 합치기 ──
+  // 각 방향의 물방울 각도 계산
+  const getAngleDeg = (dir: Direction, pts: { lat: number; lng: number }[]): number | null => {
+    if (pts.length === 0) return null;
+    const ind = indCenter[dir];
+    const avgLat = avg(pts, 'lat', centerLat);
+    const avgLng = avg(pts, 'lng', centerLng);
+    const mX = toScreenX(avgLng);
+    const mY = toScreenY(avgLat);
+    const rad = Math.atan2(mX - ind.x, -(mY - ind.y));
+    return (rad * 180) / Math.PI;
+  };
+
+  // 각도 차이 계산 (0~180)
+  const angleDiff = (a: number, b: number): number => {
+    let d = Math.abs(a - b) % 360;
+    if (d > 180) d = 360 - d;
+    return d;
+  };
+
+  // 병합: 각도 차이 < 45도인 인디케이터 쌍을 합침
+  // 더 많은 마커를 가진 방향이 대표, 나머지는 흡수
+  const MERGE_ANGLE_THRESHOLD = 45;
+  const merged = { ...classified }; // 복사본
+
+  const dirsToCheck: Direction[] = ['top', 'bottom', 'left', 'right'];
+  // 반복적으로 병합 (최대 3회)
+  for (let iter = 0; iter < 3; iter++) {
+    let didMerge = false;
+    const active = dirsToCheck.filter(d => merged[d].length > 0);
+    for (let i = 0; i < active.length && !didMerge; i++) {
+      for (let j = i + 1; j < active.length && !didMerge; j++) {
+        const dA = active[i];
+        const dB = active[j];
+        const angA = getAngleDeg(dA, merged[dA]);
+        const angB = getAngleDeg(dB, merged[dB]);
+        if (angA === null || angB === null) continue;
+        if (angleDiff(angA, angB) < MERGE_ANGLE_THRESHOLD) {
+          // 더 많은 마커를 가진 방향이 대표
+          const winner = merged[dA].length >= merged[dB].length ? dA : dB;
+          const loser  = winner === dA ? dB : dA;
+          merged[winner] = [...merged[winner], ...merged[loser]];
+          merged[loser] = [];
+          didMerge = true;
+        }
+      }
+    }
+    if (!didMerge) break;
+  }
+
   // 물방울 SVG (뾰족한 끝이 위↑ 기본)
   const cx = S / 2;
   const circleCy = S / 2 + 6;
@@ -166,7 +216,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   return (
     <>
       {dirs.map(dir => {
-        const pts = classified[dir];
+        const pts = merged[dir];
         if (pts.length === 0) return null;
 
         const pos = positions[dir];
