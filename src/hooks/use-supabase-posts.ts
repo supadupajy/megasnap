@@ -75,7 +75,15 @@ export const fetchPostsInBounds = async (
   }
 };
 
+export interface MarkerCluster {
+  count: number;
+  avgLat: number;
+  avgLng: number;
+}
+
 export interface DirectionCounts {
+  clusters: MarkerCluster[];
+  // 하위 호환 (fetchNearestInDirection용 — 방향 클릭 시 사용)
   top: number;
   bottom: number;
   left: number;
@@ -84,7 +92,6 @@ export interface DirectionCounts {
   hasBottom: boolean;
   hasLeft: boolean;
   hasRight: boolean;
-  // 각 방향 마커들의 평균 위치 (lat/lng 모두)
   topAvgLat?: number;
   topAvgLng?: number;
   bottomAvgLat?: number;
@@ -93,6 +100,55 @@ export interface DirectionCounts {
   leftAvgLng?: number;
   rightAvgLat?: number;
   rightAvgLng?: number;
+}
+
+/** 각도 기반 클러스터링: 비슷한 방향의 마커를 하나로 묶음 */
+function clusterByAngle(
+  points: { lat: number; lng: number }[],
+  centerLat: number,
+  centerLng: number,
+  latRange: number,
+  lngRange: number,
+  angleThresholdDeg = 45
+): MarkerCluster[] {
+  if (points.length === 0) return [];
+
+  // 각 포인트의 각도 계산 (화면 중심 기준, 위쪽=0, 시계방향)
+  const withAngle = points.map(p => {
+    const dx = (p.lng - centerLng) / lngRange;
+    const dy = -(p.lat - centerLat) / latRange; // 화면 Y는 위가 음수
+    const angleDeg = (Math.atan2(dx, -dy) * 180) / Math.PI; // 위쪽=0 기준
+    return { ...p, angleDeg: (angleDeg + 360) % 360 };
+  });
+
+  // 각도 기준 정렬
+  withAngle.sort((a, b) => a.angleDeg - b.angleDeg);
+
+  const clusters: MarkerCluster[] = [];
+  const used = new Array(withAngle.length).fill(false);
+
+  for (let i = 0; i < withAngle.length; i++) {
+    if (used[i]) continue;
+    const group = [withAngle[i]];
+    used[i] = true;
+
+    for (let j = i + 1; j < withAngle.length; j++) {
+      if (used[j]) continue;
+      // 각도 차이 (원형 거리)
+      let diff = Math.abs(withAngle[j].angleDeg - withAngle[i].angleDeg);
+      if (diff > 180) diff = 360 - diff;
+      if (diff <= angleThresholdDeg) {
+        group.push(withAngle[j]);
+        used[j] = true;
+      }
+    }
+
+    const avgLat = group.reduce((s, p) => s + p.lat, 0) / group.length;
+    const avgLng = group.reduce((s, p) => s + p.lng, 0) / group.length;
+    clusters.push({ count: group.length, avgLat, avgLng });
+  }
+
+  return clusters;
 }
 
 /**
@@ -142,10 +198,14 @@ export const fetchOffScreenCounts = async (
     let leftSumLat = 0, leftSumLng = 0;
     let rightSumLat = 0, rightSumLng = 0;
 
+    const offScreenPoints: { lat: number; lng: number }[] = [];
+
     (res.data || []).forEach((p: any) => {
       if (p.latitude == null || p.longitude == null) return;
       // 화면 안이면 제외
       if (p.latitude >= sw.lat && p.latitude <= ne.lat && p.longitude >= sw.lng && p.longitude <= ne.lng) return;
+
+      offScreenPoints.push({ lat: p.latitude, lng: p.longitude });
 
       // 실제로 벗어난 방향 판별 (has* 용 — 중복 허용)
       const outTop    = p.latitude > ne.lat;
@@ -167,7 +227,10 @@ export const fetchOffScreenCounts = async (
       else                                                      { right++;  rightSumLat  += p.latitude;  rightSumLng  += p.longitude; }
     });
 
+    const clusters = clusterByAngle(offScreenPoints, centerLat, centerLng, latRange, lngRange);
+
     return {
+      clusters,
       top, bottom, left, right,
       hasTop, hasBottom, hasLeft, hasRight,
       topAvgLat:    top    > 0 ? topSumLat    / top    : centerLat,
@@ -181,7 +244,7 @@ export const fetchOffScreenCounts = async (
     };
   } catch (err) {
     console.error('[SupabasePosts] Off-screen counts fetch error:', err);
-    return { top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false };
+    return { clusters: [], top: 0, bottom: 0, left: 0, right: 0, hasTop: false, hasBottom: false, hasLeft: false, hasRight: false };
   }
 };
 

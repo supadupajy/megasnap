@@ -18,7 +18,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, DirectionCounts } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
@@ -37,6 +37,41 @@ const fireConfetti = (options: any) => {
     if (f) f(options);
   } catch (e) {}
 };
+
+function clusterByAngleClient(
+  points: { lat: number; lng: number }[],
+  centerLat: number, centerLng: number,
+  latRange: number, lngRange: number,
+  angleThresholdDeg = 45
+): MarkerCluster[] {
+  if (points.length === 0) return [];
+  const withAngle = points.map(p => {
+    const dx = (p.lng - centerLng) / lngRange;
+    const dy = -(p.lat - centerLat) / latRange;
+    const angleDeg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+    return { ...p, angleDeg: (angleDeg + 360) % 360 };
+  });
+  withAngle.sort((a, b) => a.angleDeg - b.angleDeg);
+  const clusters: MarkerCluster[] = [];
+  const used = new Array(withAngle.length).fill(false);
+  for (let i = 0; i < withAngle.length; i++) {
+    if (used[i]) continue;
+    const group = [withAngle[i]];
+    used[i] = true;
+    for (let j = i + 1; j < withAngle.length; j++) {
+      if (used[j]) continue;
+      let diff = Math.abs(withAngle[j].angleDeg - withAngle[i].angleDeg);
+      if (diff > 180) diff = 360 - diff;
+      if (diff <= angleThresholdDeg) { group.push(withAngle[j]); used[j] = true; }
+    }
+    clusters.push({
+      count: group.length,
+      avgLat: group.reduce((s, p) => s + p.lat, 0) / group.length,
+      avgLng: group.reduce((s, p) => s + p.lng, 0) / group.length,
+    });
+  }
+  return clusters;
+}
 
 const Index = () => {
   const navigate = useNavigate();
@@ -420,7 +455,7 @@ const Index = () => {
            selectedCategories.includes('influencer');
   }, [selectedCategories]);
 
-  // 클라이언트 계산: displayedMarkers 기반 (45도 섹터 독점 분류)
+  // 클라이언트 계산: displayedMarkers 기반 (각도 클러스터링)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
     if (!mapData?.bounds || currentZoom >= 7) return null;
     if (!useClientSideCounts) return null;
@@ -432,36 +467,42 @@ const Index = () => {
     const lngRange = ne.lng - sw.lng;
 
     let top = 0, bottom = 0, left = 0, right = 0;
-    let topSumLng = 0, bottomSumLng = 0, leftSumLat = 0, rightSumLat = 0;
+    let topSumLat = 0, topSumLng = 0, bottomSumLat = 0, bottomSumLng = 0;
+    let leftSumLat = 0, leftSumLng = 0, rightSumLat = 0, rightSumLng = 0;
+    const offScreenPoints: { lat: number; lng: number }[] = [];
 
     displayedMarkers.forEach(post => {
       if (post.lat == null || post.lng == null) return;
       if (post.isAd) return;
       const lat = post.lat;
       const lng = post.lng;
-
-      // 화면 안이면 제외
       if (lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng) return;
 
-      // 45도 섹터로 독점 분류 (각 마커는 정확히 하나의 방향에만 속함)
+      offScreenPoints.push({ lat, lng });
+
       const dLat = (lat - centerLat) / latRange;
       const dLng = (lng - centerLng) / lngRange;
-      if      (dLat >= 0 && dLat >= Math.abs(dLng))           { top++;    topSumLng    += lng; }
-      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  { bottom++; bottomSumLng += lng; }
-      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) { left++;   leftSumLat   += lat; }
-      else                                                      { right++;  rightSumLat  += lat; }
+      if      (dLat >= 0 && dLat >= Math.abs(dLng))           { top++;    topSumLat += lat;    topSumLng    += lng; }
+      else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  { bottom++; bottomSumLat += lat; bottomSumLng += lng; }
+      else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) { left++;   leftSumLat   += lat; leftSumLng   += lng; }
+      else                                                      { right++;  rightSumLat  += lat; rightSumLng  += lng; }
     });
 
+    // 각도 기반 클러스터링
+    const clusters = clusterByAngleClient(offScreenPoints, centerLat, centerLng, latRange, lngRange);
+
     return {
+      clusters,
       top, bottom, left, right,
-      hasTop: top > 0,
-      hasBottom: bottom > 0,
-      hasLeft: left > 0,
-      hasRight: right > 0,
+      hasTop: top > 0, hasBottom: bottom > 0, hasLeft: left > 0, hasRight: right > 0,
+      topAvgLat:    top    > 0 ? topSumLat    / top    : centerLat,
       topAvgLng:    top    > 0 ? topSumLng    / top    : centerLng,
+      bottomAvgLat: bottom > 0 ? bottomSumLat / bottom : centerLat,
       bottomAvgLng: bottom > 0 ? bottomSumLng / bottom : centerLng,
       leftAvgLat:   left   > 0 ? leftSumLat   / left   : centerLat,
+      leftAvgLng:   left   > 0 ? leftSumLng   / left   : centerLng,
       rightAvgLat:  right  > 0 ? rightSumLat  / right  : centerLat,
+      rightAvgLng:  right  > 0 ? rightSumLng  / right  : centerLng,
     };
   }, [displayedMarkers, mapData?.bounds, currentZoom, useClientSideCounts]);
 
@@ -1272,45 +1313,9 @@ const Index = () => {
           <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
             <OffScreenMarkerIndicator
               bounds={mapData?.bounds || null}
-              onClickDirection={async (dir) => {
-                const b = mapDataRef.current?.bounds || mapData?.bounds;
-                const c = mapDataRef.current?.center || mapCenter;
-                if (!b || !c) return;
-
-                const { sw, ne } = b;
-                const latRange = ne.lat - sw.lat;
-                const lngRange = ne.lng - sw.lng;
-                const centerLat = (sw.lat + ne.lat) / 2;
-                const centerLng = (sw.lng + ne.lng) / 2;
-
-                // 45도 섹터로 독점 분류 — 각 마커는 정확히 하나의 방향에만 속함
-                const isInDir = (lat: number, lng: number): boolean => {
-                  if (lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng) return false;
-                  const dLat = (lat - centerLat) / latRange;
-                  const dLng = (lng - centerLng) / lngRange;
-                  if (dir === 'top')    return dLat >= 0 && dLat >= Math.abs(dLng);
-                  if (dir === 'bottom') return dLat < 0  && Math.abs(dLat) > Math.abs(dLng);
-                  if (dir === 'left')   return dLng < 0  && Math.abs(dLng) >= Math.abs(dLat);
-                  if (dir === 'right')  return dLng >= 0 && dLng > Math.abs(dLat);
-                  return false;
-                };
-
-                // 항상 DB에서 정확한 결과를 가져옴
-                // (클라이언트 캐시는 화면 근처만 fetch되어 있어 멀리 있는 마커를 놓칠 수 있음)
-                const dbNearest = await fetchNearestInDirection(b, c, dir, {
-                  categories: selectedCategories,
-                  userId: authUser?.id || null,
-                  followingIds: Array.from(followingIds),
-                });
-
-                if (dbNearest) {
-                  setMapCenter({ lat: dbNearest.lat, lng: dbNearest.lng });
-                } else {
-                  // 해당 방향에 포스팅이 정말 없으면 패닝
-                  const panLat = { top: latRange * 0.8, bottom: -latRange * 0.8, left: 0, right: 0 }[dir];
-                  const panLng = { top: 0, bottom: 0, left: -lngRange * 0.8, right: lngRange * 0.8 }[dir];
-                  setMapCenter({ lat: c.lat + panLat, lng: c.lng + panLng });
-                }
+              onClickCluster={(cluster) => {
+                // 클러스터의 평균 위치로 바로 이동
+                setMapCenter({ lat: cluster.avgLat, lng: cluster.avgLng });
               }}
               bottomOffset={bottomNavHeight}
               dbCounts={offScreenCounts}
