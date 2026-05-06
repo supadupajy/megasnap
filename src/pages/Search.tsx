@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, UserPlus, Check, Users, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import SearchAdBanner from '@/components/SearchAdBanner';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -171,8 +170,8 @@ const Search = () => {
 
       {/* 검색 입력창 */}
       <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+122px)]">
-        <div className="px-4 pb-2">
-          <div className="relative mb-4">
+        <div className="px-4 pb-0">
+          <div className="relative mb-2">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="닉네임으로 친구 찾기"
@@ -186,12 +185,6 @@ const Search = () => {
               </div>
             )}
           </div>
-          <div className="mb-4">
-            <SearchAdBanner />
-          </div>
-          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-            {searchQuery ? '검색 결과' : '추천 사용자'}
-          </p>
         </div>
       </div>
 
