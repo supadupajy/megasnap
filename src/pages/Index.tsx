@@ -544,7 +544,8 @@ const Index = () => {
   useEffect(() => {
     if (useClientSideCounts) return; // 클라이언트 계산 사용 시 스킵
     if (!mapData?.bounds || currentZoom >= 7) {
-      setOffScreenCounts(null);
+      // null로 즉시 리셋하지 않음 → 깜빡임 방지
+      // zoom >= 7이 되면 인디케이터 자체가 숨겨지므로 null 불필요
       return;
     }
 

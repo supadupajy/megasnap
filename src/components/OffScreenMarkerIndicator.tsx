@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { DirectionCounts } from '@/hooks/use-supabase-posts';
 
 interface Bounds {
@@ -38,26 +38,25 @@ function useWindowSize() {
 const S = 52;
 const EDGE_MARGIN = 14;
 
-// 화면 중심(midX, midY)에서 가장 가까운 마커를 반환
-// → 패닝 중에도 "대표 마커"가 안정적으로 유지됨
-function nearestToCenter(
+// 화면 중심에서 가장 먼 마커를 대표로 사용
+// → 패닝 중에도 "대표 마커"가 안정적으로 유지됨 (가장 먼 것은 잘 안 바뀜)
+function farthestFromCenter(
   pts: { lat: number; lng: number }[],
   centerX: number, centerY: number,
   toScreenX: (lng: number) => number,
   toScreenY: (lat: number) => number,
 ): { lat: number; lng: number } {
   let best = pts[0];
-  let bestDist = Infinity;
+  let bestDist = -1;
   for (const p of pts) {
     const dx = toScreenX(p.lng) - centerX;
     const dy = toScreenY(p.lat) - centerY;
     const d = dx * dx + dy * dy;
-    if (d < bestDist) { bestDist = d; best = p; }
+    if (d > bestDist) { bestDist = d; best = p; }
   }
   return best;
 }
 
-// 계산 로직만 분리 (순수 함수)
 function computeIndicators(
   allPoints: { lat: number; lng: number }[],
   centerLat: number, centerLng: number,
@@ -85,83 +84,35 @@ function computeIndicators(
     right:  { x: screenW - EDGE_MARGIN - S / 2, y: midY },
   };
 
+  // 45도 섹터 기반 분류 (화면 중심 기준 dLat/dLng 비율)
   const classified: Record<Direction, { lat: number; lng: number }[]> = {
     top: [], bottom: [], left: [], right: [],
   };
 
-  const angleFromFront = (px: number, py: number, indX: number, indY: number, dir: Direction): number => {
-    const dx = px - indX;
-    const dy = py - indY;
-    const frontVec = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] }[dir];
-    const dot = dx * frontVec[0] + dy * frontVec[1];
-    const mag = Math.sqrt(dx * dx + dy * dy);
-    if (mag === 0) return 0;
-    return Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180 / Math.PI;
-  };
-
   for (const p of allPoints) {
-    const px = toScreenX(p.lng);
-    const py = toScreenY(p.lat);
-    const scores: Record<Direction, number> = {
-      top:    angleFromFront(px, py, indCenter.top.x,    indCenter.top.y,    'top'),
-      bottom: angleFromFront(px, py, indCenter.bottom.x, indCenter.bottom.y, 'bottom'),
-      left:   angleFromFront(px, py, indCenter.left.x,   indCenter.left.y,   'left'),
-      right:  angleFromFront(px, py, indCenter.right.x,  indCenter.right.y,  'right'),
-    };
-    const candidates = (Object.keys(scores) as Direction[]).filter(d => scores[d] <= 45);
-    const bestDir = candidates.length > 0
-      ? candidates.reduce((a, b) => scores[a] < scores[b] ? a : b)
-      : (Object.keys(scores) as Direction[]).reduce((a, b) => scores[a] < scores[b] ? a : b);
-    classified[bestDir].push(p);
+    const dLat = (p.lat - centerLat) / latRange;
+    const dLng = (p.lng - centerLng) / lngRange;
+    if      (dLat >= 0 && dLat >= Math.abs(dLng))           classified.top.push(p);
+    else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  classified.bottom.push(p);
+    else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) classified.left.push(p);
+    else                                                      classified.right.push(p);
   }
 
-  // 각도 계산: 화면 중심에서 가장 가까운 마커를 대표로 사용
+  // 각 방향의 대표 마커 각도 계산 (화면 중심에서 가장 먼 마커 기준)
   const getAngleDeg = (dir: Direction, pts: { lat: number; lng: number }[]): number | null => {
     if (pts.length === 0) return null;
     const ind = indCenter[dir];
-    const rep = nearestToCenter(pts, midX, midY, toScreenX, toScreenY);
+    const rep = farthestFromCenter(pts, midX, midY, toScreenX, toScreenY);
     const mX = toScreenX(rep.lng);
     const mY = toScreenY(rep.lat);
     return (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
   };
 
-  const angleDiff = (a: number, b: number) => {
-    let d = Math.abs(a - b) % 360;
-    return d > 180 ? 360 - d : d;
-  };
-
-  // 병합: 물방울 각도 차이 < 45도인 인디케이터끼리 합침
-  const merged = { ...classified };
-  for (let iter = 0; iter < 3; iter++) {
-    let didMerge = false;
-    const active = (['top', 'bottom', 'left', 'right'] as Direction[]).filter(d => merged[d].length > 0);
-    for (let i = 0; i < active.length && !didMerge; i++) {
-      for (let j = i + 1; j < active.length && !didMerge; j++) {
-        const [dA, dB] = [active[i], active[j]];
-        const angA = getAngleDeg(dA, merged[dA]);
-        const angB = getAngleDeg(dB, merged[dB]);
-        if (angA === null || angB === null) continue;
-        if (angleDiff(angA, angB) < 45) {
-          const winner = merged[dA].length >= merged[dB].length ? dA : dB;
-          const loser  = winner === dA ? dB : dA;
-          merged[winner] = [...merged[winner], ...merged[loser]];
-          merged[loser] = [];
-          didMerge = true;
-        }
-      }
-    }
-    if (!didMerge) break;
-  }
-
   return (['top', 'bottom', 'left', 'right'] as Direction[])
-    .filter(dir => merged[dir].length > 0)
+    .filter(dir => classified[dir].length > 0)
     .map(dir => {
-      const pts = merged[dir];
-      const ind = indCenter[dir];
-      const rep = nearestToCenter(pts, midX, midY, toScreenX, toScreenY);
-      const mX = toScreenX(rep.lng);
-      const mY = toScreenY(rep.lat);
-      const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
+      const pts = classified[dir];
+      const angleDeg = getAngleDeg(dir, pts) ?? 0;
       return {
         dir,
         angleDeg,
@@ -173,39 +124,43 @@ function computeIndicators(
     });
 }
 
-// 개별 인디케이터 — 마운트/언마운트/각도 변경 애니메이션
+// ── 개별 인디케이터 컴포넌트 ──────────────────────────────────────
 const DropIndicator: React.FC<{
   state: IndicatorState;
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
 }> = ({ state, onClickDirection }) => {
   const { dir, angleDeg, count, pts, left, top } = state;
 
-  // 등장: opacity + scale
-  const [visible, setVisible] = useState(false);
+  // 등장 애니메이션 (마운트 시 1회)
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    const t = requestAnimationFrame(() => setVisible(true));
+    const t = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(t);
   }, []);
 
   // 각도 누적 추적 — 최단 경로 회전
-  // prevAngleRef는 "누적된 displayAngle" 값을 저장
-  const prevAngleRef = useRef<number | null>(null);
+  // accAngleRef: CSS transform에 실제로 적용되는 누적 각도값
+  const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
+  const isFirstRender = useRef(true);
 
-  useLayoutEffect(() => {
-    if (prevAngleRef.current === null) {
-      // 최초 마운트: 애니메이션 없이 즉시 세팅
-      prevAngleRef.current = angleDeg;
+  useEffect(() => {
+    if (isFirstRender.current) {
+      // 최초 렌더: 애니메이션 없이 즉시 세팅
+      isFirstRender.current = false;
+      accAngleRef.current = angleDeg;
       setDisplayAngle(angleDeg);
       return;
     }
-    // 이후 업데이트: 최단 경로로 누적
-    let delta = angleDeg - (prevAngleRef.current % 360);
-    // -180 ~ +180 범위로 정규화
+    // 이후 업데이트: 현재 누적값 기준으로 최단 경로 delta 계산
+    const current = accAngleRef.current;
+    const currentNorm = ((current % 360) + 360) % 360;
+    const targetNorm = ((angleDeg % 360) + 360) % 360;
+    let delta = targetNorm - currentNorm;
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
-    prevAngleRef.current = prevAngleRef.current + delta;
-    setDisplayAngle(prevAngleRef.current);
+    accAngleRef.current = current + delta;
+    setDisplayAngle(accAngleRef.current);
   }, [angleDeg]);
 
   const cx = S / 2;
@@ -239,13 +194,16 @@ const DropIndicator: React.FC<{
         height: `${S}px`,
         left: `${left}px`,
         top: `${top}px`,
-        opacity: visible ? 1 : 0,
-        transform: `scale(${visible ? 1 : 0.5}) rotate(${displayAngle}deg)`,
+        opacity: mounted ? 1 : 0,
+        // 등장 시: scale + rotate 동시 적용
+        // 이후: rotate만 transition (scale은 고정 1)
+        transform: `scale(${mounted ? 1 : 0.5}) rotate(${displayAngle}deg)`,
         transformOrigin: `${cx}px ${S / 2}px`,
-        transition: visible
-          ? 'opacity 0.35s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)'
+        transition: mounted
+          ? 'opacity 0.3s ease, transform 0.35s ease-out'
           : 'none',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
+        willChange: 'transform',
       }}
     >
       <svg
@@ -287,7 +245,7 @@ const DropIndicator: React.FC<{
           fill="rgb(79,70,229)"
           fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
           transform={`rotate(${-displayAngle}, ${cx}, ${circleCy})`}
-          style={{ transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
+          style={{ transition: 'transform 0.35s ease-out' }}
         >
           {label}
         </text>
@@ -296,17 +254,16 @@ const DropIndicator: React.FC<{
   );
 };
 
-// 사라지는 인디케이터를 잠깐 유지하는 래퍼
+// ── 사라지는 인디케이터 ────────────────────────────────────────────
 const FadingIndicator: React.FC<{
   state: IndicatorState;
-  onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
 }> = ({ state }) => {
-  const [alive, setAlive] = useState(true);
   const [opacity, setOpacity] = useState(1);
+  const [alive, setAlive] = useState(true);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setOpacity(0), 10);
-    const t2 = setTimeout(() => setAlive(false), 400);
+    const t1 = setTimeout(() => setOpacity(0), 16);
+    const t2 = setTimeout(() => setAlive(false), 380);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
 
@@ -342,9 +299,9 @@ const FadingIndicator: React.FC<{
         left: `${state.left}px`,
         top: `${state.top}px`,
         opacity,
-        transform: `scale(${opacity === 0 ? 0.5 : 1}) rotate(${state.angleDeg}deg)`,
+        transform: `scale(${opacity < 0.5 ? 0.7 : 1}) rotate(${state.angleDeg}deg)`,
         transformOrigin: `${cx}px ${S / 2}px`,
-        transition: 'opacity 0.35s ease, transform 0.35s ease',
+        transition: 'opacity 0.3s ease, transform 0.3s ease',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
       }}
     >
@@ -364,6 +321,7 @@ const FadingIndicator: React.FC<{
   );
 };
 
+// ── 메인 컴포넌트 ─────────────────────────────────────────────────
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bounds,
   onClickDirection,
@@ -404,13 +362,12 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const currentDirs = new Set(indicators.map(i => i.dir));
     const disappeared = prev.filter(p => !currentDirs.has(p.dir));
     if (disappeared.length > 0) {
-      setFadingItems(f => [
-        ...f,
-        ...disappeared.map(s => ({ id: fadingIdRef.current++, state: s })),
-      ]);
+      const newFading = disappeared.map(s => ({ id: fadingIdRef.current++, state: s }));
+      setFadingItems(f => [...f, ...newFading]);
+      const ids = newFading.map(f => f.id);
       setTimeout(() => {
-        setFadingItems(f => f.slice(disappeared.length));
-      }, 450);
+        setFadingItems(f => f.filter(item => !ids.includes(item.id)));
+      }, 420);
     }
     prevRef.current = indicators;
   }, [indicators]);
@@ -418,7 +375,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   return (
     <>
       {fadingItems.map(({ id, state }) => (
-        <FadingIndicator key={`fading-${id}`} state={state} onClickDirection={onClickDirection} />
+        <FadingIndicator key={`fading-${id}`} state={state} />
       ))}
       {indicators.map(state => (
         <DropIndicator key={state.dir} state={state} onClickDirection={onClickDirection} />
