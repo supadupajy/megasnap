@@ -121,22 +121,70 @@ function computeIndicators(
     else                                                classified.right.push(p);
   }
 
-  return (['top', 'bottom', 'left', 'right'] as Direction[])
+  // 1차 인디케이터 후보 (방향당 1개)
+  type Candidate = {
+    dir: Direction;
+    pts: { lat: number; lng: number }[];
+    rep: { lat: number; lng: number };
+    repAngleDeg: number; // 화면 중심 기준 대표점 각도 (위쪽=0, 시계방향)
+  };
+
+  const candidates: Candidate[] = (['top', 'bottom', 'left', 'right'] as Direction[])
     .filter(dir => classified[dir].length > 0)
     .map(dir => {
       const pts = classified[dir];
-      const ind = indCenter[dir];
-      const pos = btnPos[dir];
       const rep = nearestToMapCenter(pts, centerLat, centerLng);
-      const mX = toScreenX(rep.lng);
-      const mY = toScreenY(rep.lat);
-      const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
-      return {
-        dir, angleDeg, count: pts.length, pts,
-        left: pos.left, top: pos.top,
-        originX: CX, originY: CIRCLE_CY,
-      };
+      // 화면 중심 기준 대표점의 각도 (위쪽=0, 시계방향=+, 범위 [-180, 180])
+      const dx = toScreenX(rep.lng) - midX;
+      const dy = toScreenY(rep.lat) - midY;
+      const repAngleDeg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+      return { dir, pts, rep, repAngleDeg };
     });
+
+  // 인접한 두 후보의 대표점 각도가 가까우면 (60도 이내) 더 많은 쪽으로 머지
+  // → 좌상단/우상단 등 한쪽 사분면에만 마커가 몰려 있는 경우 인디케이터 1개로 통합
+  const MERGE_THRESHOLD_DEG = 60;
+  const angleDiff = (a: number, b: number) => {
+    let d = Math.abs(a - b);
+    if (d > 180) d = 360 - d;
+    return d;
+  };
+
+  const merged: Candidate[] = [];
+  const used = new Array(candidates.length).fill(false);
+  // 큰 그룹부터 처리 → 작은 그룹이 큰 그룹에 흡수됨
+  const order = candidates
+    .map((_, i) => i)
+    .sort((a, b) => candidates[b].pts.length - candidates[a].pts.length);
+
+  for (const i of order) {
+    if (used[i]) continue;
+    used[i] = true;
+    const base = candidates[i];
+    const collectedPts = [...base.pts];
+    for (const j of order) {
+      if (used[j] || j === i) continue;
+      const other = candidates[j];
+      if (angleDiff(base.repAngleDeg, other.repAngleDeg) <= MERGE_THRESHOLD_DEG) {
+        used[j] = true;
+        collectedPts.push(...other.pts);
+      }
+    }
+    merged.push({ ...base, pts: collectedPts });
+  }
+
+  return merged.map(({ dir, pts, rep }) => {
+    const ind = indCenter[dir];
+    const pos = btnPos[dir];
+    const mX = toScreenX(rep.lng);
+    const mY = toScreenY(rep.lat);
+    const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
+    return {
+      dir, angleDeg, count: pts.length, pts,
+      left: pos.left, top: pos.top,
+      originX: CX, originY: CIRCLE_CY,
+    };
+  });
 }
 
 // ── 개별 인디케이터 ───────────────────────────────────────────────
