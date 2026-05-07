@@ -1620,7 +1620,13 @@ const MapContainer = ({
         visible={level >= 7}
         containerRef={containerRef}
       />
-      {/* 현재 위치 마커: 히트맵 위에 React DOM으로 렌더링 */}
+      <div
+        ref={containerRef}
+        id="kakao-map"
+        className="w-full h-full select-none"
+        style={{ position: 'relative' }}
+      ></div>
+      {/* 현재 위치 마커: 카카오맵 div 뒤에 DOM 배치 + 높은 zIndex로 항상 최상단 표시 */}
       {userLocation && userLocationPixel && (
         <div
           style={{
@@ -1628,7 +1634,7 @@ const MapContainer = ({
             left: userLocationPixel.x,
             top: userLocationPixel.y,
             transform: 'translate(-50%, -50%)',
-            zIndex: 200,
+            zIndex: 9000,
             pointerEvents: 'none',
             width: 22,
             height: 22,
@@ -1668,12 +1674,6 @@ const MapContainer = ({
           }} />
         </div>
       )}
-      <div
-        ref={containerRef}
-        id="kakao-map"
-        className="w-full h-full select-none"
-        style={{ position: 'relative' }}
-      ></div>
     </div>
   );
 };
