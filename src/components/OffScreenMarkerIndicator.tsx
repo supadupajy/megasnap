@@ -21,35 +21,38 @@ interface IndicatorState {
   angleDeg: number;
   count: number;
   pts: { lat: number; lng: number }[];
-  // 버튼의 fixed 위치
   left: number;
   top: number;
-  // transformOrigin (버튼 내 좌표)
   originX: number;
   originY: number;
 }
 
 function useWindowSize() {
-  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const getSize = () => ({
+    w: window.visualViewport?.width ?? window.innerWidth,
+    h: window.visualViewport?.height ?? window.innerHeight,
+  });
+  const [size, setSize] = useState(getSize);
   useEffect(() => {
-    const handler = () => setSize({ w: window.innerWidth, h: window.innerHeight });
+    const handler = () => setSize(getSize());
     window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
+    window.visualViewport?.addEventListener('resize', handler);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.visualViewport?.removeEventListener('resize', handler);
+    };
   }, []);
   return size;
 }
 
-// ── SVG 치수 상수 ─────────────────────────────────────────────────
-const S = 52;                    // 버튼(SVG) 크기
-const CX = S / 2;                // 수평 중심: 26
-const R = 15;                    // 원 반지름
-const TIP_Y = 3;                 // 꼭지점 Y
-const CIRCLE_CY = S / 2 + 6;    // 원(숫자) 중심 Y: 32
+// SVG 치수
+const S = 52;
+const CX = S / 2;             // 26 — 수평 중심
+const R = 15;
+const TIP_Y = 3;
+const CIRCLE_CY = S / 2 + 6; // 32 — 원(숫자) 중심, 회전 기준점
+const EDGE = 10;              // 좌우 가장자리 여백
 
-// 화면 가장자리 여백 — 버튼이 이 값만큼 안쪽에 배치됨
-const EDGE = 10;
-
-// 물방울 path
 const DROP_PATH = [
   `M ${CX} ${TIP_Y}`,
   `C ${CX - 9} ${TIP_Y + 12}, ${CX - R} ${CIRCLE_CY - R * 0.55}, ${CX - R} ${CIRCLE_CY}`,
@@ -58,7 +61,6 @@ const DROP_PATH = [
   'Z',
 ].join(' ');
 
-// 지도 중심에서 가장 가까운 마커 (클릭 시 이동 대상과 동일)
 function nearestToMapCenter(
   pts: { lat: number; lng: number }[],
   centerLat: number,
@@ -86,30 +88,29 @@ function computeIndicators(
   const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + midX;
   const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
 
-  // ── 버튼 배치 ──────────────────────────────────────────────────
-  // 버튼은 항상 화면 안에 있어야 함 (잘림 방지)
-  // transformOrigin은 버튼 내 원 중심(CX, CIRCLE_CY) 고정
+  // 버튼 배치: 항상 화면 안에 있도록
+  // transformOrigin은 버튼 내 원 중심(CX, CIRCLE_CY) 기준
   //
-  // top:    버튼 상단이 topSafeY에 붙음 → top = topSafeY
-  // bottom: 버튼 하단이 (screenH - bottomSafeY)에 붙음 → top = screenH - bottomSafeY - S
-  // left:   버튼 좌측이 EDGE에 붙음 → left = EDGE
-  // right:  버튼 우측이 (screenW - EDGE)에 붙음 → left = screenW - EDGE - S
-  const positions: Record<Direction, { left: number; top: number; originX: number; originY: number }> = {
-    top:    { left: midX - CX,        top: topSafeY,                    originX: CX,        originY: CIRCLE_CY },
-    bottom: { left: midX - CX,        top: screenH - bottomSafeY - S,   originX: CX,        originY: S - (S - CIRCLE_CY) },
-    left:   { left: EDGE,             top: midY - CIRCLE_CY,            originX: CX,        originY: CIRCLE_CY },
-    right:  { left: screenW - EDGE - S, top: midY - CIRCLE_CY,          originX: CX,        originY: CIRCLE_CY },
+  // top:    버튼 상단 = topSafeY,  원 중심 화면Y = topSafeY + CIRCLE_CY
+  // bottom: 버튼 하단 = screenH - bottomSafeY,  top = screenH - bottomSafeY - S
+  //         원 중심 화면Y = (screenH - bottomSafeY - S) + CIRCLE_CY
+  // left:   버튼 좌측 = EDGE, 원 중심 화면X = EDGE + CX
+  // right:  버튼 우측 = screenW - EDGE, left = screenW - EDGE - S, 원 중심 화면X = screenW - EDGE - S + CX
+  const btnPos: Record<Direction, { left: number; top: number }> = {
+    top:    { left: midX - CX,          top: topSafeY },
+    bottom: { left: midX - CX,          top: screenH - bottomSafeY - S },
+    left:   { left: EDGE,               top: midY - CIRCLE_CY },
+    right:  { left: screenW - EDGE - S, top: midY - CIRCLE_CY },
   };
 
-  // ── 각도 계산 기준: 버튼 내 원 중심의 실제 화면 좌표 ──────────
+  // 각도 계산 기준: 버튼 내 원 중심의 실제 화면 좌표
   const indCenter: Record<Direction, { x: number; y: number }> = {
-    top:    { x: midX,                    y: topSafeY + CIRCLE_CY },
-    bottom: { x: midX,                    y: screenH - bottomSafeY - S + CIRCLE_CY },
-    left:   { x: EDGE + CX,              y: midY },
-    right:  { x: screenW - EDGE - S + CX, y: midY },
+    top:    { x: midX,                      y: topSafeY + CIRCLE_CY },
+    bottom: { x: midX,                      y: screenH - bottomSafeY - S + CIRCLE_CY },
+    left:   { x: EDGE + CX,                 y: midY },
+    right:  { x: screenW - EDGE - S + CX,   y: midY },
   };
 
-  // 45도 섹터 분류
   const classified: Record<Direction, { lat: number; lng: number }[]> = {
     top: [], bottom: [], left: [], right: [],
   };
@@ -127,7 +128,7 @@ function computeIndicators(
     .map(dir => {
       const pts = classified[dir];
       const ind = indCenter[dir];
-      const pos = positions[dir];
+      const pos = btnPos[dir];
       const rep = nearestToMapCenter(pts, centerLat, centerLng);
       const mX = toScreenX(rep.lng);
       const mY = toScreenY(rep.lat);
@@ -135,7 +136,7 @@ function computeIndicators(
       return {
         dir, angleDeg, count: pts.length, pts,
         left: pos.left, top: pos.top,
-        originX: pos.originX, originY: pos.originY,
+        originX: CX, originY: CIRCLE_CY,
       };
     });
 }
@@ -147,14 +148,13 @@ const DropIndicator: React.FC<{
 }> = ({ state, onClickDirection }) => {
   const { dir, angleDeg, count, pts, left, top, originX, originY } = state;
 
-  // 등장 애니메이션
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const t = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // 각도: 패닝 중 중간값 무시, 멈춘 후 최종값으로만 회전
+  // 각도 디바운스 (패닝 중 중간값 무시)
   const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
   const isFirstAngle = useRef(true);
@@ -187,7 +187,7 @@ const DropIndicator: React.FC<{
     return () => { if (angleDebounceRef.current) clearTimeout(angleDebounceRef.current); };
   }, [angleDeg]);
 
-  // 숫자: 패닝 중 변동 무시, 멈춘 후 최종값으로만 업데이트
+  // 숫자 디바운스
   const [displayCount, setDisplayCount] = useState(count);
   const pendingCountRef = useRef<number>(count);
   const countDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -223,6 +223,7 @@ const DropIndicator: React.FC<{
         width: `${S}px`, height: `${S}px`,
         left: `${left}px`, top: `${top}px`,
         opacity: mounted ? 1 : 0,
+        // 물방울 전체를 원 중심 기준으로 회전
         transform: `scale(${mounted ? 1 : 0.5}) rotate(${displayAngle}deg)`,
         transformOrigin: `${originX}px ${originY}px`,
         transition: mounted ? 'opacity 0.3s ease, transform 0.35s ease-out' : 'none',
@@ -234,21 +235,25 @@ const DropIndicator: React.FC<{
         <defs>
           <clipPath id={`drop-clip-${dir}`}><path d={DROP_PATH} /></clipPath>
         </defs>
+        {/* 물방울 배경 */}
         <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-${dir})`}>
           <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
         </foreignObject>
         <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
-        {/* 텍스트는 버튼 전체가 회전해도 항상 원 중심에 고정 — 역회전으로 상쇄 */}
-        <g transform={`rotate(${-displayAngle}, ${originX}, ${originY})`}>
-          <text
-            x={CX} y={CIRCLE_CY}
-            textAnchor="middle" dominantBaseline="central"
-            fontSize={fontSize} fontWeight="900" fill="rgb(79,70,229)"
-            fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-          >
-            {label}
-          </text>
-        </g>
+        {/* 숫자: 버튼 회전을 정확히 상쇄 → 항상 정립 */}
+        <text
+          x={CX}
+          y={CIRCLE_CY}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={fontSize}
+          fontWeight="900"
+          fill="rgb(79,70,229)"
+          fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          transform={`rotate(${-displayAngle} ${originX} ${originY})`}
+        >
+          {label}
+        </text>
       </svg>
     </button>
   );
@@ -293,9 +298,15 @@ const FadingIndicator: React.FC<{ state: IndicatorState }> = ({ state }) => {
           <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
         </foreignObject>
         <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
-        <g transform={`rotate(${-state.angleDeg}, ${state.originX}, ${state.originY})`}>
-          <text x={CX} y={CIRCLE_CY} textAnchor="middle" dominantBaseline="central" fontSize={fontSize} fontWeight="900" fill="rgb(79,70,229)" fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">{label}</text>
-        </g>
+        <text
+          x={CX} y={CIRCLE_CY}
+          textAnchor="middle" dominantBaseline="central"
+          fontSize={fontSize} fontWeight="900" fill="rgb(79,70,229)"
+          fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          transform={`rotate(${-state.angleDeg} ${state.originX} ${state.originY})`}
+        >
+          {label}
+        </text>
       </svg>
     </button>
   );
@@ -306,6 +317,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   bounds, onClickDirection, topOffset, bottomOffset, dbCounts,
 }) => {
   const { w: screenW, h: screenH } = useWindowSize();
+
   const topSafeY = typeof topOffset === 'number' ? topOffset : 160;
   const bottomSafeY = bottomOffset;
 

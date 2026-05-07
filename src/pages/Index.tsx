@@ -1345,7 +1345,7 @@ const Index = () => {
       >
         {/* 화면 밖 마커 방향 표시 - overflow-hidden 밖에 fixed로 배치 */}
         {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
-          <div className="fixed inset-0 z-[25] pointer-events-none" style={{ top: 'env(safe-area-inset-top)', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px))' }}>
+          <div className="fixed inset-0 z-[25] pointer-events-none">
             <OffScreenMarkerIndicator
               bounds={mapData?.bounds || null}
               onClickDirection={(dir, pts) => {
