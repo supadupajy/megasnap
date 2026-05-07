@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallba
 import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn, getFallbackImage } from '@/lib/utils';
+import { cn, getFallbackImage, getOptimizedDetailImage } from '@/lib/utils';
 
 import { useNavigate } from 'react-router-dom';
 import { Comment } from '@/types';
@@ -360,7 +360,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     if (baseImages.length === 0) {
       baseImages = [displayImage];
     }
-    return baseImages;
+    return baseImages.map((img) => getOptimizedDetailImage(img, currentPost.id));
   })();
 
   const postDisplayName = currentPost?.user?.name || '익명';

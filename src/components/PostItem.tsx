@@ -23,7 +23,7 @@ import {
   TreePine,
   PawPrint
 } from 'lucide-react';
-import { cn, getFallbackImage, formatRelativeTime } from '@/lib/utils';
+import { cn, getFallbackImage, formatRelativeTime, getOptimizedFeedImage } from '@/lib/utils';
 
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -72,7 +72,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isNewRealtime, setIsNewRealtime] = useState(post.isNewRealtime || false);
   const [imgError, setImgError] = useState(false);
-  const [currentImage, setCurrentImage] = useState(post.image_url || post.image || getFallbackImage());
+  const [currentImage, setCurrentImage] = useState(getOptimizedFeedImage(post.image_url || post.image, post.id));
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
@@ -321,14 +321,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     );
   };
 
-  // 이미지 슬라이더 데이터 준비
+  // 이미지 슬라이더 데이터 준비 (피드용 최적화 URL 적용)
   const displayImages = useMemo(() => {
-    // Ad 포스팅은 image_url(이미 음식 이미지로 교체됨)만 사용, images 배열 무시
     const baseImages = isAd
       ? [post.image_url || post.image]
       : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
-    return baseImages;
-  }, [post.images, post.image, post.image_url, isAd]);
+    return baseImages.map((img) => getOptimizedFeedImage(img, post.id));
+  }, [post.images, post.image, post.image_url, isAd, post.id]);
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isDragging) return; // 드래그 중에는 스크롤 이벤트에 의한 인덱스 업데이트 방지 (선택 사항)
@@ -370,9 +369,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   };
 
   useEffect(() => {
-    setCurrentImage(post.image_url || post.image || getFallbackImage());
+    setCurrentImage(getOptimizedFeedImage(post.image_url || post.image, post.id));
     setImgError(false);
-  }, [post.image_url, post.image]);
+  }, [post.image_url, post.image, post.id]);
 
   // 컨텐츠가 실제로 잘렸는지 DOM 높이로 감지 (여러 타이밍에 측정)
   useEffect(() => {

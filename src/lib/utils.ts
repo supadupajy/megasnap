@@ -30,6 +30,20 @@ const MARKER_IMAGE_TRANSFORM = {
   resize: 'cover' as const,
 };
 
+const FEED_IMAGE_TRANSFORM = {
+  width: 800,
+  height: 800,
+  quality: 75,
+  resize: 'cover' as const,
+};
+
+const DETAIL_IMAGE_TRANSFORM = {
+  width: 1200,
+  height: 1200,
+  quality: 85,
+  resize: 'cover' as const,
+};
+
 const getSupabaseStorageSource = (url: string) => {
   try {
     const parsed = new URL(url);
@@ -45,6 +59,45 @@ const getSupabaseStorageSource = (url: string) => {
   } catch {
     return null;
   }
+};
+
+const getOptimizedSupabaseImage = (
+  url: string,
+  transform: { width: number; height: number; quality: number; resize: 'cover' | 'contain' | 'fill' }
+): string => {
+  const normalizedUrl = url.trim();
+  const lowerUrl = normalizedUrl.toLowerCase();
+
+  if (
+    normalizedUrl.startsWith('data:') ||
+    normalizedUrl.startsWith('/') ||
+    lowerUrl.endsWith('.svg') ||
+    lowerUrl.includes('.svg?') ||
+    lowerUrl.endsWith('.gif') ||
+    lowerUrl.includes('.gif?')
+  ) {
+    return normalizedUrl;
+  }
+
+  const supabaseSource = getSupabaseStorageSource(normalizedUrl);
+  if (supabaseSource) {
+    const { data } = supabase.storage
+      .from(supabaseSource.bucket)
+      .getPublicUrl(supabaseSource.path, { transform });
+    return data.publicUrl;
+  }
+
+  return normalizedUrl;
+};
+
+export const getOptimizedFeedImage = (url: string | null | undefined, seed: string = 'default'): string => {
+  if (!url || url === 'null' || url === 'undefined') return getFallbackImage(seed);
+  return getOptimizedSupabaseImage(url.trim(), FEED_IMAGE_TRANSFORM);
+};
+
+export const getOptimizedDetailImage = (url: string | null | undefined, seed: string = 'default'): string => {
+  if (!url || url === 'null' || url === 'undefined') return getFallbackImage(seed);
+  return getOptimizedSupabaseImage(url.trim(), DETAIL_IMAGE_TRANSFORM);
 };
 
 export const getOptimizedMarkerImage = (url: string | null | undefined, seed: string = 'default') => {
