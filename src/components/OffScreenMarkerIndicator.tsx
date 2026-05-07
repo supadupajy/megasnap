@@ -403,17 +403,28 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const prev = prevRef.current;
     const currentDirs = new Set(indicators.map(i => i.dir));
     const disappeared = prev.filter(p => !currentDirs.has(p.dir));
+
+    // 1) 새로 나타난 방향과 동일한 dir의 fading 항목은 즉시 제거 (중복 표시 방지)
+    if (currentDirs.size > 0) {
+      setFadingItems(f => f.filter(item => !currentDirs.has(item.state.dir)));
+    }
+
+    // 2) 사라진 방향만 fading으로 추가
     if (disappeared.length > 0) {
       const newFading = disappeared.map(s => ({
         id: fadingIdRef.current++,
         state: {
           ...s,
-          // DropIndicator가 실제로 표시하던 각도/숫자로 스냅샷
           displayAngle: displayAnglesRef.current[s.dir] ?? s.angleDeg,
           displayCount: displayCountsRef.current[s.dir] ?? s.count,
         } as FadingState,
       }));
-      setFadingItems(f => [...f, ...newFading]);
+      setFadingItems(f => {
+        // 같은 방향의 기존 fading 항목은 제거하고 새 것만 추가 (방향당 최대 1개)
+        const disappearedDirs = new Set(disappeared.map(d => d.dir));
+        const filtered = f.filter(item => !disappearedDirs.has(item.state.dir));
+        return [...filtered, ...newFading];
+      });
       const ids = newFading.map(f => f.id);
       setTimeout(() => setFadingItems(f => f.filter(item => !ids.includes(item.id))), 420);
     }

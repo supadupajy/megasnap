@@ -607,12 +607,8 @@ const Index = () => {
     return () => { cancelled = true; };
   }, [selectedCategories, authUser?.id, useClientSideCounts]);
 
-  // 클라이언트 모드 ↔ DB 모드 전환 시 dbCounts 즉시 클리어 (이전 모드 데이터로 잘못 표시 방지)
-  useEffect(() => {
-    if (useClientSideCounts) {
-      setStableSnapshot(s => (s.dbCounts === null ? s : { ...s, dbCounts: null }));
-    }
-  }, [useClientSideCounts]);
+  // 클라이언트 모드일 땐 dbCounts가 사용되지 않으므로 클리어할 필요 없음
+  // (인디케이터는 useClientSideCounts ? clientOffScreenCounts : stableSnapshot.dbCounts 로 분기)
 
   // ── map_marker 광고들을 allPosts에 주입 ──────────────────────
   // ads 테이블의 ad_type='map_marker' 광고들을 모두 지도 마커로 표시.
