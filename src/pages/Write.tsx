@@ -632,7 +632,8 @@ const Write = () => {
 
         {/* 하단 고정 버튼 영역 - BottomNav(h-16) 위에 fixed로 위치 */}
         <div
-          className="fixed bottom-24 left-0 right-0 bg-transparent px-5 z-[1000]"
+          className="fixed left-0 right-0 bg-transparent px-5 z-[1000]"
+          style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px) + 8px)' }}
         >
           {currentPage === 1 ? (
             <button
