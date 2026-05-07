@@ -1561,7 +1561,7 @@ const Index = () => {
                     </div>
                   </button>
                   {displayedPostCount > 0 && currentZoom < 7 && (
-                    <div className="absolute -top-2 -right-2 bg-orange-500 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
+                    <div className="absolute -top-2 -right-2 bg-indigo-400 text-white text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedPostCount}
                     </div>
                   )}
