@@ -125,7 +125,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     // - 이것을 intensity 0.25에 매핑 → 1개 포인트 중심 = 하늘색
     // - intensity 1.0(빨강)이 되려면 누적값 ≈ 4.0 (약 4개 이상 겹침)
     const SINGLE_PEAK = 1.0;   // 포인트 1개 중심의 기여값
-    const RED_AT = Math.max(8, points.length * 0.3); // 전체 포인트의 30% 이상 겹쳐야 빨강
+    const RED_AT = Math.max(15, points.length * 0.6); // 전체 포인트의 60% 이상 겹쳐야 빨강
     const SCALE_FACTOR = RED_AT; // buf / SCALE_FACTOR → 0~1 intensity
 
     const imageData = ctx.createImageData(W, H);
