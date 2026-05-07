@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Send, Check } from 'lucide-react';
+import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -422,9 +422,6 @@ const Write = () => {
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                   )}
-                  <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100">
-                    <Send className="w-5 h-5 text-indigo-600" />
-                  </div>
                 </div>
               </div>
             </div>
