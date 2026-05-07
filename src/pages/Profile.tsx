@@ -72,7 +72,6 @@ const Profile = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const postListStartRef = useRef<HTMLDivElement>(null);
-  const savedScrollPos = useRef<number>(0);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
@@ -98,16 +97,13 @@ const Profile = () => {
 
     const isAd = p.content?.trim().startsWith('[AD]');
     let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-    const likesCountNum = Number(p.likes || 0);
     if (p.hot_since) {
       borderType = 'popular';
     } else if (!isAd) {
-      // follower 수 기반 tier 결정 (내 프로필이므로 followerCount 사용)
       borderType = getTierFromFollowers(followerCount) as any;
     }
 
     let finalImage = isValidUrl(rawImage) ? rawImage : SAFE_FALLBACK;
-
     let finalImages = rawImages.filter(isValidUrl);
     if (finalImages.length === 0) finalImages = [finalImage];
 
@@ -139,7 +135,6 @@ const Profile = () => {
   const loadProfileData = useCallback(async (uid: string) => {
     setIsDataLoading(true);
     try {
-      // ✅ 모든 독립 쿼리를 동시에 실행
       const [myPostsRes, savedPostsRes, followersRes, followingRes, profileRes] = await Promise.all([
         supabase
           .from('posts')
@@ -157,7 +152,6 @@ const Profile = () => {
         supabase.from('profiles').select('followers').eq('id', uid).single(),
       ]);
 
-      // profiles.followers(인플루언서 등급용 수치)가 있으면 우선 사용, 없으면 실제 follows 카운트
       const profileFollowersVal = Number(profileRes.data?.followers ?? 0);
       setFollowerCount(profileFollowersVal > 0 ? profileFollowersVal : (followersRes.count || 0));
       setFollowingCount(followingRes.count || 0);
@@ -177,7 +171,6 @@ const Profile = () => {
       if (authUser?.id && allPostIds.length > 0) {
         const [{ data: likesData }, { data: extraSavedData }] = await Promise.all([
           supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', allPostIds),
-          // 내 포스트 중 saved에 없는 것들의 저장 여부 확인
           myPostIds.filter(id => !savedPostIdSet.has(id)).length > 0
             ? supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', myPostIds.filter(id => !savedPostIdSet.has(id)))
             : Promise.resolve({ data: [] }),
@@ -185,8 +178,6 @@ const Profile = () => {
         likedPostIds = new Set((likesData || []).map(l => l.post_id));
         (extraSavedData || []).forEach((s: any) => savedPostIdSet.add(s.post_id));
       }
-
-      // 즉시 렌더링
 
       const initialMyPosts = myData.map(p => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
       const initialSavedPosts = savedPostObjects.map((p: any) => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
@@ -205,6 +196,20 @@ const Profile = () => {
       loadProfileData(authUser.id);
     }
   }, [authLoading, authUser?.id, loadProfileData]);
+
+  // 탭 전환 시 스크롤 위치 보존
+  const handleTabChange = useCallback((mode: 'grid' | 'list' | 'saved') => {
+    const container = scrollRef.current;
+    if (!container) {
+      setViewMode(mode);
+      return;
+    }
+    const currentScroll = container.scrollTop;
+    flushSync(() => {
+      setViewMode(mode);
+    });
+    container.scrollTop = currentScroll;
+  }, []);
 
   const handleLikeToggle = useCallback((postId: string) => {
     if (!authUser?.id) return;
@@ -237,10 +242,14 @@ const Profile = () => {
   }, [authUser?.id, loadProfileData]);
 
   const handleGridItemClick = (postId: string) => {
-    setViewMode('list');
+    const container = scrollRef.current;
+    const currentScroll = container?.scrollTop ?? 0;
+    flushSync(() => {
+      setViewMode('list');
+    });
+    if (container) container.scrollTop = currentScroll;
     setTimeout(() => {
       const element = document.getElementById(`post-${postId}`);
-      const container = scrollRef.current;
       if (element && container) {
         const containerTop = container.getBoundingClientRect().top;
         const elementTop = element.getBoundingClientRect().top;
@@ -271,20 +280,16 @@ const Profile = () => {
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number, post: Post) => {
     e.stopPropagation();
     if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return;
-    // zoom은 전달하지 않음 → 현재 사용자가 보고 있는 지도 레벨 그대로 유지
     sessionStorage.setItem('pendingMapFocus', JSON.stringify({ lat, lng, postId: post.id }));
     navigate('/', { state: { post, center: { lat, lng } } });
   }, [navigate]);
 
   const handleViewOnMap = () => {
-    // 좌표가 있는 첫 번째 포스팅 찾기
     const postWithCoords = myPosts.find(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng));
     if (postWithCoords) {
-      // zoom은 전달하지 않음 → 현재 지도 레벨 유지
       sessionStorage.setItem('pendingMapFocus', JSON.stringify({ lat: postWithCoords.lat, lng: postWithCoords.lng, postId: postWithCoords.id }));
       navigate('/', { state: { post: postWithCoords, center: { lat: postWithCoords.lat, lng: postWithCoords.lng } } });
     } else {
-      // 좌표 있는 포스팅이 없으면 그냥 지도로 이동
       navigate('/');
     }
   };
@@ -296,7 +301,6 @@ const Profile = () => {
     }
   };
 
-  // auth 로딩 중에만 전체 스피너 표시 (데이터 로딩은 skeleton으로 처리)
   if (authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -304,17 +308,6 @@ const Profile = () => {
       </div>
     );
   }
-
-  const handleTabChange = useCallback((mode: 'grid' | 'list' | 'saved') => {
-    const container = scrollRef.current;
-    if (!container) { setViewMode(mode); return; }
-    // 현재 스크롤 위치 저장 후 동일하게 복원
-    const currentScroll = container.scrollTop;
-    setViewMode(mode);
-    requestAnimationFrame(() => {
-      container.scrollTop = currentScroll;
-    });
-  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-white" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
@@ -408,7 +401,7 @@ const Profile = () => {
               {/* 저장됨 탭 */}
               <div className={viewMode === 'saved' ? undefined : 'hidden'}>
                 {savedPosts.map((post) => (
-                  <div key={post.id} id={`post-${post.id}`}>
+                  <div key={post.id} id={`post-saved-${post.id}`}>
                     <PostItem
                       post={post}
                       disablePulse={true}
@@ -423,7 +416,7 @@ const Profile = () => {
                 )}
               </div>
 
-              {/* 그리드/리스트 탭 */}
+              {/* 그리드/리스트 탭 — 항상 렌더링, hidden으로 숨김 */}
               <div className={viewMode === 'saved' ? 'hidden' : undefined}>
                 <div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors">
                   <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
@@ -432,7 +425,7 @@ const Profile = () => {
                   <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
                 </div>
 
-                {/* 리스트 뷰 */}
+                {/* 리스트 뷰 — 항상 렌더링 */}
                 <div className={viewMode === 'list' ? undefined : 'hidden'}>
                   {myPosts.map((post) => (
                     <div key={post.id} id={`post-${post.id}`}>
@@ -448,7 +441,7 @@ const Profile = () => {
                   ))}
                 </div>
 
-                {/* 그리드 뷰 */}
+                {/* 그리드 뷰 — 항상 렌더링 */}
                 <div className={viewMode === 'grid' ? 'grid grid-cols-3 gap-1 px-6' : 'hidden'}>
                   {myPosts.map((post) => (
                     <div
