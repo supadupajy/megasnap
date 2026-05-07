@@ -313,15 +313,14 @@ const Index = () => {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // 인디케이터 상단 오프셋: 트렌딩 패널이 접혀있을 때의 고정 높이 사용
-  // (isTrendingExpanded 시 trendingBottom이 커지면 인디케이터가 밀리므로 고정값 사용)
+  // 인디케이터 상단 오프셋: 트렌딩 패널 접힌 상태의 높이를 최초 1회만 기록
+  // 이후 패널 펼침/닫힘 애니메이션 중에도 값이 변하지 않도록 고정
   const collapsedTrendingBottomRef = useRef<number>(0);
   useEffect(() => {
-    // 접혀있을 때만 기준값 갱신
-    if (!isTrendingExpanded) {
+    if (collapsedTrendingBottomRef.current === 0 && trendingBottom > 0) {
       collapsedTrendingBottomRef.current = trendingBottom;
     }
-  }, [trendingBottom, isTrendingExpanded]);
+  }, [trendingBottom]);
   const indicatorTopOffset = (collapsedTrendingBottomRef.current || trendingBottom) + 8;
   // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 여유
   const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 8;
