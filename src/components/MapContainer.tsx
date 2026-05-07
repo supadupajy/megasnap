@@ -1658,7 +1658,7 @@ const MapContainer = ({
         id="kakao-map"
         className="w-full h-full select-none"
         style={{ position: 'relative' }}
-      />
+      ></div>
     </div>
   );
 };
