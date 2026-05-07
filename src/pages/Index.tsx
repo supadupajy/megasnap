@@ -180,9 +180,8 @@ const Index = () => {
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
   // routeState로 위치가 지정된 경우 focusPostOnMap에서 setMapCenter를 호출 → 부드러운 smoothMoveTo
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  // 지도 이동 중 여부 — 이동 중에는 인디케이터를 숨겨 생겼다 사라지는 현상 방지
-  const [isMapMoving, setIsMapMoving] = useState(false);
-  const mapMovingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 포스트 fetch가 완료된 시점의 안정적인 bounds (인디케이터 계산 기준)
+  const [stableBounds, setStableBounds] = useState<any>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
 
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -468,6 +467,8 @@ const Index = () => {
           mapCache.posts = combined;
           return combined;
         });
+        // 포스트 fetch 완료 후 stableBounds 업데이트 → 인디케이터가 이 시점부터 새 bounds 기준으로 표시
+        setStableBounds(mapData.bounds);
       } catch (err) {
         if (!cancelled) console.error('[Index] fetch error:', err);
       }
@@ -491,11 +492,12 @@ const Index = () => {
   }, [selectedCategories]);
 
   // 클라이언트 계산: displayedMarkers 기반 (각도 클러스터링)
+  // stableBounds 사용 → 포스트 fetch 완료 후에만 업데이트 (이동 중 깜빡임 방지)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
-    if (!mapData?.bounds || currentZoom >= 7) return null;
+    if (!stableBounds || currentZoom >= 7) return null;
     if (!useClientSideCounts) return null;
 
-    const { sw, ne } = mapData.bounds;
+    const { sw, ne } = stableBounds;
     const centerLat = (sw.lat + ne.lat) / 2;
     const centerLng = (sw.lng + ne.lng) / 2;
     const latRange = ne.lat - sw.lat;
@@ -542,21 +544,17 @@ const Index = () => {
       leftPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLng<0&&Math.abs(dLng)>=Math.abs(dLat); }),
       rightPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLng>=0&&dLng>Math.abs(dLat); }),
     };
-  }, [displayedMarkers, mapData?.bounds, currentZoom, useClientSideCounts]);
+  }, [displayedMarkers, stableBounds, currentZoom, useClientSideCounts]);
 
   // DB 쿼리 기반 카운트 (all/카테고리/mine)
+  // stableBounds 사용 → 포스트 fetch 완료 후에만 업데이트 (이동 중 깜빡임 방지)
   useEffect(() => {
-    if (useClientSideCounts) return; // 클라이언트 계산 사용 시 스킵
-    if (!mapData?.bounds || currentZoom >= 7) {
-      return;
-    }
-
-    // bounds가 바뀌면 즉시 null로 리셋 → 이전 위치의 인디케이터가 잠깐 나타나는 현상 방지
-    setOffScreenCounts(null);
+    if (useClientSideCounts) return;
+    if (!stableBounds || currentZoom >= 7) return;
 
     let cancelled = false;
     const fetchCounts = async () => {
-      const counts = await fetchOffScreenCounts(mapData.bounds, {
+      const counts = await fetchOffScreenCounts(stableBounds, {
         categories: selectedCategories,
         userId: authUser?.id || null,
       });
@@ -565,10 +563,10 @@ const Index = () => {
     fetchCounts();
     return () => { cancelled = true; };
   }, [
-    mapData?.bounds?.sw?.lat,
-    mapData?.bounds?.sw?.lng,
-    mapData?.bounds?.ne?.lat,
-    mapData?.bounds?.ne?.lng,
+    stableBounds?.sw?.lat,
+    stableBounds?.sw?.lng,
+    stableBounds?.ne?.lat,
+    stableBounds?.ne?.lng,
     currentZoom,
     selectedCategories,
     authUser?.id,
@@ -822,10 +820,6 @@ const Index = () => {
       return;
     }
 
-    // 지도 이동 시작 → 인디케이터 즉시 숨김
-    setIsMapMoving(true);
-    if (mapMovingTimerRef.current) clearTimeout(mapMovingTimerRef.current);
-
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
     throttleTimer.current = setTimeout(() => {
       // currentZoom과 mapData를 동시에 업데이트하여 bounds 불일치 방지
@@ -839,11 +833,6 @@ const Index = () => {
         tempAdLocationRef.current = data.center;
       }
       throttleTimer.current = null;
-      // 지도 이동 완료 후 인디케이터 다시 표시 (약간의 여유 시간 후)
-      mapMovingTimerRef.current = setTimeout(() => {
-        setIsMapMoving(false);
-        mapMovingTimerRef.current = null;
-      }, 400);
     }, 300);
   }, []);
 
@@ -1359,10 +1348,10 @@ const Index = () => {
         }}
       >
         {/* 화면 밖 마커 방향 표시 - overflow-hidden 밖에 fixed로 배치 */}
-        {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && !isMapMoving && (
+        {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
           <div className="fixed inset-0 z-[25] pointer-events-none">
             <OffScreenMarkerIndicator
-              bounds={mapData?.bounds || null}
+              bounds={stableBounds || null}
               onClickDirection={(dir, pts) => {
                 const c = mapDataRef.current?.center || mapCenter;
                 if (!c || pts.length === 0) return;
