@@ -12,7 +12,7 @@ interface HeatmapOverlayProps {
 }
 
 // 히트맵 1개 포인트의 영향 반경 (실제 지리 거리, 미터)
-const HEATMAP_RADIUS_METERS = 600;
+const HEATMAP_RADIUS_METERS = 1800;
 
 // 색상 팔레트: 하늘색(낮음) → 노란색 → 주황색 → 빨간색(높음)
 const PALETTE: Array<[number, [number, number, number, number]]> = [
@@ -120,7 +120,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
           const distSq = dx * dx + dy * dy;
           if (distSq > sRadius * sRadius) continue;
           const t = Math.sqrt(distSq) / sRadius;
-          buf[py * SW + px] += Math.exp(-3.5 * t * t);
+          buf[py * SW + px] += Math.exp(-2.0 * t * t);
         }
       }
     }
