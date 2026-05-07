@@ -41,6 +41,24 @@ const EDGE_MARGIN = 14;
 const avg = (pts: { lat: number; lng: number }[], axis: 'lat' | 'lng', fallback: number) =>
   pts.length > 0 ? pts.reduce((s, p) => s + p[axis], 0) / pts.length : fallback;
 
+// 인디케이터 중심(스크린 좌표)에서 가장 가까운 마커를 반환
+function nearestPoint(
+  pts: { lat: number; lng: number }[],
+  indX: number, indY: number,
+  toScreenX: (lng: number) => number,
+  toScreenY: (lat: number) => number,
+): { lat: number; lng: number } {
+  let best = pts[0];
+  let bestDist = Infinity;
+  for (const p of pts) {
+    const dx = toScreenX(p.lng) - indX;
+    const dy = toScreenY(p.lat) - indY;
+    const d = dx * dx + dy * dy;
+    if (d < bestDist) { bestDist = d; best = p; }
+  }
+  return best;
+}
+
 // 계산 로직만 분리 (순수 함수)
 function computeIndicators(
   allPoints: { lat: number; lng: number }[],
@@ -103,8 +121,9 @@ function computeIndicators(
   const getAngleDeg = (dir: Direction, pts: { lat: number; lng: number }[]): number | null => {
     if (pts.length === 0) return null;
     const ind = indCenter[dir];
-    const mX = toScreenX(avg(pts, 'lng', centerLng));
-    const mY = toScreenY(avg(pts, 'lat', centerLat));
+    const nearest = nearestPoint(pts, ind.x, ind.y, toScreenX, toScreenY);
+    const mX = toScreenX(nearest.lng);
+    const mY = toScreenY(nearest.lat);
     return (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
   };
   const angleDiff = (a: number, b: number) => {
@@ -139,8 +158,9 @@ function computeIndicators(
     .map(dir => {
       const pts = merged[dir];
       const ind = indCenter[dir];
-      const mX = toScreenX(avg(pts, 'lng', centerLng));
-      const mY = toScreenY(avg(pts, 'lat', centerLat));
+      const nearest = nearestPoint(pts, ind.x, ind.y, toScreenX, toScreenY);
+      const mX = toScreenX(nearest.lng);
+      const mY = toScreenY(nearest.lat);
       const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
       return {
         dir,
