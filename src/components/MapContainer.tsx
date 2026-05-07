@@ -1600,21 +1600,14 @@ const MapContainer = ({
           }}
         >
           {/* 히트맵 범례 */}
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 500 }}>적음</span>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}>
-            <div style={{
-              width: '60px',
-              height: '8px',
-              borderRadius: '4px',
-              background: 'linear-gradient(to right, #ffff50, #ff8200, #c80000)',
-            }} />
-          </div>
-          <span style={{ color: 'white', fontSize: '12px', fontWeight: 600, letterSpacing: '0.02em' }}>
-            포스팅 밀도
-          </span>
+            width: '64px',
+            height: '8px',
+            borderRadius: '4px',
+            background: 'linear-gradient(to right, #64d2ff, #ffee30, #ff8c00, #c80000)',
+          }} />
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 500 }}>많음</span>
         </div>
       )}
 

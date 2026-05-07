@@ -7,7 +7,7 @@ interface HeatmapPoint {
 
 interface HeatmapOverlayProps {
   points: HeatmapPoint[];
-  mapInstance: any; // kakao map instance
+  mapInstance: any;
   visible: boolean;
 }
 
@@ -27,10 +27,8 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
 
-    const mapEl = map.getNode ? map.getNode() : canvas.parentElement;
     const W = canvas.width;
     const H = canvas.height;
-
     if (W === 0 || H === 0) return;
 
     const latRange = ne.getLat() - sw.getLat();
@@ -51,26 +49,27 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     // 지도 레벨에 따라 반경 조정
     const level = map.getLevel();
-    const radius = Math.max(30, Math.min(120, level * 14));
+    const radius = Math.max(40, Math.min(160, level * 18));
 
-    // 오프스크린 캔버스에 가우시안 블러 히트맵 그리기
+    // ── Step 1: 오프스크린 캔버스에 강도 맵 그리기 (흑백) ──
     const offscreen = document.createElement('canvas');
     offscreen.width = W;
     offscreen.height = H;
     const offCtx = offscreen.getContext('2d');
     if (!offCtx) return;
 
-    // 각 포인트에 방사형 그라디언트 그리기 (흑백 강도 맵)
     offCtx.globalCompositeOperation = 'source-over';
+
     for (const point of points) {
       const { x, y } = toPixel(point.lat, point.lng);
-      // 화면 밖 포인트는 스킵 (약간의 여유 허용)
       if (x < -radius || x > W + radius || y < -radius || y > H + radius) continue;
 
       const gradient = offCtx.createRadialGradient(x, y, 0, x, y, radius);
-      gradient.addColorStop(0, 'rgba(255,255,255,0.35)');
-      gradient.addColorStop(0.4, 'rgba(255,255,255,0.15)');
-      gradient.addColorStop(1, 'rgba(255,255,255,0)');
+      // 중심은 강하게, 가장자리는 0으로
+      gradient.addColorStop(0,   'rgba(255,255,255,0.9)');
+      gradient.addColorStop(0.3, 'rgba(255,255,255,0.5)');
+      gradient.addColorStop(0.7, 'rgba(255,255,255,0.15)');
+      gradient.addColorStop(1,   'rgba(255,255,255,0)');
 
       offCtx.fillStyle = gradient;
       offCtx.beginPath();
@@ -78,22 +77,32 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       offCtx.fill();
     }
 
-    // 강도 맵을 컬러 히트맵으로 변환
+    // ── Step 2: 강도 맵 픽셀 읽기 + 최대값 정규화 ──
     const imageData = offCtx.getImageData(0, 0, W, H);
     const data = imageData.data;
 
-    // 컬러 팔레트: 투명 → 노란색 → 주황 → 빨간색
-    // intensity 0~1 → color
-    const getColor = (intensity: number): [number, number, number, number] => {
-      if (intensity < 0.01) return [0, 0, 0, 0];
+    // 최대 강도값 찾기 (정규화 기준)
+    let maxVal = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] > maxVal) maxVal = data[i];
+    }
 
-      // 팔레트 정의 (intensity 구간별 색상)
+    if (maxVal === 0) return; // 아무것도 없으면 종료
+
+    // ── Step 3: 색상 팔레트 적용 ──
+    // 하늘색(낮음) → 노란색 → 주황색 → 빨간색(높음)
+    // intensity 0~1 기준
+    const getColor = (intensity: number): [number, number, number, number] => {
+      if (intensity < 0.01) return [0, 0, 0, 0]; // 완전 투명
+
+      // 팔레트: [threshold, [R, G, B, A]]
       const palette: Array<[number, [number, number, number, number]]> = [
-        [0.0,  [255, 255,  80, 0]],    // 투명 노란색
-        [0.15, [255, 255,  80, 120]],  // 노란색
-        [0.35, [255, 200,  20, 180]],  // 진한 노란색
-        [0.55, [255, 130,   0, 210]],  // 주황색
-        [0.75, [255,  50,   0, 230]],  // 주황-빨간
+        [0.0,  [100, 210, 255,   0]],  // 하늘색 투명
+        [0.08, [100, 210, 255, 140]],  // 하늘색
+        [0.25, [ 80, 200, 240, 180]],  // 하늘색 진하게
+        [0.45, [255, 240,  50, 210]],  // 노란색
+        [0.65, [255, 140,   0, 225]],  // 주황색
+        [0.82, [255,  50,   0, 235]],  // 주황-빨간
         [1.0,  [200,   0,   0, 245]],  // 진한 빨간색
       ];
 
@@ -101,7 +110,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         const [t0, c0] = palette[i];
         const [t1, c1] = palette[i + 1];
         if (intensity >= t0 && intensity <= t1) {
-          const t = (intensity - t0) / (t1 - t0);
+          const t = (t1 === t0) ? 0 : (intensity - t0) / (t1 - t0);
           return [
             Math.round(c0[0] + (c1[0] - c0[0]) * t),
             Math.round(c0[1] + (c1[1] - c0[1]) * t),
@@ -114,9 +123,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     };
 
     for (let i = 0; i < data.length; i += 4) {
-      const intensity = data[i] / 255; // R 채널을 강도로 사용
+      // 최대값으로 정규화 → 실제 밀도에 비례한 강도
+      const rawIntensity = data[i] / maxVal;
+      // 감마 보정: 낮은 밀도 영역을 더 잘 보이게
+      const intensity = Math.pow(rawIntensity, 0.6);
       const [r, g, b, a] = getColor(intensity);
-      data[i] = r;
+      data[i]     = r;
       data[i + 1] = g;
       data[i + 2] = b;
       data[i + 3] = a;
@@ -125,16 +137,15 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     ctx.putImageData(imageData, 0, 0);
   }, [points, mapInstance]);
 
-  // 캔버스 크기를 지도 컨테이너에 맞게 조정
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !mapInstance) return;
 
-    const mapNode = canvas.parentElement;
-    if (!mapNode) return;
+    const parent = canvas.parentElement;
+    if (!parent) return;
 
-    const W = mapNode.offsetWidth;
-    const H = mapNode.offsetHeight;
+    const W = parent.offsetWidth;
+    const H = parent.offsetHeight;
 
     if (canvas.width !== W || canvas.height !== H) {
       canvas.width = W;
@@ -143,7 +154,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     drawHeatmap();
   }, [drawHeatmap, mapInstance]);
 
-  // 지도 이벤트에 연결
   useEffect(() => {
     if (!mapInstance || !visible) return;
     const kakao = (window as any).kakao;
@@ -161,7 +171,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     kakao.maps.event.addListener(mapInstance, 'drag', handleUpdate);
     kakao.maps.event.addListener(mapInstance, 'dragend', handleUpdate);
 
-    // 초기 렌더
     handleUpdate();
 
     return () => {
@@ -173,7 +182,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     };
   }, [mapInstance, visible, resizeCanvas]);
 
-  // points 변경 시 재렌더
   useEffect(() => {
     if (!visible) return;
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -182,7 +190,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     });
   }, [points, visible, resizeCanvas]);
 
-  // ResizeObserver로 컨테이너 크기 변경 감지
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -209,8 +216,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         height: '100%',
         pointerEvents: 'none',
         zIndex: 100,
-        opacity: 1,
-        transition: 'opacity 0.4s ease',
       }}
     />
   );
