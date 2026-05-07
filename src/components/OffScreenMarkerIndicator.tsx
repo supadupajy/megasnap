@@ -35,13 +35,16 @@ function useWindowSize() {
   return size;
 }
 
-const S = 52;
-const EDGE_MARGIN = 14;
-// 물방울 안 숫자(원) 중심 — 회전 기준점
-const CIRCLE_CY = S / 2 + 6; // 32
+// 물방울 SVG 치수
+const S = 52;           // 버튼 크기
+const CX = S / 2;       // 수평 중심: 26
+const R = 15;           // 원 반지름
+const TIP_Y = 3;        // 꼭지점 Y
+const CIRCLE_CY = S / 2 + 6; // 원(숫자) 중심 Y: 32 — 회전 기준점
 
-// 지도 중심(lat/lng)에서 가장 가까운 마커를 반환
-// → 클릭 시 이동하는 마커(Index.tsx의 onClickDirection 로직)와 동일한 기준
+const EDGE_MARGIN = 14; // 화면 가장자리 여백
+
+// 지도 중심(lat/lng)에서 가장 가까운 마커 — 클릭 시 이동 대상과 동일
 function nearestToMapCenter(
   pts: { lat: number; lng: number }[],
   centerLat: number,
@@ -50,9 +53,7 @@ function nearestToMapCenter(
   let best = pts[0];
   let bestDist = Infinity;
   for (const p of pts) {
-    const dlat = p.lat - centerLat;
-    const dlng = p.lng - centerLng;
-    const d = dlat * dlat + dlng * dlng;
+    const d = (p.lat - centerLat) ** 2 + (p.lng - centerLng) ** 2;
     if (d < bestDist) { bestDist = d; best = p; }
   }
   return best;
@@ -67,35 +68,31 @@ function computeIndicators(
 ): IndicatorState[] {
   const midX = screenW / 2;
   const midY = (topSafeY + (screenH - bottomSafeY)) / 2;
-  const cx = S / 2; // 26 — 수평 중심
 
   const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + midX;
   const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
 
-  // 회전 기준점(CIRCLE_CY)이 가장자리에 딱 붙도록 배치
-  // top 인디케이터: CIRCLE_CY가 topSafeY에 위치 → top = topSafeY - CIRCLE_CY
-  // bottom 인디케이터: CIRCLE_CY가 (screenH - bottomSafeY)에 위치 → top = screenH - bottomSafeY - CIRCLE_CY
-  // left/right: CIRCLE_CY가 수직 중앙에 위치 → top = midY - CIRCLE_CY
+  // 회전 기준점(CIRCLE_CY)이 가장자리에 딱 붙도록 버튼 배치
+  // 버튼 left/top = (원하는 기준점 화면좌표) - (버튼 내 기준점 오프셋)
   const positions: Record<Direction, { left: number; top: number }> = {
-    top:    { left: midX - cx,              top: topSafeY - CIRCLE_CY },
-    bottom: { left: midX - cx,              top: screenH - bottomSafeY - CIRCLE_CY },
-    left:   { left: EDGE_MARGIN - cx,       top: midY - CIRCLE_CY },
-    right:  { left: screenW - EDGE_MARGIN - cx, top: midY - CIRCLE_CY },
+    top:    { left: midX - CX,                    top: topSafeY - CIRCLE_CY },
+    bottom: { left: midX - CX,                    top: screenH - bottomSafeY - CIRCLE_CY },
+    left:   { left: EDGE_MARGIN - CX,             top: midY - CIRCLE_CY },
+    right:  { left: screenW - EDGE_MARGIN - CX,   top: midY - CIRCLE_CY },
   };
 
-  // 각도 계산 기준점: 버튼 내 회전 중심의 실제 화면 좌표
+  // 각도 계산 기준: 버튼 내 회전 중심의 실제 화면 좌표
   const indCenter: Record<Direction, { x: number; y: number }> = {
-    top:    { x: midX,                          y: topSafeY },
-    bottom: { x: midX,                          y: screenH - bottomSafeY },
-    left:   { x: EDGE_MARGIN,                   y: midY },
-    right:  { x: screenW - EDGE_MARGIN,         y: midY },
+    top:    { x: midX,                  y: topSafeY },
+    bottom: { x: midX,                  y: screenH - bottomSafeY },
+    left:   { x: EDGE_MARGIN,           y: midY },
+    right:  { x: screenW - EDGE_MARGIN, y: midY },
   };
 
-  // 45도 섹터 기반 분류
+  // 45도 섹터 분류
   const classified: Record<Direction, { lat: number; lng: number }[]> = {
     top: [], bottom: [], left: [], right: [],
   };
-
   for (const p of allPoints) {
     const dLat = (p.lat - centerLat) / latRange;
     const dLng = (p.lng - centerLng) / lngRange;
@@ -114,89 +111,89 @@ function computeIndicators(
       const mX = toScreenX(rep.lng);
       const mY = toScreenY(rep.lat);
       const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
-      return {
-        dir,
-        angleDeg,
-        count: pts.length,
-        pts,
-        left: positions[dir].left,
-        top: positions[dir].top,
-      };
+      return { dir, angleDeg, count: pts.length, pts, left: positions[dir].left, top: positions[dir].top };
     });
 }
 
-// ── 개별 인디케이터 컴포넌트 ──────────────────────────────────────
+// 물방울 path (상수)
+const DROP_PATH = [
+  `M ${CX} ${TIP_Y}`,
+  `C ${CX - 9} ${TIP_Y + 12}, ${CX - R} ${CIRCLE_CY - R * 0.55}, ${CX - R} ${CIRCLE_CY}`,
+  `A ${R} ${R} 0 1 0 ${CX + R} ${CIRCLE_CY}`,
+  `C ${CX + R} ${CIRCLE_CY - R * 0.55}, ${CX + 9} ${TIP_Y + 12}, ${CX} ${TIP_Y}`,
+  'Z',
+].join(' ');
+
+// ── 개별 인디케이터 ───────────────────────────────────────────────
 const DropIndicator: React.FC<{
   state: IndicatorState;
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
 }> = ({ state, onClickDirection }) => {
   const { dir, angleDeg, count, pts, left, top } = state;
 
-  // 등장 애니메이션 (마운트 시 1회)
+  // 등장 애니메이션
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const t = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // 각도: 패닝 중 중간값은 무시하고 멈춘 후 최종값으로만 애니메이션
-  // accAngleRef: 실제 CSS에 적용되는 누적 각도 (최단경로 회전 보장)
+  // 각도: 패닝 중 중간값 무시, 멈춘 후 최종값으로만 회전
   const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
   const isFirstRender = useRef(true);
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingAngleRef = useRef<number>(angleDeg);
 
   useEffect(() => {
     if (isFirstRender.current) {
-      // 최초 마운트: transition 없이 즉시 세팅
       isFirstRender.current = false;
       accAngleRef.current = angleDeg;
       pendingAngleRef.current = angleDeg;
       setDisplayAngle(angleDeg);
       return;
     }
-
-    // 최신 목표 각도를 저장해두고
     pendingAngleRef.current = angleDeg;
-
-    // 이전 디바운스 취소
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-
-    // 300ms 후 패닝이 멈추면 그때 최종값으로 애니메이션
-    debounceTimerRef.current = setTimeout(() => {
-      debounceTimerRef.current = null;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
       const target = pendingAngleRef.current;
       const current = accAngleRef.current;
-      const currentNorm = ((current % 360) + 360) % 360;
-      const targetNorm = ((target % 360) + 360) % 360;
-      let delta = targetNorm - currentNorm;
+      const curNorm = ((current % 360) + 360) % 360;
+      const tgtNorm = ((target % 360) + 360) % 360;
+      let delta = tgtNorm - curNorm;
       if (delta > 180) delta -= 360;
       if (delta < -180) delta += 360;
-      // 변화가 5도 미만이면 애니메이션 생략 (미세 떨림 방지)
       if (Math.abs(delta) < 5) return;
       accAngleRef.current = current + delta;
       setDisplayAngle(accAngleRef.current);
     }, 300);
-
-    return () => {
-      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    };
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [angleDeg]);
 
-  const cx = S / 2;
-  const circleCy = CIRCLE_CY;
-  const r = 15;
-  const tipY = 3;
-  const dropPath = [
-    `M ${cx} ${tipY}`,
-    `C ${cx - 9} ${tipY + 12}, ${cx - r} ${circleCy - r * 0.55}, ${cx - r} ${circleCy}`,
-    `A ${r} ${r} 0 1 0 ${cx + r} ${circleCy}`,
-    `C ${cx + r} ${circleCy - r * 0.55}, ${cx + 9} ${tipY + 12}, ${cx} ${tipY}`,
-    'Z',
-  ].join(' ');
+  // 숫자: 패닝 중 변동 무시, 멈춘 후 최종값으로만 업데이트
+  const [displayCount, setDisplayCount] = useState(count);
+  const pendingCountRef = useRef<number>(count);
+  const countDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstCountRender = useRef(true);
 
-  const label = count > 999 ? '999+' : String(count);
+  useEffect(() => {
+    if (isFirstCountRender.current) {
+      isFirstCountRender.current = false;
+      setDisplayCount(count);
+      pendingCountRef.current = count;
+      return;
+    }
+    pendingCountRef.current = count;
+    if (countDebounceRef.current) clearTimeout(countDebounceRef.current);
+    countDebounceRef.current = setTimeout(() => {
+      countDebounceRef.current = null;
+      setDisplayCount(pendingCountRef.current);
+    }, 300);
+    return () => { if (countDebounceRef.current) clearTimeout(countDebounceRef.current); };
+  }, [count]);
+
+  const label = displayCount > 999 ? '999+' : String(displayCount);
   const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
 
   return (
@@ -216,56 +213,27 @@ const DropIndicator: React.FC<{
         left: `${left}px`,
         top: `${top}px`,
         opacity: mounted ? 1 : 0,
-        // 등장 시: scale + rotate 동시 적용
-        // 이후: rotate만 transition (scale은 고정 1)
         transform: `scale(${mounted ? 1 : 0.5}) rotate(${displayAngle}deg)`,
-        transformOrigin: `${cx}px ${circleCy}px`,
-        transition: mounted
-          ? 'opacity 0.3s ease, transform 0.35s ease-out'
-          : 'none',
+        transformOrigin: `${CX}px ${CIRCLE_CY}px`,
+        transition: mounted ? 'opacity 0.3s ease, transform 0.35s ease-out' : 'none',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
         willChange: 'transform',
       }}
     >
-      <svg
-        width={S}
-        height={S}
-        viewBox={`0 0 ${S} ${S}`}
-        style={{ display: 'block', overflow: 'visible' }}
-      >
+      <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
         <defs>
-          <clipPath id={`drop-clip-${dir}`}>
-            <path d={dropPath} />
-          </clipPath>
+          <clipPath id={`drop-clip-${dir}`}><path d={DROP_PATH} /></clipPath>
         </defs>
         <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-${dir})`}>
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              background: 'rgba(255,255,255,0.8)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-            }}
-          />
+          <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
         </foreignObject>
-        <path
-          d={dropPath}
-          fill="none"
-          stroke="rgba(255,255,255,0.7)"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
+        <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
         <text
-          x={cx}
-          y={circleCy}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={fontSize}
-          fontWeight="900"
-          fill="rgb(79,70,229)"
+          x={CX} y={CIRCLE_CY}
+          textAnchor="middle" dominantBaseline="central"
+          fontSize={fontSize} fontWeight="900" fill="rgb(79,70,229)"
           fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-          transform={`rotate(${-displayAngle}, ${cx}, ${circleCy})`}
+          transform={`rotate(${-displayAngle}, ${CX}, ${CIRCLE_CY})`}
           style={{ transition: 'transform 0.35s ease-out' }}
         >
           {label}
@@ -275,10 +243,8 @@ const DropIndicator: React.FC<{
   );
 };
 
-// ── 사라지는 인디케이터 ────────────────────────────────────────────
-const FadingIndicator: React.FC<{
-  state: IndicatorState;
-}> = ({ state }) => {
+// ── 사라지는 인디케이터 ───────────────────────────────────────────
+const FadingIndicator: React.FC<{ state: IndicatorState }> = ({ state }) => {
   const [opacity, setOpacity] = useState(1);
   const [alive, setAlive] = useState(true);
 
@@ -290,18 +256,6 @@ const FadingIndicator: React.FC<{
 
   if (!alive) return null;
 
-  const cx = S / 2;
-  const circleCy = CIRCLE_CY;
-  const r = 15;
-  const tipY = 3;
-  const dropPath = [
-    `M ${cx} ${tipY}`,
-    `C ${cx - 9} ${tipY + 12}, ${cx - r} ${circleCy - r * 0.55}, ${cx - r} ${circleCy}`,
-    `A ${r} ${r} 0 1 0 ${cx + r} ${circleCy}`,
-    `C ${cx + r} ${circleCy - r * 0.55}, ${cx + 9} ${tipY + 12}, ${cx} ${tipY}`,
-    'Z',
-  ].join(' ');
-
   const label = state.count > 999 ? '999+' : String(state.count);
   const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
 
@@ -309,34 +263,26 @@ const FadingIndicator: React.FC<{
     <button
       style={{
         position: 'fixed',
-        padding: 0,
-        background: 'none',
-        border: 'none',
-        cursor: 'default',
-        pointerEvents: 'none',
-        zIndex: 8999,
-        width: `${S}px`,
-        height: `${S}px`,
-        left: `${state.left}px`,
-        top: `${state.top}px`,
+        padding: 0, background: 'none', border: 'none',
+        cursor: 'default', pointerEvents: 'none', zIndex: 8999,
+        width: `${S}px`, height: `${S}px`,
+        left: `${state.left}px`, top: `${state.top}px`,
         opacity,
         transform: `scale(${opacity < 0.5 ? 0.7 : 1}) rotate(${state.angleDeg}deg)`,
-        transformOrigin: `${cx}px ${circleCy}px`,
+        transformOrigin: `${CX}px ${CIRCLE_CY}px`,
         transition: 'opacity 0.3s ease, transform 0.3s ease',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
       }}
     >
       <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
         <defs>
-          <clipPath id={`drop-clip-fading-${state.dir}`}>
-            <path d={dropPath} />
-          </clipPath>
+          <clipPath id={`drop-clip-fading-${state.dir}`}><path d={DROP_PATH} /></clipPath>
         </defs>
         <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-fading-${state.dir})`}>
           <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
         </foreignObject>
-        <path d={dropPath} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
-        <text x={cx} y={circleCy} textAnchor="middle" dominantBaseline="central" fontSize={fontSize} fontWeight="900" fill="rgb(79,70,229)" fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" transform={`rotate(${-state.angleDeg}, ${cx}, ${circleCy})`}>{label}</text>
+        <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
+        <text x={CX} y={CIRCLE_CY} textAnchor="middle" dominantBaseline="central" fontSize={fontSize} fontWeight="900" fill="rgb(79,70,229)" fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" transform={`rotate(${-state.angleDeg}, ${CX}, ${CIRCLE_CY})`}>{label}</text>
       </svg>
     </button>
   );
@@ -344,14 +290,9 @@ const FadingIndicator: React.FC<{
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
-  bounds,
-  onClickDirection,
-  topOffset,
-  bottomOffset,
-  dbCounts,
+  bounds, onClickDirection, topOffset, bottomOffset, dbCounts,
 }) => {
   const { w: screenW, h: screenH } = useWindowSize();
-
   const topSafeY = typeof topOffset === 'number' ? topOffset : 160;
   const bottomSafeY = bottomOffset;
 
@@ -373,7 +314,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     );
   }, [dbCounts, bounds, screenW, screenH, topSafeY, bottomSafeY]);
 
-  // 사라지는 인디케이터 추적
   const prevRef = useRef<IndicatorState[]>([]);
   const [fadingItems, setFadingItems] = useState<{ id: number; state: IndicatorState }[]>([]);
   const fadingIdRef = useRef(0);
@@ -386,21 +326,15 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
       const newFading = disappeared.map(s => ({ id: fadingIdRef.current++, state: s }));
       setFadingItems(f => [...f, ...newFading]);
       const ids = newFading.map(f => f.id);
-      setTimeout(() => {
-        setFadingItems(f => f.filter(item => !ids.includes(item.id)));
-      }, 420);
+      setTimeout(() => setFadingItems(f => f.filter(item => !ids.includes(item.id))), 420);
     }
     prevRef.current = indicators;
   }, [indicators]);
 
   return (
     <>
-      {fadingItems.map(({ id, state }) => (
-        <FadingIndicator key={`fading-${id}`} state={state} />
-      ))}
-      {indicators.map(state => (
-        <DropIndicator key={state.dir} state={state} onClickDirection={onClickDirection} />
-      ))}
+      {fadingItems.map(({ id, state }) => <FadingIndicator key={`fading-${id}`} state={state} />)}
+      {indicators.map(state => <DropIndicator key={state.dir} state={state} onClickDirection={onClickDirection} />)}
     </>
   );
 };
