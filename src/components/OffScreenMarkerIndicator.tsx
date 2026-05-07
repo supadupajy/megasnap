@@ -280,7 +280,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
                   style={{
                     width: '100%',
                     height: '100%',
-                    background: 'rgba(255,255,255,0.22)',
+                    background: 'rgba(255,255,255,0.65)',
                     backdropFilter: 'blur(12px)',
                     WebkitBackdropFilter: 'blur(12px)',
                   }}
