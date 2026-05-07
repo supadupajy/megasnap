@@ -47,70 +47,74 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     if (points.length === 0) return;
 
-    // 지도 레벨에 따라 반경 조정
     const level = map.getLevel();
     const radius = Math.max(40, Math.min(160, level * 18));
 
-    // ── Step 1: 오프스크린 캔버스에 강도 맵 그리기 (흑백) ──
-    const offscreen = document.createElement('canvas');
-    offscreen.width = W;
-    offscreen.height = H;
-    const offCtx = offscreen.getContext('2d');
-    if (!offCtx) return;
+    // ── Step 1: 화면 안에 있는 포인트만 필터링 ──
+    const visiblePoints = points.filter(p => {
+      const { x, y } = toPixel(p.lat, p.lng);
+      return x >= -radius && x <= W + radius && y >= -radius && y <= H + radius;
+    });
 
-    offCtx.globalCompositeOperation = 'source-over';
+    if (visiblePoints.length === 0) return;
 
-    for (const point of points) {
-      const { x, y } = toPixel(point.lat, point.lng);
-      if (x < -radius || x > W + radius || y < -radius || y > H + radius) continue;
+    // ── Step 2: Float32 강도 누적 버퍼 (픽셀당 실제 강도 합산) ──
+    // 각 포인트가 기여하는 강도를 직접 float 버퍼에 누적
+    // → 정규화를 "최대값" 기준이 아닌 "포인트 수" 기준으로 할 수 있음
+    const intensityBuf = new Float32Array(W * H);
 
-      const gradient = offCtx.createRadialGradient(x, y, 0, x, y, radius);
-      // 중심은 강하게, 가장자리는 0으로
-      gradient.addColorStop(0,   'rgba(255,255,255,0.9)');
-      gradient.addColorStop(0.3, 'rgba(255,255,255,0.5)');
-      gradient.addColorStop(0.7, 'rgba(255,255,255,0.15)');
-      gradient.addColorStop(1,   'rgba(255,255,255,0)');
+    for (const point of visiblePoints) {
+      const { x: cx, y: cy } = toPixel(point.lat, point.lng);
 
-      offCtx.fillStyle = gradient;
-      offCtx.beginPath();
-      offCtx.arc(x, y, radius, 0, Math.PI * 2);
-      offCtx.fill();
+      const x0 = Math.max(0, Math.floor(cx - radius));
+      const x1 = Math.min(W - 1, Math.ceil(cx + radius));
+      const y0 = Math.max(0, Math.floor(cy - radius));
+      const y1 = Math.min(H - 1, Math.ceil(cy + radius));
+
+      for (let py = y0; py <= y1; py++) {
+        for (let px = x0; px <= x1; px++) {
+          const dx = px - cx;
+          const dy = py - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > radius) continue;
+
+          // 가우시안 감쇠: 중심 1.0, 가장자리 0
+          const t = dist / radius;
+          const weight = Math.exp(-3.5 * t * t); // 가우시안 커널
+          intensityBuf[py * W + px] += weight;
+        }
+      }
     }
 
-    // ── Step 2: 강도 맵 픽셀 읽기 + 최대값 정규화 ──
-    const imageData = offCtx.getImageData(0, 0, W, H);
-    const data = imageData.data;
+    // ── Step 3: 절대적 포인트 수 기반 상한값 설정 ──
+    // 포인트 1개가 중심에서 기여하는 최대값 ≈ 1.0 (exp(0) = 1)
+    // 포인트 N개가 완전히 겹치면 최대값 ≈ N
+    // → 상한값을 포인트 수에 비례하되, 최소 3 이상으로 설정
+    //   (포인트 1개면 상한 3 → 중심 강도 1/3 ≈ 0.33 → 하늘색~노란색 사이)
+    const maxPossible = Math.max(3, visiblePoints.length * 0.6);
 
-    // 최대 강도값 찾기 (정규화 기준)
-    let maxVal = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (data[i] > maxVal) maxVal = data[i];
-    }
-
-    if (maxVal === 0) return; // 아무것도 없으면 종료
-
-    // ── Step 3: 색상 팔레트 적용 ──
+    // ── Step 4: 색상 팔레트 적용 ──
     // 하늘색(낮음) → 노란색 → 주황색 → 빨간색(높음)
-    // intensity 0~1 기준
     const getColor = (intensity: number): [number, number, number, number] => {
-      if (intensity < 0.01) return [0, 0, 0, 0]; // 완전 투명
+      if (intensity < 0.005) return [0, 0, 0, 0];
 
-      // 팔레트: [threshold, [R, G, B, A]]
       const palette: Array<[number, [number, number, number, number]]> = [
         [0.0,  [100, 210, 255,   0]],  // 하늘색 투명
-        [0.08, [100, 210, 255, 140]],  // 하늘색
-        [0.25, [ 80, 200, 240, 180]],  // 하늘색 진하게
-        [0.45, [255, 240,  50, 210]],  // 노란색
-        [0.65, [255, 140,   0, 225]],  // 주황색
-        [0.82, [255,  50,   0, 235]],  // 주황-빨간
+        [0.05, [100, 210, 255, 130]],  // 하늘색
+        [0.25, [ 60, 190, 240, 180]],  // 하늘색 진하게
+        [0.45, [255, 235,  40, 210]],  // 노란색
+        [0.65, [255, 130,   0, 225]],  // 주황색
+        [0.82, [255,  40,   0, 235]],  // 주황-빨간
         [1.0,  [200,   0,   0, 245]],  // 진한 빨간색
       ];
+
+      const clamped = Math.min(intensity, 1.0);
 
       for (let i = 0; i < palette.length - 1; i++) {
         const [t0, c0] = palette[i];
         const [t1, c1] = palette[i + 1];
-        if (intensity >= t0 && intensity <= t1) {
-          const t = (t1 === t0) ? 0 : (intensity - t0) / (t1 - t0);
+        if (clamped >= t0 && clamped <= t1) {
+          const t = (t1 === t0) ? 0 : (clamped - t0) / (t1 - t0);
           return [
             Math.round(c0[0] + (c1[0] - c0[0]) * t),
             Math.round(c0[1] + (c1[1] - c0[1]) * t),
@@ -122,16 +126,25 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       return [200, 0, 0, 245];
     };
 
-    for (let i = 0; i < data.length; i += 4) {
-      // 최대값으로 정규화 → 실제 밀도에 비례한 강도
-      const rawIntensity = data[i] / maxVal;
-      // 감마 보정: 낮은 밀도 영역을 더 잘 보이게
-      const intensity = Math.pow(rawIntensity, 0.6);
+    // ── Step 5: ImageData에 색상 쓰기 ──
+    const imageData = ctx.createImageData(W, H);
+    const data = imageData.data;
+
+    for (let i = 0; i < intensityBuf.length; i++) {
+      const raw = intensityBuf[i];
+      if (raw < 0.001) continue;
+
+      // 절대적 상한값으로 정규화
+      const normalized = Math.min(raw / maxPossible, 1.0);
+      // 감마 보정: 낮은 밀도도 색상이 잘 보이게
+      const intensity = Math.pow(normalized, 0.7);
+
       const [r, g, b, a] = getColor(intensity);
-      data[i]     = r;
-      data[i + 1] = g;
-      data[i + 2] = b;
-      data[i + 3] = a;
+      const idx = i * 4;
+      data[idx]     = r;
+      data[idx + 1] = g;
+      data[idx + 2] = b;
+      data[idx + 3] = a;
     }
 
     ctx.putImageData(imageData, 0, 0);
