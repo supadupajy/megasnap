@@ -47,11 +47,11 @@ function useWindowSize() {
 
 // SVG 치수
 const S = 52;
-const CX = S / 2;             // 26 — 수평 중심
+const CX = S / 2;             // 26
 const R = 15;
 const TIP_Y = 3;
 const CIRCLE_CY = S / 2 + 6; // 32 — 원(숫자) 중심, 회전 기준점
-const EDGE = 10;              // 좌우 가장자리 여백
+const EDGE = 10;
 
 const DROP_PATH = [
   `M ${CX} ${TIP_Y}`,
@@ -88,14 +88,7 @@ function computeIndicators(
   const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + midX;
   const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
 
-  // 버튼 배치: 항상 화면 안에 있도록
-  // transformOrigin은 버튼 내 원 중심(CX, CIRCLE_CY) 기준
-  //
-  // top:    버튼 상단 = topSafeY,  원 중심 화면Y = topSafeY + CIRCLE_CY
-  // bottom: 버튼 하단 = screenH - bottomSafeY,  top = screenH - bottomSafeY - S
-  //         원 중심 화면Y = (screenH - bottomSafeY - S) + CIRCLE_CY
-  // left:   버튼 좌측 = EDGE, 원 중심 화면X = EDGE + CX
-  // right:  버튼 우측 = screenW - EDGE, left = screenW - EDGE - S, 원 중심 화면X = screenW - EDGE - S + CX
+  // 각 인디케이터 버튼의 화면 배치 (left/top은 버튼 좌상단)
   const btnPos: Record<Direction, { left: number; top: number }> = {
     top:    { left: midX - CX,          top: topSafeY },
     bottom: { left: midX - CX,          top: screenH - bottomSafeY - S },
@@ -103,7 +96,7 @@ function computeIndicators(
     right:  { left: screenW - EDGE - S, top: midY - CIRCLE_CY },
   };
 
-  // 각도 계산 기준: 버튼 내 원 중심의 실제 화면 좌표
+  // 회전·각도 계산 기준: 버튼 내 원 중심의 실제 화면 좌표
   const indCenter: Record<Direction, { x: number; y: number }> = {
     top:    { x: midX,                      y: topSafeY + CIRCLE_CY },
     bottom: { x: midX,                      y: screenH - bottomSafeY - S + CIRCLE_CY },
@@ -142,6 +135,7 @@ function computeIndicators(
 }
 
 // ── 개별 인디케이터 ───────────────────────────────────────────────
+// 구조: 외부 컨테이너(위치 고정) > 회전하는 물방울 SVG + 회전하지 않는 숫자 텍스트
 const DropIndicator: React.FC<{
   state: IndicatorState;
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
@@ -154,7 +148,7 @@ const DropIndicator: React.FC<{
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // 각도 디바운스 (패닝 중 중간값 무시)
+  // 각도 디바운스
   const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
   const isFirstAngle = useRef(true);
@@ -212,50 +206,71 @@ const DropIndicator: React.FC<{
   const label = displayCount > 999 ? '999+' : String(displayCount);
   const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
 
+  const containerStyle: React.CSSProperties = {
+    position: 'fixed',
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${S}px`,
+    height: `${S}px`,
+    zIndex: 9000,
+    pointerEvents: 'auto',
+    cursor: 'pointer',
+    opacity: mounted ? 1 : 0,
+    transform: `scale(${mounted ? 1 : 0.5})`,
+    transition: 'opacity 0.3s ease, transform 0.35s ease-out',
+  };
+
+  // 회전하는 물방울 레이어
+  const dropStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    transform: `rotate(${displayAngle}deg)`,
+    transformOrigin: `${originX}px ${originY}px`,
+    transition: 'transform 0.35s ease-out',
+    filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
+    willChange: 'transform',
+    pointerEvents: 'none',
+  };
+
+  // 고정된 숫자 레이어 — 원의 중심에 절대 위치, 회전 없음
+  const textStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: `${S}px`,
+    height: `${S}px`,
+    pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingTop: `${CIRCLE_CY - fontSize / 2 - 1}px`,
+    fontSize: `${fontSize}px`,
+    fontWeight: 900,
+    color: 'rgb(79,70,229)',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    lineHeight: 1,
+  };
+
   return (
-    <button
+    <div
+      role="button"
       onClick={() => onClickDirection(dir, pts)}
       onMouseDown={e => e.stopPropagation()}
-      style={{
-        position: 'fixed',
-        padding: 0, background: 'none', border: 'none',
-        cursor: 'pointer', zIndex: 9000, pointerEvents: 'auto',
-        width: `${S}px`, height: `${S}px`,
-        left: `${left}px`, top: `${top}px`,
-        opacity: mounted ? 1 : 0,
-        // 물방울 전체를 원 중심 기준으로 회전
-        transform: `scale(${mounted ? 1 : 0.5}) rotate(${displayAngle}deg)`,
-        transformOrigin: `${originX}px ${originY}px`,
-        transition: mounted ? 'opacity 0.3s ease, transform 0.35s ease-out' : 'none',
-        filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
-        willChange: 'transform',
-      }}
+      style={containerStyle}
     >
-      <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
-        <defs>
-          <clipPath id={`drop-clip-${dir}`}><path d={DROP_PATH} /></clipPath>
-        </defs>
-        {/* 물방울 배경 */}
-        <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-${dir})`}>
-          <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
-        </foreignObject>
-        <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
-        {/* 숫자: 버튼 회전을 정확히 상쇄 → 항상 정립 */}
-        <text
-          x={CX}
-          y={CIRCLE_CY}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={fontSize}
-          fontWeight="900"
-          fill="rgb(79,70,229)"
-          fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-          transform={`rotate(${-displayAngle} ${originX} ${originY})`}
-        >
-          {label}
-        </text>
-      </svg>
-    </button>
+      <div style={dropStyle}>
+        <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
+          <defs>
+            <clipPath id={`drop-clip-${dir}`}><path d={DROP_PATH} /></clipPath>
+          </defs>
+          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-${dir})`}>
+            <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
+          </foreignObject>
+          <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <div style={textStyle}>{label}</div>
+    </div>
   );
 };
 
@@ -275,40 +290,60 @@ const FadingIndicator: React.FC<{ state: IndicatorState }> = ({ state }) => {
   const label = state.count > 999 ? '999+' : String(state.count);
   const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
 
+  const containerStyle: React.CSSProperties = {
+    position: 'fixed',
+    left: `${state.left}px`,
+    top: `${state.top}px`,
+    width: `${S}px`,
+    height: `${S}px`,
+    zIndex: 8999,
+    pointerEvents: 'none',
+    opacity,
+    transform: `scale(${opacity < 0.5 ? 0.7 : 1})`,
+    transition: 'opacity 0.3s ease, transform 0.3s ease',
+  };
+
+  const dropStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    transform: `rotate(${state.angleDeg}deg)`,
+    transformOrigin: `${state.originX}px ${state.originY}px`,
+    filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
+  };
+
+  const textStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: `${S}px`,
+    height: `${S}px`,
+    pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingTop: `${CIRCLE_CY - fontSize / 2 - 1}px`,
+    fontSize: `${fontSize}px`,
+    fontWeight: 900,
+    color: 'rgb(79,70,229)',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    lineHeight: 1,
+  };
+
   return (
-    <button
-      style={{
-        position: 'fixed',
-        padding: 0, background: 'none', border: 'none',
-        cursor: 'default', pointerEvents: 'none', zIndex: 8999,
-        width: `${S}px`, height: `${S}px`,
-        left: `${state.left}px`, top: `${state.top}px`,
-        opacity,
-        transform: `scale(${opacity < 0.5 ? 0.7 : 1}) rotate(${state.angleDeg}deg)`,
-        transformOrigin: `${state.originX}px ${state.originY}px`,
-        transition: 'opacity 0.3s ease, transform 0.3s ease',
-        filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
-      }}
-    >
-      <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
-        <defs>
-          <clipPath id={`drop-clip-fading-${state.dir}`}><path d={DROP_PATH} /></clipPath>
-        </defs>
-        <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-fading-${state.dir})`}>
-          <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
-        </foreignObject>
-        <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
-        <text
-          x={CX} y={CIRCLE_CY}
-          textAnchor="middle" dominantBaseline="central"
-          fontSize={fontSize} fontWeight="900" fill="rgb(79,70,229)"
-          fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-          transform={`rotate(${-state.angleDeg} ${state.originX} ${state.originY})`}
-        >
-          {label}
-        </text>
-      </svg>
-    </button>
+    <div style={containerStyle}>
+      <div style={dropStyle}>
+        <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
+          <defs>
+            <clipPath id={`drop-clip-fading-${state.dir}`}><path d={DROP_PATH} /></clipPath>
+          </defs>
+          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-fading-${state.dir})`}>
+            <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
+          </foreignObject>
+          <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <div style={textStyle}>{label}</div>
+    </div>
   );
 };
 
@@ -319,7 +354,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const { w: screenW, h: screenH } = useWindowSize();
 
   const topSafeY = typeof topOffset === 'number' ? topOffset : 160;
-  const bottomSafeY = bottomOffset;
+  // 하단은 BottomNav + safe-area + 추가 여유로 충분히 띄움
+  const bottomSafeY = bottomOffset + 8;
 
   const indicators = React.useMemo(() => {
     if (!dbCounts || !bounds) return [];

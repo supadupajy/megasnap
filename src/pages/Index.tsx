@@ -322,8 +322,9 @@ const Index = () => {
     }
   }, [trendingBottom]);
   const indicatorTopOffset = (collapsedTrendingBottomRef.current || trendingBottom) + 8;
-  // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 여유
-  const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 8;
+  // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 충분한 여유
+  // 물방울 마커 높이(52px)가 BottomNav에 가려지지 않도록 16px 추가 여유
+  const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 16;
 
   // ── 포스트 매핑 헬퍼 ────────────────────────────────────────
   const mapRawToPost = (p: any, prev?: Post | null): Post => {
