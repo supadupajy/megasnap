@@ -221,7 +221,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: 100,
+        zIndex: 10,
       }}
     />
   );
