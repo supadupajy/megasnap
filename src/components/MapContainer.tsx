@@ -5,6 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
+import HeatmapOverlay from '@/components/HeatmapOverlay';
 
 interface MapContainerProps {
   posts: any[];
@@ -43,6 +44,7 @@ const MapContainer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [currentLevel, setCurrentLevel] = useState<number>(6);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
+  const [mapInstanceState, setMapInstanceState] = useState<any>(null);
 
   // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
   const [uiState, setUiState] = useState<'idle' | 'pressing' | 'hidden'>('idle');
@@ -477,6 +479,7 @@ const MapContainer = ({
       });
       map.setMaxLevel(11);
       mapInstance.current = map;
+      setMapInstanceState(map);
 
       const updateZoomClass = () => {
         const lvl = map.getLevel();
@@ -1575,7 +1578,7 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 레벨 7 이상 안내 메시지 */}
+      {/* 레벨 7 이상 히트맵 안내 메시지 */}
       {level >= 7 && (
         <div
           style={{
@@ -1591,13 +1594,26 @@ const MapContainer = ({
             background: 'rgba(0,0,0,0.65)',
             backdropFilter: 'blur(8px)',
             borderRadius: '20px',
-            padding: '10px 18px',
+            padding: '8px 16px',
             boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
             whiteSpace: 'nowrap',
           }}
         >
-          <span style={{ color: 'white', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
-            포스팅 마커가 보이지 않는 화면 입니다.
+          {/* 히트맵 범례 */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}>
+            <div style={{
+              width: '60px',
+              height: '8px',
+              borderRadius: '4px',
+              background: 'linear-gradient(to right, #ffff50, #ff8200, #c80000)',
+            }} />
+          </div>
+          <span style={{ color: 'white', fontSize: '12px', fontWeight: 600, letterSpacing: '0.02em' }}>
+            포스팅 밀도
           </span>
         </div>
       )}
@@ -1639,7 +1655,17 @@ const MapContainer = ({
         ref={containerRef}
         id="kakao-map"
         className="w-full h-full select-none"
-      />
+        style={{ position: 'relative' }}
+      >
+        {/* 히트맵 오버레이: 레벨 7 이상에서만 표시 */}
+        <HeatmapOverlay
+          points={posts
+            .filter(p => p.lat != null && p.lng != null)
+            .map(p => ({ lat: p.lat, lng: p.lng }))}
+          mapInstance={mapInstanceState}
+          visible={level >= 7}
+        />
+      </div>
     </div>
   );
 };
