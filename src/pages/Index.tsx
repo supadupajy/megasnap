@@ -545,10 +545,11 @@ const Index = () => {
   useEffect(() => {
     if (useClientSideCounts) return; // 클라이언트 계산 사용 시 스킵
     if (!mapData?.bounds || currentZoom >= 7) {
-      // null로 즉시 리셋하지 않음 → 깜빡임 방지
-      // zoom >= 7이 되면 인디케이터 자체가 숨겨지므로 null 불필요
       return;
     }
+
+    // bounds가 바뀌면 즉시 null로 리셋 → 이전 위치의 인디케이터가 잠깐 나타나는 현상 방지
+    setOffScreenCounts(null);
 
     let cancelled = false;
     const fetchCounts = async () => {
@@ -572,6 +573,7 @@ const Index = () => {
   ]);
 
   // 클라이언트 계산 카운트는 별도 effect로 setOffScreenCounts에 반영
+  // clientOffScreenCounts가 null이면 즉시 null로 리셋 (bounds 변경 시 이전 인디케이터 제거)
   useEffect(() => {
     if (!useClientSideCounts) return;
     setOffScreenCounts(clientOffScreenCounts);
