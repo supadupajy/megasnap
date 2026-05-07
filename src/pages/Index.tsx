@@ -313,8 +313,16 @@ const Index = () => {
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // 인디케이터 상단 오프셋: 트렌딩 패널 하단 + 여유
-  const indicatorTopOffset = trendingBottom + 8;
+  // 인디케이터 상단 오프셋: 트렌딩 패널이 접혀있을 때의 고정 높이 사용
+  // (isTrendingExpanded 시 trendingBottom이 커지면 인디케이터가 밀리므로 고정값 사용)
+  const collapsedTrendingBottomRef = useRef<number>(0);
+  useEffect(() => {
+    // 접혀있을 때만 기준값 갱신
+    if (!isTrendingExpanded) {
+      collapsedTrendingBottomRef.current = trendingBottom;
+    }
+  }, [trendingBottom, isTrendingExpanded]);
+  const indicatorTopOffset = (collapsedTrendingBottomRef.current || trendingBottom) + 8;
   // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 여유
   const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 8;
 
