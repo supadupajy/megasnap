@@ -55,7 +55,7 @@ function useWindowSize() {
 const S = 52;
 const CX = S / 2;             // 26
 const R = 15;
-const TIP_Y = 10;             // 꼭짓점 위치 (높을수록 꼬리 짧아짐)
+const TIP_Y = 12;             // 꼭짓점 위치 (높을수록 꼬리 짧아짐)
 const CIRCLE_CY = S / 2 + 2; // 28 — 원(숫자) 중심, 회전 기준점
 const EDGE = 10;
 
