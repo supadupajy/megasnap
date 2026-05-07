@@ -417,12 +417,12 @@ const PostListOverlay = ({
 
   return (
     <motion.div
-      initial={{ scale: 0.85, opacity: 0 }}
+      initial={{ scale: 0.95, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.85, opacity: 0 }}
+      exit={{ scale: 0.95, opacity: 0 }}
       transition={{
         type: 'tween',
-        duration: 0.35,
+        duration: 0.2,
         ease: [0.42, 0, 1, 1] // ease-in cubic-bezier
       }}
       style={{ willChange: 'transform, opacity', transformOrigin: 'center center', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
