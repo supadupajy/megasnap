@@ -1508,7 +1508,6 @@ const Index = () => {
                   <span className="text-[9px] font-black mt-1">새로고침</span>
                 </button>
                 <div className="relative">
-                  {displayedPostCount > 0 && currentZoom < 7 && <div className="absolute inset-2 -m-1 bg-indigo-400/30 rounded-[30px] animate-ping pointer-events-none" />}
                   <button
                     ref={viewAllBtnRef}
                     onClick={() => {
