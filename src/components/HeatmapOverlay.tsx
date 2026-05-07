@@ -126,6 +126,10 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
     if (maxVal === 0) return;
 
+    // 가장자리 페이드아웃용: 각 픽셀에서 가장 가까운 포인트까지의 거리 비율
+    // → 버퍼값이 낮은 외곽 영역의 알파를 추가로 감쇠시켜 테두리를 부드럽게
+    const FADE_THRESHOLD = 0.08; // 이 강도 이하부터 페이드 시작
+
     // 다운샘플 버퍼 → 실제 캔버스 크기로 업스케일 렌더링
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
@@ -137,16 +141,21 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         const raw = buf[sy * SW + sx];
         if (raw < 0.001) continue;
 
-        // 실제 최댓값 기준으로 정규화 → 포인트 1개여도 중심은 빨강, 가장자리는 하늘색
         const normalized = raw / maxVal;
-        // 감마 보정으로 중간 색상 범위를 더 넓게 표현
         const intensity = Math.pow(normalized, 0.6);
         const [r, g, b, a] = getColor(intensity);
+
+        // 외곽 영역(normalized < FADE_THRESHOLD)은 알파를 0까지 부드럽게 감쇠
+        const edgeFade = normalized < FADE_THRESHOLD
+          ? normalized / FADE_THRESHOLD
+          : 1.0;
+        const finalAlpha = Math.round(a * edgeFade);
+
         const idx = (fy * W + fx) * 4;
         data[idx]     = r;
         data[idx + 1] = g;
         data[idx + 2] = b;
-        data[idx + 3] = a;
+        data[idx + 3] = finalAlpha;
       }
     }
 
