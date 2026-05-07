@@ -235,7 +235,7 @@ const DropIndicator: React.FC<{
             style={{
               width: '100%',
               height: '100%',
-              background: 'rgba(255,255,255,0.65)',
+              background: 'rgba(255,255,255,0.8)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
             }}
