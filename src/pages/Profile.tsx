@@ -248,6 +248,14 @@ const Profile = () => {
     }, 150);
   };
 
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    const scrollTop = scrollRef.current?.scrollTop ?? 0;
+    setViewMode(mode);
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollTop });
+    });
+  };
+
   const handleImageError = useCallback((postId: string) => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
     setSavedPosts(prev => prev.filter(p => p.id !== postId));
@@ -368,14 +376,15 @@ const Profile = () => {
             <div ref={postListStartRef} className="flex border-b border-gray-100 mb-4">
               <div className={cn("flex-1 flex flex-col border-b-2 transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-indigo-600" : "border-transparent")}>
                 <button
-                  onClick={() => setViewMode('grid')}
-                  className={cn("flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all border-b border-gray-100", viewMode === 'grid' ? "text-indigo-600" : "text-gray-300")}
+                  onClick={() => handleViewModeChange('grid')}
+                  className={cn("flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all", viewMode === 'grid' ? "text-indigo-600" : "text-gray-300")}
                 >
                   <LayoutGrid className="w-4 h-4" />
                   <span className="text-xs font-bold">그리드</span>
                 </button>
+                <div className="mx-auto w-3/4 h-px bg-gray-100" />
                 <button
-                  onClick={() => setViewMode('list')}
+                  onClick={() => handleViewModeChange('list')}
                   className={cn("flex-1 py-2.5 flex items-center justify-center gap-1.5 transition-all", viewMode === 'list' ? "text-indigo-600" : "text-gray-300")}
                 >
                   <List className="w-4 h-4" />
@@ -446,6 +455,7 @@ const Profile = () => {
                             <img src={post.image_url || post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={() => handleImageError(post.id)} />
                           )}
                           {post.videoUrl && (
+
 
                             <div className="absolute top-2 right-2 z-10">
                               <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
