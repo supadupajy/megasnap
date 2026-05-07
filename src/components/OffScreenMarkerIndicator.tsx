@@ -67,20 +67,6 @@ const DROP_PATH = [
   'Z',
 ].join(' ');
 
-function nearestToMapCenter(
-  pts: { lat: number; lng: number }[],
-  centerLat: number,
-  centerLng: number,
-): { lat: number; lng: number } {
-  let best = pts[0];
-  let bestDist = Infinity;
-  for (const p of pts) {
-    const d = (p.lat - centerLat) ** 2 + (p.lng - centerLng) ** 2;
-    if (d < bestDist) { bestDist = d; best = p; }
-  }
-  return best;
-}
-
 function computeIndicators(
   allPoints: { lat: number; lng: number }[],
   centerLat: number, centerLng: number,
@@ -108,17 +94,42 @@ function computeIndicators(
     right:  { x: screenW - EDGE - S + CX,   y: midY },
   };
 
+  // 각 인디케이터의 "기본 방향" (인디케이터에서 마커를 가리킬 때의 0도 방향)
+  // top: 위(-y), bottom: 아래(+y), left: 왼쪽(-x), right: 오른쪽(+x)
+  const dirVec: Record<Direction, { x: number; y: number }> = {
+    top:    { x: 0, y: -1 },
+    bottom: { x: 0, y:  1 },
+    left:   { x: -1, y: 0 },
+    right:  { x:  1, y: 0 },
+  };
+
+  // 분류: 각 마커를 "인디케이터 위치에서 본 각도가 ±45° 안에 들어오는" 방향에 배정
+  // 여러 후보가 있으면 각도 차이가 가장 작은 인디케이터 선택
+  // → 화살표가 항상 인디케이터 기본 방향에서 ±45° 이내로 유지됨
   const classified: Record<Direction, { lat: number; lng: number }[]> = {
     top: [], bottom: [], left: [], right: [],
   };
   for (const p of allPoints) {
-    // 픽셀 좌표 기준으로 방향 분류 (lat/lng 비율 왜곡 방지)
-    const px = toScreenX(p.lng) - midX;
-    const py = toScreenY(p.lat) - (screenH / 2);
-    if      (py <= 0 && Math.abs(py) >= Math.abs(px))  classified.top.push(p);
-    else if (py > 0  && Math.abs(py) > Math.abs(px))   classified.bottom.push(p);
-    else if (px <= 0 && Math.abs(px) > Math.abs(py))   classified.left.push(p);
-    else                                                classified.right.push(p);
+    const sx = toScreenX(p.lng);
+    const sy = toScreenY(p.lat);
+
+    let bestDir: Direction = 'top';
+    let bestDot = -Infinity; // dot product가 클수록 각도가 작음 (cos 기준)
+    (['top', 'bottom', 'left', 'right'] as Direction[]).forEach(dir => {
+      const ind = indCenter[dir];
+      const vx = sx - ind.x;
+      const vy = sy - ind.y;
+      const len = Math.hypot(vx, vy);
+      if (len < 1e-6) return;
+      const nx = vx / len;
+      const ny = vy / len;
+      const v = dirVec[dir];
+      const dot = nx * v.x + ny * v.y; // cos(θ)
+      if (dot > bestDot) { bestDot = dot; bestDir = dir; }
+    });
+    // bestDot이 cos(45°)≈0.707보다 작으면 어떤 방향에도 ±45° 안에 안 들어오는 것이지만,
+    // 화면 밖 마커는 어딘가엔 배정되어야 하므로 가장 가까운 방향에 그대로 배정
+    classified[bestDir].push(p);
   }
 
   return (['top', 'bottom', 'left', 'right'] as Direction[])
@@ -127,7 +138,17 @@ function computeIndicators(
       const pts = classified[dir];
       const ind = indCenter[dir];
       const pos = btnPos[dir];
-      const rep = nearestToMapCenter(pts, centerLat, centerLng);
+
+      // 대표 마커: 인디케이터 위치에서 가장 가까운 마커 (화살표 방향이 자연스럽게 인디케이터 기본 방향과 정렬됨)
+      let rep = pts[0];
+      let bestDist = Infinity;
+      for (const p of pts) {
+        const dx = toScreenX(p.lng) - ind.x;
+        const dy = toScreenY(p.lat) - ind.y;
+        const d = dx * dx + dy * dy;
+        if (d < bestDist) { bestDist = d; rep = p; }
+      }
+
       const mX = toScreenX(rep.lng);
       const mY = toScreenY(rep.lat);
       const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
