@@ -255,7 +255,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
               top: `${pos.top}px`,
               transform: `rotate(${angleDeg}deg)`,
               transformOrigin: `${cx}px ${S / 2}px`,
-              filter: 'drop-shadow(0 4px 12px rgba(79,70,229,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.18))',
+              filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
             }}
           >
             <svg
