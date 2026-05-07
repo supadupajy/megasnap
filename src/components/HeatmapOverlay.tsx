@@ -14,16 +14,17 @@ interface HeatmapOverlayProps {
 const HEATMAP_RADIUS_METERS = 1800;
 
 // intensity 0~1 → RGBA
-// 0: 투명, 0~0.3: 하늘색, 0.3~0.6: 노랑, 0.6~0.8: 주황, 0.8~1.0: 빨강
+// 포인트 1개 중심 → intensity ≈ 0.25 (하늘색)
+// 여러 개 겹침 → intensity 올라가며 노랑→주황→빨강
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.00, [  0, 180, 255,   0]],
-  [0.08, [ 80, 210, 255,  80]],
-  [0.20, [ 40, 190, 255, 160]],
-  [0.35, [  0, 220, 180, 190]],
-  [0.50, [255, 230,  30, 210]],
-  [0.65, [255, 140,   0, 225]],
-  [0.80, [255,  40,   0, 235]],
-  [1.00, [180,   0,   0, 245]],
+  [0.00, [  0, 180, 255,   0]],   // 완전 투명
+  [0.05, [ 60, 200, 255,  60]],   // 하늘색 시작
+  [0.20, [ 30, 190, 255, 150]],   // 하늘색
+  [0.35, [  0, 220, 160, 190]],   // 청록
+  [0.50, [255, 230,  20, 210]],   // 노랑
+  [0.65, [255, 130,   0, 225]],   // 주황
+  [0.80, [255,  30,   0, 235]],   // 빨강
+  [1.00, [160,   0,   0, 245]],   // 진빨강
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -42,7 +43,7 @@ function getColor(intensity: number): [number, number, number, number] {
       ];
     }
   }
-  return [180, 0, 0, 245];
+  return [160, 0, 0, 245];
 }
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
@@ -112,18 +113,20 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
           const dy = py - cy;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist > sRadius) continue;
-          const t = dist / sRadius; // 0(중심) ~ 1(가장자리)
-          // 선형 감쇠: 중심=1, 가장자리=0 → 자연스러운 그라데이션
-          buf[py * SW + px] += (1 - t);
+          const t = dist / sRadius; // 0(중심)~1(가장자리)
+          // 가우시안: 중심=1, 가장자리 근처=부드럽게 0
+          buf[py * SW + px] += Math.exp(-4.0 * t * t);
         }
       }
     }
 
-    // 포인트 밀집도에 따른 절대 기준값 설정
-    // 포인트 1개 중심의 최대 누적값 ≈ 1.0
-    // N개가 완전히 겹치면 ≈ N
-    // 빨강이 되려면 일정 수 이상 겹쳐야 함
-    const RED_THRESHOLD = Math.max(3, Math.ceil(points.length * 0.15));
+    // 정규화 기준:
+    // - 포인트 1개 중심의 누적값 ≈ 1.0
+    // - 이것을 intensity 0.25에 매핑 → 1개 포인트 중심 = 하늘색
+    // - intensity 1.0(빨강)이 되려면 누적값 ≈ 4.0 (약 4개 이상 겹침)
+    const SINGLE_PEAK = 1.0;   // 포인트 1개 중심의 기여값
+    const RED_AT = 4.0;        // 이 누적값에서 빨강
+    const SCALE_FACTOR = RED_AT; // buf / SCALE_FACTOR → 0~1 intensity
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
@@ -133,10 +136,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       for (let fx = 0; fx < W; fx++) {
         const sx = Math.min(SW - 1, Math.floor(fx / SCALE));
         const raw = buf[sy * SW + sx];
-        if (raw < 0.005) continue;
+        if (raw < 0.003) continue;
 
-        // RED_THRESHOLD 기준으로 정규화
-        const intensity = Math.min(raw / RED_THRESHOLD, 1.0);
+        const intensity = Math.min(raw / SCALE_FACTOR, 1.0);
         const [r, g, b, a] = getColor(intensity);
 
         const idx = (fy * W + fx) * 4;
