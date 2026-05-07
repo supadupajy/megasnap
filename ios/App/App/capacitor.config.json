@@ -8,12 +8,18 @@
 			"style": "light",
 			"resizeOnFullScreen": true
 		},
-		"Geolocation": {}
+		"Geolocation": {},
+		"StatusBar": {
+			"overlaysWebView": false,
+			"style": "DARK",
+			"backgroundColor": "#FFFFFF"
+		}
 	},
 	"packageClassList": [
 		"AppPlugin",
 		"CAPCameraPlugin",
 		"GeolocationPlugin",
-		"PushNotificationsPlugin"
+		"PushNotificationsPlugin",
+		"StatusBarPlugin"
 	]
 }

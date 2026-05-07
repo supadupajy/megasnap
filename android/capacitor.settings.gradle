@@ -13,3 +13,6 @@ project(':capacitor-geolocation').projectDir = new File('../node_modules/.pnpm/@
 
 include ':capacitor-push-notifications'
 project(':capacitor-push-notifications').projectDir = new File('../node_modules/.pnpm/@capacitor+push-notifications@8.0.3_@capacitor+core@7.6.1/node_modules/@capacitor/push-notifications/android')
+
+include ':capacitor-status-bar'
+project(':capacitor-status-bar').projectDir = new File('../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@7.6.1/node_modules/@capacitor/status-bar/android')
