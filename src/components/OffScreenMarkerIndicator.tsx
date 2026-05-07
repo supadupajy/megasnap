@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { DirectionCounts } from '@/hooks/use-supabase-posts';
 
 interface Bounds {
@@ -38,21 +38,19 @@ function useWindowSize() {
 const S = 52;
 const EDGE_MARGIN = 14;
 
-const avg = (pts: { lat: number; lng: number }[], axis: 'lat' | 'lng', fallback: number) =>
-  pts.length > 0 ? pts.reduce((s, p) => s + p[axis], 0) / pts.length : fallback;
-
-// 인디케이터 중심(스크린 좌표)에서 가장 가까운 마커를 반환
-function nearestPoint(
+// 화면 중심(midX, midY)에서 가장 가까운 마커를 반환
+// → 패닝 중에도 "대표 마커"가 안정적으로 유지됨
+function nearestToCenter(
   pts: { lat: number; lng: number }[],
-  indX: number, indY: number,
+  centerX: number, centerY: number,
   toScreenX: (lng: number) => number,
   toScreenY: (lat: number) => number,
 ): { lat: number; lng: number } {
   let best = pts[0];
   let bestDist = Infinity;
   for (const p of pts) {
-    const dx = toScreenX(p.lng) - indX;
-    const dy = toScreenY(p.lat) - indY;
+    const dx = toScreenX(p.lng) - centerX;
+    const dy = toScreenY(p.lat) - centerY;
     const d = dx * dx + dy * dy;
     if (d < bestDist) { bestDist = d; best = p; }
   }
@@ -117,20 +115,22 @@ function computeIndicators(
     classified[bestDir].push(p);
   }
 
-  // 병합: 물방울 각도 차이 < 45도인 인디케이터끼리 합침
+  // 각도 계산: 화면 중심에서 가장 가까운 마커를 대표로 사용
   const getAngleDeg = (dir: Direction, pts: { lat: number; lng: number }[]): number | null => {
     if (pts.length === 0) return null;
     const ind = indCenter[dir];
-    const nearest = nearestPoint(pts, ind.x, ind.y, toScreenX, toScreenY);
-    const mX = toScreenX(nearest.lng);
-    const mY = toScreenY(nearest.lat);
+    const rep = nearestToCenter(pts, midX, midY, toScreenX, toScreenY);
+    const mX = toScreenX(rep.lng);
+    const mY = toScreenY(rep.lat);
     return (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
   };
+
   const angleDiff = (a: number, b: number) => {
     let d = Math.abs(a - b) % 360;
     return d > 180 ? 360 - d : d;
   };
 
+  // 병합: 물방울 각도 차이 < 45도인 인디케이터끼리 합침
   const merged = { ...classified };
   for (let iter = 0; iter < 3; iter++) {
     let didMerge = false;
@@ -158,9 +158,9 @@ function computeIndicators(
     .map(dir => {
       const pts = merged[dir];
       const ind = indCenter[dir];
-      const nearest = nearestPoint(pts, ind.x, ind.y, toScreenX, toScreenY);
-      const mX = toScreenX(nearest.lng);
-      const mY = toScreenY(nearest.lat);
+      const rep = nearestToCenter(pts, midX, midY, toScreenX, toScreenY);
+      const mX = toScreenX(rep.lng);
+      const mY = toScreenY(rep.lat);
       const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
       return {
         dir,
@@ -180,19 +180,28 @@ const DropIndicator: React.FC<{
 }> = ({ state, onClickDirection }) => {
   const { dir, angleDeg, count, pts, left, top } = state;
 
-  // 등장/사라짐: opacity + scale
+  // 등장: opacity + scale
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const t = requestAnimationFrame(() => setVisible(true));
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // 각도 변화: CSS transition으로 부드럽게
-  const prevAngleRef = useRef(angleDeg);
+  // 각도 누적 추적 — 최단 경로 회전
+  // prevAngleRef는 "누적된 displayAngle" 값을 저장
+  const prevAngleRef = useRef<number | null>(null);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
-  useEffect(() => {
-    // 최단 경로 회전 (예: 350° → 10° = +20°, not -340°)
-    let delta = angleDeg - prevAngleRef.current;
+
+  useLayoutEffect(() => {
+    if (prevAngleRef.current === null) {
+      // 최초 마운트: 애니메이션 없이 즉시 세팅
+      prevAngleRef.current = angleDeg;
+      setDisplayAngle(angleDeg);
+      return;
+    }
+    // 이후 업데이트: 최단 경로로 누적
+    let delta = angleDeg - (prevAngleRef.current % 360);
+    // -180 ~ +180 범위로 정규화
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
     prevAngleRef.current = prevAngleRef.current + delta;
@@ -230,12 +239,12 @@ const DropIndicator: React.FC<{
         height: `${S}px`,
         left: `${left}px`,
         top: `${top}px`,
-        // 등장/사라짐: opacity + scale
         opacity: visible ? 1 : 0,
         transform: `scale(${visible ? 1 : 0.5}) rotate(${displayAngle}deg)`,
         transformOrigin: `${cx}px ${S / 2}px`,
-        // 각도 변화는 transform transition으로
-        transition: 'opacity 0.35s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+        transition: visible
+          ? 'opacity 0.35s ease, transform 0.4s cubic-bezier(0.34,1.56,0.64,1)'
+          : 'none',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
       }}
     >
@@ -291,12 +300,11 @@ const DropIndicator: React.FC<{
 const FadingIndicator: React.FC<{
   state: IndicatorState;
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
-}> = ({ state, onClickDirection }) => {
+}> = ({ state }) => {
   const [alive, setAlive] = useState(true);
   const [opacity, setOpacity] = useState(1);
 
   useEffect(() => {
-    // 사라질 때: opacity → 0 후 DOM 제거
     const t1 = setTimeout(() => setOpacity(0), 10);
     const t2 = setTimeout(() => setAlive(false), 400);
     return () => { clearTimeout(t1); clearTimeout(t2); };
@@ -368,7 +376,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const topSafeY = typeof topOffset === 'number' ? topOffset : 160;
   const bottomSafeY = bottomOffset;
 
-  // 현재 계산된 인디케이터 목록
   const indicators = React.useMemo(() => {
     if (!dbCounts || !bounds) return [];
     const allPoints = [
@@ -387,7 +394,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     );
   }, [dbCounts, bounds, screenW, screenH, topSafeY, bottomSafeY]);
 
-  // 이전 프레임 인디케이터 추적 (사라지는 것 감지)
+  // 사라지는 인디케이터 추적
   const prevRef = useRef<IndicatorState[]>([]);
   const [fadingItems, setFadingItems] = useState<{ id: number; state: IndicatorState }[]>([]);
   const fadingIdRef = useRef(0);
@@ -401,7 +408,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
         ...f,
         ...disappeared.map(s => ({ id: fadingIdRef.current++, state: s })),
       ]);
-      // 400ms 후 정리
       setTimeout(() => {
         setFadingItems(f => f.slice(disappeared.length));
       }, 450);
@@ -411,11 +417,9 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
 
   return (
     <>
-      {/* 사라지는 인디케이터 */}
       {fadingItems.map(({ id, state }) => (
         <FadingIndicator key={`fading-${id}`} state={state} onClickDirection={onClickDirection} />
       ))}
-      {/* 현재 인디케이터 */}
       {indicators.map(state => (
         <DropIndicator key={state.dir} state={state} onClickDirection={onClickDirection} />
       ))}
