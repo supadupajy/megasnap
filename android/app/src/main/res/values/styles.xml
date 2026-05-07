@@ -13,6 +13,10 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- 상태바 배경: 흰색 -->
+        <item name="android:statusBarColor">#FFFFFFFF</item>
+        <!-- 상태바 아이콘(시간/배터리/WiFi)을 어두운 색으로 표시 -->
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
 
