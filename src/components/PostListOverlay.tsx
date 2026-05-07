@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2, LayoutGrid, ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MapPin, MessageSquare, Clock, Filter, Loader2, LayoutGrid, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -443,9 +443,10 @@ const PostListOverlay = ({
             </div>
             <button
               onClick={onClose}
-              className="p-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
             >
-              <ChevronDown className="w-5 h-5 text-indigo-600" />
+              <X className="w-4 h-4 text-gray-900" />
+              <span className="text-sm font-normal text-gray-900">닫기</span>
             </button>
           </div>
         </div>
