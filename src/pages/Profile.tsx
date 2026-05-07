@@ -317,9 +317,13 @@ const Profile = () => {
                 <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">My Activity</p>
               </div>
             </div>
-            <div className="p-2 bg-white rounded-full shadow-sm border border-gray-100 cursor-pointer" onClick={() => navigate('/settings')}>
-              <Settings className="w-5 h-5 text-indigo-600" />
-            </div>
+            <button
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+            >
+              <Settings className="w-4 h-4 text-gray-900" />
+              <span className="text-sm font-normal text-gray-900">설정</span>
+            </button>
           </div>
         </div>
       </div>
