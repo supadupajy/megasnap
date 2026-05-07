@@ -276,19 +276,19 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
     >
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
         {post.rank === 1 ? (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black leading-none" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>
             1
           </span>
         ) : post.rank === 2 ? (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black leading-none" style={{ background: 'linear-gradient(135deg, #9ca3af, #6b7280)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #9ca3af, #6b7280)', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>
             2
           </span>
         ) : post.rank === 3 ? (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black leading-none" style={{ background: 'linear-gradient(135deg, #cd7f32, #a0522d)' }}>
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #cd7f32, #a0522d)', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>
             3
           </span>
         ) : (
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-white text-[11px] font-black leading-none">
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: '#374151', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>
             {post.rank}
           </span>
         )}
@@ -652,13 +652,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   className="shrink-0 flex items-center justify-center mr-1"
                 >
                   {currentPost?.rank === 1 ? (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black leading-none" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>1</span>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>1</span>
                   ) : currentPost?.rank === 2 ? (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black leading-none" style={{ background: 'linear-gradient(135deg, #9ca3af, #6b7280)' }}>2</span>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #9ca3af, #6b7280)', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>2</span>
                   ) : currentPost?.rank === 3 ? (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[11px] font-black leading-none" style={{ background: 'linear-gradient(135deg, #cd7f32, #a0522d)' }}>3</span>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: 'linear-gradient(135deg, #cd7f32, #a0522d)', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>3</span>
                   ) : (
-                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-gray-700 text-white text-[11px] font-black leading-none">{currentPost?.rank}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', borderRadius: '50%', background: '#374151', color: '#fff', fontSize: '11px', fontWeight: 900, lineHeight: 1 }}>{currentPost?.rank}</span>
                   )}
                 </motion.div>
               )}
