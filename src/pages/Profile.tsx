@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Settings,
-  Grid,
+  LayoutGrid,
+  List,
   Bookmark,
   Map,
   User as UserIcon,
@@ -366,16 +367,29 @@ const Profile = () => {
 
             <div ref={postListStartRef} className="flex border-b border-gray-100 mb-4">
               <button
-                onClick={() => setViewMode('grid')}
-                className={cn("flex-1 py-3 flex justify-center transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}
+                onClick={() => setViewMode(viewMode === 'list' ? 'grid' : (viewMode === 'grid' ? 'list' : 'grid'))}
+                className={cn("flex-1 py-3 flex flex-col items-center gap-1 transition-all", (viewMode === 'grid' || viewMode === 'list') ? "border-b-2 border-indigo-600" : "text-gray-300")}
               >
-                <Grid className={cn("w-6 h-6", (viewMode === 'grid' || viewMode === 'list') ? "text-indigo-600" : "")} />
+                <div className="flex items-center gap-1.5">
+                  {viewMode === 'list' ? (
+                    <>
+                      <LayoutGrid className="w-5 h-5 text-indigo-600" />
+                      <span className="text-xs font-bold text-indigo-600">그리드</span>
+                    </>
+                  ) : (
+                    <>
+                      <List className={cn("w-5 h-5", (viewMode === 'grid') ? "text-indigo-600" : "text-gray-300")} />
+                      <span className={cn("text-xs font-bold", (viewMode === 'grid') ? "text-indigo-600" : "text-gray-300")}>리스트</span>
+                    </>
+                  )}
+                </div>
               </button>
               <button
                 onClick={() => setViewMode('saved')}
-                className={cn("flex-1 py-3 flex justify-center transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}
+                className={cn("flex-1 py-3 flex flex-col items-center gap-1 transition-all", viewMode === 'saved' ? "border-b-2 border-indigo-600" : "text-gray-300")}
               >
-                <Bookmark className={cn("w-6 h-6", viewMode === 'saved' ? "text-indigo-600" : "")} />
+                <Bookmark className={cn("w-5 h-5", viewMode === 'saved' ? "text-indigo-600" : "")} />
+                <span className={cn("text-xs font-bold", viewMode === 'saved' ? "text-indigo-600" : "")}>저장됨</span>
               </button>
             </div>
 
