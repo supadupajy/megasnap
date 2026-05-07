@@ -261,13 +261,13 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
               width={S}
               height={S}
               viewBox={`0 0 ${S} ${S}`}
-              style={{ display: 'block', filter: 'drop-shadow(0 3px 8px rgba(0,0,0,0.22))' }}
+              style={{ display: 'block', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.30))' }}
             >
               <path
                 d={dropPath}
-                fill="rgba(255,255,255,0.35)"
-                stroke="rgba(255,255,255,0.65)"
-                strokeWidth="1.5"
+                fill="rgba(255,255,255,0.92)"
+                stroke="rgba(200,200,220,0.9)"
+                strokeWidth="1.2"
                 strokeLinejoin="round"
               />
               <text
@@ -276,8 +276,8 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
                 textAnchor="middle"
                 dominantBaseline="central"
                 fontSize={fontSize}
-                fontWeight="800"
-                fill="rgb(79,70,229)"
+                fontWeight="900"
+                fill="rgb(67,56,202)"
                 fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
                 transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
               >
