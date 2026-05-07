@@ -1644,21 +1644,21 @@ const MapContainer = ({
         </div>
       )}
 
+      {/* 히트맵 오버레이: 카카오맵 div 밖 형제 요소로 배치 → 현재위치 마커가 가려지지 않음 */}
+      <HeatmapOverlay
+        points={posts
+          .filter(p => p.lat != null && p.lng != null)
+          .map(p => ({ lat: p.lat, lng: p.lng }))}
+        mapInstance={mapInstanceState}
+        visible={level >= 7}
+        containerRef={containerRef}
+      />
       <div
         ref={containerRef}
         id="kakao-map"
         className="w-full h-full select-none"
         style={{ position: 'relative' }}
-      >
-        {/* 히트맵 오버레이: 레벨 7 이상에서만 표시 */}
-        <HeatmapOverlay
-          points={posts
-            .filter(p => p.lat != null && p.lng != null)
-            .map(p => ({ lat: p.lat, lng: p.lng }))}
-          mapInstance={mapInstanceState}
-          visible={level >= 7}
-        />
-      </div>
+      />
     </div>
   );
 };

@@ -9,22 +9,20 @@ interface HeatmapOverlayProps {
   points: HeatmapPoint[];
   mapInstance: any;
   visible: boolean;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
 const HEATMAP_RADIUS_METERS = 1800;
 
-// intensity 0~1 → RGBA
-// 포인트 1개 중심 → intensity ≈ 0.25 (하늘색)
-// 여러 개 겹침 → intensity 올라가며 노랑→주황→빨강
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.00, [  0, 180, 255,   0]],   // 완전 투명
-  [0.05, [ 60, 200, 255,  60]],   // 하늘색 시작
-  [0.20, [ 30, 190, 255, 150]],   // 하늘색
-  [0.35, [  0, 220, 160, 190]],   // 청록
-  [0.50, [255, 230,  20, 210]],   // 노랑
-  [0.65, [255, 130,   0, 225]],   // 주황
-  [0.80, [255,  30,   0, 235]],   // 빨강
-  [1.00, [160,   0,   0, 245]],   // 진빨강
+  [0.00, [  0, 180, 255,   0]],
+  [0.08, [ 80, 210, 255,  80]],
+  [0.20, [ 40, 190, 255, 160]],
+  [0.35, [  0, 220, 180, 190]],
+  [0.50, [255, 230,  30, 210]],
+  [0.65, [255, 140,   0, 225]],
+  [0.80, [255,  40,   0, 235]],
+  [1.00, [180,   0,   0, 245]],
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -43,10 +41,10 @@ function getColor(intensity: number): [number, number, number, number] {
       ];
     }
   }
-  return [160, 0, 0, 245];
+  return [180, 0, 0, 245];
 }
 
-const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
+const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible, containerRef }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
@@ -75,11 +73,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     ctx.clearRect(0, 0, W, H);
     if (points.length === 0) return;
 
-    // 지리적 거리 → 픽셀 반경 변환
     const metersPerPixel = (latRange / H) * 111320;
     const radiusPx = Math.max(20, Math.min(600, HEATMAP_RADIUS_METERS / metersPerPixel));
 
-    // 다운샘플로 성능 최적화
     const SCALE = Math.max(1, Math.min(4, Math.floor(radiusPx / 30)));
     const SW = Math.ceil(W / SCALE);
     const SH = Math.ceil(H / SCALE);
@@ -90,7 +86,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       y: (1 - (lat - sw.getLat()) / latRange) * SH,
     });
 
-    // 강도 버퍼 누적
     const buf = new Float32Array(SW * SH);
 
     const visiblePoints = points.filter(p => {
@@ -113,20 +108,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
           const dy = py - cy;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist > sRadius) continue;
-          const t = dist / sRadius; // 0(중심)~1(가장자리)
-          // 가우시안: 중심=1, 가장자리 근처=부드럽게 0
+          const t = dist / sRadius;
           buf[py * SW + px] += Math.exp(-4.0 * t * t);
         }
       }
     }
 
-    // 정규화 기준:
-    // - 포인트 1개 중심의 누적값 ≈ 1.0
-    // - 이것을 intensity 0.25에 매핑 → 1개 포인트 중심 = 하늘색
-    // - intensity 1.0(빨강)이 되려면 누적값 ≈ 4.0 (약 4개 이상 겹침)
-    // 포인트 수에 따라 동적으로 기준값 조절:
-    // - 1개: 중심이 하늘색 중간(intensity≈0.3)으로 잘 보임
-    // - 많을수록 기준이 높아져 빨강이 되기 어려워짐
     const SCALE_FACTOR = Math.max(1.5, points.length * 0.8);
 
     const imageData = ctx.createImageData(W, H);
@@ -155,17 +142,16 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !mapInstance) return;
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const W = parent.offsetWidth;
-    const H = parent.offsetHeight;
+    const container = containerRef.current;
+    if (!canvas || !mapInstance || !container) return;
+    const W = container.offsetWidth;
+    const H = container.offsetHeight;
     if (canvas.width !== W || canvas.height !== H) {
       canvas.width = W;
       canvas.height = H;
     }
     drawHeatmap();
-  }, [drawHeatmap, mapInstance]);
+  }, [drawHeatmap, mapInstance, containerRef]);
 
   useEffect(() => {
     if (!mapInstance || !visible) return;
@@ -200,14 +186,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   }, [points, visible, resizeCanvas]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const parent = canvas.parentElement;
-    if (!parent) return;
+    const container = containerRef.current;
+    if (!container) return;
     const ro = new ResizeObserver(() => resizeCanvas());
-    ro.observe(parent);
+    ro.observe(container);
     return () => ro.disconnect();
-  }, [resizeCanvas]);
+  }, [resizeCanvas, containerRef]);
 
   if (!visible) return null;
 
