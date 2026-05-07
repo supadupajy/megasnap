@@ -365,8 +365,8 @@ const Profile = () => {
 
             <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-0">프로필 편집</Button>
 
-            {/* 탭 바 — 스크롤 컨테이너 기준 sticky */}
-            <div ref={postListStartRef} className="sticky top-0 z-30 bg-white -mx-6 px-6 mb-0">
+            {/* 탭 바 */}
+            <div ref={postListStartRef} className="bg-white -mx-6 px-6 mb-0">
               <div className="flex border-b border-gray-100">
                 <button
                   onClick={() => setViewMode('grid')}
