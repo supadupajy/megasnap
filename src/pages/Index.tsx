@@ -180,8 +180,11 @@ const Index = () => {
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
   // routeState로 위치가 지정된 경우 focusPostOnMap에서 setMapCenter를 호출 → 부드러운 smoothMoveTo
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  // 포스트 fetch가 완료된 시점의 안정적인 bounds (인디케이터 계산 기준)
-  const [stableBounds, setStableBounds] = useState<any>(null);
+  // posts + bounds를 항상 동시에 업데이트 → 인디케이터 계산 시 불일치 방지
+  const [stableSnapshot, setStableSnapshot] = useState<{
+    posts: Post[];
+    bounds: any;
+  }>({ posts: [], bounds: null });
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
 
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -435,6 +438,8 @@ const Index = () => {
         const raw = await fetchPostsInBounds(expandedSw, expandedNe, currentZoom, center);
         if (cancelled) return;
 
+        // allPosts 업데이트 후 stableSnapshot을 동일 배치에서 함께 업데이트
+        // React 18 automatic batching으로 두 setState가 하나의 렌더로 합쳐짐
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
 
@@ -465,10 +470,10 @@ const Index = () => {
 
           const combined = Array.from(existingMap.values()).slice(0, 5000);
           mapCache.posts = combined;
+          // stableSnapshot도 같은 렌더 배치에서 업데이트 (React 18 automatic batching)
+          setStableSnapshot({ posts: combined, bounds: mapData.bounds });
           return combined;
         });
-        // 포스트 fetch 완료 후 stableBounds 업데이트 → 인디케이터가 이 시점부터 새 bounds 기준으로 표시
-        setStableBounds(mapData.bounds);
       } catch (err) {
         if (!cancelled) console.error('[Index] fetch error:', err);
       }
@@ -491,9 +496,9 @@ const Index = () => {
            selectedCategories.includes('influencer');
   }, [selectedCategories]);
 
-  // 클라이언트 계산: displayedMarkers 기반 (각도 클러스터링)
-  // stableBounds 사용 → 포스트 fetch 완료 후에만 업데이트 (이동 중 깜빡임 방지)
+  // 클라이언트 계산: stableSnapshot 기반 (posts + bounds 항상 동기화)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
+    const { posts: stablePosts, bounds: stableBounds } = stableSnapshot;
     if (!stableBounds || currentZoom >= 7) return null;
     if (!useClientSideCounts) return null;
 
@@ -508,7 +513,22 @@ const Index = () => {
     let leftSumLat = 0, leftSumLng = 0, rightSumLat = 0, rightSumLng = 0;
     const offScreenPoints: { lat: number; lng: number }[] = [];
 
-    displayedMarkers.forEach((post: any) => {
+    // stablePosts에서 카테고리 필터 적용 (displayedMarkers 대신)
+    const filteredStable = stablePosts.filter((post: any) => {
+      if (!post || post.lat == null || post.lng == null) return false;
+      if (blockedIds.has(post.user?.id)) return false;
+      if (post.isAd) return false;
+      if (selectedCategories.includes('friends')) return !!(post.user?.id && followingIds.has(post.user.id));
+      if (selectedCategories.includes('mine')) return !!(authUser && post.user?.id === authUser.id);
+      if (selectedCategories.includes('all')) return true;
+      const isHot = post.borderType === 'popular';
+      const isInfluencer = post.isInfluencer || ['silver', 'gold', 'diamond'].includes(post.borderType || '');
+      return selectedCategories.includes(post.category || 'none') ||
+        (selectedCategories.includes('hot') && isHot) ||
+        (selectedCategories.includes('influencer') && isInfluencer);
+    });
+
+    filteredStable.forEach((post: any) => {
       if (post.lat == null || post.lng == null) return;
       if (post.isAd) return;
       const lat = post.lat;
@@ -544,17 +564,18 @@ const Index = () => {
       leftPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLng<0&&Math.abs(dLng)>=Math.abs(dLat); }),
       rightPoints: offScreenPoints.filter(p => { const dLat=(p.lat-centerLat)/latRange, dLng=(p.lng-centerLng)/lngRange; return dLng>=0&&dLng>Math.abs(dLat); }),
     };
-  }, [displayedMarkers, stableBounds, currentZoom, useClientSideCounts]);
+  }, [stableSnapshot, currentZoom, useClientSideCounts, blockedIds, selectedCategories, authUser, followingIds]);
 
   // DB 쿼리 기반 카운트 (all/카테고리/mine)
-  // stableBounds 사용 → 포스트 fetch 완료 후에만 업데이트 (이동 중 깜빡임 방지)
+  // stableSnapshot.bounds 사용 → posts fetch 완료 후에만 업데이트
   useEffect(() => {
     if (useClientSideCounts) return;
-    if (!stableBounds || currentZoom >= 7) return;
+    const b = stableSnapshot.bounds;
+    if (!b || currentZoom >= 7) return;
 
     let cancelled = false;
     const fetchCounts = async () => {
-      const counts = await fetchOffScreenCounts(stableBounds, {
+      const counts = await fetchOffScreenCounts(b, {
         categories: selectedCategories,
         userId: authUser?.id || null,
       });
@@ -563,10 +584,10 @@ const Index = () => {
     fetchCounts();
     return () => { cancelled = true; };
   }, [
-    stableBounds?.sw?.lat,
-    stableBounds?.sw?.lng,
-    stableBounds?.ne?.lat,
-    stableBounds?.ne?.lng,
+    stableSnapshot.bounds?.sw?.lat,
+    stableSnapshot.bounds?.sw?.lng,
+    stableSnapshot.bounds?.ne?.lat,
+    stableSnapshot.bounds?.ne?.lng,
     currentZoom,
     selectedCategories,
     authUser?.id,
@@ -1351,7 +1372,7 @@ const Index = () => {
         {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
           <div className="fixed inset-0 z-[25] pointer-events-none">
             <OffScreenMarkerIndicator
-              bounds={stableBounds || null}
+              bounds={stableSnapshot.bounds || null}
               onClickDirection={(dir, pts) => {
                 const c = mapDataRef.current?.center || mapCenter;
                 if (!c || pts.length === 0) return;
