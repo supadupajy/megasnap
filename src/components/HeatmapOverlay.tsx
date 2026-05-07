@@ -127,7 +127,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     // 포인트 수에 따라 동적으로 기준값 조절:
     // - 1개: 중심이 하늘색 중간(intensity≈0.3)으로 잘 보임
     // - 많을수록 기준이 높아져 빨강이 되기 어려워짐
-    const SCALE_FACTOR = Math.max(1.5, points.length * 0.4);
+    const SCALE_FACTOR = Math.max(1.5, points.length * 1.2);
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
