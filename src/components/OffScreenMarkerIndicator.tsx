@@ -38,21 +38,20 @@ function useWindowSize() {
 const S = 52;
 const EDGE_MARGIN = 14;
 
-// 화면 중심에서 가장 먼 마커를 대표로 사용
-// → 패닝 중에도 "대표 마커"가 안정적으로 유지됨 (가장 먼 것은 잘 안 바뀜)
-function farthestFromCenter(
+// 지도 중심(lat/lng)에서 가장 가까운 마커를 반환
+// → 클릭 시 이동하는 마커(Index.tsx의 onClickDirection 로직)와 동일한 기준
+function nearestToMapCenter(
   pts: { lat: number; lng: number }[],
-  centerX: number, centerY: number,
-  toScreenX: (lng: number) => number,
-  toScreenY: (lat: number) => number,
+  centerLat: number,
+  centerLng: number,
 ): { lat: number; lng: number } {
   let best = pts[0];
-  let bestDist = -1;
+  let bestDist = Infinity;
   for (const p of pts) {
-    const dx = toScreenX(p.lng) - centerX;
-    const dy = toScreenY(p.lat) - centerY;
-    const d = dx * dx + dy * dy;
-    if (d > bestDist) { bestDist = d; best = p; }
+    const dlat = p.lat - centerLat;
+    const dlng = p.lng - centerLng;
+    const d = dlat * dlat + dlng * dlng;
+    if (d < bestDist) { bestDist = d; best = p; }
   }
   return best;
 }
@@ -98,21 +97,16 @@ function computeIndicators(
     else                                                      classified.right.push(p);
   }
 
-  // 각 방향의 대표 마커 각도 계산 (화면 중심에서 가장 먼 마커 기준)
-  const getAngleDeg = (dir: Direction, pts: { lat: number; lng: number }[]): number | null => {
-    if (pts.length === 0) return null;
-    const ind = indCenter[dir];
-    const rep = farthestFromCenter(pts, midX, midY, toScreenX, toScreenY);
-    const mX = toScreenX(rep.lng);
-    const mY = toScreenY(rep.lat);
-    return (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
-  };
-
   return (['top', 'bottom', 'left', 'right'] as Direction[])
     .filter(dir => classified[dir].length > 0)
     .map(dir => {
       const pts = classified[dir];
-      const angleDeg = getAngleDeg(dir, pts) ?? 0;
+      const ind = indCenter[dir];
+      // 클릭 시 이동할 마커(지도 중심에서 가장 가까운 것)를 인디케이터도 가리킴
+      const rep = nearestToMapCenter(pts, centerLat, centerLng);
+      const mX = toScreenX(rep.lng);
+      const mY = toScreenY(rep.lat);
+      const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
       return {
         dir,
         angleDeg,
