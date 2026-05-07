@@ -72,6 +72,7 @@ const Profile = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const postListStartRef = useRef<HTMLDivElement>(null);
+  const savedScrollPos = useRef<number>(0);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
@@ -304,6 +305,17 @@ const Profile = () => {
     );
   }
 
+  const handleTabChange = useCallback((mode: 'grid' | 'list' | 'saved') => {
+    const container = scrollRef.current;
+    if (!container) { setViewMode(mode); return; }
+    // 현재 스크롤 위치 저장 후 동일하게 복원
+    const currentScroll = container.scrollTop;
+    setViewMode(mode);
+    requestAnimationFrame(() => {
+      container.scrollTop = currentScroll;
+    });
+  }, []);
+
   return (
     <div className="h-screen flex flex-col bg-white" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 상단 고정 헤더 */}
@@ -369,21 +381,21 @@ const Profile = () => {
             <div ref={postListStartRef} className="bg-white -mx-6 px-6 mb-0">
               <div className="flex border-b border-gray-100">
                 <button
-                  onClick={() => setViewMode('grid')}
+                  onClick={() => handleTabChange('grid')}
                   className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'grid' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
                 >
                   <LayoutGrid className="w-4 h-4" />
                   <span className="text-xs font-bold">그리드</span>
                 </button>
                 <button
-                  onClick={() => setViewMode('list')}
+                  onClick={() => handleTabChange('list')}
                   className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'list' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
                 >
                   <List className="w-4 h-4" />
                   <span className="text-xs font-bold">리스트</span>
                 </button>
                 <button
-                  onClick={() => setViewMode('saved')}
+                  onClick={() => handleTabChange('saved')}
                   className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'saved' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
                 >
                   <Bookmark className="w-4 h-4" />
@@ -393,73 +405,74 @@ const Profile = () => {
             </div>
 
             <div className="flex flex-col -mx-6">
-              {viewMode === 'saved' ? (
-                <div className="flex flex-col">
-                  {savedPosts.map((post) => (
-                    <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
+              {/* 저장됨 탭 */}
+              <div className={viewMode === 'saved' ? undefined : 'hidden'}>
+                {savedPosts.map((post) => (
+                  <div key={post.id} id={`post-${post.id}`}>
+                    <PostItem
+                      post={post}
+                      disablePulse={true}
+                      onLikeToggle={() => handleLikeToggle(post.id)}
+                      onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)}
+                      onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
+                    />
+                  </div>
+                ))}
+                {savedPosts.length === 0 && (
+                  <div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>
+                )}
+              </div>
+
+              {/* 그리드/리스트 탭 */}
+              <div className={viewMode === 'saved' ? 'hidden' : undefined}>
+                <div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors">
+                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
+                    <Map className="w-4 h-4 fill-indigo-600" />지도에서 보기
+                  </h3>
+                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
+                </div>
+
+                {/* 리스트 뷰 */}
+                <div className={viewMode === 'list' ? undefined : 'hidden'}>
+                  {myPosts.map((post) => (
+                    <div key={post.id} id={`post-${post.id}`}>
                       <PostItem
                         post={post}
                         disablePulse={true}
                         onLikeToggle={() => handleLikeToggle(post.id)}
                         onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)}
                         onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
+                        onDelete={() => handlePostDelete(post.id)}
                       />
                     </div>
                   ))}
-                  {savedPosts.length === 0 && (
-                    <div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>
-                  )}
                 </div>
-              ) : (
-                <>
-                  <div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors">
-                    <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
-                      <Map className="w-4 h-4 fill-indigo-600" />지도에서 보기
-                    </h3>
-                    <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
-                  </div>
-                  {viewMode === 'list' ? (
-                    <div className="flex flex-col">
-                      {myPosts.map((post) => (
-                        <div key={post.id} id={`post-${post.id}`} className="scroll-mt-[150px]">
-                          <PostItem
-                            post={post}
-                            disablePulse={true}
-                            onLikeToggle={() => handleLikeToggle(post.id)}
-                            onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)}
-                            onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
-                            onDelete={() => handlePostDelete(post.id)}
-                          />
+
+                {/* 그리드 뷰 */}
+                <div className={viewMode === 'grid' ? 'grid grid-cols-3 gap-1 px-6' : 'hidden'}>
+                  {myPosts.map((post) => (
+                    <div
+                      key={post.id}
+                      className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+                      onClick={() => handleGridItemClick(post.id)}
+                    >
+                      {post.videoUrl ? (
+                        <video src={`${post.videoUrl}#t=0.5`} className="w-full h-full object-cover hover:opacity-80 transition-opacity" muted playsInline />
+                      ) : (
+                        <img src={post.image_url || post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={() => handleImageError(post.id)} />
+                      )}
+                      {post.videoUrl && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-1 px-6">
-                      {myPosts.map((post) => (
-                        <div
-                          key={post.id}
-                          className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
-                          onClick={() => handleGridItemClick(post.id)}
-                        >
-                          {post.videoUrl ? (
-                            <video src={`${post.videoUrl}#t=0.5`} className="w-full h-full object-cover hover:opacity-80 transition-opacity" muted playsInline />
-                          ) : (
-                            <img src={post.image_url || post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={() => handleImageError(post.id)} />
-                          )}
-                          {post.videoUrl && (
-                            <div className="absolute top-2 right-2 z-10">
-                              <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                      {myPosts.length === 0 && (
-                        <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>
                       )}
                     </div>
+                  ))}
+                  {myPosts.length === 0 && (
+                    <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>
                   )}
-                </>
-              )}
+                </div>
+              </div>
             </div>
           </div>
         )}
