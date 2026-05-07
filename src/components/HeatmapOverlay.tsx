@@ -101,6 +101,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     if (visiblePoints.length === 0) return;
 
+    // ── 상한값은 전체 포인트 수 기준으로 고정 ──
+    // visiblePoints.length를 쓰면 지도 이동 시 화면 밖 포인트가 빠져
+    // maxPossible이 달라지고 같은 포인트의 색이 변하는 버그 발생
+    const maxPossible = Math.max(3, points.length * 0.7);
+
     for (const point of visiblePoints) {
       const { x: cx, y: cy } = toScaledPixel(point.lat, point.lng);
       const x0 = Math.max(0, Math.floor(cx - sRadius));
@@ -119,11 +124,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         }
       }
     }
-
-    // ── 절대적 포인트 수 기반 상한값 ──
-    // 포인트 1개 중심 강도 ≈ 1.0, 상한 3 → 중심 33% → 하늘색
-    // 포인트 3개 겹침 → 중심 100% → 빨간색
-    const maxPossible = Math.max(3, visiblePoints.length * 0.7);
 
     // ── 다운샘플 버퍼 → 실제 캔버스 크기로 업스케일 렌더링 ──
     const imageData = ctx.createImageData(W, H);
