@@ -112,12 +112,13 @@ function computeIndicators(
     top: [], bottom: [], left: [], right: [],
   };
   for (const p of allPoints) {
-    const dLat = (p.lat - centerLat) / latRange;
-    const dLng = (p.lng - centerLng) / lngRange;
-    if      (dLat >= 0 && dLat >= Math.abs(dLng))           classified.top.push(p);
-    else if (dLat < 0  && Math.abs(dLat) > Math.abs(dLng))  classified.bottom.push(p);
-    else if (dLng < 0  && Math.abs(dLng) >= Math.abs(dLat)) classified.left.push(p);
-    else                                                      classified.right.push(p);
+    // 픽셀 좌표 기준으로 방향 분류 (lat/lng 비율 왜곡 방지)
+    const px = toScreenX(p.lng) - midX;
+    const py = toScreenY(p.lat) - (screenH / 2);
+    if      (py <= 0 && Math.abs(py) >= Math.abs(px))  classified.top.push(p);
+    else if (py > 0  && Math.abs(py) > Math.abs(px))   classified.bottom.push(p);
+    else if (px <= 0 && Math.abs(px) > Math.abs(py))   classified.left.push(p);
+    else                                                classified.right.push(p);
   }
 
   return (['top', 'bottom', 'left', 'right'] as Direction[])
