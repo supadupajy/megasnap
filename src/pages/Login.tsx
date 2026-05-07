@@ -162,7 +162,10 @@ const Login = () => {
             <Camera className="w-10 h-10 text-white" strokeWidth={2.5} />
           </motion.div>
           <div className="text-center">
-            <h1 className="text-4xl font-black text-gray-900 tracking-tighter italic">
+            <h1
+              className="text-4xl font-black text-gray-900 tracking-tighter"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
               Chora<span className="text-indigo-600">Snap</span>
             </h1>
             <p className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
