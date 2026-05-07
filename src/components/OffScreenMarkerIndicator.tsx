@@ -37,6 +37,8 @@ function useWindowSize() {
 
 const S = 52;
 const EDGE_MARGIN = 14;
+// 물방울 안 숫자(원) 중심 — 회전 기준점
+const CIRCLE_CY = S / 2 + 6; // 32
 
 // 지도 중심(lat/lng)에서 가장 가까운 마커를 반환
 // → 클릭 시 이동하는 마커(Index.tsx의 onClickDirection 로직)와 동일한 기준
@@ -65,25 +67,31 @@ function computeIndicators(
 ): IndicatorState[] {
   const midX = screenW / 2;
   const midY = (topSafeY + (screenH - bottomSafeY)) / 2;
+  const cx = S / 2; // 26 — 수평 중심
 
   const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + midX;
   const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
 
+  // 회전 기준점(CIRCLE_CY)이 가장자리에 딱 붙도록 배치
+  // top 인디케이터: CIRCLE_CY가 topSafeY에 위치 → top = topSafeY - CIRCLE_CY
+  // bottom 인디케이터: CIRCLE_CY가 (screenH - bottomSafeY)에 위치 → top = screenH - bottomSafeY - CIRCLE_CY
+  // left/right: CIRCLE_CY가 수직 중앙에 위치 → top = midY - CIRCLE_CY
   const positions: Record<Direction, { left: number; top: number }> = {
-    top:    { left: midX - S / 2, top: topSafeY },
-    bottom: { left: midX - S / 2, top: screenH - bottomSafeY - S },
-    left:   { left: EDGE_MARGIN,  top: midY - S / 2 },
-    right:  { left: screenW - EDGE_MARGIN - S, top: midY - S / 2 },
+    top:    { left: midX - cx,              top: topSafeY - CIRCLE_CY },
+    bottom: { left: midX - cx,              top: screenH - bottomSafeY - CIRCLE_CY },
+    left:   { left: EDGE_MARGIN - cx,       top: midY - CIRCLE_CY },
+    right:  { left: screenW - EDGE_MARGIN - cx, top: midY - CIRCLE_CY },
   };
 
+  // 각도 계산 기준점: 버튼 내 회전 중심의 실제 화면 좌표
   const indCenter: Record<Direction, { x: number; y: number }> = {
-    top:    { x: midX, y: topSafeY + S / 2 },
-    bottom: { x: midX, y: screenH - bottomSafeY - S / 2 },
-    left:   { x: EDGE_MARGIN + S / 2, y: midY },
-    right:  { x: screenW - EDGE_MARGIN - S / 2, y: midY },
+    top:    { x: midX,                          y: topSafeY },
+    bottom: { x: midX,                          y: screenH - bottomSafeY },
+    left:   { x: EDGE_MARGIN,                   y: midY },
+    right:  { x: screenW - EDGE_MARGIN,         y: midY },
   };
 
-  // 45도 섹터 기반 분류 (화면 중심 기준 dLat/dLng 비율)
+  // 45도 섹터 기반 분류
   const classified: Record<Direction, { lat: number; lng: number }[]> = {
     top: [], bottom: [], left: [], right: [],
   };
@@ -102,7 +110,6 @@ function computeIndicators(
     .map(dir => {
       const pts = classified[dir];
       const ind = indCenter[dir];
-      // 클릭 시 이동할 마커(지도 중심에서 가장 가까운 것)를 인디케이터도 가리킴
       const rep = nearestToMapCenter(pts, centerLat, centerLng);
       const mX = toScreenX(rep.lng);
       const mY = toScreenY(rep.lat);
@@ -178,7 +185,7 @@ const DropIndicator: React.FC<{
   }, [angleDeg]);
 
   const cx = S / 2;
-  const circleCy = S / 2 + 6;
+  const circleCy = CIRCLE_CY;
   const r = 15;
   const tipY = 3;
   const dropPath = [
@@ -212,7 +219,7 @@ const DropIndicator: React.FC<{
         // 등장 시: scale + rotate 동시 적용
         // 이후: rotate만 transition (scale은 고정 1)
         transform: `scale(${mounted ? 1 : 0.5}) rotate(${displayAngle}deg)`,
-        transformOrigin: `${cx}px ${S / 2}px`,
+        transformOrigin: `${cx}px ${circleCy}px`,
         transition: mounted
           ? 'opacity 0.3s ease, transform 0.35s ease-out'
           : 'none',
@@ -284,7 +291,7 @@ const FadingIndicator: React.FC<{
   if (!alive) return null;
 
   const cx = S / 2;
-  const circleCy = S / 2 + 6;
+  const circleCy = CIRCLE_CY;
   const r = 15;
   const tipY = 3;
   const dropPath = [
@@ -314,7 +321,7 @@ const FadingIndicator: React.FC<{
         top: `${state.top}px`,
         opacity,
         transform: `scale(${opacity < 0.5 ? 0.7 : 1}) rotate(${state.angleDeg}deg)`,
-        transformOrigin: `${cx}px ${S / 2}px`,
+        transformOrigin: `${cx}px ${circleCy}px`,
         transition: 'opacity 0.3s ease, transform 0.3s ease',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
       }}
