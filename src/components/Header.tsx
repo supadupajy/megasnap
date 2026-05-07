@@ -23,7 +23,7 @@ const Header = () => {
           className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform shrink-0"
           onClick={() => navigate('/')}
         >
-          <h1 className="text-2xl font-black" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+          <h1 className="text-2xl font-black tracking-tighter" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             <span className="text-gray-900">Chora</span>
             <span className="text-indigo-600">Snap</span>
           </h1>
