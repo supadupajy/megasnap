@@ -57,7 +57,8 @@ const SplashScreen = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.8 }}
-              className="text-4xl font-black text-gray-900 tracking-tighter italic"
+              className="text-4xl font-black text-gray-900 tracking-tighter"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
               Chora<span className="text-indigo-600">Snap</span>
             </motion.h1>
