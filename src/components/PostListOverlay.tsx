@@ -416,16 +416,16 @@ const PostListOverlay = ({
   const firstViewedIndex = posts.findIndex(p => openedViewedIds.has(p.id));
 
   return (
-    <motion.div 
-      initial={{ y: "100vh" }}
-      animate={{ y: 0 }}
-      exit={{ y: "100vh" }}
-      transition={{ 
-        type: 'tween', 
-        duration: 0.35, 
-        ease: [0.32, 0.72, 0, 1] 
+    <motion.div
+      initial={{ scale: 0.85, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.85, opacity: 0 }}
+      transition={{
+        type: 'tween',
+        duration: 0.35,
+        ease: [0.42, 0, 1, 1] // ease-in cubic-bezier
       }}
-      style={{ willChange: 'transform', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
+      style={{ willChange: 'transform, opacity', transformOrigin: 'center center', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
       className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
     >
       {/* Header */}
