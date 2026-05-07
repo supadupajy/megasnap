@@ -180,11 +180,13 @@ const Index = () => {
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
   // routeState로 위치가 지정된 경우 focusPostOnMap에서 setMapCenter를 호출 → 부드러운 smoothMoveTo
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
-  // posts + bounds를 항상 동시에 업데이트 → 인디케이터 계산 시 불일치 방지
+  // 인디케이터용 통합 스냅샷: bounds, dbCounts, posts를 항상 동시에 업데이트
+  // → 인디케이터가 (bounds, points)를 일관된 짝으로 받아 깜빡임 방지
   const [stableSnapshot, setStableSnapshot] = useState<{
     posts: Post[];
     bounds: any;
-  }>({ posts: [], bounds: null });
+    dbCounts: DirectionCounts | null;
+  }>({ posts: [], bounds: null, dbCounts: null });
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
 
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -435,19 +437,27 @@ const Index = () => {
         const lngPad = (ne.lng - sw.lng) * 0.8;
         const expandedSw = { lat: sw.lat - latPad, lng: sw.lng - lngPad };
         const expandedNe = { lat: ne.lat + latPad, lng: ne.lng + lngPad };
-        const raw = await fetchPostsInBounds(expandedSw, expandedNe, currentZoom, center);
+
+        // posts와 dbCounts(DB 모드용)를 병렬 fetch
+        // → 둘 다 완료된 후 stableSnapshot 단일 업데이트 → 인디케이터가 일관된 (bounds, dbCounts) 짝으로 계산
+        const needDbCounts = !useClientSideCountsRef.current && currentZoom < 7;
+        const [raw, dbCounts] = await Promise.all([
+          fetchPostsInBounds(expandedSw, expandedNe, currentZoom, center),
+          needDbCounts
+            ? fetchOffScreenCounts(mapData.bounds, {
+                categories: selectedCategoriesRef.current,
+                userId: authUserIdRef.current,
+              })
+            : Promise.resolve(null),
+        ]);
         if (cancelled) return;
 
-        // allPosts 업데이트 후 stableSnapshot을 동일 배치에서 함께 업데이트
-        // React 18 automatic batching으로 두 setState가 하나의 렌더로 합쳐짐
+        // allPosts 업데이트 + stableSnapshot 단일 갱신 (React 18 automatic batching)
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
 
-          // DB에서 반환된 포스트 ID 집합
           const fetchedIds = new Set(raw.map((r: any) => String(r.id)));
 
-          // 현재 bounds 안에 있는 일반 포스트 중 DB에서 돌아오지 않은 것은 삭제된 것으로 제거
-          // (광고 마커는 ads 테이블에서 별도 관리하므로 제외)
           existingMap.forEach((post, id) => {
             if (String(id).startsWith('ad-map-marker-')) return;
             if (post.lat == null || post.lng == null) return;
@@ -461,7 +471,6 @@ const Index = () => {
             }
           });
 
-          // DB에서 반환된 포스트 추가/갱신
           raw.forEach((r: any) => {
             if (String(r.id).startsWith('ad-map-marker-')) return;
             const prevPost = existingMap.get(r.id) || null;
@@ -470,8 +479,12 @@ const Index = () => {
 
           const combined = Array.from(existingMap.values()).slice(0, 5000);
           mapCache.posts = combined;
-          // stableSnapshot도 같은 렌더 배치에서 업데이트 (React 18 automatic batching)
-          setStableSnapshot({ posts: combined, bounds: mapData.bounds });
+          // bounds + dbCounts + posts 동시 업데이트
+          setStableSnapshot({
+            posts: combined,
+            bounds: mapData.bounds,
+            dbCounts,
+          });
           return combined;
         });
       } catch (err) {
@@ -485,9 +498,8 @@ const Index = () => {
   }, [mapData?.bounds?.sw?.lat, mapData?.bounds?.sw?.lng, mapData?.bounds?.ne?.lat, mapData?.bounds?.ne?.lng, currentZoom]);
 
   // ── 화면 밖 방향별 포스트 수 ──────────────────────────────────
-  // friends/hot/influencer 필터는 클라이언트 계산(displayedMarkers 기반)
-  // all/카테고리/mine 필터는 DB 쿼리(정확한 카운트, 화면 밖 데이터 fetch 불필요)
-  const [offScreenCounts, setOffScreenCounts] = useState<DirectionCounts | null>(null);
+  // friends/hot/influencer 필터는 클라이언트 계산(stableSnapshot.posts 기반)
+  // all/카테고리/mine 필터는 DB 쿼리(stableSnapshot.dbCounts에 통합 저장)
 
   // 클라이언트 계산이 필요한 카테고리인지 판단
   const useClientSideCounts = useMemo(() => {
@@ -495,6 +507,14 @@ const Index = () => {
            selectedCategories.includes('hot') ||
            selectedCategories.includes('influencer');
   }, [selectedCategories]);
+
+  // fetch effect 안에서 stale closure 없이 최신값을 읽기 위한 ref들
+  const useClientSideCountsRef = useRef(useClientSideCounts);
+  const selectedCategoriesRef = useRef(selectedCategories);
+  const authUserIdRef = useRef<string | null>(authUser?.id || null);
+  useEffect(() => { useClientSideCountsRef.current = useClientSideCounts; }, [useClientSideCounts]);
+  useEffect(() => { selectedCategoriesRef.current = selectedCategories; }, [selectedCategories]);
+  useEffect(() => { authUserIdRef.current = authUser?.id || null; }, [authUser?.id]);
 
   // 클라이언트 계산: stableSnapshot 기반 (posts + bounds 항상 동기화)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
@@ -566,8 +586,8 @@ const Index = () => {
     };
   }, [stableSnapshot, currentZoom, useClientSideCounts, blockedIds, selectedCategories, authUser, followingIds]);
 
-  // DB 쿼리 기반 카운트 (all/카테고리/mine)
-  // stableSnapshot.bounds 사용 → posts fetch 완료 후에만 업데이트
+  // 카테고리/사용자 필터만 변경된 경우 dbCounts 재계산
+  // (bounds 변경에 의한 dbCounts는 메인 fetch effect에서 stableSnapshot에 통합 업데이트됨)
   useEffect(() => {
     if (useClientSideCounts) return;
     const b = stableSnapshot.bounds;
@@ -579,27 +599,20 @@ const Index = () => {
         categories: selectedCategories,
         userId: authUser?.id || null,
       });
-      if (!cancelled) setOffScreenCounts(counts);
+      if (!cancelled) {
+        setStableSnapshot(s => (s.bounds === b ? { ...s, dbCounts: counts } : s));
+      }
     };
     fetchCounts();
     return () => { cancelled = true; };
-  }, [
-    stableSnapshot.bounds?.sw?.lat,
-    stableSnapshot.bounds?.sw?.lng,
-    stableSnapshot.bounds?.ne?.lat,
-    stableSnapshot.bounds?.ne?.lng,
-    currentZoom,
-    selectedCategories,
-    authUser?.id,
-    useClientSideCounts,
-  ]);
+  }, [selectedCategories, authUser?.id, useClientSideCounts]);
 
-  // 클라이언트 계산 카운트는 별도 effect로 setOffScreenCounts에 반영
-  // clientOffScreenCounts가 null이면 즉시 null로 리셋 (bounds 변경 시 이전 인디케이터 제거)
+  // 클라이언트 모드 ↔ DB 모드 전환 시 dbCounts 즉시 클리어 (이전 모드 데이터로 잘못 표시 방지)
   useEffect(() => {
-    if (!useClientSideCounts) return;
-    setOffScreenCounts(clientOffScreenCounts);
-  }, [useClientSideCounts, clientOffScreenCounts]);
+    if (useClientSideCounts) {
+      setStableSnapshot(s => (s.dbCounts === null ? s : { ...s, dbCounts: null }));
+    }
+  }, [useClientSideCounts]);
 
   // ── map_marker 광고들을 allPosts에 주입 ──────────────────────
   // ads 테이블의 ad_type='map_marker' 광고들을 모두 지도 마커로 표시.
@@ -1369,6 +1382,7 @@ const Index = () => {
         }}
       >
         {/* 화면 밖 마커 방향 표시 - overflow-hidden 밖에 fixed로 배치 */}
+        {/* bounds와 dbCounts는 항상 stableSnapshot에서 함께 가져와 일관성 보장 (깜빡임 방지) */}
         {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
           <div className="fixed inset-0 z-[25] pointer-events-none">
             <OffScreenMarkerIndicator
@@ -1376,7 +1390,6 @@ const Index = () => {
               onClickDirection={(dir, pts) => {
                 const c = mapDataRef.current?.center || mapCenter;
                 if (!c || pts.length === 0) return;
-                // 재분류된 pts에서 현재 중심에 가장 가까운 마커로 이동
                 let nearest = pts[0];
                 let minDist = Infinity;
                 for (const p of pts) {
@@ -1387,7 +1400,7 @@ const Index = () => {
               }}
               topOffset={indicatorTopOffset}
               bottomOffset={indicatorBottomOffset}
-              dbCounts={offScreenCounts}
+              dbCounts={useClientSideCounts ? clientOffScreenCounts : stableSnapshot.dbCounts}
             />
           </div>
         )}
