@@ -328,6 +328,33 @@ const Profile = () => {
             </button>
           </div>
         </div>
+
+        {/* 탭 바 — 헤더에 고정 */}
+        <div className="bg-white border-b border-gray-100">
+          <div className="flex">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'grid' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span className="text-xs font-bold">그리드</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'list' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
+            >
+              <List className="w-4 h-4" />
+              <span className="text-xs font-bold">리스트</span>
+            </button>
+            <button
+              onClick={() => setViewMode('saved')}
+              className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'saved' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
+            >
+              <Bookmark className="w-4 h-4" />
+              <span className="text-xs font-bold">저장됨</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 스크롤 영역 */}
@@ -365,34 +392,7 @@ const Profile = () => {
 
             <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
 
-            {/* 탭 바 — sticky로 고정 */}
-            <div ref={postListStartRef} className="sticky top-[120px] z-30 bg-white -mx-6 px-6">
-              <div className="flex border-b border-gray-100">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'grid' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  <span className="text-xs font-bold">그리드</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'list' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-                >
-                  <List className="w-4 h-4" />
-                  <span className="text-xs font-bold">리스트</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('saved')}
-                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'saved' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-                >
-                  <Bookmark className="w-4 h-4" />
-                  <span className="text-xs font-bold">저장됨</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-col -mx-6 mt-4">
+            <div ref={postListStartRef} className="flex flex-col -mx-6">
               {viewMode === 'saved' ? (
                 <div className="flex flex-col">
                   {savedPosts.map((post) => (
