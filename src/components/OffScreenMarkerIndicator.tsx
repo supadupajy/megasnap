@@ -132,29 +132,49 @@ const DropIndicator: React.FC<{
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // 각도 누적 추적 — 최단 경로 회전
-  // accAngleRef: CSS transform에 실제로 적용되는 누적 각도값
+  // 각도: 패닝 중 중간값은 무시하고 멈춘 후 최종값으로만 애니메이션
+  // accAngleRef: 실제 CSS에 적용되는 누적 각도 (최단경로 회전 보장)
   const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
   const isFirstRender = useRef(true);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingAngleRef = useRef<number>(angleDeg);
 
   useEffect(() => {
     if (isFirstRender.current) {
-      // 최초 렌더: 애니메이션 없이 즉시 세팅
+      // 최초 마운트: transition 없이 즉시 세팅
       isFirstRender.current = false;
       accAngleRef.current = angleDeg;
+      pendingAngleRef.current = angleDeg;
       setDisplayAngle(angleDeg);
       return;
     }
-    // 이후 업데이트: 현재 누적값 기준으로 최단 경로 delta 계산
-    const current = accAngleRef.current;
-    const currentNorm = ((current % 360) + 360) % 360;
-    const targetNorm = ((angleDeg % 360) + 360) % 360;
-    let delta = targetNorm - currentNorm;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-    accAngleRef.current = current + delta;
-    setDisplayAngle(accAngleRef.current);
+
+    // 최신 목표 각도를 저장해두고
+    pendingAngleRef.current = angleDeg;
+
+    // 이전 디바운스 취소
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    // 300ms 후 패닝이 멈추면 그때 최종값으로 애니메이션
+    debounceTimerRef.current = setTimeout(() => {
+      debounceTimerRef.current = null;
+      const target = pendingAngleRef.current;
+      const current = accAngleRef.current;
+      const currentNorm = ((current % 360) + 360) % 360;
+      const targetNorm = ((target % 360) + 360) % 360;
+      let delta = targetNorm - currentNorm;
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+      // 변화가 5도 미만이면 애니메이션 생략 (미세 떨림 방지)
+      if (Math.abs(delta) < 5) return;
+      accAngleRef.current = current + delta;
+      setDisplayAngle(accAngleRef.current);
+    }, 300);
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
   }, [angleDeg]);
 
   const cx = S / 2;
