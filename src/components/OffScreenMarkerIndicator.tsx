@@ -255,21 +255,48 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
               top: `${pos.top}px`,
               transform: `rotate(${angleDeg}deg)`,
               transformOrigin: `${cx}px ${S / 2}px`,
+              filter: 'drop-shadow(0 4px 12px rgba(79,70,229,0.35)) drop-shadow(0 2px 4px rgba(0,0,0,0.18))',
             }}
           >
             <svg
               width={S}
               height={S}
               viewBox={`0 0 ${S} ${S}`}
-              style={{ display: 'block', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.30))' }}
+              style={{ display: 'block', overflow: 'visible' }}
             >
+              <defs>
+                <clipPath id={`drop-clip-${dir}`}>
+                  <path d={dropPath} />
+                </clipPath>
+              </defs>
+
+              {/* glass 배경: blur는 SVG foreignObject로 */}
+              <foreignObject
+                x="0" y="0"
+                width={S} height={S}
+                clipPath={`url(#drop-clip-${dir})`}
+              >
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'rgba(255,255,255,0.22)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                  }}
+                />
+              </foreignObject>
+
+              {/* 테두리 */}
               <path
                 d={dropPath}
-                fill="rgba(255,255,255,0.92)"
-                stroke="rgba(200,200,220,0.9)"
-                strokeWidth="1.2"
+                fill="none"
+                stroke="rgba(255,255,255,0.7)"
+                strokeWidth="1.5"
                 strokeLinejoin="round"
               />
+
+              {/* 숫자 */}
               <text
                 x={cx}
                 y={circleCy}
@@ -277,8 +304,9 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
                 dominantBaseline="central"
                 fontSize={fontSize}
                 fontWeight="900"
-                fill="rgb(67,56,202)"
+                fill="rgb(255,255,255)"
                 fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                style={{ textShadow: '0 1px 4px rgba(79,70,229,0.7)' }}
                 transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
               >
                 {label}
