@@ -27,6 +27,12 @@ interface IndicatorState {
   originY: number;
 }
 
+// FadingIndicator에 넘기는 스냅샷 — displayAngle이 포함됨
+interface FadingState extends IndicatorState {
+  displayAngle: number;
+  displayCount: number;
+}
+
 function useWindowSize() {
   const getSize = () => ({
     w: window.visualViewport?.width ?? window.innerWidth,
@@ -88,7 +94,6 @@ function computeIndicators(
   const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + midX;
   const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
 
-  // 각 인디케이터 버튼의 화면 배치 (left/top은 버튼 좌상단)
   const btnPos: Record<Direction, { left: number; top: number }> = {
     top:    { left: midX - CX,          top: topSafeY },
     bottom: { left: midX - CX,          top: screenH - bottomSafeY - S },
@@ -96,7 +101,6 @@ function computeIndicators(
     right:  { left: screenW - EDGE - S, top: midY - CIRCLE_CY },
   };
 
-  // 회전·각도 계산 기준: 버튼 내 원 중심의 실제 화면 좌표
   const indCenter: Record<Direction, { x: number; y: number }> = {
     top:    { x: midX,                      y: topSafeY + CIRCLE_CY },
     bottom: { x: midX,                      y: screenH - bottomSafeY - S + CIRCLE_CY },
@@ -135,11 +139,13 @@ function computeIndicators(
 }
 
 // ── 개별 인디케이터 ───────────────────────────────────────────────
-// 구조: 외부 컨테이너(위치 고정) > 회전하는 물방울 SVG + 회전하지 않는 숫자 텍스트
 const DropIndicator: React.FC<{
   state: IndicatorState;
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
-}> = ({ state, onClickDirection }) => {
+  // 현재 표시 중인 displayAngle/displayCount를 부모에게 알림 (사라질 때 스냅샷용)
+  onDisplayAngleChange: (dir: Direction, angle: number) => void;
+  onDisplayCountChange: (dir: Direction, count: number) => void;
+}> = ({ state, onClickDirection, onDisplayAngleChange, onDisplayCountChange }) => {
   const { dir, angleDeg, count, pts, left, top, originX, originY } = state;
 
   const [mounted, setMounted] = useState(false);
@@ -161,6 +167,7 @@ const DropIndicator: React.FC<{
       accAngleRef.current = angleDeg;
       pendingAngleRef.current = angleDeg;
       setDisplayAngle(angleDeg);
+      onDisplayAngleChange(dir, angleDeg);
       return;
     }
     pendingAngleRef.current = angleDeg;
@@ -177,6 +184,7 @@ const DropIndicator: React.FC<{
       if (Math.abs(delta) < 5) return;
       accAngleRef.current = current + delta;
       setDisplayAngle(accAngleRef.current);
+      onDisplayAngleChange(dir, accAngleRef.current);
     }, 300);
     return () => { if (angleDebounceRef.current) clearTimeout(angleDebounceRef.current); };
   }, [angleDeg]);
@@ -192,6 +200,7 @@ const DropIndicator: React.FC<{
       isFirstCount.current = false;
       setDisplayCount(count);
       pendingCountRef.current = count;
+      onDisplayCountChange(dir, count);
       return;
     }
     pendingCountRef.current = count;
@@ -199,6 +208,7 @@ const DropIndicator: React.FC<{
     countDebounceRef.current = setTimeout(() => {
       countDebounceRef.current = null;
       setDisplayCount(pendingCountRef.current);
+      onDisplayCountChange(dir, pendingCountRef.current);
     }, 300);
     return () => { if (countDebounceRef.current) clearTimeout(countDebounceRef.current); };
   }, [count]);
@@ -220,7 +230,6 @@ const DropIndicator: React.FC<{
     transition: 'opacity 0.3s ease, transform 0.35s ease-out',
   };
 
-  // 회전하는 물방울 레이어
   const dropStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
@@ -232,7 +241,6 @@ const DropIndicator: React.FC<{
     pointerEvents: 'none',
   };
 
-  // 고정된 숫자 레이어 — 원의 중심에 절대 위치, 회전 없음
   const textStyle: React.CSSProperties = {
     position: 'absolute',
     left: 0,
@@ -274,8 +282,8 @@ const DropIndicator: React.FC<{
   );
 };
 
-// ── 사라지는 인디케이터 ───────────────────────────────────────────
-const FadingIndicator: React.FC<{ state: IndicatorState }> = ({ state }) => {
+// ── 사라지는 인디케이터 — displayAngle/displayCount 스냅샷 사용 ──
+const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
   const [opacity, setOpacity] = useState(1);
   const [alive, setAlive] = useState(true);
 
@@ -287,7 +295,7 @@ const FadingIndicator: React.FC<{ state: IndicatorState }> = ({ state }) => {
 
   if (!alive) return null;
 
-  const label = state.count > 999 ? '999+' : String(state.count);
+  const label = state.displayCount > 999 ? '999+' : String(state.displayCount);
   const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
 
   const containerStyle: React.CSSProperties = {
@@ -303,10 +311,11 @@ const FadingIndicator: React.FC<{ state: IndicatorState }> = ({ state }) => {
     transition: 'opacity 0.3s ease, transform 0.3s ease',
   };
 
+  // 사라질 때는 마지막으로 화면에 표시되던 각도(displayAngle)를 그대로 유지
   const dropStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
-    transform: `rotate(${state.angleDeg}deg)`,
+    transform: `rotate(${state.displayAngle}deg)`,
     transformOrigin: `${state.originX}px ${state.originY}px`,
     filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
   };
@@ -354,7 +363,6 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   const { w: screenW, h: screenH } = useWindowSize();
 
   const topSafeY = typeof topOffset === 'number' ? topOffset : 160;
-  // 하단은 BottomNav + safe-area + 추가 여유로 충분히 띄움
   const bottomSafeY = bottomOffset + 8;
 
   const indicators = React.useMemo(() => {
@@ -375,8 +383,19 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     );
   }, [dbCounts, bounds, screenW, screenH, topSafeY, bottomSafeY]);
 
+  // 각 방향별로 DropIndicator가 현재 표시 중인 displayAngle/displayCount를 추적
+  const displayAnglesRef = useRef<Partial<Record<Direction, number>>>({});
+  const displayCountsRef = useRef<Partial<Record<Direction, number>>>({});
+
+  const handleDisplayAngleChange = (dir: Direction, angle: number) => {
+    displayAnglesRef.current[dir] = angle;
+  };
+  const handleDisplayCountChange = (dir: Direction, count: number) => {
+    displayCountsRef.current[dir] = count;
+  };
+
   const prevRef = useRef<IndicatorState[]>([]);
-  const [fadingItems, setFadingItems] = useState<{ id: number; state: IndicatorState }[]>([]);
+  const [fadingItems, setFadingItems] = useState<{ id: number; state: FadingState }[]>([]);
   const fadingIdRef = useRef(0);
 
   useEffect(() => {
@@ -384,7 +403,15 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
     const currentDirs = new Set(indicators.map(i => i.dir));
     const disappeared = prev.filter(p => !currentDirs.has(p.dir));
     if (disappeared.length > 0) {
-      const newFading = disappeared.map(s => ({ id: fadingIdRef.current++, state: s }));
+      const newFading = disappeared.map(s => ({
+        id: fadingIdRef.current++,
+        state: {
+          ...s,
+          // DropIndicator가 실제로 표시하던 각도/숫자로 스냅샷
+          displayAngle: displayAnglesRef.current[s.dir] ?? s.angleDeg,
+          displayCount: displayCountsRef.current[s.dir] ?? s.count,
+        } as FadingState,
+      }));
       setFadingItems(f => [...f, ...newFading]);
       const ids = newFading.map(f => f.id);
       setTimeout(() => setFadingItems(f => f.filter(item => !ids.includes(item.id))), 420);
@@ -395,7 +422,15 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
   return (
     <>
       {fadingItems.map(({ id, state }) => <FadingIndicator key={`fading-${id}`} state={state} />)}
-      {indicators.map(state => <DropIndicator key={state.dir} state={state} onClickDirection={onClickDirection} />)}
+      {indicators.map(state => (
+        <DropIndicator
+          key={state.dir}
+          state={state}
+          onClickDirection={onClickDirection}
+          onDisplayAngleChange={handleDisplayAngleChange}
+          onDisplayCountChange={handleDisplayCountChange}
+        />
+      ))}
     </>
   );
 };
