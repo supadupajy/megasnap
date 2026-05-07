@@ -11,22 +11,23 @@ interface HeatmapOverlayProps {
   visible: boolean;
 }
 
-// 히트맵 1개 포인트의 영향 반경 (실제 지리 거리, 미터)
 const HEATMAP_RADIUS_METERS = 1800;
 
-// 색상 팔레트: 투명 → 하늘색 → 노랑 → 주황 → 빨강
+// intensity 0~1 → RGBA
+// 0: 투명, 0~0.3: 하늘색, 0.3~0.6: 노랑, 0.6~0.8: 주황, 0.8~1.0: 빨강
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.00, [  0, 180, 255,   0]],  // 투명
-  [0.10, [ 80, 210, 255, 120]],  // 하늘색 (연하게)
-  [0.30, [ 40, 190, 255, 180]],  // 하늘색 (진하게)
-  [0.50, [255, 230,  30, 210]],  // 노랑
-  [0.70, [255, 120,   0, 225]],  // 주황
-  [0.85, [255,  30,   0, 235]],  // 빨강
-  [1.00, [180,   0,   0, 245]],  // 진빨강
+  [0.00, [  0, 180, 255,   0]],
+  [0.08, [ 80, 210, 255,  80]],
+  [0.20, [ 40, 190, 255, 160]],
+  [0.35, [  0, 220, 180, 190]],
+  [0.50, [255, 230,  30, 210]],
+  [0.65, [255, 140,   0, 225]],
+  [0.80, [255,  40,   0, 235]],
+  [1.00, [180,   0,   0, 245]],
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
-  if (intensity < 0.01) return [0, 0, 0, 0];
+  if (intensity <= 0) return [0, 0, 0, 0];
   const v = Math.min(intensity, 1.0);
   for (let i = 0; i < PALETTE.length - 1; i++) {
     const [t0, c0] = PALETTE[i];
@@ -71,14 +72,13 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
-
     if (points.length === 0) return;
 
     // 지리적 거리 → 픽셀 반경 변환
     const metersPerPixel = (latRange / H) * 111320;
     const radiusPx = Math.max(20, Math.min(600, HEATMAP_RADIUS_METERS / metersPerPixel));
 
-    // 성능 최적화: 다운샘플 해상도로 계산 후 업스케일
+    // 다운샘플로 성능 최적화
     const SCALE = Math.max(1, Math.min(4, Math.floor(radiusPx / 30)));
     const SW = Math.ceil(W / SCALE);
     const SH = Math.ceil(H / SCALE);
@@ -89,7 +89,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       y: (1 - (lat - sw.getLat()) / latRange) * SH,
     });
 
-    // Float32 강도 버퍼에 가우시안 누적
+    // 강도 버퍼 누적
     const buf = new Float32Array(SW * SH);
 
     const visiblePoints = points.filter(p => {
@@ -110,27 +110,21 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         for (let px = x0; px <= x1; px++) {
           const dx = px - cx;
           const dy = py - cy;
-          const distSq = dx * dx + dy * dy;
-          if (distSq > sRadius * sRadius) continue;
-          const t = Math.sqrt(distSq) / sRadius;
-          // 중심은 강하고 가장자리는 부드럽게 감쇠
-          buf[py * SW + px] += Math.exp(-2.5 * t * t);
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > sRadius) continue;
+          const t = dist / sRadius; // 0(중심) ~ 1(가장자리)
+          // 선형 감쇠: 중심=1, 가장자리=0 → 자연스러운 그라데이션
+          buf[py * SW + px] += (1 - t);
         }
       }
     }
 
-    // 버퍼 최댓값을 실제로 측정해서 정규화 → 항상 전체 색상 범위 활용
-    let maxVal = 0;
-    for (let i = 0; i < buf.length; i++) {
-      if (buf[i] > maxVal) maxVal = buf[i];
-    }
-    if (maxVal === 0) return;
+    // 포인트 밀집도에 따른 절대 기준값 설정
+    // 포인트 1개 중심의 최대 누적값 ≈ 1.0
+    // N개가 완전히 겹치면 ≈ N
+    // 빨강이 되려면 일정 수 이상 겹쳐야 함
+    const RED_THRESHOLD = Math.max(3, Math.ceil(points.length * 0.15));
 
-    // 가장자리 페이드아웃용: 각 픽셀에서 가장 가까운 포인트까지의 거리 비율
-    // → 버퍼값이 낮은 외곽 영역의 알파를 추가로 감쇠시켜 테두리를 부드럽게
-    const FADE_THRESHOLD = 0.08; // 이 강도 이하부터 페이드 시작
-
-    // 다운샘플 버퍼 → 실제 캔버스 크기로 업스케일 렌더링
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
 
@@ -139,23 +133,17 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       for (let fx = 0; fx < W; fx++) {
         const sx = Math.min(SW - 1, Math.floor(fx / SCALE));
         const raw = buf[sy * SW + sx];
-        if (raw < 0.001) continue;
+        if (raw < 0.005) continue;
 
-        const normalized = raw / maxVal;
-        const intensity = Math.pow(normalized, 0.6);
+        // RED_THRESHOLD 기준으로 정규화
+        const intensity = Math.min(raw / RED_THRESHOLD, 1.0);
         const [r, g, b, a] = getColor(intensity);
-
-        // 외곽 영역(normalized < FADE_THRESHOLD)은 알파를 0까지 부드럽게 감쇠
-        const edgeFade = normalized < FADE_THRESHOLD
-          ? normalized / FADE_THRESHOLD
-          : 1.0;
-        const finalAlpha = Math.round(a * edgeFade);
 
         const idx = (fy * W + fx) * 4;
         data[idx]     = r;
         data[idx + 1] = g;
         data[idx + 2] = b;
-        data[idx + 3] = finalAlpha;
+        data[idx + 3] = a;
       }
     }
 
