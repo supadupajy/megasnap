@@ -304,9 +304,9 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
                 dominantBaseline="central"
                 fontSize={fontSize}
                 fontWeight="900"
-                fill="rgb(255,255,255)"
+                fill="rgb(20,20,20)"
                 fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-                style={{ textShadow: '0 1px 4px rgba(79,70,229,0.7)' }}
+                style={{ textShadow: 'none' }}
                 transform={`rotate(${-angleDeg}, ${cx}, ${circleCy})`}
               >
                 {label}
