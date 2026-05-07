@@ -2,6 +2,10 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./globals.css";
+import { initStatusBar } from "./utils/statusBar";
+
+// 네이티브 앱에서 상태바(시간/배터리/WiFi 아이콘)를 어두운 색으로 설정
+initStatusBar();
 
 // iOS Safari는 user-scalable=no를 무시하므로 JS로 페이지 핀치 줌 차단
 document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false });
