@@ -330,7 +330,7 @@ const VideoSearch = () => {
               <Video className="w-8 h-8 text-orange-300" />
             </div>
             <p className="text-sm text-gray-400 font-semibold leading-relaxed">
-              원하는 포스팅을 검색해 보세요.
+              검색하면 결과가 여기에 나와요.
             </p>
           </div>
         ) : isSearching ? (
