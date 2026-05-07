@@ -658,6 +658,11 @@ const Write = () => {
             </button>
           ) : (
             <div className="relative">
+              {(!content.trim() || mediaFiles.length === 0) && (
+                <p className="mb-1.5 text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                  {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
+                </p>
+              )}
               <button
                 className={cn(
                   "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
@@ -681,11 +686,6 @@ const Write = () => {
                   }
                 </div>
               </button>
-              {(!content.trim() || mediaFiles.length === 0) && (
-                <p className="absolute top-full mt-1.5 w-full text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                  {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
-                </p>
-              )}
             </div>
           )}
         </div>
