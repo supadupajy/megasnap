@@ -249,14 +249,6 @@ const Profile = () => {
     }, 150);
   };
 
-  const handleViewModeChange = (mode: 'grid' | 'list') => {
-    const scrollTop = scrollRef.current?.scrollTop ?? 0;
-    flushSync(() => {
-      setViewMode(mode);
-    });
-    scrollRef.current?.scrollTo({ top: scrollTop });
-  };
-
   const handleImageError = useCallback((postId: string) => {
     setMyPosts(prev => prev.filter(p => p.id !== postId));
     setSavedPosts(prev => prev.filter(p => p.id !== postId));
@@ -313,7 +305,7 @@ const Profile = () => {
   }
 
   return (
-    <div className="h-screen overflow-y-auto bg-white no-scrollbar" ref={scrollRef} style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="h-screen flex flex-col bg-white" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 상단 고정 헤더 */}
       <div className="sticky top-0 z-40 bg-white pt-[64px]">
         <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
@@ -338,9 +330,8 @@ const Profile = () => {
         </div>
       </div>
 
-      <div
-        className="bg-white no-scrollbar"
-      >
+      {/* 스크롤 영역 */}
+      <div className="flex-1 overflow-y-auto bg-white no-scrollbar" ref={scrollRef}>
         {isDataLoading && myPosts.length === 0 ? (
           <ProfileHeaderSkeleton />
         ) : (
@@ -374,30 +365,34 @@ const Profile = () => {
 
             <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-8">프로필 편집</Button>
 
-            <div ref={postListStartRef} className="flex border-b border-gray-100 mb-4">
-              <button
-                onClick={() => handleViewModeChange(viewMode === 'grid' ? 'list' : 'grid')}
-                className={cn("flex-1 py-3 flex items-center justify-center gap-2 transition-all border-b-2", (viewMode === 'grid' || viewMode === 'list') ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-              >
-                {viewMode === 'list' ? (
-                  <LayoutGrid className="w-5 h-5" />
-                ) : (
-                  <List className="w-5 h-5" />
-                )}
-                <span className="text-xs font-bold">
-                  {viewMode === 'list' ? '그리드' : '리스트'}
-                </span>
-              </button>
-              <button
-                onClick={() => setViewMode('saved')}
-                className={cn("flex-1 py-3 flex items-center justify-center gap-2 transition-all border-b-2", viewMode === 'saved' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-              >
-                <Bookmark className="w-5 h-5" />
-                <span className="text-xs font-bold">저장됨</span>
-              </button>
+            {/* 탭 바 — sticky로 고정 */}
+            <div ref={postListStartRef} className="sticky top-[120px] z-30 bg-white -mx-6 px-6">
+              <div className="flex border-b border-gray-100">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'grid' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="text-xs font-bold">그리드</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'list' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
+                >
+                  <List className="w-4 h-4" />
+                  <span className="text-xs font-bold">리스트</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('saved')}
+                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'saved' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
+                >
+                  <Bookmark className="w-4 h-4" />
+                  <span className="text-xs font-bold">저장됨</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex flex-col -mx-6">
+            <div className="flex flex-col -mx-6 mt-4">
               {viewMode === 'saved' ? (
                 <div className="flex flex-col">
                   {savedPosts.map((post) => (
@@ -452,8 +447,6 @@ const Profile = () => {
                             <img src={post.image_url || post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={() => handleImageError(post.id)} />
                           )}
                           {post.videoUrl && (
-
-
                             <div className="absolute top-2 right-2 z-10">
                               <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
                             </div>
