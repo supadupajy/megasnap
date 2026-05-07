@@ -53,10 +53,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       y: (1 - (lat - sw.getLat()) / latRange) * H,
     });
 
-    // 각 포인트를 radialGradient로 그려서 자연스러운 그라데이션 보장
-    // globalCompositeOperation 'screen'으로 겹치는 영역이 밝아지게 합성
-    ctx.globalCompositeOperation = 'screen';
-
     const visiblePoints = points.filter(p => {
       const { x, y } = toPixel(p.lat, p.lng);
       return x >= -radiusPx && x <= W + radiusPx && y >= -radiusPx && y <= H + radiusPx;
@@ -66,19 +62,16 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       const { x, y } = toPixel(point.lat, point.lng);
 
       const gradient = ctx.createRadialGradient(x, y, 0, x, y, radiusPx);
-      gradient.addColorStop(0.0,  'rgba(100, 220, 255, 0.85)');
-      gradient.addColorStop(0.25, 'rgba(80,  200, 255, 0.60)');
-      gradient.addColorStop(0.55, 'rgba(60,  180, 240, 0.30)');
-      gradient.addColorStop(0.80, 'rgba(40,  160, 220, 0.10)');
-      gradient.addColorStop(1.0,  'rgba(20,  140, 200, 0.00)');
+      gradient.addColorStop(0.0,  'rgba(80, 200, 255, 0.55)');
+      gradient.addColorStop(0.35, 'rgba(60, 180, 245, 0.35)');
+      gradient.addColorStop(0.65, 'rgba(40, 160, 230, 0.15)');
+      gradient.addColorStop(1.0,  'rgba(20, 140, 210, 0.00)');
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(x, y, radiusPx, 0, Math.PI * 2);
       ctx.fill();
     }
-
-    ctx.globalCompositeOperation = 'source-over';
   }, [points, mapInstance]);
 
   const resizeCanvas = useCallback(() => {
