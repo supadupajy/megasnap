@@ -23,6 +23,8 @@ interface IndicatorState {
   pts: { lat: number; lng: number }[];
   left: number;
   top: number;
+  originX: number;
+  originY: number;
 }
 
 function useWindowSize() {
@@ -42,7 +44,7 @@ const R = 15;           // 원 반지름
 const TIP_Y = 3;        // 꼭지점 Y
 const CIRCLE_CY = S / 2 + 6; // 원(숫자) 중심 Y: 32 — 회전 기준점
 
-const EDGE_MARGIN = 14; // 화면 가장자리 여백
+const EDGE_MARGIN = 8;  // 화면 가장자리 여백 (버튼 기준)
 
 // 지도 중심(lat/lng)에서 가장 가까운 마커 — 클릭 시 이동 대상과 동일
 function nearestToMapCenter(
@@ -72,21 +74,22 @@ function computeIndicators(
   const toScreenX = (lng: number) => ((lng - centerLng) / lngRange) * screenW + midX;
   const toScreenY = (lat: number) => (-(lat - centerLat) / latRange) * screenH + screenH / 2;
 
-  // 회전 기준점(CIRCLE_CY)이 가장자리에 딱 붙도록 버튼 배치
-  // 버튼 left/top = (원하는 기준점 화면좌표) - (버튼 내 기준점 오프셋)
-  const positions: Record<Direction, { left: number; top: number }> = {
-    top:    { left: midX - CX,                    top: topSafeY - CIRCLE_CY },
-    bottom: { left: midX - CX,                    top: screenH - bottomSafeY - CIRCLE_CY },
-    left:   { left: EDGE_MARGIN - CX,             top: midY - CIRCLE_CY },
-    right:  { left: screenW - EDGE_MARGIN - CX,   top: midY - CIRCLE_CY },
+  // 버튼은 항상 화면 안에 배치
+  // top/bottom: 수평 중앙, 원 중심이 경계에 붙도록 top 조정
+  // left/right: 화면 가장자리에서 EDGE_MARGIN만큼 안쪽, 원 중심이 수직 중앙
+  const positions: Record<Direction, { left: number; top: number; originX: number; originY: number }> = {
+    top:    { left: midX - CX,          top: topSafeY - CIRCLE_CY,              originX: CX,   originY: CIRCLE_CY },
+    bottom: { left: midX - CX,          top: screenH - bottomSafeY - CIRCLE_CY, originX: CX,   originY: CIRCLE_CY },
+    left:   { left: EDGE_MARGIN,        top: midY - CIRCLE_CY,                  originX: CX,   originY: CIRCLE_CY },
+    right:  { left: screenW - EDGE_MARGIN - S, top: midY - CIRCLE_CY,           originX: CX,   originY: CIRCLE_CY },
   };
 
-  // 각도 계산 기준: 버튼 내 회전 중심의 실제 화면 좌표
+  // 각도 계산 기준: 버튼 내 원 중심의 실제 화면 좌표
   const indCenter: Record<Direction, { x: number; y: number }> = {
-    top:    { x: midX,                  y: topSafeY },
-    bottom: { x: midX,                  y: screenH - bottomSafeY },
-    left:   { x: EDGE_MARGIN,           y: midY },
-    right:  { x: screenW - EDGE_MARGIN, y: midY },
+    top:    { x: midX,                              y: topSafeY },
+    bottom: { x: midX,                              y: screenH - bottomSafeY },
+    left:   { x: EDGE_MARGIN + CX,                  y: midY },
+    right:  { x: screenW - EDGE_MARGIN - S + CX,    y: midY },
   };
 
   // 45도 섹터 분류
@@ -107,11 +110,16 @@ function computeIndicators(
     .map(dir => {
       const pts = classified[dir];
       const ind = indCenter[dir];
+      const pos = positions[dir];
       const rep = nearestToMapCenter(pts, centerLat, centerLng);
       const mX = toScreenX(rep.lng);
       const mY = toScreenY(rep.lat);
       const angleDeg = (Math.atan2(mX - ind.x, -(mY - ind.y)) * 180) / Math.PI;
-      return { dir, angleDeg, count: pts.length, pts, left: positions[dir].left, top: positions[dir].top };
+      return {
+        dir, angleDeg, count: pts.length, pts,
+        left: pos.left, top: pos.top,
+        originX: pos.originX, originY: pos.originY,
+      };
     });
 }
 
@@ -129,7 +137,7 @@ const DropIndicator: React.FC<{
   state: IndicatorState;
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
 }> = ({ state, onClickDirection }) => {
-  const { dir, angleDeg, count, pts, left, top } = state;
+  const { dir, angleDeg, count, pts, left, top, originX, originY } = state;
 
   // 등장 애니메이션
   const [mounted, setMounted] = useState(false);
@@ -214,7 +222,7 @@ const DropIndicator: React.FC<{
         top: `${top}px`,
         opacity: mounted ? 1 : 0,
         transform: `scale(${mounted ? 1 : 0.5}) rotate(${displayAngle}deg)`,
-        transformOrigin: `${CX}px ${CIRCLE_CY}px`,
+        transformOrigin: `${originX}px ${originY}px`,
         transition: mounted ? 'opacity 0.3s ease, transform 0.35s ease-out' : 'none',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
         willChange: 'transform',
@@ -269,7 +277,7 @@ const FadingIndicator: React.FC<{ state: IndicatorState }> = ({ state }) => {
         left: `${state.left}px`, top: `${state.top}px`,
         opacity,
         transform: `scale(${opacity < 0.5 ? 0.7 : 1}) rotate(${state.angleDeg}deg)`,
-        transformOrigin: `${CX}px ${CIRCLE_CY}px`,
+        transformOrigin: `${state.originX}px ${state.originY}px`,
         transition: 'opacity 0.3s ease, transform 0.3s ease',
         filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
       }}
