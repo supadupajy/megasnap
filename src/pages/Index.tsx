@@ -1561,7 +1561,7 @@ const Index = () => {
                       width: '8px',
                       height: '100px',
                       borderRadius: '4px',
-                      background: 'linear-gradient(to bottom, #b40000, #ff1e00, #ff7800, #ffdc00, #b4e61e, #3cd250, #28c8b4, #64d2ff)',
+                      background: 'linear-gradient(to bottom, #b40000, #ff1e00, #ff7800, #ffdc00, #b4e61e, #3cd250, #28c8b4, #64d2ff, transparent)',
                     }} />
                     <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
                   </div>

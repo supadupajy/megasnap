@@ -15,14 +15,14 @@ const HEATMAP_RADIUS_METERS = 600;
 
 const PALETTE: Array<[number, [number, number, number, number]]> = [
   [0.0,  [100, 210, 255,   0]],   // 투명 하늘색
-  [0.08, [100, 210, 255, 140]],   // 하늘색
-  [0.20, [ 40, 200, 180, 180]],   // 청록색
-  [0.35, [ 60, 210,  80, 200]],   // 초록색
-  [0.50, [180, 230,  30, 215]],   // 연두-노란색
-  [0.65, [255, 220,   0, 225]],   // 노란색
-  [0.78, [255, 120,   0, 235]],   // 주황색
+  [0.05, [100, 210, 255, 130]],   // 하늘색
+  [0.20, [ 40, 200, 180, 170]],   // 청록색
+  [0.35, [ 60, 210,  80, 195]],   // 초록색
+  [0.50, [180, 230,  30, 210]],   // 연두-노란색
+  [0.65, [255, 220,   0, 220]],   // 노란색
+  [0.78, [255, 120,   0, 232]],   // 주황색
   [0.90, [255,  30,   0, 240]],   // 빨간색
-  [1.0,  [180,   0,   0, 250]],   // 진한 빨간색
+  [1.0,  [180,   0,   0, 248]],   // 진한 빨간색
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -131,8 +131,8 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         const raw = buf[sy * SW + sx];
         if (raw < 0.001) continue;
         const normalized = Math.min(raw / maxPossible, 1.0);
-        // 감마 > 1: 낮은 강도 구간을 압축 → 색상 전환이 더 빠르고 선명하게
-        const intensity = Math.pow(normalized, 1.4);
+        // 감마 < 1: 낮은 강도 영역도 색상이 잘 보이게 (1개짜리 포인트도 표시)
+        const intensity = Math.pow(normalized, 0.7);
         const [r, g, b, a] = getColor(intensity);
         const idx = (fy * W + fx) * 4;
         data[idx]     = r;
