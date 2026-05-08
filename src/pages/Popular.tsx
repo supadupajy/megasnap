@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Flame, TrendingUp, Search } from 'lucide-react';
+import { Loader2, Flame, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Post } from '@/types';
 import { getFallbackImage } from '@/lib/utils';
@@ -14,7 +14,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
 import AdMobBanner from '@/components/AdMobBanner';
-import { motion } from 'framer-motion';
 import { showError } from '@/utils/toast';
 
 const getTierFromFollowers = (followers: number) => {
@@ -27,33 +26,6 @@ const getTierFromFollowers = (followers: number) => {
 const PAGE_SIZE = 15;
 // 광고 삽입 간격을 렌더 외부에서 한 번만 계산 (매 렌더마다 Math.random() 호출 방지)
 const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
-
-// 포스트 데이터를 즉시 매핑
-
-const mapPostImmediate = (p: any): Post => {
-  const followers = Number(p.profiles?.followers ?? 0);
-  const borderType = p.hot_since ? 'popular' : getTierFromFollowers(followers);
-  const isAd = p.content?.trim().startsWith('[AD]');
-  const finalImage = p.image_url || getFallbackImage(String(p.id));
-  const finalImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
-  const displayName = p.profiles?.nickname || p.user_name;
-  const displayAvatar = p.profiles?.avatar_url || p.user_avatar;
-  return {
-    id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
-    user: { id: p.user_id, name: displayName, avatar: displayAvatar },
-    content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-    location: p.location_name, lat: p.latitude, lng: p.longitude,
-    likes: Number(p.likes || 0), commentsCount: 0, comments: [],
-    image: finalImage, image_url: finalImage,
-    images: finalImages,
-    latitude: p.latitude, longitude: p.longitude,
-    videoUrl: p.video_url,
-    isLiked: false, isSaved: false,
-    createdAt: new Date(p.created_at),
-    borderType: borderType as any,
-    category: p.category || 'none',
-  };
-};
 
 // Skeleton 카드 컴포넌트
 const PostSkeleton = () => (
@@ -86,6 +58,10 @@ const Popular = () => {
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  // 셔플된 전체 풀을 보관 (페이지네이션은 이 배열에서 슬라이싱)
+  const shuffledPoolRef = useRef<Post[]>([]);
+  const displayedCountRef = useRef(0);
+
   const hasLoaded = useRef(false);
 
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
@@ -95,33 +71,66 @@ const Popular = () => {
     return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const fetchPopularPosts = useCallback(async (pageNum: number) => {
+  // Fisher-Yates 셔플
+  const shuffle = <T,>(arr: T[]): T[] => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  const fetchAndShufflePool = useCallback(async () => {
     try {
-      const from = pageNum * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      const { data, error } = await supabase
-        .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
-        .order('likes', { ascending: false })
-        .range(from, to);
-
+      // likes_per_hour 기반 상위 200개를 가져와서 셔플 풀로 사용
+      const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 200 });
       if (error) throw error;
-      if (!data || data.length < PAGE_SIZE) setHasMore(false);
 
-      return (data || []).map(mapPostImmediate);
+      const mapped: Post[] = (data || []).map((p: any) => {
+        const followers = Number(p.profiles?.followers ?? 0);
+        const borderType = p.hot_since ? 'popular' : getTierFromFollowers(followers);
+        const isAd = p.content?.trim().startsWith('[AD]');
+        const finalImage = p.image_url || getFallbackImage(String(p.id));
+        const finalImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
+        const displayName = p.user_name;
+        const displayAvatar = p.user_avatar;
+        return {
+          id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+          user: { id: p.user_id, name: displayName, avatar: displayAvatar },
+          content: p.content?.replace(/^\[AD\]\s*/, '') || '',
+          location: p.location_name, lat: p.latitude, lng: p.longitude,
+          likes: Number(p.likes || 0), commentsCount: 0, comments: [],
+          image: finalImage, image_url: finalImage,
+          images: finalImages,
+          latitude: p.latitude, longitude: p.longitude,
+          videoUrl: p.video_url,
+          isLiked: false, isSaved: false,
+          createdAt: new Date(p.created_at),
+          borderType: borderType as any,
+          category: p.category || 'none',
+        };
+      });
+
+      // 매번 새로운 랜덤 순서로 셔플
+      shuffledPoolRef.current = shuffle(mapped);
+      displayedCountRef.current = 0;
     } catch (err) {
-      return [];
+      shuffledPoolRef.current = [];
     }
   }, []);
 
   const loadInitialData = useCallback(async () => {
     if (hasLoaded.current) return;
     setIsInitialLoading(true);
-    const initialPosts = await fetchPopularPosts(0);
-    setPosts(initialPosts);
+    await fetchAndShufflePool();
+    const initial = shuffledPoolRef.current.slice(0, PAGE_SIZE);
+    displayedCountRef.current = initial.length;
+    setPosts(initial);
+    setHasMore(shuffledPoolRef.current.length > PAGE_SIZE);
     hasLoaded.current = true;
     setIsInitialLoading(false);
-  }, [fetchPopularPosts]);
+  }, [fetchAndShufflePool]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -133,18 +142,19 @@ const Popular = () => {
   const loadNearbyPosts = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     setIsLoadingMore(true);
-    const currentPage = Math.floor(posts.length / PAGE_SIZE);
-    const newPosts = await fetchPopularPosts(currentPage);
-    if (newPosts.length > 0) {
+    const next = shuffledPoolRef.current.slice(displayedCountRef.current, displayedCountRef.current + PAGE_SIZE);
+    if (next.length > 0) {
+      displayedCountRef.current += next.length;
       setPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
-        return [...prev, ...newPosts.filter(p => !existingIds.has(p.id))];
+        return [...prev, ...next.filter(p => !existingIds.has(p.id))];
       });
+      setHasMore(displayedCountRef.current < shuffledPoolRef.current.length);
     } else {
       setHasMore(false);
     }
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMore, posts.length, fetchPopularPosts]);
+  }, [isLoadingMore, hasMore]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
