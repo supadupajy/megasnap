@@ -15,12 +15,26 @@ const isVideoUrl = (url: string | undefined | null): boolean => {
   return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
 };
 
+// ── 비디오 썸네일 인메모리 캐시 ──────────────────────────────
+const videoThumbCache = new Map<string, string | 'failed'>();
+
 // 동영상 썸네일을 canvas로 추출하는 컴포넌트
 const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ videoUrl, className }) => {
-  const [thumbUrl, setThumbUrl] = React.useState<string | null>(null);
-  const [failed, setFailed] = React.useState(false);
+  const cached = videoThumbCache.get(videoUrl);
+  const [thumbUrl, setThumbUrl] = React.useState<string | null>(
+    cached && cached !== 'failed' ? cached : null
+  );
+  const [failed, setFailed] = React.useState(cached === 'failed');
 
   React.useEffect(() => {
+    // 캐시 히트 시 즉시 반환 (video 엘리먼트 생성 불필요)
+    if (videoThumbCache.has(videoUrl)) {
+      const c = videoThumbCache.get(videoUrl)!;
+      if (c === 'failed') setFailed(true);
+      else setThumbUrl(c);
+      return;
+    }
+
     let cancelled = false;
     const video = document.createElement('video');
     let timeoutId: number | undefined;
@@ -40,6 +54,7 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
         canvas.height = 120;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
+          videoThumbCache.set(videoUrl, 'failed');
           setFailed(true);
           cleanup();
           return;
@@ -47,8 +62,10 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const url = canvas.toDataURL('image/jpeg', 0.8);
+        videoThumbCache.set(videoUrl, url);
         setThumbUrl(url);
       } catch {
+        videoThumbCache.set(videoUrl, 'failed');
         setFailed(true);
       }
 
@@ -81,12 +98,16 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
     video.addEventListener('loadedmetadata', moveToCaptureFrame);
     video.addEventListener('seeked', capture);
     video.addEventListener('error', () => {
-      if (!cancelled) setFailed(true);
+      if (!cancelled) {
+        videoThumbCache.set(videoUrl, 'failed');
+        setFailed(true);
+      }
       cleanup();
     });
 
     timeoutId = window.setTimeout(() => {
       if (!cancelled && !thumbUrl) {
+        videoThumbCache.set(videoUrl, 'failed');
         setFailed(true);
         cleanup();
       }
@@ -204,7 +225,7 @@ interface TrendingPostItemProps {
   rankChange: RankChange;
 }
 
-const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, handleImageError, rankChange }) => {
+const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange }) => {
   const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
   const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
@@ -338,7 +359,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = ({ post, onPostClick, 
       )}
     </div>
   );
-};
+});
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
@@ -608,11 +629,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       ref={containerRef}
       data-trending-panel="true"
       className={cn(
-        "bg-white/95 backdrop-blur-xl rounded-[32px] transition-[max-height] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80",
+        "bg-white rounded-[32px] transition-[max-height] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80",
         isExpanded ? (maxHeight ? "" : "max-h-[85vh]") : "max-h-[56px]"
       )}
       style={{
-        willChange: "max-height",
         ...(isExpanded && maxHeight ? { maxHeight } : {}),
       }}
     >
