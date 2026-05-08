@@ -440,7 +440,7 @@ const Index = () => {
 
         // posts와 dbCounts(DB 모드용)를 병렬 fetch
         // → 둘 다 완료된 후 stableSnapshot 단일 업데이트 → 인디케이터가 일관된 (bounds, dbCounts) 짝으로 계산
-        const needDbCounts = !useClientSideCountsRef.current && currentZoom < 7;
+        const needDbCounts = !useClientSideCountsRef.current;
         const [raw, dbCounts] = await Promise.all([
           fetchPostsInBounds(expandedSw, expandedNe, currentZoom, center),
           needDbCounts
@@ -519,7 +519,7 @@ const Index = () => {
   // 클라이언트 계산: stableSnapshot 기반 (posts + bounds 항상 동기화)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
     const { posts: stablePosts, bounds: stableBounds } = stableSnapshot;
-    if (!stableBounds || currentZoom >= 7) return null;
+    if (!stableBounds) return null;
     if (!useClientSideCounts) return null;
 
     const { sw, ne } = stableBounds;
@@ -591,7 +591,7 @@ const Index = () => {
   useEffect(() => {
     if (useClientSideCounts) return;
     const b = stableSnapshot.bounds;
-    if (!b || currentZoom >= 7) return;
+    if (!b) return;
 
     let cancelled = false;
     const fetchCounts = async () => {
@@ -1379,7 +1379,7 @@ const Index = () => {
       >
         {/* 화면 밖 마커 방향 표시 - overflow-hidden 밖에 fixed로 배치 */}
         {/* bounds와 dbCounts는 항상 stableSnapshot에서 함께 가져와 일관성 보장 (깜빡임 방지) */}
-        {!isSelectingLocation && !isSelectingAdLocation && currentZoom < 7 && (
+        {!isSelectingLocation && !isSelectingAdLocation && (
           <div className="fixed inset-0 z-[25] pointer-events-none">
             <OffScreenMarkerIndicator
               bounds={stableSnapshot.bounds || null}
