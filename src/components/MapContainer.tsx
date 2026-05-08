@@ -1464,7 +1464,7 @@ const MapContainer = ({
 
   return (
     <div
-      className="w-full h-full relative select-none touch-none"
+      className="w-full h-full relative select-none touch-none overflow-hidden"
       style={{
         backgroundColor: '#f8f9fa',
         WebkitUserSelect: 'none',
