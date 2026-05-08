@@ -248,7 +248,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     <canvas
       ref={canvasRef}
       style={{
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
         width: '100%',

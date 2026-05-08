@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
-import HeatmapOverlay from '@/components/HeatmapOverlay';
 import TrendingPosts from '@/components/TrendingPosts';
 import PostDetail from '@/components/PostDetail';
 import PlaceSearch from '@/components/PlaceSearch';
@@ -281,8 +280,6 @@ const Index = () => {
   const tempSelectedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [heatmapMapInstance, setHeatmapMapInstance] = useState<any>(null);
-  const heatmapContainerRef = useRef<HTMLDivElement>(null);
 
   // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
 
@@ -1419,22 +1416,6 @@ const Index = () => {
               onMapClick={() => setSearchResultLocation(null)}
               userLocation={userLocation}
               draggable={!isTrendingExpanded}
-              onMapReady={(mapInst, contRef) => {
-                setHeatmapMapInstance(mapInst);
-                (heatmapContainerRef as any).current = contRef.current;
-              }}
-            />
-          </div>
-
-          {/* 히트맵: MapContainer(z-0)와 범례(z-20) 사이에 배치 → 범례가 히트맵 위에 제대로 올라감 */}
-          <div className="absolute inset-0 z-[5] pointer-events-none">
-            <HeatmapOverlay
-              points={displayedMarkers
-                .filter(p => p.lat != null && p.lng != null)
-                .map(p => ({ lat: p.lat, lng: p.lng }))}
-              mapInstance={heatmapMapInstance}
-              visible={currentZoom >= 7}
-              containerRef={heatmapContainerRef}
             />
           </div>
 
@@ -1566,9 +1547,10 @@ const Index = () => {
                   style={{
                     bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)',
                     left: 'calc(1rem + 48px + 8px)',
+                    zIndex: 20,
                   }}
                   className={cn(
-                    "absolute z-20 pointer-events-none transition-opacity",
+                    "absolute pointer-events-none transition-opacity",
                     isTrendingExpanded && "opacity-20"
                   )}
                 >

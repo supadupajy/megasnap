@@ -5,7 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
-// HeatmapOverlay는 Index.tsx에서 직접 렌더링 (stacking context 분리로 z-index 충돌 방지)
+import HeatmapOverlay from '@/components/HeatmapOverlay';
 
 interface MapContainerProps {
   posts: any[];
@@ -18,7 +18,6 @@ interface MapContainerProps {
   searchResultLocation?: { lat: number; lng: number } | null;
   userLocation?: { lat: number; lng: number } | null;
   draggable?: boolean;
-  onMapReady?: (mapInstance: any, containerRef: React.RefObject<HTMLDivElement>) => void;
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg";
@@ -38,7 +37,6 @@ const MapContainer = ({
   searchResultLocation,
   userLocation,
   draggable = true,
-  onMapReady,
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -97,14 +95,12 @@ const MapContainer = ({
   const onMapChangeRef = useRef(onMapChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
-  const onMapReadyRef = useRef(onMapReady);
   const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '' );
   const authUserRef = useRef(authUser);
 
   useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
-  useEffect(() => { onMapReadyRef.current = onMapReady; }, [onMapReady]);
   useEffect(() => { postsRef.current = posts; }, [posts]);
   useEffect(() => { authUserRef.current = authUser; }, [authUser]);
   useEffect(() => { viewedPostIdsRef.current = viewedPostIds; }, [viewedPostIds]);
@@ -452,7 +448,6 @@ const MapContainer = ({
       map.setMinLevel(3);
       mapInstance.current = map;
       setMapInstanceState(map);
-      onMapReadyRef.current?.(map, containerRef);
 
       const updateZoomClass = () => {
         const lvl = map.getLevel();
@@ -534,14 +529,9 @@ const MapContainer = ({
         }
       });
 
-      // onMapReady callback 호출
-      if (onMapReady) {
-        onMapReady(mapInstance.current, containerRef);
-      }
-
       return true;
     } catch (e) { return false; }
-  }, [onMapReady]);
+  }, []);
 
   useEffect(() => {
     const checkMap = setInterval(() => {
@@ -1579,7 +1569,15 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* HeatmapOverlay는 Index.tsx에서 직접 렌더링 (stacking context 분리) */}
+      {/* 히트맵 오버레이 */}
+      <HeatmapOverlay
+        points={posts
+          .filter(p => p.lat != null && p.lng != null)
+          .map(p => ({ lat: p.lat, lng: p.lng }))}
+        mapInstance={mapInstanceState}
+        visible={level >= 7}
+        containerRef={containerRef}
+      />
       <div
         ref={containerRef}
         id="kakao-map"
