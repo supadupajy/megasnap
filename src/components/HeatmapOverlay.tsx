@@ -115,7 +115,10 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       }
     }
 
-    const SCALE_FACTOR = Math.max(1.5, points.length * 0.8);
+    // SCALE_FACTOR: 화면에 실제로 그려지는 포인트 수 + 반경 크기를 함께 반영
+    // radiusPx가 커질수록(줌인) 각 포인트의 buf 누적값이 커지므로 함께 보정
+    const radiusNorm = sRadius / 30; // 기준 반경(30px) 대비 배율
+    const SCALE_FACTOR = Math.max(1.5, visiblePoints.length * 0.8 * radiusNorm);
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
