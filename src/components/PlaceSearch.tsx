@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, X, Loader2, ChevronLeft } from 'lucide-react';
+import { Search, MapPin, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -204,13 +204,14 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
           transition={{
+            type: 'tween',
             duration: 0.2,
-            ease: "easeOut"
+            ease: [0.42, 0, 1, 1]
           }}
           className="fixed inset-0 z-[40] bg-white flex flex-col overflow-hidden"
           style={{ 
@@ -223,12 +224,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
         >
           {/* Header */}
           <div className="py-3 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -244,6 +239,13 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
                 </div>
               )}
             </div>
+            <button
+              onClick={onClose}
+              className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+            >
+              <X className="w-4 h-4 text-gray-900" />
+              <span className="text-sm font-normal text-gray-900">닫기</span>
+            </button>
           </div>
 
           {/* 현재 지도 위치 기준 안내 */}

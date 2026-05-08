@@ -37,6 +37,7 @@
       }
 
       .kakao-overlay { position: absolute; pointer-events: auto; }
+<<<<<<< HEAD
     </style>
     <script>
       (function() {
@@ -61,4 +62,30 @@
   <body>
     <div id="root"></div>
   </body>
+=======
+    </style>
+    <script>
+      (function() {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(function() {
+            document.documentElement.classList.add('fonts-loaded');
+          });
+          // 최대 1초 후에는 강제로 표시 (폰트 로드 실패 대비)
+          setTimeout(function() {
+            document.documentElement.classList.add('fonts-loaded');
+          }, 1000);
+        } else {
+          document.documentElement.classList.add('fonts-loaded');
+        }
+      })();
+    </script>
+    <!-- Kakao Maps API -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer"></script>
+    <script type="module" crossorigin src="./assets/index-DxZI_ECN.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DF_qKhe9.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+>>>>>>> 653da46fe20efbfda8f6416617dd162c3be017f4
 </html>

@@ -40,7 +40,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
   // 오디오 잠금 해제 여부 (모바일 브라우저 정책)
   const audioUnlockedRef = useRef(false);
 
-  // 모바일 브라우저 오디오 잠금 해제: 첫 사용자 인터랙션 시 실행
+  // 모바일 브라우저 오디오 잠금 해제: 첫 사용자 인터랙션 시 1회만 실행
+  // once: true로 등록해 자동 해제 → 중복 등록 및 리스너 누수 방지
   useEffect(() => {
     const unlock = () => {
       if (audioUnlockedRef.current) return;
@@ -50,8 +51,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
         audioUnlockedRef.current = true;
       }).catch(() => {});
     };
-    window.addEventListener('click', unlock, { once: false });
-    window.addEventListener('touchstart', unlock, { once: false });
+    window.addEventListener('click', unlock, { once: true });
+    window.addEventListener('touchstart', unlock, { once: true });
     return () => {
       window.removeEventListener('click', unlock);
       window.removeEventListener('touchstart', unlock);

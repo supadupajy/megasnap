@@ -163,26 +163,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     }
   }, [autoPlayVideo]);
 
-  // 프로필 정보 가져오기
-  // [Optimized] AuthProvider가 이미 profile을 관리하므로 그것을 우선 사용.
-  // 없을 때만 가벼운 fetch (필요 컬럼만, select('*') 제거)
+  // 프로필 정보: AuthProvider에서 이미 관리하는 authProfile을 직접 사용
+  // 별도 supabase fetch 불필요 (각 PostItem마다 DB 쿼리 발생 방지)
   useEffect(() => {
     if (authProfile) {
       setProfile(authProfile);
-      return;
     }
-    if (authUser?.id) {
-      const fetchProfile = async () => {
-        const { data } = await supabase
-          .from('profiles')
-          .select('id, nickname, avatar_url')
-          .eq('id', authUser.id)
-          .single();
-        if (data) setProfile(data);
-      };
-      fetchProfile();
-    }
-  }, [authUser, authProfile]);
+  }, [authProfile]);
 
   // 댓글 lazy-load: post.comments가 비어있을 때 DB에서 가져옴
   useEffect(() => {

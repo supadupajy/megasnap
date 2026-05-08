@@ -1404,7 +1404,7 @@ const Index = () => {
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
           <ShutterOverlay ref={shutterRef} />
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0">
             <MapContainer
               posts={displayedMarkers}
               viewedPostIds={viewedIds}
@@ -1541,6 +1541,32 @@ const Index = () => {
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Navigation className="w-6 h-6 fill-gray-700" /></button>
               </div>
 
+              {/* 히트맵 범례: 레벨 7 이상일 때 좌측 하단 아이콘 옆에 세로로 표시 */}
+              {/* position: fixed → viewport stacking context → 히트맵(absolute) 위에 항상 올라옴 */}
+              {currentZoom >= 7 && (
+                <div
+                  style={{
+                    bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)',
+                    left: 'calc(1rem + 48px + 8px)',
+                  }}
+                  className={cn(
+                    "absolute z-20 pointer-events-none transition-opacity",
+                    isTrendingExpanded && "opacity-20"
+                  )}
+                >
+                  <div className="flex flex-col items-center gap-2 bg-white/30 backdrop-blur-xl border border-white/50 shadow-lg rounded-2xl px-2.5 py-3">
+                    <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
+                    <div style={{
+                      width: '8px',
+                      height: '100px',
+                      borderRadius: '4px',
+                      background: 'linear-gradient(to bottom, #5a00a0, #a0001e, #ff3c00, #ffa000, #ffdc00, #78dc28, #3cdca0, #64d2ff)',
+                    }} />
+                    <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
+                  </div>
+                </div>
+              )}
+
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
@@ -1650,6 +1676,7 @@ const Index = () => {
               maxHeight="calc(100dvh - env(safe-area-inset-top, 0px) - 74px - env(safe-area-inset-bottom, 0px) - 3rem - 74px)"
             />
           </div>
+
         </div>
       )}
 

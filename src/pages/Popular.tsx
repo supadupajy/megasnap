@@ -25,6 +25,8 @@ const getTierFromFollowers = (followers: number) => {
 };
 
 const PAGE_SIZE = 15;
+// 광고 삽입 간격을 렌더 외부에서 한 번만 계산 (매 렌더마다 Math.random() 호출 방지)
+const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
 
 // 포스트 데이터를 즉시 매핑
 
@@ -92,9 +94,6 @@ const Popular = () => {
     if (!posts) return [];
     return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
-
-  // 2~3개 포스팅마다 광고를 삽입하는 헬퍼
-  const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
 
   const fetchPopularPosts = useCallback(async (pageNum: number) => {
     try {
@@ -183,6 +182,13 @@ const Popular = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
+  // PostItem에 안정적인 핸들러 참조를 전달하기 위해 post.id를 클로저로 캡처하지 않음
+  // 대신 handleLikeToggle 자체가 useCallback으로 안정화되어 있으므로
+  // 렌더 함수 내에서 인라인 화살표 함수 대신 직접 전달
+  const handleLikeToggleById = useCallback((postId: string) => {
+    handleLikeToggle(postId);
+  }, [handleLikeToggle]);
+
   return (
     <div className="h-screen overflow-y-auto bg-white no-scrollbar" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 고정 상단 헤더 */}
@@ -228,7 +234,7 @@ const Popular = () => {
                   <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
                     <PostItem
                       post={post}
-                      onLikeToggle={() => handleLikeToggle(post.id)}
+                      onLikeToggle={handleLikeToggleById}
                       onLocationClick={handleLocationClick}
                       onDelete={handlePostDelete}
                       autoPlayVideo={true}
