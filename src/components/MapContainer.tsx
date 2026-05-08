@@ -18,6 +18,7 @@ interface MapContainerProps {
   searchResultLocation?: { lat: number; lng: number } | null;
   userLocation?: { lat: number; lng: number } | null;
   draggable?: boolean;
+  hideUserLocation?: boolean;
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg";
@@ -37,6 +38,7 @@ const MapContainer = ({
   searchResultLocation,
   userLocation,
   draggable = true,
+  hideUserLocation = false,
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -1585,7 +1587,7 @@ const MapContainer = ({
         style={{ position: 'relative' }}
       ></div>
       {/* 현재 위치 마커: 카카오맵 div 뒤에 DOM 배치 + 높은 zIndex로 항상 최상단 표시 */}
-      {userLocation && userLocationPixel && (
+      {userLocation && userLocationPixel && !hideUserLocation && (
         <div
           style={{
             position: 'absolute',
