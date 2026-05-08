@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Flame, Heart, ExternalLink, Sparkles, Mail, ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn, getOptimizedMarkerImage, getOptimizedBannerImage } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
@@ -160,8 +160,10 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
   if (hasStoredThumbnail) {
     return (
       <img
-        src={imageUrl}
+        src={getOptimizedMarkerImage(imageUrl, post.id)}
         alt=""
+        loading="lazy"
+        decoding="async"
         className={cn("w-full h-full object-cover", imgClassName, className)}
         onError={onImgError}
       />
@@ -176,8 +178,10 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
 
   return (
     <img
-      src={imageUrl}
+      src={getOptimizedMarkerImage(imageUrl, post.id)}
       alt=""
+      loading="lazy"
+      decoding="async"
       className={cn("w-full h-full object-cover", imgClassName)}
       onError={onImgError}
     />
@@ -426,8 +430,10 @@ const TrendingAdBanner: React.FC = () => {
         <div className="absolute inset-0 z-0">
           <img
             key={slot.image_url}
-            src={slot.image_url}
+            src={getOptimizedBannerImage(slot.image_url, 'trending-ad')}
             alt={slot.brand_name || 'Ad'}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
@@ -437,8 +443,10 @@ const TrendingAdBanner: React.FC = () => {
             <span className="bg-white text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
             {slot.brand_logo_url && (
               <img
-                src={slot.brand_logo_url}
+                src={getOptimizedMarkerImage(slot.brand_logo_url, 'trending-ad-logo')}
                 alt={slot.brand_name || 'Brand'}
+                loading="lazy"
+                decoding="async"
                 className="h-3.5 invert brightness-200"
               />
             )}

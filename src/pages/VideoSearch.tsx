@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, ChevronLeft, Video, Play, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { getFallbackImage } from '@/lib/utils';
+import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
@@ -279,9 +279,10 @@ const VideoSearch = () => {
   }, [searchQuery, handleSearch]);
 
   const getThumbnail = (post: SearchPost) => {
-    if (Array.isArray(post.images) && post.images.length > 0) return post.images[0];
-    if (post.image_url) return post.image_url;
-    return getFallbackImage(post.id);
+    const raw = Array.isArray(post.images) && post.images.length > 0
+      ? post.images[0]
+      : post.image_url;
+    return raw ? getOptimizedMarkerImage(raw, post.id) : getFallbackImage(post.id);
   };
 
   return (
@@ -362,6 +363,8 @@ const VideoSearch = () => {
                 <img
                   src={getThumbnail(post)}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = getFallbackImage(post.id);

@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { Post } from '@/types';
-import { cn, formatCount } from '@/lib/utils';
+import { cn, formatCount, getOptimizedMarkerImage } from '@/lib/utils';
 
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -345,7 +345,7 @@ const Profile = () => {
             <div className="flex items-center gap-6 mb-8">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
-                  <img src={avatarUrl} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
+                  <img src={getOptimizedMarkerImage(avatarUrl, authUser?.id || 'profile')} alt="profile" loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
                 </div>
               </div>
               <div className="flex-1">
@@ -452,7 +452,14 @@ const Profile = () => {
                       {post.videoUrl ? (
                         <video src={`${post.videoUrl}#t=0.5`} className="w-full h-full object-cover hover:opacity-80 transition-opacity" muted playsInline />
                       ) : (
-                        <img src={post.image_url || post.image} alt="" className="w-full h-full object-cover hover:opacity-80 transition-opacity" onError={() => handleImageError(post.id)} />
+                        <img
+                          src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                          onError={() => handleImageError(post.id)}
+                        />
                       )}
                       {post.videoUrl && (
                         <div className="absolute top-2 right-2 z-10">

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallba
 import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn, getFallbackImage, getOptimizedDetailImage } from '@/lib/utils';
+import { cn, getFallbackImage, getOptimizedDetailImage, getOptimizedMarkerImage } from '@/lib/utils';
 
 import { useNavigate } from 'react-router-dom';
 import { Comment } from '@/types';
@@ -546,7 +546,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
     return (
       <div className="w-9 h-9 rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm overflow-hidden transition-transform group-active:scale-90">
-        <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full object-contain p-1" onError={() => setAvatarError(true)} />
+        <img src={getOptimizedMarkerImage(currentPost.user.avatar, currentPost.user.id || currentPost.id)} alt={postDisplayName} loading="lazy" decoding="async" className="w-full h-full object-contain p-1" onError={() => setAvatarError(true)} />
       </div>
     );
   };
@@ -561,7 +561,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     }
     return (
       <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-        <img src={currentPost.user.avatar} alt={postDisplayName} className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
+        <img src={getOptimizedMarkerImage(currentPost.user.avatar, currentPost.user.id || currentPost.id)} alt={postDisplayName} loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
       </div>
     );
   };

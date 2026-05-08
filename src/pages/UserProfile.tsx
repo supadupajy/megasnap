@@ -15,7 +15,7 @@ import {
   Ban,
 } from 'lucide-react';
 import { Post } from '@/types';
-import { cn, formatCount } from '@/lib/utils';
+import { cn, formatCount, getOptimizedMarkerImage } from '@/lib/utils';
 
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
@@ -324,7 +324,7 @@ const UserProfile = () => {
             <div className="p-6">
               <div className="flex items-center gap-6 mb-8">
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 flex-shrink-0">
-                  <img src={userProfile?.avatar_url || FALLBACK_IMAGE} alt="profile" className="w-full h-full rounded-full object-cover border-4 border-white" />
+                  <img src={getOptimizedMarkerImage(userProfile?.avatar_url || FALLBACK_IMAGE, userProfile?.id || 'profile')} alt="profile" loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover border-4 border-white" />
                 </div>
                 <div className="flex-1">
                   <h2 className="text-xl font-black text-gray-900 mb-1">{nickname}</h2>
@@ -385,8 +385,10 @@ const UserProfile = () => {
                         />
                       ) : (
                         <img
-                          src={post.image_url || post.image}
+                          src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
                           alt=""
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover hover:opacity-80 transition-opacity"
                         />
                       )}

@@ -44,6 +44,13 @@ const DETAIL_IMAGE_TRANSFORM = {
   resize: 'cover' as const,
 };
 
+const BANNER_IMAGE_TRANSFORM = {
+  width: 1200,
+  height: 600,
+  quality: 78,
+  resize: 'cover' as const,
+};
+
 const getSupabaseStorageSource = (url: string) => {
   try {
     const parsed = new URL(url);
@@ -98,6 +105,11 @@ export const getOptimizedFeedImage = (url: string | null | undefined, seed: stri
 export const getOptimizedDetailImage = (url: string | null | undefined, seed: string = 'default'): string => {
   if (!url || url === 'null' || url === 'undefined') return getFallbackImage(seed);
   return getOptimizedSupabaseImage(url.trim(), DETAIL_IMAGE_TRANSFORM);
+};
+
+export const getOptimizedBannerImage = (url: string | null | undefined, seed: string = 'default'): string => {
+  if (!url || url === 'null' || url === 'undefined') return getFallbackImage(seed);
+  return getOptimizedSupabaseImage(url.trim(), BANNER_IMAGE_TRANSFORM);
 };
 
 export const getOptimizedMarkerImage = (url: string | null | undefined, seed: string = 'default') => {

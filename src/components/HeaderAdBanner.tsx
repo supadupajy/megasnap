@@ -4,6 +4,7 @@ import React from 'react';
 import { Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
+import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
 
 const HeaderAdBanner = () => {
   const { ad, loading, now } = useAd('header');
@@ -47,8 +48,10 @@ const HeaderAdBanner = () => {
       {/* Background Image */}
       <img
         key={slot.image_url}
-        src={slot.image_url}
+        src={getOptimizedBannerImage(slot.image_url, 'header-ad')}
         alt={slot.brand_name || 'Ad'}
+        loading="lazy"
+        decoding="async"
         className="absolute inset-0 w-full h-full object-cover object-center opacity-70 group-hover:scale-110 transition-transform duration-700"
       />
       
@@ -58,10 +61,12 @@ const HeaderAdBanner = () => {
           <div className="absolute inset-0 z-10 pointer-events-none shine-overlay opacity-30" />
           {slot.brand_logo_url && (
             <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center p-0.5 shrink-0 shadow-sm relative z-20">
-              <img 
-                src={slot.brand_logo_url}
+              <img
+                src={getOptimizedMarkerImage(slot.brand_logo_url, 'header-ad-logo')}
                 alt={slot.brand_name || 'Brand'}
-                className="w-full h-full object-contain" 
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-contain"
               />
             </div>
           )}

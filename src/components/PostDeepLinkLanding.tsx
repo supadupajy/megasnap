@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, MapPin, Heart, Download, ExternalLink, Smartphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { getFallbackImage } from '@/lib/utils';
+import { getFallbackImage, getOptimizedFeedImage } from '@/lib/utils';
 
 const ANDROID_PACKAGE = 'com.chorasnap.chorasnap';
 const IOS_APP_ID = '0000000000'; // 실제 App Store ID로 교체 필요
@@ -128,9 +128,8 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
   const getPostImage = (): string => {
     if (!post) return getFallbackImage(postId);
     const imgs = Array.isArray(post.images) ? post.images.filter(isValidUrl) : [];
-    if (imgs.length > 0) return imgs[0];
-    if (isValidUrl(post.image_url)) return post.image_url!;
-    return getFallbackImage(postId);
+    const raw = imgs.length > 0 ? imgs[0] : (isValidUrl(post.image_url) ? post.image_url! : null);
+    return raw ? getOptimizedFeedImage(raw, postId) : getFallbackImage(postId);
   };
 
   const getContentPreview = (): string => {
@@ -174,6 +173,8 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
               <img
                 src={getPostImage()}
                 alt="포스팅 이미지"
+                loading="eager"
+                decoding="async"
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = getFallbackImage(postId);

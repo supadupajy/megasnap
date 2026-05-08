@@ -4,6 +4,7 @@ import React from 'react';
 import { ExternalLink, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
+import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
 
 const SearchAdBanner = () => {
   const { ad, loading, now } = useAd('search');
@@ -58,7 +59,9 @@ const SearchAdBanner = () => {
       {/* Background Image */}
       <img
         key={slot.image_url}
-        src={slot.image_url}
+        src={getOptimizedBannerImage(slot.image_url, 'search-ad')}
+        loading="lazy"
+        decoding="async"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-90"
         alt={slot.brand_name}
       />
@@ -85,8 +88,10 @@ const SearchAdBanner = () => {
       {slot.brand_logo_url && (
         <div className="absolute bottom-3 right-4 pointer-events-none">
           <img
-            src={slot.brand_logo_url}
+            src={getOptimizedMarkerImage(slot.brand_logo_url, 'search-ad-logo')}
             alt={slot.brand_name}
+            loading="lazy"
+            decoding="async"
             className="h-10 w-auto object-contain drop-shadow-lg"
           />
         </div>

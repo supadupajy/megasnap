@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Camera, Mail } from 'lucide-react';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
+import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
 
 const SplashScreen = () => {
   const { ad, loading, now } = useAd('splash');
@@ -108,8 +109,10 @@ const SplashScreen = () => {
               ) : (
                 <div className="aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group">
                   <img
-                    src={slot.image_url}
+                    src={getOptimizedBannerImage(slot.image_url, 'splash-ad')}
                     alt={slot.brand_name}
+                    loading="eager"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
@@ -121,8 +124,10 @@ const SplashScreen = () => {
                       {slot.brand_logo_url && (
                         <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
                           <img
-                            src={slot.brand_logo_url}
+                            src={getOptimizedMarkerImage(slot.brand_logo_url, 'splash-ad-logo')}
                             alt={slot.brand_name}
+                            loading="eager"
+                            decoding="async"
                             className="w-full h-full object-contain"
                           />
                         </div>
