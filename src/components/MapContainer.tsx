@@ -1578,7 +1578,6 @@ const MapContainer = ({
           .map(p => ({ lat: p.lat, lng: p.lng }))}
         mapInstance={mapInstanceState}
         visible={level >= 7}
-        containerRef={containerRef}
       />
       <div
         ref={containerRef}
