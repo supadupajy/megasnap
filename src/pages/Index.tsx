@@ -1423,7 +1423,7 @@ const Index = () => {
               onMapClick={() => setSearchResultLocation(null)}
               userLocation={userLocation}
               draggable={!isTrendingExpanded}
-              hideUserLocation={!!selectedPostId}
+              hideUserLocation={!!selectedPostId || isPostListOpen}
             />
           </div>
 
