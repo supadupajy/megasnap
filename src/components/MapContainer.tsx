@@ -1569,7 +1569,13 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 히트맵 오버레이: 카카오맵 div 뒤에 배치하여 마커가 항상 앞에 오도록 함 */}
+      {/* 카카오맵 컨테이너: HeatmapOverlay가 이 div 내부 DOM에 canvas를 직접 삽입함 */}
+      <div
+        ref={containerRef}
+        id="kakao-map"
+        className="w-full h-full select-none"
+        style={{ position: 'relative' }}
+      ></div>
       <HeatmapOverlay
         points={posts
           .filter(p => p.lat != null && p.lng != null)
@@ -1578,12 +1584,6 @@ const MapContainer = ({
         visible={true}
         containerRef={containerRef}
       />
-      <div
-        ref={containerRef}
-        id="kakao-map"
-        className="w-full h-full select-none"
-        style={{ position: 'relative', zIndex: 3 }}
-      ></div>
       {/* 현재 위치 마커: 카카오맵 div 뒤에 DOM 배치 + 높은 zIndex로 항상 최상단 표시 */}
       {userLocation && userLocationPixel && (
         <div

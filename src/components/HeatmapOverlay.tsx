@@ -12,21 +12,19 @@ interface HeatmapOverlayProps {
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
-// 포인트 하나의 영향 반경 (미터). 작을수록 각 마커가 좁게 표시됨.
 const HEATMAP_RADIUS_METERS = 600;
 
-// 색상 팔레트: intensity 0~1 → RGBA
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.00, [100, 210, 255,   0]],  // 투명 (없음)
-  [0.08, [100, 210, 255,  70]],  // 하늘색 (희박)
-  [0.20, [ 60, 220, 160, 130]],  // 청록
-  [0.35, [120, 220,  40, 170]],  // 초록
-  [0.50, [210, 230,   0, 195]],  // 연두
-  [0.65, [255, 220,   0, 210]],  // 노랑
-  [0.78, [255, 160,   0, 220]],  // 주황
-  [0.88, [255,  60,   0, 228]],  // 빨강 (매우 밀집)
-  [0.95, [160,   0,  30, 238]],  // 진빨강
-  [1.00, [ 90,   0, 160, 245]],  // 진한 보라 (극단적 밀집)
+  [0.00, [100, 210, 255,   0]],
+  [0.08, [100, 210, 255,  70]],
+  [0.20, [ 60, 220, 160, 130]],
+  [0.35, [120, 220,  40, 170]],
+  [0.50, [210, 230,   0, 195]],
+  [0.65, [255, 220,   0, 210]],
+  [0.78, [255, 160,   0, 220]],
+  [0.88, [255,  60,   0, 228]],
+  [0.95, [160,   0,  30, 238]],
+  [1.00, [ 90,   0, 160, 245]],
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -49,8 +47,52 @@ function getColor(intensity: number): [number, number, number, number] {
 }
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible, containerRef }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
+
+  // 카카오맵 내부에서 실제 지도 타일이 그려지는 컨테이너를 찾아 반환
+  // 카카오맵은 containerRef.current 안에 여러 div 레이어를 만드는데,
+  // 첫 번째 자식 div가 지도 레이어 컨테이너임
+  const getMapInnerContainer = useCallback((): HTMLElement | null => {
+    const el = containerRef.current;
+    if (!el) return null;
+    // 카카오맵 내부 구조: #kakao-map > div (지도 레이어 wrapper)
+    const inner = el.querySelector('div') as HTMLElement | null;
+    return inner || el;
+  }, [containerRef]);
+
+  // canvas를 카카오맵 내부 DOM에 삽입 (마커 레이어보다 낮은 zIndex)
+  const ensureCanvas = useCallback((): HTMLCanvasElement | null => {
+    if (canvasRef.current && document.contains(canvasRef.current)) {
+      return canvasRef.current;
+    }
+
+    const container = containerRef.current;
+    if (!container) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = [
+      'position:absolute',
+      'top:0',
+      'left:0',
+      'width:100%',
+      'height:100%',
+      'pointer-events:none',
+      'z-index:10',  // 카카오맵 타일(z-index 없음) 위, CustomOverlay(z-index 300+) 아래
+    ].join(';');
+    canvas.setAttribute('data-heatmap', 'true');
+
+    // 카카오맵 내부 첫 번째 div에 삽입 (타일 레이어 위, 마커 레이어 아래)
+    const inner = container.querySelector('div') as HTMLElement | null;
+    if (inner) {
+      inner.appendChild(canvas);
+    } else {
+      container.appendChild(canvas);
+    }
+
+    canvasRef.current = canvas;
+    return canvas;
+  }, [containerRef]);
 
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -60,21 +102,30 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   }, []);
 
   const drawHeatmap = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !mapInstance) return;
+    if (!mapInstance) return;
 
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
+    const canvas = ensureCanvas();
+    if (!canvas) return;
+
     const map = mapInstance;
+    const container = containerRef.current;
+    if (!container) return;
+
+    // canvas 크기를 컨테이너에 맞춤
+    const W = container.offsetWidth;
+    const H = container.offsetHeight;
+    if (W === 0 || H === 0) return;
+    if (canvas.width !== W || canvas.height !== H) {
+      canvas.width = W;
+      canvas.height = H;
+    }
 
     const bounds = map.getBounds();
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
-
-    const W = canvas.width;
-    const H = canvas.height;
-    if (W === 0 || H === 0) return;
 
     const latRange = ne.getLat() - sw.getLat();
     const lngRange = ne.getLng() - sw.getLng();
@@ -85,11 +136,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     ctx.clearRect(0, 0, W, H);
     if (points.length === 0) return;
 
-    // 미터 → 픽셀 변환
     const metersPerPixel = (latRange / H) * 111320;
     const radiusPx = Math.max(15, Math.min(300, HEATMAP_RADIUS_METERS / metersPerPixel));
 
-    // 다운샘플 스케일 (성능)
     const SCALE = Math.max(1, Math.min(4, Math.floor(radiusPx / 25)));
     const SW = Math.ceil(W / SCALE);
     const SH = Math.ceil(H / SCALE);
@@ -102,7 +151,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     const buf = new Float32Array(SW * SH);
 
-    // 화면 범위 안(+반경 여유) 포인트만 처리
     const visiblePoints = points.filter(p => {
       const { x, y } = toScaledPixel(p.lat, p.lng);
       return x >= -sRadius && x <= SW + sRadius && y >= -sRadius && y <= SH + sRadius;
@@ -110,7 +158,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     if (visiblePoints.length === 0) return;
 
-    // 가우시안 커널로 각 포인트의 영향을 buf에 누적
     for (const point of visiblePoints) {
       const { x: cx, y: cy } = toScaledPixel(point.lat, point.lng);
       const x0 = Math.max(0, Math.floor(cx - sRadius));
@@ -137,7 +184,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     if (maxVal === 0) return;
 
     const densityScale = Math.min(1.0, Math.log1p(visiblePoints.length) / Math.log1p(150));
-    const maxIntensity = 0.40 + densityScale * 0.60; // 0.40 ~ 1.0
+    const maxIntensity = 0.40 + densityScale * 0.60;
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
@@ -161,45 +208,34 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
 
     ctx.putImageData(imageData, 0, 0);
-  }, [points, mapInstance, clearCanvas]);
+  }, [points, mapInstance, ensureCanvas, containerRef]);
 
-  const resizeCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !mapInstance || !container) return;
-    const W = container.offsetWidth;
-    const H = container.offsetHeight;
-    if (canvas.width !== W || canvas.height !== H) {
-      canvas.width = W;
-      canvas.height = H;
-    }
-    drawHeatmap();
-  }, [drawHeatmap, mapInstance, containerRef]);
+  const scheduleRedraw = useCallback(() => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    animFrameRef.current = requestAnimationFrame(() => drawHeatmap());
+  }, [drawHeatmap]);
 
+  // 지도 이벤트 구독
   useEffect(() => {
     if (!mapInstance || !visible) return;
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
-    const handleUpdate = () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
-    };
+    kakao.maps.event.addListener(mapInstance, 'idle', scheduleRedraw);
+    kakao.maps.event.addListener(mapInstance, 'zoom_changed', scheduleRedraw);
+    kakao.maps.event.addListener(mapInstance, 'dragend', scheduleRedraw);
 
-    kakao.maps.event.addListener(mapInstance, 'idle', handleUpdate);
-    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleUpdate);
-    kakao.maps.event.addListener(mapInstance, 'dragend', handleUpdate);
-
-    handleUpdate();
+    scheduleRedraw();
 
     return () => {
-      kakao.maps.event.removeListener(mapInstance, 'idle', handleUpdate);
-      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleUpdate);
-      kakao.maps.event.removeListener(mapInstance, 'dragend', handleUpdate);
+      kakao.maps.event.removeListener(mapInstance, 'idle', scheduleRedraw);
+      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', scheduleRedraw);
+      kakao.maps.event.removeListener(mapInstance, 'dragend', scheduleRedraw);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [mapInstance, visible, resizeCanvas, clearCanvas]);
+  }, [mapInstance, visible, scheduleRedraw]);
 
+  // visible 꺼지면 캔버스 지우기
   useEffect(() => {
     if (!visible) {
       if (animFrameRef.current) {
@@ -210,36 +246,33 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
   }, [visible, clearCanvas]);
 
+  // points 변경 시 다시 그리기
   useEffect(() => {
     if (!visible) return;
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
-  }, [points, visible, resizeCanvas]);
+    scheduleRedraw();
+  }, [points, visible, scheduleRedraw]);
 
+  // 컨테이너 크기 변경 감지
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const ro = new ResizeObserver(() => resizeCanvas());
+    const ro = new ResizeObserver(() => scheduleRedraw());
     ro.observe(container);
     return () => ro.disconnect();
-  }, [resizeCanvas, containerRef]);
+  }, [scheduleRedraw, containerRef]);
 
-  if (!visible) return null;
+  // 카카오맵이 초기화되면 canvas 삽입 시도 (mapInstance가 생긴 직후)
+  useEffect(() => {
+    if (!mapInstance || !visible) return;
+    // 카카오맵 내부 DOM이 생성될 때까지 잠깐 대기
+    const timer = setTimeout(() => {
+      scheduleRedraw();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [mapInstance, visible, scheduleRedraw]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 2,
-      }}
-    />
-  );
+  // canvas는 DOM에 직접 삽입하므로 React render에서는 아무것도 반환하지 않음
+  return null;
 };
 
 export default HeatmapOverlay;
