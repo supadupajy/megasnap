@@ -16,22 +16,10 @@ android {
         applicationId "com.chorasnap.chorasnap"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-<<<<<<< HEAD
-        versionCode 76
-        versionName "1.0.76"
-=======
-<<<<<<< HEAD
-        versionCode 73
-        versionName "1.0.73"
-=======
-        versionCode 75
-        versionName "1.0.75"
->>>>>>> 653da46fe20efbfda8f6416617dd162c3be017f4
->>>>>>> d2144a72ed02bc26030802118d90cfc6dea87a80
+        versionCode 78
+        versionName "1.0.78"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
