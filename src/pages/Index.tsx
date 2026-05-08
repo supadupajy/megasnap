@@ -1404,7 +1404,7 @@ const Index = () => {
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
           <ShutterOverlay ref={shutterRef} />
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0">
             <MapContainer
               posts={displayedMarkers}
               viewedPostIds={viewedIds}
@@ -1556,21 +1556,7 @@ const Index = () => {
                     isTrendingExpanded && "opacity-20"
                   )}
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '8px',
-                      // 히트맵 캔버스가 뒤에 있으므로 반투명 배경을 쓰면 히트맵 색이 비쳐 왜곡됨.
-                      // 완전 불투명 흰 배경으로 히트맵이 전혀 비치지 않도록 처리.
-                      background: '#ffffff',
-                      borderRadius: '16px',
-                      padding: '12px 10px',
-                      boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
-                      border: '1px solid rgba(0,0,0,0.06)',
-                    }}
-                  >
+                  <div className="flex flex-col items-center gap-2 bg-white/30 backdrop-blur-xl border border-white/50 shadow-lg rounded-2xl px-2.5 py-3">
                     <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
                     <div style={{
                       width: '8px',
