@@ -1663,21 +1663,23 @@ const Index = () => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'rgba(0,0,0,0.40)',
-                  backdropFilter: 'blur(8px)',
+                  background: 'rgba(255,255,255,0.30)',
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
                   borderRadius: '16px',
                   padding: '12px 10px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.20)',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                  border: '1px solid rgba(255,255,255,0.50)',
                 }}
               >
-                <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
+                <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
                 <div style={{
                   width: '8px',
                   height: '100px',
                   borderRadius: '4px',
                   background: 'linear-gradient(to bottom, #c80000, #ff8c00, #ffee30, #64d2ff)',
                 }} />
-                <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
+                <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
               </div>
             </div>
           )}
