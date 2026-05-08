@@ -473,6 +473,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [renderExpandedBody, setRenderExpandedBody] = useState(isExpanded);
+  const [visibleItemLimit, setVisibleItemLimit] = useState(8);
   // 비교 기준이 되는 "이전 순위" 스냅샷 — localStorage에서 1회 로드
   // 현재 posts와 비교해 변동을 표시
   const [prevRanks, setPrevRanks] = useState<PrevRankMap>(() => loadPrevRanks());
@@ -545,6 +547,29 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const isLoading = posts.length === 0;
 
   useEffect(() => {
+    let bodyTimer: number | undefined;
+    let listTimer: number | undefined;
+
+    if (isExpanded) {
+      setVisibleItemLimit(8);
+      bodyTimer = window.setTimeout(() => {
+        setRenderExpandedBody(true);
+        listTimer = window.setTimeout(() => {
+          setVisibleItemLimit(posts.length);
+        }, 260);
+      }, 80);
+    } else {
+      setVisibleItemLimit(8);
+      bodyTimer = window.setTimeout(() => setRenderExpandedBody(false), 260);
+    }
+
+    return () => {
+      if (bodyTimer) window.clearTimeout(bodyTimer);
+      if (listTimer) window.clearTimeout(listTimer);
+    };
+  }, [isExpanded, posts.length]);
+
+  useEffect(() => {
     if (isExpanded || posts.length <= 1) return;
 
     const timer = setInterval(() => {
@@ -555,6 +580,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, [isExpanded, posts.length]);
 
   const currentPost = (posts[currentIndex] || posts[0]) as (Post & { rank: number }) | undefined;
+  const visibleExpandedPosts = isExpanded ? posts.slice(0, visibleItemLimit) : [];
 
   const handleScroll = useCallback(() => {
     if (!listRef.current) return;
@@ -567,14 +593,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     setShowScrollUpArrow(!isAtTop);
   }, []);
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
-
-  };
+  }, []);
 
   useEffect(() => {
     const el = listRef.current;
-    if (isExpanded && posts.length > 5) {
+    if (isExpanded && renderExpandedBody && posts.length > 5) {
       handleScroll();
       el?.addEventListener('scroll', handleScroll);
       return () => el?.removeEventListener('scroll', handleScroll);
@@ -582,7 +607,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       setShowScrollDownArrow(false);
       setShowScrollUpArrow(false);
     }
-  }, [isExpanded, posts.length, handleScroll]);
+  }, [isExpanded, renderExpandedBody, visibleItemLimit, posts.length, handleScroll]);
 
   // isExpanded 전환 시 body/html 레벨 overscroll + 스크롤 자체 잠금
   // (Android WebView가 페이지를 끌어당기는 현상까지 차단)
@@ -763,49 +788,64 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
           "flex flex-col relative transition-opacity duration-300 overflow-hidden",
           isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
-        style={{ overscrollBehavior: 'none', ...(maxHeight ? { maxHeight: `calc(${maxHeight} - 56px)` } : {}) }}
+        style={{
+          overscrollBehavior: 'none',
+          contain: 'layout paint style',
+          contentVisibility: isExpanded ? 'visible' : 'hidden',
+          ...(maxHeight ? { maxHeight: `calc(${maxHeight} - 56px)` } : {})
+        }}
       >
-        {/* 광고 구좌 (DB 연동) */}
-        <TrendingAdBanner />
+        {renderExpandedBody ? (
+          <>
+            {/* 광고 구좌 (DB 연동) */}
+            <TrendingAdBanner />
 
-        {/* 스크롤 위 화살표 - listRef 형제로 absolute 배치 (scrollHeight 변동 방지) */}
-        {isExpanded && showScrollUpArrow && (
-          <div className="absolute left-0 right-0 flex justify-center pointer-events-none z-30 animate-in fade-in slide-in-from-top-1 duration-300" style={{ top: '140px' }}>
-            <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
-              <ChevronUp className="w-5 h-5 text-indigo-600" />
+            {/* 스크롤 위 화살표 - listRef 형제로 absolute 배치 (scrollHeight 변동 방지) */}
+            {isExpanded && showScrollUpArrow && (
+              <div className="absolute left-0 right-0 flex justify-center pointer-events-none z-30 animate-in fade-in slide-in-from-top-1 duration-300" style={{ top: '140px' }}>
+                <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
+                  <ChevronUp className="w-5 h-5 text-indigo-600" />
+                </div>
+              </div>
+            )}
+
+            {/* 스크롤 가능한 포스팅 리스트 */}
+            <div
+              ref={listRef}
+              className="flex-1 overflow-y-scroll no-scrollbar pb-2 px-3 space-y-2 relative"
+              data-trending-scroll="true"
+              style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y', contain: 'layout paint' }}
+            >
+              {/* 상단 스톱바 (1위 위) */}
+              <div className="h-[3px] rounded-full mx-8 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
+
+              {visibleExpandedPosts.map((post) => (
+                <TrendingPostItem
+                  key={post.id}
+                  post={post as Post & { rank: number }}
+                  onPostClick={onPostClick}
+                  handleImageError={handleImageError}
+                  rankChange={getRankChange(post as Post & { rank: number })}
+                />
+              ))}
+
+              {/* 하단 스톱바 (20위 아래) */}
+              <div className="h-[3px] rounded-full mx-8 mt-1" style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
             </div>
-          </div>
-        )}
 
-        {/* 스크롤 가능한 포스팅 리스트 */}
-        <div
-          ref={listRef}
-          className="flex-1 overflow-y-scroll no-scrollbar pb-2 px-3 space-y-2 relative"
-          data-trending-scroll="true"
-          style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y' }}
-        >
-          {/* 상단 스톱바 (1위 위) */}
-          <div className="h-[3px] rounded-full mx-8 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
-
-          {posts.map((post) => (
-            <TrendingPostItem
-              key={post.id}
-              post={post as Post & { rank: number }}
-              onPostClick={onPostClick}
-              handleImageError={handleImageError}
-              rankChange={getRankChange(post as Post & { rank: number })}
-            />
-          ))}
-
-          {/* 하단 스톱바 (20위 아래) */}
-          <div className="h-[3px] rounded-full mx-8 mt-1" style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
-        </div>
-
-        {isExpanded && posts.length > 5 && showScrollDownArrow && (
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
-            <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
-              <ChevronDown className="w-5 h-5 text-indigo-600" />
-            </div>
+            {isExpanded && posts.length > 5 && showScrollDownArrow && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none pb-2 z-20 animate-in fade-in duration-300">
+                <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-lg border border-indigo-100 animate-bounce pointer-events-auto">
+                  <ChevronDown className="w-5 h-5 text-indigo-600" />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="px-5 py-3 space-y-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-14 rounded-2xl bg-gray-100/80 animate-pulse" />
+            ))}
           </div>
         )}
       </div>
