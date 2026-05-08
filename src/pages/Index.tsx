@@ -1655,25 +1655,25 @@ const Index = () => {
           {currentZoom >= 7 && !isTrendingExpanded && (
             <div
               className="absolute right-0 pointer-events-none"
-              style={{ top: 'calc(100% + 8px)' }}
+              style={{ top: 'calc(100% + 20px)' }}
             >
               <div
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '8px',
                   background: 'rgba(0,0,0,0.60)',
                   backdropFilter: 'blur(8px)',
                   borderRadius: '16px',
-                  padding: '10px 10px',
+                  padding: '12px 10px',
                   boxShadow: '0 4px 16px rgba(0,0,0,0.20)',
                 }}
               >
                 <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
                 <div style={{
                   width: '8px',
-                  height: '56px',
+                  height: '100px',
                   borderRadius: '4px',
                   background: 'linear-gradient(to bottom, #c80000, #ff8c00, #ffee30, #64d2ff)',
                 }} />
