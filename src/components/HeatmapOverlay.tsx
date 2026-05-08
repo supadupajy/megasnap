@@ -13,6 +13,8 @@ interface HeatmapOverlayProps {
 }
 
 const HEATMAP_RADIUS_METERS = 1800;
+// 히트맵을 표시할 최소 지도 레벨. 이 레벨보다 작으면(=더 확대된 상태) 그리지 않음.
+const HEATMAP_MIN_LEVEL = 7;
 
 const PALETTE: Array<[number, [number, number, number, number]]> = [
   [0.00, [100, 180, 255,   0]],  // 하늘색 (투명)
@@ -49,6 +51,13 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
+  const clearCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx?.clearRect(0, 0, canvas.width, canvas.height);
+  }, []);
+
   const drawHeatmap = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !mapInstance) return;
@@ -57,6 +66,16 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     if (!kakao?.maps) return;
 
     const map = mapInstance;
+
+    // ★ 핵심: 그리는 시점에 항상 지도 레벨을 직접 체크
+    // visible prop은 React 리렌더 사이클을 거쳐야 갱신되므로,
+    // 카카오맵의 zoom_changed/idle 이벤트가 그보다 먼저 발생할 수 있음.
+    // 그 갭에서 잘못된 강도(빨간 깜빡임)로 그려지는 것을 방지.
+    if (typeof map.getLevel === 'function' && map.getLevel() < HEATMAP_MIN_LEVEL) {
+      clearCanvas();
+      return;
+    }
+
     const bounds = map.getBounds();
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
@@ -142,7 +161,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
 
     ctx.putImageData(imageData, 0, 0);
-  }, [points, mapInstance]);
+  }, [points, mapInstance, clearCanvas]);
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -163,20 +182,22 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     if (!kakao?.maps) return;
 
     const handleUpdate = () => {
+      // 그리기 직전(rAF 콜백 안)에서도 drawHeatmap이 다시 레벨을 체크하므로 안전
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
     };
 
-    // zoom_changed: 레벨이 7 미만이면 즉시 캔버스 클리어 (빨간 깜빡임 방지)
+    // zoom_changed: 동기적으로 레벨을 즉시 확인.
+    // 레벨이 임계값 미만이면 진행 중인 rAF 취소 + 캔버스 즉시 클리어
+    // (visible prop이 false로 바뀌는 React 리렌더 전에 이미 화면에서 사라짐)
     const handleZoomChanged = () => {
       const level = mapInstance.getLevel();
-      if (level < 7) {
-        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-        const canvas = canvasRef.current;
-        if (canvas) {
-          const ctx = canvas.getContext('2d');
-          ctx?.clearRect(0, 0, canvas.width, canvas.height);
+      if (level < HEATMAP_MIN_LEVEL) {
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
         }
+        clearCanvas();
         return;
       }
       handleUpdate();
@@ -194,7 +215,18 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       kakao.maps.event.removeListener(mapInstance, 'dragend', handleUpdate);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [mapInstance, visible, resizeCanvas]);
+  }, [mapInstance, visible, resizeCanvas, clearCanvas]);
+
+  // visible이 false로 바뀌는 순간 즉시 캔버스 클리어 (React 언마운트 전 잔상 방지)
+  useEffect(() => {
+    if (!visible) {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      clearCanvas();
+    }
+  }, [visible, clearCanvas]);
 
   useEffect(() => {
     if (!visible) return;
