@@ -19,6 +19,13 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heatRef = useRef<any>(null);
   const animFrameRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  // 드래그 시작 시점의 bounds (픽셀 변환 기준)
+  const dragStartBoundsRef = useRef<{
+    swLat: number; swLng: number;
+    latRange: number; lngRange: number;
+  } | null>(null);
 
   /** 현재 지도 bounds 기준으로 simpleheat 데이터를 계산하고 draw */
   const drawHeatmap = useCallback(() => {
@@ -91,7 +98,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       })
       .draw(0.05);
 
-    // 드래그 중 CSS transform 초기화
+    // 재계산 완료 후 CSS transform 초기화
     canvas.style.transform = '';
     canvas.style.transformOrigin = '';
   }, [points, mapInstance]);
@@ -115,12 +122,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
   const scheduleRedraw = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
+    animFrameRef.current = requestAnimationFrame(() => {
+      animFrameRef.current = null;
+      resizeCanvas();
+    });
   }, [resizeCanvas]);
-
-  // 드래그 중 CSS translate로 실시간 이동 (재계산 없이 부드럽게)
-  const dragStartCenterRef = useRef<{ lat: number; lng: number } | null>(null);
-  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     if (!mapInstance || !visible) return;
@@ -131,44 +137,66 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       isDraggingRef.current = true;
       const center = mapInstance.getCenter();
       dragStartCenterRef.current = { lat: center.getLat(), lng: center.getLng() };
+
+      // 드래그 시작 시점의 bounds를 저장 (drag 중 픽셀 계산 기준)
+      const bounds = mapInstance.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      dragStartBoundsRef.current = {
+        swLat: sw.getLat(),
+        swLng: sw.getLng(),
+        latRange: ne.getLat() - sw.getLat(),
+        lngRange: ne.getLng() - sw.getLng(),
+      };
     };
 
     const handleDrag = () => {
       const canvas = canvasRef.current;
-      if (!canvas || !dragStartCenterRef.current) return;
-      const map = mapInstance;
-      const bounds = map.getBounds();
-      const sw = bounds.getSouthWest();
-      const ne = bounds.getNorthEast();
+      if (!canvas || !dragStartCenterRef.current || !dragStartBoundsRef.current) return;
+
+      const { latRange, lngRange } = dragStartBoundsRef.current;
+      if (latRange === 0 || lngRange === 0) return;
+
       const W = canvas.width;
       const H = canvas.height;
-      const latRange = ne.getLat() - sw.getLat();
-      const lngRange = ne.getLng() - sw.getLng();
-      if (latRange === 0 || lngRange === 0) return;
-      const currentCenter = map.getCenter();
+      const currentCenter = mapInstance.getCenter();
       const startCenter = dragStartCenterRef.current;
+
       const dLat = currentCenter.getLat() - startCenter.lat;
       const dLng = currentCenter.getLng() - startCenter.lng;
+
       const dx = -(dLng / lngRange) * W;
       const dy =  (dLat / latRange) * H;
+
       canvas.style.transform = `translate(${dx}px, ${dy}px)`;
     };
 
     const handleDragEnd = () => {
       isDraggingRef.current = false;
       dragStartCenterRef.current = null;
+      dragStartBoundsRef.current = null;
+      // 드래그 끝난 후 한 번만 재계산
       scheduleRedraw();
     };
 
-    const handleUpdate = () => {
+    // zoom_changed: 드래그 중이 아닐 때만 재계산
+    const handleZoomChanged = () => {
       if (!isDraggingRef.current) scheduleRedraw();
+    };
+
+    // idle: 드래그 중이거나 이미 redraw가 예약된 경우 무시
+    // dragend 직후 idle이 연달아 발생해 깜빡임이 생기는 것을 방지
+    const handleIdle = () => {
+      if (isDraggingRef.current) return;
+      if (animFrameRef.current !== null) return; // 이미 예약됨
+      scheduleRedraw();
     };
 
     kakao.maps.event.addListener(mapInstance, 'dragstart',    handleDragStart);
     kakao.maps.event.addListener(mapInstance, 'drag',         handleDrag);
     kakao.maps.event.addListener(mapInstance, 'dragend',      handleDragEnd);
-    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleUpdate);
-    kakao.maps.event.addListener(mapInstance, 'idle',         handleUpdate);
+    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleZoomChanged);
+    kakao.maps.event.addListener(mapInstance, 'idle',         handleIdle);
 
     scheduleRedraw();
 
@@ -176,9 +204,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       kakao.maps.event.removeListener(mapInstance, 'dragstart',    handleDragStart);
       kakao.maps.event.removeListener(mapInstance, 'drag',         handleDrag);
       kakao.maps.event.removeListener(mapInstance, 'dragend',      handleDragEnd);
-      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleUpdate);
-      kakao.maps.event.removeListener(mapInstance, 'idle',         handleUpdate);
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleZoomChanged);
+      kakao.maps.event.removeListener(mapInstance, 'idle',         handleIdle);
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
     };
   }, [mapInstance, visible, scheduleRedraw]);
 
@@ -194,7 +225,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     if (!canvas) return;
     const parent = canvas.parentElement;
     if (!parent) return;
-    const ro = new ResizeObserver(() => resizeCanvas());
+    const ro = new ResizeObserver(() => {
+      if (!isDraggingRef.current) resizeCanvas();
+    });
     ro.observe(parent);
     return () => ro.disconnect();
   }, [resizeCanvas]);
