@@ -1569,14 +1569,15 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 카카오맵 컨테이너: HeatmapOverlay가 이 div 내부 첫 번째 자식으로 canvas를 prepend함 */}
-      {/* isolation:isolate → 카카오맵 내부 z-index가 외부 stacking context에 영향 안 줌 */}
+      {/* 카카오맵 컨테이너 */}
       <div
         ref={containerRef}
         id="kakao-map"
         className="w-full h-full select-none"
-        style={{ position: 'relative', isolation: 'isolate' }}
+        style={{ position: 'relative' }}
       ></div>
+      {/* 히트맵 canvas: 카카오맵 위에 absolute로 올림 (zIndex:10) */}
+      {/* 마커 위치는 destination-out으로 구멍을 뚫어 마커가 보이도록 처리 */}
       <HeatmapOverlay
         points={posts
           .filter(p => p.lat != null && p.lng != null)

@@ -13,6 +13,8 @@ interface HeatmapOverlayProps {
 }
 
 const HEATMAP_RADIUS_METERS = 600;
+// 마커 주변에 뚫을 구멍 반경 (px) — 마커 크기(60px)의 절반보다 약간 크게
+const MARKER_HOLE_RADIUS = 38;
 
 const PALETTE: Array<[number, [number, number, number, number]]> = [
   [0.00, [100, 210, 255,   0]],
@@ -47,63 +49,8 @@ function getColor(intensity: number): [number, number, number, number] {
 }
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible, containerRef }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
-
-  /**
-   * 카카오맵 내부 DOM 구조 분석:
-   * #kakao-map
-   *   └─ div[style="width:100%;height:100%;position:relative;overflow:hidden"]  ← mapWrapper
-   *        ├─ div (타일 레이어, z-index 없음 또는 낮음)
-   *        ├─ div (CustomOverlay 컨테이너, z-index: 200 이상)
-   *        └─ ...
-   *
-   * 전략: mapWrapper 안에서 CustomOverlay 컨테이너의 실제 z-index를 읽어서
-   * canvas의 z-index를 그보다 1 낮게 설정.
-   * CustomOverlay 컨테이너를 못 찾으면 z-index: 150으로 fallback.
-   */
-  const ensureCanvas = useCallback((): HTMLCanvasElement | null => {
-    if (canvasRef.current && document.contains(canvasRef.current)) {
-      return canvasRef.current;
-    }
-
-    const container = containerRef.current;
-    if (!container) return null;
-
-    // 카카오맵 내부 wrapper (첫 번째 자식 div)
-    const mapWrapper = container.firstElementChild as HTMLElement | null;
-    if (!mapWrapper) return null;
-
-    // 카카오맵 내부 레이어 구조:
-    // - 타일 레이어: z-index 없음 (DOM 순서로 결정)
-    // - CustomOverlay 컨테이너 div: z-index 3~4 (카카오맵 내부 레이어)
-    // - CustomOverlay 내부 zIndex 옵션(300~500)은 컨테이너 안에서의 순서
-    //
-    // mapWrapper 자식들의 실제 z-index를 읽어서 가장 낮은 양수값보다 1 낮게 설정
-    let minChildZIndex = Infinity;
-    Array.from(mapWrapper.children).forEach(child => {
-      const zi = parseInt((child as HTMLElement).style.zIndex || '0', 10);
-      if (zi > 0 && zi < minChildZIndex) minChildZIndex = zi;
-    });
-    // 자식 z-index를 못 읽으면 2로 fallback (타일 위, 마커 아래)
-    const canvasZIndex = isFinite(minChildZIndex) ? Math.max(1, minChildZIndex - 1) : 2;
-
-    const canvas = document.createElement('canvas');
-    canvas.setAttribute('data-heatmap', 'true');
-    canvas.style.cssText = [
-      'position:absolute',
-      'top:0',
-      'left:0',
-      'width:100%',
-      'height:100%',
-      'pointer-events:none',
-      `z-index:${canvasZIndex}`,
-    ].join(';');
-
-    mapWrapper.appendChild(canvas);
-    canvasRef.current = canvas;
-    return canvas;
-  }, [containerRef]);
 
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -113,13 +60,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   }, []);
 
   const drawHeatmap = useCallback(() => {
-    if (!mapInstance) return;
+    const canvas = canvasRef.current;
+    if (!canvas || !mapInstance) return;
 
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
-
-    const canvas = ensureCanvas();
-    if (!canvas) return;
 
     const map = mapInstance;
     const container = containerRef.current;
@@ -157,6 +102,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const toScaledPixel = (lat: number, lng: number) => ({
       x: ((lng - sw.getLng()) / lngRange) * SW,
       y: (1 - (lat - sw.getLat()) / latRange) * SH,
+    });
+
+    const toPixel = (lat: number, lng: number) => ({
+      x: ((lng - sw.getLng()) / lngRange) * W,
+      y: (1 - (lat - sw.getLat()) / latRange) * H,
     });
 
     const buf = new Float32Array(SW * SH);
@@ -218,7 +168,25 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
 
     ctx.putImageData(imageData, 0, 0);
-  }, [points, mapInstance, ensureCanvas, containerRef]);
+
+    // 마커 위치에 구멍을 뚫어서 마커가 히트맵에 가려지지 않도록 함
+    // destination-out: 그린 영역을 투명하게 지움
+    ctx.globalCompositeOperation = 'destination-out';
+    for (const point of visiblePoints) {
+      const { x: px, y: py } = toPixel(point.lat, point.lng);
+      // 마커는 yAnchor:1 이므로 좌표가 마커 하단 중앙 → 마커 중심은 위로 MARKER_HOLE_RADIUS만큼
+      const markerCenterY = py - MARKER_HOLE_RADIUS;
+      const gradient = ctx.createRadialGradient(px, markerCenterY, 0, px, markerCenterY, MARKER_HOLE_RADIUS);
+      gradient.addColorStop(0, 'rgba(0,0,0,1)');
+      gradient.addColorStop(0.6, 'rgba(0,0,0,0.8)');
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(px, markerCenterY, MARKER_HOLE_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }, [points, mapInstance, containerRef]);
 
   const scheduleRedraw = useCallback(() => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
@@ -267,14 +235,22 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     return () => ro.disconnect();
   }, [scheduleRedraw, containerRef]);
 
-  // 카카오맵 초기화 후 canvas 삽입 (내부 DOM이 생성될 때까지 대기)
-  useEffect(() => {
-    if (!mapInstance || !visible) return;
-    const timer = setTimeout(() => scheduleRedraw(), 300);
-    return () => clearTimeout(timer);
-  }, [mapInstance, visible, scheduleRedraw]);
+  if (!visible) return null;
 
-  return null;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 10,
+      }}
+    />
+  );
 };
 
 export default HeatmapOverlay;
