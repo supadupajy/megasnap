@@ -12,20 +12,24 @@ interface HeatmapOverlayProps {
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
-const HEATMAP_RADIUS_METERS = 1800;
-// 히트맵을 표시할 최소 지도 레벨. 이 레벨보다 작으면(=더 확대된 상태) 그리지 않음.
+// 포인트 하나의 영향 반경 (미터). 작을수록 각 마커가 좁게 표시됨.
+const HEATMAP_RADIUS_METERS = 600;
+
+// 히트맵을 표시할 최소 지도 레벨
 const HEATMAP_MIN_LEVEL = 7;
 
+// 색상 팔레트: intensity 0~1 → RGBA
+// 마커가 적으면 하늘색, 많아질수록 초록→노랑→주황→빨강 순으로 변함
+// 빨강/보라는 매우 밀집된 경우에만 나타나도록 상위 구간에 배치
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.00, [100, 180, 255,   0]],  // 하늘색 (투명)
-  [0.10, [100, 200, 255, 100]],  // 하늘색
-  [0.22, [  0, 210, 120, 170]],  // 초록색
-  [0.38, [ 80, 230,  30, 200]],  // 연두/노랑
-  [0.52, [255, 230,   0, 215]],  // 노랑
-  [0.65, [255, 130,   0, 225]],  // 주황
-  [0.78, [255,  20,   0, 235]],  // 빨강
-  [0.90, [200,   0,  60, 240]],  // 진빨강
-  [1.00, [160,   0, 200, 250]],  // 보라
+  [0.00, [100, 210, 255,   0]],  // 투명 (없음)
+  [0.08, [100, 210, 255,  80]],  // 하늘색 (희박)
+  [0.20, [ 60, 220, 160, 140]],  // 청록
+  [0.35, [ 80, 220,  50, 180]],  // 초록
+  [0.50, [200, 230,   0, 200]],  // 연두/노랑
+  [0.65, [255, 180,   0, 215]],  // 주황
+  [0.80, [255,  60,   0, 225]],  // 빨강
+  [1.00, [200,   0,  40, 235]],  // 진빨강 (매우 밀집)
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -44,7 +48,7 @@ function getColor(intensity: number): [number, number, number, number] {
       ];
     }
   }
-  return [180, 0, 0, 245];
+  return PALETTE[PALETTE.length - 1][1];
 }
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible, containerRef }) => {
@@ -67,10 +71,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     const map = mapInstance;
 
-    // ★ 핵심: 그리는 시점에 항상 지도 레벨을 직접 체크
-    // visible prop은 React 리렌더 사이클을 거쳐야 갱신되므로,
-    // 카카오맵의 zoom_changed/idle 이벤트가 그보다 먼저 발생할 수 있음.
-    // 그 갭에서 잘못된 강도(빨간 깜빡임)로 그려지는 것을 방지.
+    // 그리는 시점에 항상 레벨 직접 체크 (React 리렌더 갭 방지)
     if (typeof map.getLevel === 'function' && map.getLevel() < HEATMAP_MIN_LEVEL) {
       clearCanvas();
       return;
@@ -93,10 +94,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     ctx.clearRect(0, 0, W, H);
     if (points.length === 0) return;
 
+    // 미터 → 픽셀 변환
     const metersPerPixel = (latRange / H) * 111320;
-    const radiusPx = Math.max(20, Math.min(600, HEATMAP_RADIUS_METERS / metersPerPixel));
+    const radiusPx = Math.max(15, Math.min(300, HEATMAP_RADIUS_METERS / metersPerPixel));
 
-    const SCALE = Math.max(1, Math.min(4, Math.floor(radiusPx / 30)));
+    // 다운샘플 스케일 (성능)
+    const SCALE = Math.max(1, Math.min(4, Math.floor(radiusPx / 25)));
     const SW = Math.ceil(W / SCALE);
     const SH = Math.ceil(H / SCALE);
     const sRadius = radiusPx / SCALE;
@@ -108,6 +111,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     const buf = new Float32Array(SW * SH);
 
+    // 화면 범위 안(+반경 여유) 포인트만 처리
     const visiblePoints = points.filter(p => {
       const { x, y } = toScaledPixel(p.lat, p.lng);
       return x >= -sRadius && x <= SW + sRadius && y >= -sRadius && y <= SH + sRadius;
@@ -115,6 +119,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     if (visiblePoints.length === 0) return;
 
+    // 가우시안 커널로 각 포인트의 영향을 buf에 누적
     for (const point of visiblePoints) {
       const { x: cx, y: cy } = toScaledPixel(point.lat, point.lng);
       const x0 = Math.max(0, Math.floor(cx - sRadius));
@@ -126,15 +131,29 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         for (let px = x0; px <= x1; px++) {
           const dx = px - cx;
           const dy = py - cy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > sRadius) continue;
-          const t = dist / sRadius;
-          buf[py * SW + px] += Math.exp(-4.0 * t * t);
+          const distSq = dx * dx + dy * dy;
+          if (distSq > sRadius * sRadius) continue;
+          const t = Math.sqrt(distSq) / sRadius;
+          buf[py * SW + px] += Math.exp(-3.0 * t * t);
         }
       }
     }
 
-    const SCALE_FACTOR = Math.max(1.5, points.length * 0.8);
+    // buf의 실제 최댓값으로 정규화
+    // → 가장 밀집된 곳이 항상 팔레트 최고값에 매핑되지 않고,
+    //   전체 포인트 밀도에 비례해서 색이 결정됨
+    let maxVal = 0;
+    for (let i = 0; i < buf.length; i++) {
+      if (buf[i] > maxVal) maxVal = buf[i];
+    }
+    if (maxVal === 0) return;
+
+    // 포인트가 적을 때 빨간색이 나오지 않도록 상한을 동적으로 조정
+    // 포인트 1개: 최대 intensity ~0.4 (하늘~초록 구간)
+    // 포인트 5개 이상 밀집: 최대 intensity ~0.8 (주황~빨강)
+    // 포인트 15개 이상 밀집: 최대 intensity 1.0 (진빨강)
+    const densityScale = Math.min(1.0, Math.log1p(visiblePoints.length) / Math.log1p(15));
+    const maxIntensity = 0.35 + densityScale * 0.65; // 0.35 ~ 1.0
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
@@ -144,9 +163,10 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       for (let fx = 0; fx < W; fx++) {
         const sx = Math.min(SW - 1, Math.floor(fx / SCALE));
         const raw = buf[sy * SW + sx];
-        if (raw < 0.003) continue;
+        if (raw < 0.005) continue;
 
-        const intensity = Math.min(raw / SCALE_FACTOR, 1.0);
+        // 각 픽셀의 상대적 밀도(0~1) × maxIntensity
+        const intensity = Math.min((raw / maxVal) * maxIntensity, 1.0);
         const [r, g, b, a] = getColor(intensity);
 
         const idx = (fy * W + fx) * 4;
@@ -179,14 +199,10 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     if (!kakao?.maps) return;
 
     const handleUpdate = () => {
-      // 그리기 직전(rAF 콜백 안)에서도 drawHeatmap이 다시 레벨을 체크하므로 안전
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
     };
 
-    // zoom_changed: 동기적으로 레벨을 즉시 확인.
-    // 레벨이 임계값 미만이면 진행 중인 rAF 취소 + 캔버스 즉시 클리어
-    // (visible prop이 false로 바뀌는 React 리렌더 전에 이미 화면에서 사라짐)
     const handleZoomChanged = () => {
       const level = mapInstance.getLevel();
       if (level < HEATMAP_MIN_LEVEL) {
@@ -214,7 +230,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     };
   }, [mapInstance, visible, resizeCanvas, clearCanvas]);
 
-  // visible이 false로 바뀌는 순간 즉시 캔버스 클리어 (React 언마운트 전 잔상 방지)
   useEffect(() => {
     if (!visible) {
       if (animFrameRef.current) {
