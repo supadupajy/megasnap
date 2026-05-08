@@ -445,6 +445,7 @@ const MapContainer = ({
         disableDoubleClickZoom: true,
       });
       map.setMaxLevel(11);
+      map.setMinLevel(3);
       mapInstance.current = map;
       setMapInstanceState(map);
 
@@ -811,18 +812,6 @@ const MapContainer = ({
         // 진행 중인 removalTimeout도 모두 취소
         removalTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
         removalTimeoutsRef.current.clear();
-      }
-
-      if (level < MIN_LEVEL) {
-        const centerToRestore = lastAllowedCenter || map.getCenter();
-        map.setLevel(MIN_LEVEL, { animate: { duration: 200 } });
-        map.setCenter(centerToRestore);
-        const el = containerRef.current;
-        if (el) {
-          el.className = el.className.replace(/\bzoom-\d+\b/g, '');
-          el.classList.add(`zoom-${MIN_LEVEL}`);
-        }
-        return;
       }
 
       if (level === MIN_LEVEL) {
