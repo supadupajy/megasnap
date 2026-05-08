@@ -1546,13 +1546,11 @@ const Index = () => {
               {currentZoom >= 7 && (
                 <div
                   style={{
-                    position: 'fixed',
                     bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)',
                     left: 'calc(1rem + 48px + 8px)',
-                    zIndex: 20,
                   }}
                   className={cn(
-                    "pointer-events-none transition-opacity",
+                    "absolute z-20 pointer-events-none transition-opacity",
                     isTrendingExpanded && "opacity-20"
                   )}
                 >
