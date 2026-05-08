@@ -840,9 +840,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}
-                              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
-                                <X className="w-4 h-4" />
-                              </button>
                             </div>
                           </div>
 
@@ -890,8 +887,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <LayoutGrid className="w-5 h-5 text-indigo-600" />
                               </div>
                               <div>
-                                <h2 className="text-lg font-black text-gray-900 tracking-tight">지도 마커</h2>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MAP MARKER</p>
+                                <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
                               </div>
                             </div>
                             <button
@@ -921,9 +918,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                             {renderDropdownMenu()}
-                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
-                              <X className="w-4 h-4" />
-                            </button>
                           </div>
                         </div>
 
