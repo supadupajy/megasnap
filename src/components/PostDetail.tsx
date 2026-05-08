@@ -891,7 +891,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               </div>
                               <div>
                                 <h2 className="text-lg font-black text-gray-900 tracking-tight">지도 마커</h2>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MAP MARKER</p>
                               </div>
                             </div>
                             <button
