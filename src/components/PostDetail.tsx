@@ -290,7 +290,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogPortal>
           <DialogOverlay className="z-[12999] bg-black/40" />
-          <DialogPrimitive.Content className="fixed inset-0 z-[13000] max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+          <DialogPrimitive.Content
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            className="fixed inset-0 z-[13000] max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          >
             <VisuallyHidden.Root>
               <DialogTitle>광고 준비 중</DialogTitle>
               <DialogDescription>광고 시작 시간 전입니다.</DialogDescription>
@@ -774,6 +777,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
           />
           <DialogPrimitive.Content
+            onOpenAutoFocus={(e) => e.preventDefault()}
             className="fixed z-[13000] max-w-[100vw] w-full p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
             style={{
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
