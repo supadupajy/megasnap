@@ -15,16 +15,15 @@ interface HeatmapOverlayProps {
 
 const HEATMAP_RADIUS_METERS = 600;
 const OVERSCAN_RATIO = 0.65;
-const IDLE_AFTER_DRAG_IGNORE_MS = 300;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const heatRef = useRef<any>(null);
   const pointsRef = useRef(points);
   const animFrameRef = useRef<number | null>(null);
+  const redrawTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDraggingRef = useRef(false);
   const pendingRedrawRef = useRef(false);
-  const lastDragEndAtRef = useRef(0);
   const dragStartCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const dragStartBoundsRef = useRef<{ latRange: number; lngRange: number } | null>(null);
   const viewportRef = useRef({ width: 0, height: 0, overscanX: 0, overscanY: 0 });
@@ -82,6 +81,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const lngRange = ne.getLng() - sw.getLng();
     if (latRange === 0 || lngRange === 0) return;
 
+    const projection = map.getProjection?.();
+    if (!projection?.containerPointFromCoords) return;
+
     if (!heatRef.current) {
       heatRef.current = simpleheat(canvas);
     }
@@ -91,10 +93,13 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const radiusPx = Math.max(10, Math.min(420, HEATMAP_RADIUS_METERS / metersPerPixel));
     const blurPx = radiusPx * 0.85;
 
-    const toPixel = (lat: number, lng: number) => ({
-      x: overscanX + ((lng - sw.getLng()) / lngRange) * viewportWidth,
-      y: overscanY + (1 - (lat - sw.getLat()) / latRange) * viewportHeight,
-    });
+    const toPixel = (lat: number, lng: number) => {
+      const point = projection.containerPointFromCoords(new kakao.maps.LatLng(lat, lng));
+      return {
+        x: overscanX + (point.x ?? point.getX?.() ?? 0),
+        y: overscanY + (point.y ?? point.getY?.() ?? 0),
+      };
+    };
 
     const margin = radiusPx;
     const data: [number, number, number][] = [];
@@ -196,8 +201,13 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       isDraggingRef.current = false;
       dragStartCenterRef.current = null;
       dragStartBoundsRef.current = null;
-      lastDragEndAtRef.current = Date.now();
       scheduleRedraw();
+
+      if (redrawTimerRef.current) clearTimeout(redrawTimerRef.current);
+      redrawTimerRef.current = setTimeout(() => {
+        redrawTimerRef.current = null;
+        scheduleRedraw();
+      }, 160);
     };
 
     const handleZoomChanged = () => {
@@ -206,7 +216,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     const handleIdle = () => {
       if (isDraggingRef.current) return;
-      if (Date.now() - lastDragEndAtRef.current < IDLE_AFTER_DRAG_IGNORE_MS) return;
       if (animFrameRef.current !== null) return;
       scheduleRedraw();
     };
@@ -228,6 +237,10 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;
+      }
+      if (redrawTimerRef.current) {
+        clearTimeout(redrawTimerRef.current);
+        redrawTimerRef.current = null;
       }
     };
   }, [mapInstance, visible, scheduleRedraw]);
