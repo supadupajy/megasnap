@@ -50,18 +50,18 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animFrameRef = useRef<number | null>(null);
 
-  // 카카오맵 내부에서 실제 지도 타일이 그려지는 컨테이너를 찾아 반환
-  // 카카오맵은 containerRef.current 안에 여러 div 레이어를 만드는데,
-  // 첫 번째 자식 div가 지도 레이어 컨테이너임
-  const getMapInnerContainer = useCallback((): HTMLElement | null => {
-    const el = containerRef.current;
-    if (!el) return null;
-    // 카카오맵 내부 구조: #kakao-map > div (지도 레이어 wrapper)
-    const inner = el.querySelector('div') as HTMLElement | null;
-    return inner || el;
-  }, [containerRef]);
-
-  // canvas를 카카오맵 내부 DOM에 삽입 (마커 레이어보다 낮은 zIndex)
+  /**
+   * 카카오맵 내부 DOM 구조 분석:
+   * #kakao-map
+   *   └─ div[style="width:100%;height:100%;position:relative;overflow:hidden"]  ← mapWrapper
+   *        ├─ div (타일 레이어, z-index 없음 또는 낮음)
+   *        ├─ div (CustomOverlay 컨테이너, z-index: 200 이상)
+   *        └─ ...
+   *
+   * 전략: mapWrapper 안에서 CustomOverlay 컨테이너의 실제 z-index를 읽어서
+   * canvas의 z-index를 그보다 1 낮게 설정.
+   * CustomOverlay 컨테이너를 못 찾으면 z-index: 150으로 fallback.
+   */
   const ensureCanvas = useCallback((): HTMLCanvasElement | null => {
     if (canvasRef.current && document.contains(canvasRef.current)) {
       return canvasRef.current;
@@ -70,7 +70,26 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const container = containerRef.current;
     if (!container) return null;
 
+    // 카카오맵 내부 wrapper (첫 번째 자식 div)
+    const mapWrapper = container.firstElementChild as HTMLElement | null;
+    if (!mapWrapper) return null;
+
+    // 카카오맵 내부 레이어 구조:
+    // - 타일 레이어: z-index 없음 (DOM 순서로 결정)
+    // - CustomOverlay 컨테이너 div: z-index 3~4 (카카오맵 내부 레이어)
+    // - CustomOverlay 내부 zIndex 옵션(300~500)은 컨테이너 안에서의 순서
+    //
+    // mapWrapper 자식들의 실제 z-index를 읽어서 가장 낮은 양수값보다 1 낮게 설정
+    let minChildZIndex = Infinity;
+    Array.from(mapWrapper.children).forEach(child => {
+      const zi = parseInt((child as HTMLElement).style.zIndex || '0', 10);
+      if (zi > 0 && zi < minChildZIndex) minChildZIndex = zi;
+    });
+    // 자식 z-index를 못 읽으면 2로 fallback (타일 위, 마커 아래)
+    const canvasZIndex = isFinite(minChildZIndex) ? Math.max(1, minChildZIndex - 1) : 2;
+
     const canvas = document.createElement('canvas');
+    canvas.setAttribute('data-heatmap', 'true');
     canvas.style.cssText = [
       'position:absolute',
       'top:0',
@@ -78,18 +97,10 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       'width:100%',
       'height:100%',
       'pointer-events:none',
-      'z-index:10',  // 카카오맵 타일(z-index 없음) 위, CustomOverlay(z-index 300+) 아래
+      `z-index:${canvasZIndex}`,
     ].join(';');
-    canvas.setAttribute('data-heatmap', 'true');
 
-    // 카카오맵 내부 첫 번째 div에 삽입 (타일 레이어 위, 마커 레이어 아래)
-    const inner = container.querySelector('div') as HTMLElement | null;
-    if (inner) {
-      inner.appendChild(canvas);
-    } else {
-      container.appendChild(canvas);
-    }
-
+    mapWrapper.appendChild(canvas);
     canvasRef.current = canvas;
     return canvas;
   }, [containerRef]);
@@ -114,7 +125,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const container = containerRef.current;
     if (!container) return;
 
-    // canvas 크기를 컨테이너에 맞춤
     const W = container.offsetWidth;
     const H = container.offsetHeight;
     if (W === 0 || H === 0) return;
@@ -215,7 +225,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     animFrameRef.current = requestAnimationFrame(() => drawHeatmap());
   }, [drawHeatmap]);
 
-  // 지도 이벤트 구독
   useEffect(() => {
     if (!mapInstance || !visible) return;
     const kakao = (window as any).kakao;
@@ -235,7 +244,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     };
   }, [mapInstance, visible, scheduleRedraw]);
 
-  // visible 꺼지면 캔버스 지우기
   useEffect(() => {
     if (!visible) {
       if (animFrameRef.current) {
@@ -246,13 +254,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
   }, [visible, clearCanvas]);
 
-  // points 변경 시 다시 그리기
   useEffect(() => {
     if (!visible) return;
     scheduleRedraw();
   }, [points, visible, scheduleRedraw]);
 
-  // 컨테이너 크기 변경 감지
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -261,17 +267,13 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     return () => ro.disconnect();
   }, [scheduleRedraw, containerRef]);
 
-  // 카카오맵이 초기화되면 canvas 삽입 시도 (mapInstance가 생긴 직후)
+  // 카카오맵 초기화 후 canvas 삽입 (내부 DOM이 생성될 때까지 대기)
   useEffect(() => {
     if (!mapInstance || !visible) return;
-    // 카카오맵 내부 DOM이 생성될 때까지 잠깐 대기
-    const timer = setTimeout(() => {
-      scheduleRedraw();
-    }, 300);
+    const timer = setTimeout(() => scheduleRedraw(), 300);
     return () => clearTimeout(timer);
   }, [mapInstance, visible, scheduleRedraw]);
 
-  // canvas는 DOM에 직접 삽입하므로 React render에서는 아무것도 반환하지 않음
   return null;
 };
 

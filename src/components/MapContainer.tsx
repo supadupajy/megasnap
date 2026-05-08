@@ -1569,12 +1569,13 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 카카오맵 컨테이너: HeatmapOverlay가 이 div 내부 DOM에 canvas를 직접 삽입함 */}
+      {/* 카카오맵 컨테이너: HeatmapOverlay가 이 div 내부 첫 번째 자식으로 canvas를 prepend함 */}
+      {/* isolation:isolate → 카카오맵 내부 z-index가 외부 stacking context에 영향 안 줌 */}
       <div
         ref={containerRef}
         id="kakao-map"
         className="w-full h-full select-none"
-        style={{ position: 'relative' }}
+        style={{ position: 'relative', isolation: 'isolate' }}
       ></div>
       <HeatmapOverlay
         points={posts
