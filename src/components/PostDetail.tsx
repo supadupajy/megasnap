@@ -890,7 +890,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <LayoutGrid className="w-5 h-5 text-indigo-600" />
                               </div>
                               <div>
-                                <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
+                                <h2 className="text-lg font-black text-gray-900 tracking-tight">지도 마커</h2>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
                               </div>
                             </div>
