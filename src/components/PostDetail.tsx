@@ -840,9 +840,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}
-                              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
-                                <X className="w-4 h-4" />
-                              </button>
                             </div>
                           </div>
 
@@ -921,9 +918,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                             {renderDropdownMenu()}
-                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
-                              <X className="w-4 h-4" />
-                            </button>
                           </div>
                         </div>
 
