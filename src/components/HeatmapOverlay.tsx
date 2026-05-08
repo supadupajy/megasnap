@@ -14,13 +14,15 @@ interface HeatmapOverlayProps {
 const HEATMAP_RADIUS_METERS = 600;
 
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.0,  [100, 210, 255,   0]],
-  [0.05, [100, 210, 255, 130]],
-  [0.25, [ 60, 190, 240, 180]],
-  [0.45, [255, 235,  40, 210]],
-  [0.65, [255, 130,   0, 225]],
-  [0.82, [255,  40,   0, 235]],
-  [1.0,  [200,   0,   0, 245]],
+  [0.0,  [100, 210, 255,   0]],   // 투명 하늘색
+  [0.08, [100, 210, 255, 140]],   // 하늘색
+  [0.20, [ 40, 200, 180, 180]],   // 청록색
+  [0.35, [ 60, 210,  80, 200]],   // 초록색
+  [0.50, [180, 230,  30, 215]],   // 연두-노란색
+  [0.65, [255, 220,   0, 225]],   // 노란색
+  [0.78, [255, 120,   0, 235]],   // 주황색
+  [0.90, [255,  30,   0, 240]],   // 빨간색
+  [1.0,  [180,   0,   0, 250]],   // 진한 빨간색
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -129,7 +131,8 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         const raw = buf[sy * SW + sx];
         if (raw < 0.001) continue;
         const normalized = Math.min(raw / maxPossible, 1.0);
-        const intensity = Math.pow(normalized, 0.7);
+        // 감마 > 1: 낮은 강도 구간을 압축 → 색상 전환이 더 빠르고 선명하게
+        const intensity = Math.pow(normalized, 1.4);
         const [r, g, b, a] = getColor(intensity);
         const idx = (fy * W + fx) * 4;
         data[idx]     = r;
