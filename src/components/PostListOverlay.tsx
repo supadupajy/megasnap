@@ -185,6 +185,10 @@ const PostListOverlay = ({
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // 광고 삽입 간격을 posts 변경과 무관하게 안정적으로 유지
+  // useMemo 안에서 Math.random()을 쓰면 posts가 바뀔 때마다 광고 위치가 달라지는 문제 발생
+  const adIntervalsRef = useRef<number[]>([]);
+
   // ── 뒤로가기 버튼으로 닫기 (Android/브라우저 back 버튼) ──────
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
@@ -234,15 +238,15 @@ const PostListOverlay = ({
         ? new Date(lastPost.createdAt).toISOString()
         : new Date().toISOString();
 
-      // 현재 지도 화면 bounds 그대로 사용 (확장 없음)
       const latMin = Math.min(currentBounds.sw.lat, currentBounds.ne.lat);
       const latMax = Math.max(currentBounds.sw.lat, currentBounds.ne.lat);
       const lngMin = Math.min(currentBounds.sw.lng, currentBounds.ne.lng);
       const lngMax = Math.max(currentBounds.sw.lng, currentBounds.ne.lng);
 
+      // profiles JOIN을 첫 쿼리에서 함께 처리 (별도 profiles 쿼리 제거)
       let { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
         .gte('latitude', latMin)
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
@@ -258,23 +262,10 @@ const PostListOverlay = ({
         return;
       }
 
-      const userIds = Array.from(new Set(
-        data.map((p: any) => p.user_id).filter((id: any) => !!id)
-      ));
-
-      let profileMap = new Map<string, { nickname: string | null; avatar_url: string | null }>();
-      if (userIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, nickname, avatar_url')
-          .in('id', userIds);
-        (profilesData || []).forEach((pf: any) => {
-          profileMap.set(pf.id, { nickname: pf.nickname, avatar_url: pf.avatar_url });
-        });
-      }
+      // REMOVED: 별도 profiles 쿼리 (N+1 패턴) - JOIN 결과를 직접 사용
 
       const newPosts: Post[] = data.map((p: any) => {
-        const profile = p.user_id ? profileMap.get(p.user_id) : null;
+        const profile = (p as any).profiles;
         const userName = profile?.nickname || p.user_name || '탐험가';
         const userAvatar = profile?.avatar_url || p.user_avatar || '';
 
@@ -282,7 +273,7 @@ const PostListOverlay = ({
         if (p.hot_since) {
           borderType = 'popular';
         } else {
-          borderType = getTierFromFollowers(Number(p.profiles?.followers ?? 0));
+          borderType = getTierFromFollowers(Number(profile?.followers ?? 0));
         }
 
         let finalImage = p.image_url || '/placeholder.svg';
@@ -292,7 +283,6 @@ const PostListOverlay = ({
           id: p.id,
           user: { id: p.user_id, name: userName, avatar: userAvatar || '/placeholder.svg' },
           content: p.content || '',
-
           location: p.location_name || '알 수 없는 장소',
           lat: p.latitude, lng: p.longitude,
           latitude: p.latitude, longitude: p.longitude,
@@ -394,14 +384,20 @@ const PostListOverlay = ({
   const adIndices = useMemo(() => {
     const indices = new Set<number>();
     let postCount = 0;
-    let nextAdAt = Math.floor(Math.random() * 2) + 2; // 2 또는 3
+    let adIntervalIdx = 0;
+
+    // 기존 간격이 부족하면 새로 생성 (한 번 생성된 간격은 재사용)
     posts.forEach((post, index) => {
       if (!post.isAd) {
         postCount++;
+        if (adIntervalIdx >= adIntervalsRef.current.length) {
+          adIntervalsRef.current.push(Math.floor(Math.random() * 2) + 2);
+        }
+        const nextAdAt = adIntervalsRef.current[adIntervalIdx];
         if (postCount >= nextAdAt) {
           indices.add(index);
           postCount = 0;
-          nextAdAt = Math.floor(Math.random() * 2) + 2;
+          adIntervalIdx++;
         }
       }
     });

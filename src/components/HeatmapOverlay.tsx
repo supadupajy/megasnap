@@ -176,7 +176,8 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     kakao.maps.event.addListener(mapInstance, 'idle', handleUpdate);
     kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleUpdate);
-    kakao.maps.event.addListener(mapInstance, 'drag', handleUpdate);
+    // drag 이벤트 제거: 초당 수십 번 발생해 canvas 재계산 부하 유발
+    // dragend만으로 충분 (드래그 완료 후 한 번만 재계산)
     kakao.maps.event.addListener(mapInstance, 'dragend', handleUpdate);
 
     handleUpdate();
@@ -184,7 +185,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     return () => {
       kakao.maps.event.removeListener(mapInstance, 'idle', handleUpdate);
       kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleUpdate);
-      kakao.maps.event.removeListener(mapInstance, 'drag', handleUpdate);
       kakao.maps.event.removeListener(mapInstance, 'dragend', handleUpdate);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
