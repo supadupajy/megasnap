@@ -204,13 +204,14 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
           transition={{
+            type: 'tween',
             duration: 0.2,
-            ease: "easeOut"
+            ease: [0.42, 0, 1, 1]
           }}
           className="fixed inset-0 z-[40] bg-white flex flex-col overflow-hidden"
           style={{ 
