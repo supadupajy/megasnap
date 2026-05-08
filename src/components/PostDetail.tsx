@@ -800,30 +800,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <div className="ad-post-wrapper w-full h-full">
                       <div className="ad-post-inner w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                         <div className="flex-1 min-h-0 flex flex-col relative bg-white">
-                          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-                            {/* 광고 마커 상단 헤더 */}
-                            <div className="px-4 py-4 bg-gray-50 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                                    <LayoutGrid className="w-5 h-5 text-indigo-600" />
-                                  </div>
-                                  <div>
-                                    <h2 className="text-lg font-black text-gray-900 tracking-tight">광고 마커</h2>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Advertisement Marker</p>
-                                  </div>
+                          {/* 광고 마커 상단 헤더 - 고정 */}
+                          <div className="px-4 py-4 bg-gray-50 border-b border-gray-100 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                                  <LayoutGrid className="w-5 h-5 text-indigo-600" />
                                 </div>
-                                <button
-                                  onClick={onClose}
-                                  className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
-                                >
-                                  <X className="w-4 h-4 text-gray-900" />
-                                  <span className="text-sm font-normal text-gray-900">닫기</span>
-                                </button>
+                                <div>
+                                  <h2 className="text-lg font-black text-gray-900 tracking-tight">광고 마커</h2>
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Advertisement Marker</p>
+                                </div>
                               </div>
+                              <button
+                                onClick={onClose}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+                              >
+                                <X className="w-4 h-4 text-gray-900" />
+                                <span className="text-sm font-normal text-gray-900">닫기</span>
+                              </button>
                             </div>
+                          </div>
 
-                            {/* 닉네임 헤더 */}
+                          {/* 닉네임 헤더 + 콘텐츠 - 스크롤 */}
+                          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                             <div className="flex items-center justify-between px-4 py-4 bg-white border-b border-gray-50" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                                 {renderAvatarForAd()}
@@ -879,30 +879,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     /* ===== 일반 포스트 ===== */
                     <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                       <div className="flex-1 min-h-0 flex flex-col relative bg-white">
-                        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-                          {/* 지도 마커 상단 헤더 */}
-                          <div className="px-4 py-4 bg-gray-50 border-b border-gray-100" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                                  <LayoutGrid className="w-5 h-5 text-indigo-600" />
-                                </div>
-                                <div>
-                                  <h2 className="text-lg font-black text-gray-900 tracking-tight">지도 마커</h2>
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MAP MARKER</p>
-                                </div>
+                        {/* 지도 마커 상단 헤더 - 고정 */}
+                        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                                <LayoutGrid className="w-5 h-5 text-indigo-600" />
                               </div>
-                              <button
-                                onClick={onClose}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
-                              >
-                                <X className="w-4 h-4 text-gray-900" />
-                                <span className="text-sm font-normal text-gray-900">닫기</span>
-                              </button>
+                              <div>
+                                <h2 className="text-lg font-black text-gray-900 tracking-tight">지도 마커</h2>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MAP MARKER</p>
+                              </div>
                             </div>
+                            <button
+                              onClick={onClose}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+                            >
+                              <X className="w-4 h-4 text-gray-900" />
+                              <span className="text-sm font-normal text-gray-900">닫기</span>
+                            </button>
                           </div>
+                        </div>
 
-                          {/* 닉네임 헤더 */}
+                        {/* 닉네임 헤더 + 콘텐츠 - 스크롤 */}
+                        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                           <div className="flex items-center justify-between px-4 py-4 bg-white border-b border-gray-50" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                               {renderAvatarForNormal()}
