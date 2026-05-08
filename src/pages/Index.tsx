@@ -1542,15 +1542,17 @@ const Index = () => {
               </div>
 
               {/* 히트맵 범례: 레벨 7 이상일 때 좌측 하단 아이콘 옆에 세로로 표시 */}
+              {/* position: fixed → viewport stacking context → 히트맵(absolute) 위에 항상 올라옴 */}
               {currentZoom >= 7 && (
                 <div
                   style={{
+                    position: 'fixed',
                     bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)',
                     left: 'calc(1rem + 48px + 8px)',
                     zIndex: 20,
                   }}
                   className={cn(
-                    "absolute pointer-events-none transition-opacity",
+                    "pointer-events-none transition-opacity",
                     isTrendingExpanded && "opacity-20"
                   )}
                 >
