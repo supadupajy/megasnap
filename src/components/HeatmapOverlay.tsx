@@ -9,24 +9,25 @@ interface HeatmapOverlayProps {
   points: HeatmapPoint[];
   mapInstance: any;
   visible: boolean;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
-// 히트맵 1개 포인트의 영향 반경 (실제 지리 거리, 미터)
-const HEATMAP_RADIUS_METERS = 600;
+const HEATMAP_RADIUS_METERS = 1800;
 
-// 색상 팔레트: 하늘색(낮음) → 노란색 → 주황색 → 빨간색(높음)
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.0,  [100, 210, 255,   0]],
-  [0.05, [100, 210, 255, 130]],
-  [0.25, [ 60, 190, 240, 180]],
-  [0.45, [255, 235,  40, 210]],
-  [0.65, [255, 130,   0, 225]],
-  [0.82, [255,  40,   0, 235]],
-  [1.0,  [200,   0,   0, 245]],
+  [0.00, [100, 180, 255,   0]],  // 하늘색 (투명)
+  [0.10, [100, 200, 255, 100]],  // 하늘색
+  [0.22, [  0, 210, 120, 170]],  // 초록색
+  [0.38, [ 80, 230,  30, 200]],  // 연두/노랑
+  [0.52, [255, 230,   0, 215]],  // 노랑
+  [0.65, [255, 130,   0, 225]],  // 주황
+  [0.78, [255,  20,   0, 235]],  // 빨강
+  [0.90, [200,   0,  60, 240]],  // 진빨강
+  [1.00, [160,   0, 200, 250]],  // 보라
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
-  if (intensity < 0.005) return [0, 0, 0, 0];
+  if (intensity <= 0) return [0, 0, 0, 0];
   const v = Math.min(intensity, 1.0);
   for (let i = 0; i < PALETTE.length - 1; i++) {
     const [t0, c0] = PALETTE[i];
@@ -41,10 +42,10 @@ function getColor(intensity: number): [number, number, number, number] {
       ];
     }
   }
-  return [200, 0, 0, 245];
+  return [180, 0, 0, 245];
 }
 
-const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
+const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible, containerRef }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
 
@@ -71,16 +72,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, W, H);
-
     if (points.length === 0) return;
 
-    // ── 지리적 거리 → 픽셀 반경 변환 ──
-    // 위도 1도 ≈ 111320m, 화면 H픽셀이 latRange도를 커버
     const metersPerPixel = (latRange / H) * 111320;
-    const radiusPx = Math.max(6, Math.min(400, HEATMAP_RADIUS_METERS / metersPerPixel));
+    const radiusPx = Math.max(20, Math.min(600, HEATMAP_RADIUS_METERS / metersPerPixel));
 
-    // ── 성능 최적화: 다운샘플 해상도로 계산 후 업스케일 ──
-    // radiusPx가 작을수록 다운샘플 불필요, 클수록 더 많이 줄임
     const SCALE = Math.max(1, Math.min(4, Math.floor(radiusPx / 30)));
     const SW = Math.ceil(W / SCALE);
     const SH = Math.ceil(H / SCALE);
@@ -91,7 +87,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       y: (1 - (lat - sw.getLat()) / latRange) * SH,
     });
 
-    // ── Float32 강도 버퍼에 가우시안 누적 ──
     const buf = new Float32Array(SW * SH);
 
     const visiblePoints = points.filter(p => {
@@ -100,11 +95,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     });
 
     if (visiblePoints.length === 0) return;
-
-    // ── 상한값은 전체 포인트 수 기준으로 고정 ──
-    // visiblePoints.length를 쓰면 지도 이동 시 화면 밖 포인트가 빠져
-    // maxPossible이 달라지고 같은 포인트의 색이 변하는 버그 발생
-    const maxPossible = Math.max(3, points.length * 0.7);
 
     for (const point of visiblePoints) {
       const { x: cx, y: cy } = toScaledPixel(point.lat, point.lng);
@@ -117,15 +107,16 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         for (let px = x0; px <= x1; px++) {
           const dx = px - cx;
           const dy = py - cy;
-          const distSq = dx * dx + dy * dy;
-          if (distSq > sRadius * sRadius) continue;
-          const t = Math.sqrt(distSq) / sRadius;
-          buf[py * SW + px] += Math.exp(-3.5 * t * t);
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > sRadius) continue;
+          const t = dist / sRadius;
+          buf[py * SW + px] += Math.exp(-4.0 * t * t);
         }
       }
     }
 
-    // ── 다운샘플 버퍼 → 실제 캔버스 크기로 업스케일 렌더링 ──
+    const SCALE_FACTOR = Math.max(1.5, points.length * 0.8);
+
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
 
@@ -134,11 +125,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       for (let fx = 0; fx < W; fx++) {
         const sx = Math.min(SW - 1, Math.floor(fx / SCALE));
         const raw = buf[sy * SW + sx];
-        if (raw < 0.001) continue;
+        if (raw < 0.003) continue;
 
-        const normalized = Math.min(raw / maxPossible, 1.0);
-        const intensity = Math.pow(normalized, 0.7);
+        const intensity = Math.min(raw / SCALE_FACTOR, 1.0);
         const [r, g, b, a] = getColor(intensity);
+
         const idx = (fy * W + fx) * 4;
         data[idx]     = r;
         data[idx + 1] = g;
@@ -152,17 +143,16 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
   const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !mapInstance) return;
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const W = parent.offsetWidth;
-    const H = parent.offsetHeight;
+    const container = containerRef.current;
+    if (!canvas || !mapInstance || !container) return;
+    const W = container.offsetWidth;
+    const H = container.offsetHeight;
     if (canvas.width !== W || canvas.height !== H) {
       canvas.width = W;
       canvas.height = H;
     }
     drawHeatmap();
-  }, [drawHeatmap, mapInstance]);
+  }, [drawHeatmap, mapInstance, containerRef]);
 
   useEffect(() => {
     if (!mapInstance || !visible) return;
@@ -197,14 +187,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   }, [points, visible, resizeCanvas]);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const parent = canvas.parentElement;
-    if (!parent) return;
+    const container = containerRef.current;
+    if (!container) return;
     const ro = new ResizeObserver(() => resizeCanvas());
-    ro.observe(parent);
+    ro.observe(container);
     return () => ro.disconnect();
-  }, [resizeCanvas]);
+  }, [resizeCanvas, containerRef]);
 
   if (!visible) return null;
 
@@ -218,7 +206,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: 100,
+        zIndex: 10,
       }}
     />
   );

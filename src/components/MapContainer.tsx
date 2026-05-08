@@ -45,6 +45,7 @@ const MapContainer = ({
   const [currentLevel, setCurrentLevel] = useState<number>(6);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
   const [mapInstanceState, setMapInstanceState] = useState<any>(null);
+  const [userLocationPixel, setUserLocationPixel] = useState<{ x: number; y: number } | null>(null);
 
   // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
   const [uiState, setUiState] = useState<'idle' | 'pressing' | 'hidden'>('idle');
@@ -60,7 +61,6 @@ const MapContainer = ({
   const overlaysRef = useRef<Map<string, any>>(new Map());
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   const searchOverlayRef = useRef<any>(null);
-  const userLocationOverlayRef = useRef<any>(null);
   const highlightingIdsRef = useRef<Set<string>>(new Set());
   const animationFrameRef = useRef<number | null>(null);
   const levelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -288,81 +288,48 @@ const MapContainer = ({
     };
   }, [isMapReady, cancelLongPress, revealMarkersOnce]);
 
-  // ── 현재 위치 오버레이 ──────────────────────────────────────
-  useEffect(() => {
-    const kakao = (window as any).kakao;
-    if (!isMapReady || !mapInstance.current || !kakao?.maps?.CustomOverlay) return;
-
-    // 기존 오버레이 제거
-    if (userLocationOverlayRef.current) {
-      userLocationOverlayRef.current.setMap(null);
-      userLocationOverlayRef.current = null;
+  // ── 현재 위치 픽셀 좌표 계산 (지도 이동/줌 시 갱신) ──────────────────
+  const updateUserLocationPixel = useCallback(() => {
+    if (!userLocation || !mapInstanceState) {
+      setUserLocationPixel(null);
+      return;
     }
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+    const map = mapInstanceState;
+    const bounds = map.getBounds();
+    const sw = bounds.getSouthWest();
+    const ne = bounds.getNorthEast();
+    const container = containerRef.current;
+    if (!container) return;
+    const W = container.offsetWidth;
+    const H = container.offsetHeight;
+    const latRange = ne.getLat() - sw.getLat();
+    const lngRange = ne.getLng() - sw.getLng();
+    if (latRange === 0 || lngRange === 0) return;
+    const x = ((userLocation.lng - sw.getLng()) / lngRange) * W;
+    const y = (1 - (userLocation.lat - sw.getLat()) / latRange) * H;
+    setUserLocationPixel({ x, y });
+  }, [userLocation, mapInstanceState, containerRef]);
 
-    if (!userLocation) return;
+  useEffect(() => {
+    updateUserLocationPixel();
+  }, [updateUserLocationPixel]);
 
-    const content = document.createElement('div');
-    content.className = 'user-location-marker';
-    content.innerHTML = `
-      <div style="
-        position: relative;
-        width: 22px;
-        height: 22px;
-        transform: translate(-50%, -50%);
-      ">
-        <!-- 정확도 파동 (큰 원) -->
-        <div style="
-          position: absolute;
-          top: 50%; left: 50%;
-          transform: translate(-50%, -50%);
-          width: 48px; height: 48px;
-          border-radius: 50%;
-          background: rgba(66, 133, 244, 0.15);
-          animation: user-loc-accuracy 2.4s ease-out infinite;
-          pointer-events: none;
-        "></div>
-        <!-- 파동 링 -->
-        <div style="
-          position: absolute;
-          top: 50%; left: 50%;
-          transform: translate(-50%, -50%);
-          width: 22px; height: 22px;
-          border-radius: 50%;
-          background: transparent;
-          border: 2.5px solid rgba(66, 133, 244, 0.6);
-          animation: user-loc-pulse 2.4s ease-out infinite;
-          pointer-events: none;
-        "></div>
-        <!-- 흰 테두리 -->
-        <div style="
-          position: absolute;
-          top: 50%; left: 50%;
-          transform: translate(-50%, -50%);
-          width: 22px; height: 22px;
-          border-radius: 50%;
-          background: white;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-        "></div>
-        <!-- 파란 점 -->
-        <div style="
-          position: absolute;
-          top: 50%; left: 50%;
-          transform: translate(-50%, -50%);
-          width: 14px; height: 14px;
-          border-radius: 50%;
-          background: #4285F4;
-        "></div>
-      </div>
-    `;
-
-    const overlay = new kakao.maps.CustomOverlay({
-      position: new kakao.maps.LatLng(userLocation.lat, userLocation.lng),
-      content: content,
-      zIndex: 9000,
-    });
-    overlay.setMap(mapInstance.current);
-    userLocationOverlayRef.current = overlay;
-  }, [userLocation, isMapReady]);
+  useEffect(() => {
+    if (!mapInstanceState) return;
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+    const handleUpdate = () => updateUserLocationPixel();
+    kakao.maps.event.addListener(mapInstanceState, 'idle', handleUpdate);
+    kakao.maps.event.addListener(mapInstanceState, 'drag', handleUpdate);
+    kakao.maps.event.addListener(mapInstanceState, 'zoom_changed', handleUpdate);
+    return () => {
+      kakao.maps.event.removeListener(mapInstanceState, 'idle', handleUpdate);
+      kakao.maps.event.removeListener(mapInstanceState, 'drag', handleUpdate);
+      kakao.maps.event.removeListener(mapInstanceState, 'zoom_changed', handleUpdate);
+    };
+  }, [mapInstanceState, updateUserLocationPixel]);
 
   // ── 기존 이벤트 핸들러들 ──────────────────────────────────────────────
 
@@ -1583,7 +1550,7 @@ const MapContainer = ({
         <div
           style={{
             position: 'fixed',
-            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)',
+            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 52px + 8px + 16px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
@@ -1644,21 +1611,69 @@ const MapContainer = ({
         </div>
       )}
 
+      {/* 히트맵 오버레이: 카카오맵 div 밖 형제 요소로 배치 → 현재위치 마커가 가려지지 않음 */}
+      <HeatmapOverlay
+        points={posts
+          .filter(p => p.lat != null && p.lng != null)
+          .map(p => ({ lat: p.lat, lng: p.lng }))}
+        mapInstance={mapInstanceState}
+        visible={level >= 7}
+        containerRef={containerRef}
+      />
       <div
         ref={containerRef}
         id="kakao-map"
         className="w-full h-full select-none"
         style={{ position: 'relative' }}
-      >
-        {/* 히트맵 오버레이: 레벨 7 이상에서만 표시 */}
-        <HeatmapOverlay
-          points={posts
-            .filter(p => p.lat != null && p.lng != null)
-            .map(p => ({ lat: p.lat, lng: p.lng }))}
-          mapInstance={mapInstanceState}
-          visible={level >= 7}
-        />
-      </div>
+      ></div>
+      {/* 현재 위치 마커: 카카오맵 div 뒤에 DOM 배치 + 높은 zIndex로 항상 최상단 표시 */}
+      {userLocation && userLocationPixel && (
+        <div
+          style={{
+            position: 'absolute',
+            left: userLocationPixel.x,
+            top: userLocationPixel.y,
+            transform: 'translate(-50%, -50%)',
+            zIndex: 9000,
+            pointerEvents: 'none',
+            width: 22,
+            height: 22,
+          }}
+        >
+          {/* 정확도 파동 */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 48, height: 48, borderRadius: '50%',
+            background: 'rgba(66, 133, 244, 0.15)',
+            animation: 'user-loc-accuracy 2.4s ease-out infinite',
+          }} />
+          {/* 파동 링 */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 22, height: 22, borderRadius: '50%',
+            background: 'transparent',
+            border: '2.5px solid rgba(66, 133, 244, 0.6)',
+            animation: 'user-loc-pulse 2.4s ease-out infinite',
+          }} />
+          {/* 흰 테두리 */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 22, height: 22, borderRadius: '50%',
+            background: 'white',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+          }} />
+          {/* 파란 점 */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 14, height: 14, borderRadius: '50%',
+            background: '#4285F4',
+          }} />
+        </div>
+      )}
     </div>
   );
 };
