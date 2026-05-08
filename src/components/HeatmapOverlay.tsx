@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
-// @ts-ignore
-import simpleheat from 'simpleheat';
+// @ts-ignore — heatmapjs has no bundled type declarations
+import h337 from 'heatmapjs';
 
 interface HeatmapPoint {
   lat: number;
@@ -17,86 +17,88 @@ interface HeatmapOverlayProps {
 const HEATMAP_RADIUS_METERS = 1800;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible, containerRef }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const heatRef = useRef<any>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const heatInstanceRef = useRef<any>(null);
   const animFrameRef = useRef<number | null>(null);
+  const lastSizeRef = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  // heatmap.js 인스턴스를 완전히 새로 생성 (canvas 크기 변경 시 재생성 필수)
+  const createHeatInstance = useCallback((w: number, h: number) => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return null;
+
+    // 기존 인스턴스의 canvas 제거
+    wrapper.innerHTML = '';
+
+    wrapper.style.width = `${w}px`;
+    wrapper.style.height = `${h}px`;
+
+    const instance = h337.create({
+      container: wrapper,
+      radius: 40,
+      maxOpacity: 0.85,
+      minOpacity: 0,
+      blur: 0.85,
+      gradient: {
+        '0.0': '#64d2ff',
+        '0.4': '#64d2ff',
+        '0.55': '#ffee30',
+        '0.70': '#ff8c00',
+        '1.0': '#c80000',
+      },
+    });
+
+    lastSizeRef.current = { w, h };
+    return instance;
+  }, []);
 
   const drawHeatmap = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !mapInstance) return;
+    if (!mapInstance) return;
 
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
+
+    const mapContainer = containerRef.current;
+    if (!mapContainer) return;
+
+    const W = mapContainer.offsetWidth;
+    const H = mapContainer.offsetHeight;
+    if (W === 0 || H === 0) return;
+
+    // 크기가 바뀌었으면 인스턴스 재생성
+    if (!heatInstanceRef.current || lastSizeRef.current.w !== W || lastSizeRef.current.h !== H) {
+      heatInstanceRef.current = createHeatInstance(W, H);
+    }
+
+    if (!heatInstanceRef.current) return;
 
     const map = mapInstance;
     const bounds = map.getBounds();
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
 
-    const W = canvas.width;
-    const H = canvas.height;
-    if (W === 0 || H === 0) return;
-
     const latRange = ne.getLat() - sw.getLat();
     const lngRange = ne.getLng() - sw.getLng();
     if (latRange === 0 || lngRange === 0) return;
 
-    // simpleheat 인스턴스가 없거나 canvas가 바뀌면 재생성
-    if (!heatRef.current) {
-      heatRef.current = simpleheat(canvas);
-    }
-
-    const heat = heatRef.current;
-
     // 반경: 미터 → 픽셀 변환
     const metersPerPixel = (latRange / H) * 111320;
     const radiusPx = Math.max(20, Math.min(600, HEATMAP_RADIUS_METERS / metersPerPixel));
-    const blurPx = radiusPx * 0.85;
 
-    // 위경도 → 캔버스 픽셀 좌표 변환 (화면 밖 포인트 포함해 블러가 자연스럽게)
+    // 위경도 → 픽셀 좌표 변환
     const heatPoints = points
-      .map(p => [
-        ((p.lng - sw.getLng()) / lngRange) * W,
-        (1 - (p.lat - sw.getLat()) / latRange) * H,
-        1,
-      ] as [number, number, number])
-      .filter(([x, y]) => x >= -radiusPx && x <= W + radiusPx && y >= -radiusPx && y <= H + radiusPx);
+      .map(p => ({
+        x: Math.round(((p.lng - sw.getLng()) / lngRange) * W),
+        y: Math.round((1 - (p.lat - sw.getLat()) / latRange) * H),
+        value: 1,
+      }))
+      .filter(p => p.x >= -radiusPx && p.x <= W + radiusPx && p.y >= -radiusPx && p.y <= H + radiusPx);
 
-    // max를 낮게 고정 → 포인트 1개도 선명하게 표시
-    // 포인트가 많아질수록 조금씩 올려 과포화 방지
-    const max = Math.max(1, Math.min(3, Math.ceil(heatPoints.length / 5)));
+    const max = Math.max(1, Math.ceil(points.length * 0.8));
 
-    heat.data(heatPoints);
-    heat.radius(radiusPx, blurPx);
-    heat.max(max);
-    heat.gradient({
-      0.0:  '#64d2ff',
-      0.35: '#64d2ff',
-      0.55: '#ffee30',
-      0.75: '#ff8c00',
-      1.0:  '#c80000',
-    });
-
-    heat.draw(0.0);
-  }, [points, mapInstance]);
-
-  const resizeCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !mapInstance || !container) return;
-
-    const W = container.offsetWidth;
-    const H = container.offsetHeight;
-
-    if (canvas.width !== W || canvas.height !== H) {
-      canvas.width = W;
-      canvas.height = H;
-      // 캔버스 크기 변경 시 simpleheat 인스턴스 재생성 (내부 버퍼 크기 동기화)
-      heatRef.current = simpleheat(canvas);
-    }
-
-    drawHeatmap();
-  }, [drawHeatmap, mapInstance, containerRef]);
+    heatInstanceRef.current.configure({ radius: radiusPx });
+    heatInstanceRef.current.setData({ max, min: 0, data: heatPoints });
+  }, [points, mapInstance, containerRef, createHeatInstance]);
 
   // 지도 이벤트 연동
   useEffect(() => {
@@ -106,7 +108,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     const handleUpdate = () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
+      animFrameRef.current = requestAnimationFrame(() => drawHeatmap());
     };
 
     kakao.maps.event.addListener(mapInstance, 'idle', handleUpdate);
@@ -123,38 +125,44 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       kakao.maps.event.removeListener(mapInstance, 'dragend', handleUpdate);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [mapInstance, visible, resizeCanvas]);
+  }, [mapInstance, visible, drawHeatmap]);
 
   // points 변경 시 재렌더
   useEffect(() => {
     if (!visible) return;
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
-  }, [points, visible, resizeCanvas]);
+    animFrameRef.current = requestAnimationFrame(() => drawHeatmap());
+  }, [points, visible, drawHeatmap]);
 
   // 컨테이너 크기 변경 감지
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const mapContainer = containerRef.current;
+    if (!mapContainer) return;
     const ro = new ResizeObserver(() => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
+      animFrameRef.current = requestAnimationFrame(() => drawHeatmap());
     });
-    ro.observe(container);
+    ro.observe(mapContainer);
     return () => ro.disconnect();
-  }, [resizeCanvas, containerRef]);
+  }, [drawHeatmap, containerRef]);
+
+  // 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      heatInstanceRef.current = null;
+    };
+  }, []);
 
   if (!visible) return null;
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div
+      ref={wrapperRef}
       style={{
         position: 'absolute',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
         pointerEvents: 'none',
         zIndex: 10,
       }}
