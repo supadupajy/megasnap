@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, MapPin, Heart, Download, ExternalLink, Smartphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedFeedImage } from '@/lib/utils';
+import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 
 const ANDROID_PACKAGE = 'com.chorasnap.chorasnap';
 const IOS_APP_ID = '0000000000'; // 실제 App Store ID로 교체 필요
@@ -125,12 +126,15 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
     navigate('/login', { state: { redirectTo: `/post/${postId}` } });
   };
 
-  const getPostImage = (): string => {
-    if (!post) return getFallbackImage(postId);
+  const getRawPostImage = (): string | null => {
+    if (!post) return null;
     const imgs = Array.isArray(post.images) ? post.images.filter(isValidUrl) : [];
-    const raw = imgs.length > 0 ? imgs[0] : (isValidUrl(post.image_url) ? post.image_url! : null);
-    return raw ? getOptimizedFeedImage(raw, postId) : getFallbackImage(postId);
+    return imgs.length > 0 ? imgs[0] : (isValidUrl(post.image_url) ? post.image_url! : null);
   };
+
+  const rawPostImage = getRawPostImage();
+  const postImage = rawPostImage ? getOptimizedFeedImage(rawPostImage, postId) : getFallbackImage(postId);
+  const mediaAspectRatio = useMediaAspectRatio(rawPostImage, 'image');
 
   const getContentPreview = (): string => {
     if (!post?.content) return '';
@@ -169,9 +173,9 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
         {post ? (
           <div className="bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
             {/* 포스트 이미지 */}
-            <div className="relative aspect-square bg-gray-100">
+            <div className="relative bg-gray-100 transition-[height] duration-300" style={{ aspectRatio: mediaAspectRatio }}>
               <img
-                src={getPostImage()}
+                src={postImage}
                 alt="포스팅 이미지"
                 loading="eager"
                 decoding="async"

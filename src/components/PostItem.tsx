@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Comment } from '@/types';
 import { useAuth } from './AuthProvider';
@@ -229,6 +230,18 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const lng = post.longitude ?? post.lng;
 
   const displayLocation = useLocationDisplay(post.location || '', lat, lng);
+
+  const rawImages = useMemo(() => {
+    const baseImages = isAd
+      ? [post.image_url || post.image]
+      : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
+    return baseImages.filter(Boolean) as string[];
+  }, [post.images, post.image, post.image_url, isAd]);
+
+  const mediaAspectRatio = useMediaAspectRatio(
+    !isAd && post.videoUrl ? post.videoUrl : (rawImages[currentImageIndex] || rawImages[0]),
+    !isAd && post.videoUrl ? 'video' : 'image'
+  );
 
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
 
@@ -606,7 +619,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
             {/* Media Section */}
             <div
-              className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+              className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner transition-[height] duration-300"
+              style={{ aspectRatio: mediaAspectRatio }}
             >
               {renderMedia()}
             </div>
@@ -719,7 +733,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
           {/* Media Section */}
           <div
-            className="relative aspect-square mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner"
+            className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner transition-[height] duration-300"
+            style={{ aspectRatio: mediaAspectRatio }}
           >
             {renderMedia()}
           </div>

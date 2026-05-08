@@ -23,6 +23,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { invalidateAdCache } from '@/hooks/use-ad';
 import { handleShare } from '@/utils/share';
@@ -283,6 +284,69 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     setImgErrors(prev => ({ ...prev, [postId]: true }));
   };
 
+  const isDummyUrl = (url: any) => {
+    if (!url || typeof url !== 'string') return true;
+    const clean = url.trim();
+    if (clean.includes('supabase.co/storage')) return false;
+    // "post content" 같은 placeholder 문자열만 더미로 간주 (정상 URL의 'post'/'content' 단어는 허용)
+    if (/post\s*content/i.test(clean)) return true;
+    return clean.length < 10 || !clean.startsWith('http');
+  };
+
+  const displayImage = (() => {
+    if (!currentPost) return getFallbackImage('default');
+    if (imgErrors[currentPost.id]) return getFallbackImage(currentPost.id);
+    const rawUrl = currentPost.image || currentPost.image_url;
+    return isDummyUrl(rawUrl) ? getFallbackImage(currentPost.id) : rawUrl;
+  })();
+
+  const isAd = currentPost?.isAd || false;
+
+  const rawDisplayImages = (() => {
+    if (!currentPost) return [];
+    let baseImages: string[] = [];
+    if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
+      baseImages = currentPost.images.filter((img: any) => !isDummyUrl(img));
+    }
+    const singleImg = currentPost.image_url || currentPost.image;
+    if (baseImages.length === 0 && singleImg && !isDummyUrl(singleImg)) {
+      baseImages = [singleImg];
+    }
+    if (baseImages.length === 0) {
+      baseImages = [displayImage];
+    }
+    return baseImages;
+  })();
+
+  const displayImages = currentPost
+    ? rawDisplayImages.map((img) => getOptimizedDetailImage(img, currentPost.id))
+    : [];
+
+  const mediaAspectRatio = useMediaAspectRatio(
+    currentPost?.videoUrl && !currentPost?.isAd ? currentPost.videoUrl : (rawDisplayImages[currentImageIndex] || rawDisplayImages[0]),
+    currentPost?.videoUrl && !currentPost?.isAd ? 'video' : 'image'
+  );
+
+  const postDisplayName = currentPost?.user?.name || '익명';
+  
+  const isMine = (() => {
+    if (!currentPost || !authUser) return false;
+    const ownerId = currentPost.owner_id || currentPost.user_id;
+    return ownerId === authUser.id || ownerId === 'me';
+  })();
+
+  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
+
+  const formattedDate = currentPost?.createdAt
+    ? formatRelativeTime(new Date(currentPost.createdAt))
+    : null;
+
+  const displayLocation = useLocationDisplay(
+    currentPost?.location || '',
+    currentPost?.lat ?? currentPost?.latitude,
+    currentPost?.lng ?? currentPost?.longitude
+  );
+
   if (!currentPost) return null;
 
   if (currentPost.isAdPending) {
@@ -331,60 +395,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       </Dialog>
     );
   }
-
-  const isDummyUrl = (url: any) => {
-    if (!url || typeof url !== 'string') return true;
-    const clean = url.trim();
-    if (clean.includes('supabase.co/storage')) return false;
-    // "post content" 같은 placeholder 문자열만 더미로 간주 (정상 URL의 'post'/'content' 단어는 허용)
-    if (/post\s*content/i.test(clean)) return true;
-    return clean.length < 10 || !clean.startsWith('http');
-  };
-
-  const displayImage = (() => {
-    if (!currentPost) return getFallbackImage('default');
-    if (imgErrors[currentPost.id]) return getFallbackImage(currentPost.id);
-    const rawUrl = currentPost.image || currentPost.image_url;
-    return isDummyUrl(rawUrl) ? getFallbackImage(currentPost.id) : rawUrl;
-  })();
-
-  const isAd = currentPost?.isAd || false;
-
-  const displayImages = (() => {
-    if (!currentPost) return [];
-    let baseImages: string[] = [];
-    if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
-      baseImages = currentPost.images.filter((img: any) => !isDummyUrl(img));
-    }
-    const singleImg = currentPost.image_url || currentPost.image;
-    if (baseImages.length === 0 && singleImg && !isDummyUrl(singleImg)) {
-      baseImages = [singleImg];
-    }
-    if (baseImages.length === 0) {
-      baseImages = [displayImage];
-    }
-    return baseImages.map((img) => getOptimizedDetailImage(img, currentPost.id));
-  })();
-
-  const postDisplayName = currentPost?.user?.name || '익명';
-  
-  const isMine = (() => {
-    if (!currentPost || !authUser) return false;
-    const ownerId = currentPost.owner_id || currentPost.user_id;
-    return ownerId === authUser.id || ownerId === 'me';
-  })();
-
-  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
-
-  const formattedDate = currentPost?.createdAt
-    ? formatRelativeTime(new Date(currentPost.createdAt))
-    : null;
-
-  const displayLocation = useLocationDisplay(
-    currentPost?.location || '',
-    currentPost?.lat ?? currentPost?.latitude,
-    currentPost?.lng ?? currentPost?.longitude
-  );
 
   const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isDragging) return;
@@ -684,7 +694,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   };
 
   const renderMediaArea = () => (
-    <div className="relative aspect-square rounded-3xl overflow-hidden bg-black shadow-inner">
+    <div
+      className="relative rounded-3xl overflow-hidden bg-black shadow-inner transition-[height] duration-300"
+      style={{ aspectRatio: mediaAspectRatio }}
+    >
       {currentPost.videoUrl && !currentPost.isAd ? (
         <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
       ) : (
