@@ -1559,13 +1559,13 @@ const Index = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: '8px',
-                      background: 'rgba(255,255,255,0.30)',
-                      backdropFilter: 'blur(24px)',
-                      WebkitBackdropFilter: 'blur(24px)',
+                      // backdrop-filter는 뒤쪽 히트맵 색을 블러링해서 색이 번져 보이는 문제가 있어 사용하지 않음.
+                      // 대신 흰색 반투명 배경 + 그림자/테두리로 glass에 가까운 느낌만 유지
+                      background: 'rgba(255,255,255,0.78)',
                       borderRadius: '16px',
                       padding: '12px 10px',
                       boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-                      border: '1px solid rgba(255,255,255,0.50)',
+                      border: '1px solid rgba(255,255,255,0.70)',
                     }}
                   >
                     <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
