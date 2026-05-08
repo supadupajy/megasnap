@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getFallbackImage, getOptimizedDetailImage } from '@/lib/utils';
@@ -779,9 +779,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
               left: 0,
               right: 0,
-              // visualViewport.offsetTop이 있으면 키보드가 올라온 것 → bottom을 0으로 (키보드가 레이아웃을 밀어냄)
-              // keyboardHeight가 있으면 (resizes-visual 환경) → bottom을 키보드 높이로
-              // 둘 다 없으면 기본값
               bottom: vpOffsetTop > 10
                 ? '0px'
                 : keyboardHeight > 0
@@ -803,6 +800,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <div className="ad-post-wrapper w-full h-full">
                       <div className="ad-post-inner w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                         <div className="flex-1 min-h-0 flex flex-col relative bg-white">
+                          {/* 여기 보기 상단 헤더 */}
+                          <div className="px-4 py-4 bg-gray-50 border-b border-gray-100 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                                  <LayoutGrid className="w-5 h-5 text-indigo-600" />
+                                </div>
+                                <div>
+                                  <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={onClose}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+                              >
+                                <X className="w-4 h-4 text-gray-900" />
+                                <span className="text-sm font-normal text-gray-900">닫기</span>
+                              </button>
+                            </div>
+                          </div>
+
                           {/* 헤더 */}
                           <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
@@ -863,6 +882,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     /* ===== 일반 포스트 ===== */
                     <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                       <div className="flex-1 min-h-0 flex flex-col relative bg-white">
+                        {/* 여기 보기 상단 헤더 */}
+                        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                                <LayoutGrid className="w-5 h-5 text-indigo-600" />
+                              </div>
+                              <div>
+                                <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={onClose}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
+                            >
+                              <X className="w-4 h-4 text-gray-900" />
+                              <span className="text-sm font-normal text-gray-900">닫기</span>
+                            </button>
+                          </div>
+                        </div>
+
                         {/* 헤더 */}
                         <div className="flex items-center justify-between px-4 py-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-[55] border-b border-gray-50">
                           <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
