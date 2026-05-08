@@ -1530,7 +1530,7 @@ const Index = () => {
             <>
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
-                className={cn("absolute left-4 z-20 flex flex-col gap-2 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
+                className={cn("absolute left-4 z-20 flex flex-col gap-2", isTrendingExpanded && "pointer-events-none")}
               >
                 <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -1557,10 +1557,7 @@ const Index = () => {
                     bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)',
                     left: 'calc(1rem + 48px + 8px)',
                   }}
-                  className={cn(
-                    "absolute z-20 pointer-events-none transition-opacity",
-                    isTrendingExpanded && "opacity-20"
-                  )}
+                  className="absolute z-20 pointer-events-none"
                 >
                   <div className="flex flex-col items-center gap-2 bg-white/30 backdrop-blur-xl border border-white/50 shadow-lg rounded-2xl px-2.5 py-3">
                     <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
@@ -1577,7 +1574,7 @@ const Index = () => {
 
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
-                className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
+                className={cn("absolute right-4 z-20 flex flex-col items-center gap-4", isTrendingExpanded && "pointer-events-none")}
               >
                 <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/20 backdrop-blur-2xl rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-lg shadow-black/10 active:scale-90 transition-all disabled:bg-white/10 disabled:text-indigo-400/60 disabled:shadow-none border border-white/60">
                   <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
