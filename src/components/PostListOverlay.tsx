@@ -470,7 +470,7 @@ const PostListOverlay = ({
                   items.push(
                     <div key="divider" className="flex items-center gap-3 px-4 py-3 bg-white">
                       <div className="flex-1 h-px bg-gray-900" />
-                      <span className="text-[11px] font-bold text-gray-900 whitespace-nowrap shrink-0">
+                      <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap shrink-0">
                         여기서부터는 이미 조회한 포스팅입니다
                       </span>
                       <div className="flex-1 h-px bg-gray-900" />
