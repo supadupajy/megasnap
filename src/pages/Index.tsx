@@ -781,20 +781,28 @@ const Index = () => {
     currentZoomRef.current = currentZoom;
   }, [currentZoom]);
 
-  // 트렌딩 포스트 div의 실제 bottom 위치 측정 (ResizeObserver)
+  // 트렌딩 포스트 div의 실제 bottom 위치 측정
+  // 펼침 애니메이션 중 ResizeObserver → setState → 전체 리렌더가 반복되지 않도록
+  // 접힌 상태에서만 측정값을 상태에 반영한다.
   useEffect(() => {
     const measure = () => {
-      if (trendingDivRef.current) {
-        const rect = trendingDivRef.current.getBoundingClientRect();
-        setTrendingBottom(rect.bottom);
-      }
+      if (!trendingDivRef.current) return;
+      if (isTrendingExpandedRef.current) return;
+
+      const rect = trendingDivRef.current.getBoundingClientRect();
+      const nextBottom = Math.round(rect.bottom);
+      setTrendingBottom(prev => (Math.abs(prev - nextBottom) < 1 ? prev : nextBottom));
     };
+
     measure();
     const ro = new ResizeObserver(measure);
     if (trendingDivRef.current) ro.observe(trendingDivRef.current);
     window.addEventListener('resize', measure);
-    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, [isPostListOpen, isSearchOpen]);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [isPostListOpen, isSearchOpen, isTrendingExpanded]);
 
 
   // ── visibleMarkers: displayedMarkers 그대로 사용 (분산 없음) ──────

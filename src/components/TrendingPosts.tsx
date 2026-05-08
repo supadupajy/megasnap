@@ -653,12 +653,10 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div
       ref={containerRef}
       data-trending-panel="true"
-      className={cn(
-        "bg-white/95 backdrop-blur-sm rounded-[32px] transition-[max-height] duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80",
-        isExpanded ? (maxHeight ? "" : "max-h-[85vh]") : "max-h-[56px]"
-      )}
+      className="bg-white/95 rounded-[32px] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80 transition-[box-shadow,background-color] duration-200"
       style={{
-        ...(isExpanded && maxHeight ? { maxHeight } : {}),
+        height: isExpanded ? (maxHeight || '85vh') : '56px',
+        contain: 'layout paint style',
       }}
     >
       <div
@@ -785,14 +783,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
       <div
         className={cn(
-          "flex flex-col relative transition-opacity duration-300 overflow-hidden",
-          isExpanded ? "opacity-100" : "opacity-0 pointer-events-none"
+          "flex flex-col relative overflow-hidden transition-[transform,opacity] duration-[220ms] ease-out origin-top",
+          isExpanded ? "opacity-100 scale-y-100" : "opacity-0 scale-y-95 pointer-events-none"
         )}
         style={{
+          height: maxHeight ? `calc(${maxHeight} - 56px)` : 'calc(85vh - 56px)',
           overscrollBehavior: 'none',
           contain: 'layout paint style',
           contentVisibility: isExpanded ? 'visible' : 'hidden',
-          ...(maxHeight ? { maxHeight: `calc(${maxHeight} - 56px)` } : {})
         }}
       >
         {renderExpandedBody ? (
