@@ -191,6 +191,9 @@ importers:
       google-map-react:
         specifier: ^2.2.5
         version: 2.2.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      heatmapjs:
+        specifier: ^2.0.2
+        version: 2.0.2
       input-otp:
         specifier: ^1.2.4
         version: 1.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2312,6 +2315,9 @@ packages:
   hasown@2.0.2:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
+
+  heatmapjs@2.0.2:
+    resolution: {integrity: sha512-1pO/bbn9G1NYhndvjnzLVAQMGBOCk8abMM7QnLOPlIMoxDfG9Uylb68PlZe/0MCT9GuwGGtchXVPLWfoT6HrCw==}
 
   iceberg-js@0.8.1:
     resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
@@ -5255,6 +5261,8 @@ snapshots:
   hasown@2.0.2:
     dependencies:
       function-bind: 1.1.2
+
+  heatmapjs@2.0.2: {}
 
   iceberg-js@0.8.1: {}
 
