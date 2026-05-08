@@ -1657,7 +1657,7 @@ const Index = () => {
             key="trending-backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[49] bg-black/35"
+            className="fixed inset-0 z-[11999] bg-black/35"
             onClick={() => setIsTrendingExpanded(false)}
           >
             <div className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}>              
@@ -1671,7 +1671,7 @@ const Index = () => {
         <div
           ref={trendingDivRef}
           className={cn(
-            "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[50] pointer-events-none transition-opacity duration-200",
+            "fixed top-[calc(env(safe-area-inset-top,0px)+74px)] left-4 right-4 z-[12000] pointer-events-none transition-opacity duration-200",
             isCategoryOpen && "opacity-50",
           )}
           style={{ touchAction: isTrendingExpanded ? 'none' : 'auto' }}
