@@ -14,7 +14,7 @@ interface HeatmapOverlayProps {
 }
 
 const HEATMAP_RADIUS_METERS = 600;
-const HEATMAP_INTENSITY_MAX = 2;
+const HEATMAP_INTENSITY_MAX = 4.5;
 const OVERSCAN_RATIO = 0.65;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
