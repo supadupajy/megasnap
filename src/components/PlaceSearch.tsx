@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, MapPin, X, Loader2, ChevronLeft } from 'lucide-react';
+import { Search, MapPin, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -224,12 +224,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
         >
           {/* Header */}
           <div className="py-3 px-4 flex items-center gap-3 border-b border-gray-100 bg-white shrink-0">
-            <button 
-              onClick={onClose}
-              className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
@@ -245,6 +239,13 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
                 </div>
               )}
             </div>
+            <button
+              onClick={onClose}
+              className="shrink-0 flex items-center gap-1.5 h-11 px-3 bg-gray-100 hover:bg-gray-200 active:scale-95 rounded-xl transition-all text-gray-600"
+            >
+              <X className="w-4 h-4" />
+              <span className="text-sm font-bold">닫기</span>
+            </button>
           </div>
 
           {/* 현재 지도 위치 기준 안내 */}
