@@ -241,10 +241,10 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 flex items-center gap-1.5 h-11 px-3 bg-gray-100 hover:bg-gray-200 active:scale-95 rounded-xl transition-all text-gray-600"
+              className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
             >
-              <X className="w-4 h-4" />
-              <span className="text-sm font-bold">닫기</span>
+              <X className="w-4 h-4 text-gray-900" />
+              <span className="text-sm font-normal text-gray-900">닫기</span>
             </button>
           </div>
 
