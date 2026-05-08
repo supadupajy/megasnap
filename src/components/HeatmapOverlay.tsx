@@ -167,17 +167,30 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
     };
 
+    // zoom_changed: 레벨이 7 미만이면 즉시 캔버스 클리어 (빨간 깜빡임 방지)
+    const handleZoomChanged = () => {
+      const level = mapInstance.getLevel();
+      if (level < 7) {
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        const canvas = canvasRef.current;
+        if (canvas) {
+          const ctx = canvas.getContext('2d');
+          ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        return;
+      }
+      handleUpdate();
+    };
+
     kakao.maps.event.addListener(mapInstance, 'idle', handleUpdate);
-    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleUpdate);
-    // drag 이벤트 제거: 초당 수십 번 발생해 canvas 재계산 부하 유발
-    // dragend만으로 충분 (드래그 완료 후 한 번만 재계산)
+    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleZoomChanged);
     kakao.maps.event.addListener(mapInstance, 'dragend', handleUpdate);
 
     handleUpdate();
 
     return () => {
       kakao.maps.event.removeListener(mapInstance, 'idle', handleUpdate);
-      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleUpdate);
+      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleZoomChanged);
       kakao.maps.event.removeListener(mapInstance, 'dragend', handleUpdate);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
