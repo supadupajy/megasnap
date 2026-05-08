@@ -800,7 +800,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                     <div className="ad-post-wrapper w-full h-full">
                       <div className="ad-post-inner w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                         <div className="flex-1 min-h-0 flex flex-col relative bg-white">
-                          {/* 여기 보기 상단 헤더 */}
+                          {/* 광고 마커 상단 헤더 */}
                           <div className="px-4 py-4 bg-gray-50 border-b border-gray-100 shrink-0" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3">
@@ -808,8 +808,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                   <LayoutGrid className="w-5 h-5 text-indigo-600" />
                                 </div>
                                 <div>
-                                  <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
+                                  <h2 className="text-lg font-black text-gray-900 tracking-tight">광고 마커</h2>
+                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Advertisement Marker</p>
                                 </div>
                               </div>
                               <button
@@ -840,6 +840,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}
+                              <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
+                                <X className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
 
@@ -887,8 +890,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                                 <LayoutGrid className="w-5 h-5 text-indigo-600" />
                               </div>
                               <div>
-                                <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
+                                <h2 className="text-lg font-black text-gray-900 tracking-tight">지도 마커</h2>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MAP MARKER</p>
                               </div>
                             </div>
                             <button
@@ -918,6 +921,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                           <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                             {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                             {renderDropdownMenu()}
+                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 active:scale-90 transition-all">
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
 
