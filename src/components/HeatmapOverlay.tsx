@@ -23,13 +23,14 @@ const HEATMAP_MIN_LEVEL = 7;
 // 빨강/보라는 매우 밀집된 경우에만 나타나도록 상위 구간에 배치
 const PALETTE: Array<[number, [number, number, number, number]]> = [
   [0.00, [100, 210, 255,   0]],  // 투명 (없음)
-  [0.08, [100, 210, 255,  80]],  // 하늘색 (희박)
-  [0.20, [ 60, 220, 160, 140]],  // 청록
-  [0.35, [ 80, 220,  50, 180]],  // 초록
-  [0.50, [200, 230,   0, 200]],  // 연두/노랑
-  [0.65, [255, 180,   0, 215]],  // 주황
-  [0.80, [255,  60,   0, 225]],  // 빨강
-  [1.00, [200,   0,  40, 235]],  // 진빨강 (매우 밀집)
+  [0.08, [100, 210, 255,  70]],  // 하늘색 (희박)
+  [0.20, [ 60, 220, 160, 130]],  // 청록
+  [0.35, [120, 220,  40, 170]],  // 초록
+  [0.50, [210, 230,   0, 195]],  // 연두
+  [0.65, [255, 220,   0, 210]],  // 노랑 ← 넓은 구간
+  [0.78, [255, 160,   0, 220]],  // 주황
+  [0.90, [255,  60,   0, 228]],  // 빨강 (매우 밀집)
+  [1.00, [200,   0,  30, 235]],  // 진빨강 (극단적 밀집)
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -148,12 +149,14 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
     if (maxVal === 0) return;
 
-    // 포인트가 적을 때 빨간색이 나오지 않도록 상한을 동적으로 조정
-    // 포인트 1개: 최대 intensity ~0.4 (하늘~초록 구간)
-    // 포인트 5개 이상 밀집: 최대 intensity ~0.8 (주황~빨강)
-    // 포인트 15개 이상 밀집: 최대 intensity 1.0 (진빨강)
-    const densityScale = Math.min(1.0, Math.log1p(visiblePoints.length) / Math.log1p(15));
-    const maxIntensity = 0.35 + densityScale * 0.65; // 0.35 ~ 1.0
+    // 포인트 수에 따라 최대 intensity 상한을 동적으로 조정
+    // - 포인트 1~3개:  최대 ~0.45 → 하늘~초록 구간
+    // - 포인트 ~10개:  최대 ~0.60 → 초록~노랑 구간
+    // - 포인트 ~30개:  최대 ~0.72 → 노랑~주황 구간
+    // - 포인트 ~80개:  최대 ~0.88 → 주황~빨강 진입
+    // - 포인트 150개+: 최대 1.0  → 진빨강 (극단적 밀집)
+    const densityScale = Math.min(1.0, Math.log1p(visiblePoints.length) / Math.log1p(150));
+    const maxIntensity = 0.40 + densityScale * 0.60; // 0.40 ~ 1.0
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
