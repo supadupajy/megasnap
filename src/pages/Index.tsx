@@ -1559,13 +1559,13 @@ const Index = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       gap: '8px',
-                      // backdrop-filter는 뒤쪽 히트맵 색을 블러링해서 색이 번져 보이는 문제가 있어 사용하지 않음.
-                      // 대신 흰색 반투명 배경 + 그림자/테두리로 glass에 가까운 느낌만 유지
-                      background: 'rgba(255,255,255,0.78)',
+                      // 히트맵 캔버스가 뒤에 있으므로 반투명 배경을 쓰면 히트맵 색이 비쳐 왜곡됨.
+                      // 완전 불투명 흰 배경으로 히트맵이 전혀 비치지 않도록 처리.
+                      background: '#ffffff',
                       borderRadius: '16px',
                       padding: '12px 10px',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-                      border: '1px solid rgba(255,255,255,0.70)',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+                      border: '1px solid rgba(0,0,0,0.06)',
                     }}
                   >
                     <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
