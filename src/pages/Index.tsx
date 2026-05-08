@@ -1541,6 +1541,45 @@ const Index = () => {
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Navigation className="w-6 h-6 fill-gray-700" /></button>
               </div>
 
+              {/* 히트맵 범례: 레벨 7 이상일 때 좌측 하단 아이콘 옆에 세로로 표시 */}
+              {currentZoom >= 7 && (
+                <div
+                  style={{
+                    bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)',
+                    left: 'calc(1rem + 48px + 8px)',
+                  }}
+                  className={cn(
+                    "absolute z-20 pointer-events-none transition-opacity",
+                    isTrendingExpanded && "opacity-20"
+                  )}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: 'rgba(255,255,255,0.30)',
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                      borderRadius: '16px',
+                      padding: '12px 10px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+                      border: '1px solid rgba(255,255,255,0.50)',
+                    }}
+                  >
+                    <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
+                    <div style={{
+                      width: '8px',
+                      height: '100px',
+                      borderRadius: '4px',
+                      background: 'linear-gradient(to bottom, #c80000, #ff8c00, #ffee30, #64d2ff)',
+                    }} />
+                    <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
+                  </div>
+                </div>
+              )}
+
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4 transition-opacity", isTrendingExpanded && "opacity-20 pointer-events-none")}
@@ -1651,38 +1690,6 @@ const Index = () => {
             />
           </div>
 
-          {/* 히트맵 범례: 레벨 7 이상일 때 TrendingPosts 패널 오른쪽 아래에 세로로 표시 */}
-          {currentZoom >= 7 && !isTrendingExpanded && (
-            <div
-              className="absolute right-0 pointer-events-none"
-              style={{ top: 'calc(100% + 40px)' }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: 'rgba(255,255,255,0.30)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                  borderRadius: '16px',
-                  padding: '12px 10px',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-                  border: '1px solid rgba(255,255,255,0.50)',
-                }}
-              >
-                <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
-                <div style={{
-                  width: '8px',
-                  height: '100px',
-                  borderRadius: '4px',
-                  background: 'linear-gradient(to bottom, #c80000, #ff8c00, #ffee30, #64d2ff)',
-                }} />
-                <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
