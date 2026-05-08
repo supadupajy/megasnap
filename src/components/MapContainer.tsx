@@ -1550,7 +1550,7 @@ const MapContainer = ({
         <div
           style={{
             position: 'fixed',
-            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)',
+            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 52px + 8px + 16px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
