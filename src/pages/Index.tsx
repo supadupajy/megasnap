@@ -419,7 +419,6 @@ const Index = () => {
   // ── 핵심: bounds가 바뀔 때마다 해당 영역 포스트 fetch ──────
   useEffect(() => {
     if (!mapData?.bounds) return;
-    if (currentZoom >= 11) return;
 
     const { sw, ne } = mapData.bounds;
     const center = mapData.center;
