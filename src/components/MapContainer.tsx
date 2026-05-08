@@ -1569,23 +1569,21 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 카카오맵 컨테이너 */}
+      {/* 히트맵 오버레이 */}
+      <HeatmapOverlay
+        points={posts
+          .filter(p => p.lat != null && p.lng != null)
+          .map(p => ({ lat: p.lat, lng: p.lng }))}
+        mapInstance={mapInstanceState}
+        visible={level >= 7}
+        containerRef={containerRef}
+      />
       <div
         ref={containerRef}
         id="kakao-map"
         className="w-full h-full select-none"
         style={{ position: 'relative' }}
       ></div>
-      {/* 히트맵 canvas: 카카오맵 위에 absolute로 올림 (zIndex:10) */}
-      {/* 마커 위치는 destination-out으로 구멍을 뚫어 마커가 보이도록 처리 */}
-      <HeatmapOverlay
-        points={posts
-          .filter(p => p.lat != null && p.lng != null)
-          .map(p => ({ lat: p.lat, lng: p.lng }))}
-        mapInstance={mapInstanceState}
-        visible={true}
-        containerRef={containerRef}
-      />
       {/* 현재 위치 마커: 카카오맵 div 뒤에 DOM 배치 + 높은 zIndex로 항상 최상단 표시 */}
       {userLocation && userLocationPixel && (
         <div

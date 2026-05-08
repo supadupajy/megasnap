@@ -12,21 +12,26 @@ interface HeatmapOverlayProps {
   containerRef: React.RefObject<HTMLDivElement>;
 }
 
+// 포인트 하나의 영향 반경 (미터). 작을수록 각 마커가 좁게 표시됨.
 const HEATMAP_RADIUS_METERS = 600;
-// 마커 주변에 뚫을 구멍 반경 (px) — 마커 크기(60px)의 절반보다 약간 크게
-const MARKER_HOLE_RADIUS = 38;
 
+// 히트맵을 표시할 최소 지도 레벨
+const HEATMAP_MIN_LEVEL = 7;
+
+// 색상 팔레트: intensity 0~1 → RGBA
+// 마커가 적으면 하늘색, 많아질수록 초록→노랑→주황→빨강 순으로 변함
+// 빨강/보라는 매우 밀집된 경우에만 나타나도록 상위 구간에 배치
 const PALETTE: Array<[number, [number, number, number, number]]> = [
-  [0.00, [100, 210, 255,   0]],
-  [0.08, [100, 210, 255,  70]],
-  [0.20, [ 60, 220, 160, 130]],
-  [0.35, [120, 220,  40, 170]],
-  [0.50, [210, 230,   0, 195]],
-  [0.65, [255, 220,   0, 210]],
-  [0.78, [255, 160,   0, 220]],
-  [0.88, [255,  60,   0, 228]],
-  [0.95, [160,   0,  30, 238]],
-  [1.00, [ 90,   0, 160, 245]],
+  [0.00, [100, 210, 255,   0]],  // 투명 (없음)
+  [0.08, [100, 210, 255,  70]],  // 하늘색 (희박)
+  [0.20, [ 60, 220, 160, 130]],  // 청록
+  [0.35, [120, 220,  40, 170]],  // 초록
+  [0.50, [210, 230,   0, 195]],  // 연두
+  [0.65, [255, 220,   0, 210]],  // 노랑 ← 넓은 구간
+  [0.78, [255, 160,   0, 220]],  // 주황
+  [0.88, [255,  60,   0, 228]],  // 빨강 (매우 밀집)
+  [0.95, [160,   0,  30, 238]],  // 진빨강
+  [1.00, [ 90,   0, 160, 245]],  // 진한 보라 (극단적 밀집)
 ];
 
 function getColor(intensity: number): [number, number, number, number] {
@@ -67,20 +72,20 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     if (!kakao?.maps) return;
 
     const map = mapInstance;
-    const container = containerRef.current;
-    if (!container) return;
 
-    const W = container.offsetWidth;
-    const H = container.offsetHeight;
-    if (W === 0 || H === 0) return;
-    if (canvas.width !== W || canvas.height !== H) {
-      canvas.width = W;
-      canvas.height = H;
+    // 그리는 시점에 항상 레벨 직접 체크 (React 리렌더 갭 방지)
+    if (typeof map.getLevel === 'function' && map.getLevel() < HEATMAP_MIN_LEVEL) {
+      clearCanvas();
+      return;
     }
 
     const bounds = map.getBounds();
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
+
+    const W = canvas.width;
+    const H = canvas.height;
+    if (W === 0 || H === 0) return;
 
     const latRange = ne.getLat() - sw.getLat();
     const lngRange = ne.getLng() - sw.getLng();
@@ -91,9 +96,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     ctx.clearRect(0, 0, W, H);
     if (points.length === 0) return;
 
+    // 미터 → 픽셀 변환
     const metersPerPixel = (latRange / H) * 111320;
     const radiusPx = Math.max(15, Math.min(300, HEATMAP_RADIUS_METERS / metersPerPixel));
 
+    // 다운샘플 스케일 (성능)
     const SCALE = Math.max(1, Math.min(4, Math.floor(radiusPx / 25)));
     const SW = Math.ceil(W / SCALE);
     const SH = Math.ceil(H / SCALE);
@@ -104,13 +111,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       y: (1 - (lat - sw.getLat()) / latRange) * SH,
     });
 
-    const toPixel = (lat: number, lng: number) => ({
-      x: ((lng - sw.getLng()) / lngRange) * W,
-      y: (1 - (lat - sw.getLat()) / latRange) * H,
-    });
-
     const buf = new Float32Array(SW * SH);
 
+    // 화면 범위 안(+반경 여유) 포인트만 처리
     const visiblePoints = points.filter(p => {
       const { x, y } = toScaledPixel(p.lat, p.lng);
       return x >= -sRadius && x <= SW + sRadius && y >= -sRadius && y <= SH + sRadius;
@@ -118,6 +121,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     if (visiblePoints.length === 0) return;
 
+    // 가우시안 커널로 각 포인트의 영향을 buf에 누적
     for (const point of visiblePoints) {
       const { x: cx, y: cy } = toScaledPixel(point.lat, point.lng);
       const x0 = Math.max(0, Math.floor(cx - sRadius));
@@ -137,14 +141,23 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       }
     }
 
+    // buf의 실제 최댓값으로 정규화
+    // → 가장 밀집된 곳이 항상 팔레트 최고값에 매핑되지 않고,
+    //   전체 포인트 밀도에 비례해서 색이 결정됨
     let maxVal = 0;
     for (let i = 0; i < buf.length; i++) {
       if (buf[i] > maxVal) maxVal = buf[i];
     }
     if (maxVal === 0) return;
 
+    // 포인트 수에 따라 최대 intensity 상한을 동적으로 조정
+    // - 포인트 1~3개:  최대 ~0.45 → 하늘~초록 구간
+    // - 포인트 ~10개:  최대 ~0.60 → 초록~노랑 구간
+    // - 포인트 ~30개:  최대 ~0.72 → 노랑~주황 구간
+    // - 포인트 ~80개:  최대 ~0.88 → 주황~빨강 진입
+    // - 포인트 150개+: 최대 1.0  → 진빨강 (극단적 밀집)
     const densityScale = Math.min(1.0, Math.log1p(visiblePoints.length) / Math.log1p(150));
-    const maxIntensity = 0.40 + densityScale * 0.60;
+    const maxIntensity = 0.40 + densityScale * 0.60; // 0.40 ~ 1.0
 
     const imageData = ctx.createImageData(W, H);
     const data = imageData.data;
@@ -156,6 +169,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         const raw = buf[sy * SW + sx];
         if (raw < 0.005) continue;
 
+        // 각 픽셀의 상대적 밀도(0~1) × maxIntensity
         const intensity = Math.min((raw / maxVal) * maxIntensity, 1.0);
         const [r, g, b, a] = getColor(intensity);
 
@@ -168,49 +182,57 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
 
     ctx.putImageData(imageData, 0, 0);
+  }, [points, mapInstance, clearCanvas]);
 
-    // 마커 위치에 구멍을 뚫어서 마커가 히트맵에 가려지지 않도록 함
-    // destination-out: 그린 영역을 투명하게 지움
-    ctx.globalCompositeOperation = 'destination-out';
-    for (const point of visiblePoints) {
-      const { x: px, y: py } = toPixel(point.lat, point.lng);
-      // 마커는 yAnchor:1 이므로 좌표가 마커 하단 중앙 → 마커 중심은 위로 MARKER_HOLE_RADIUS만큼
-      const markerCenterY = py - MARKER_HOLE_RADIUS;
-      const gradient = ctx.createRadialGradient(px, markerCenterY, 0, px, markerCenterY, MARKER_HOLE_RADIUS);
-      gradient.addColorStop(0, 'rgba(0,0,0,1)');
-      gradient.addColorStop(0.6, 'rgba(0,0,0,0.8)');
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(px, markerCenterY, MARKER_HOLE_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !mapInstance || !container) return;
+    const W = container.offsetWidth;
+    const H = container.offsetHeight;
+    if (canvas.width !== W || canvas.height !== H) {
+      canvas.width = W;
+      canvas.height = H;
     }
-    ctx.globalCompositeOperation = 'source-over';
-  }, [points, mapInstance, containerRef]);
-
-  const scheduleRedraw = useCallback(() => {
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    animFrameRef.current = requestAnimationFrame(() => drawHeatmap());
-  }, [drawHeatmap]);
+    drawHeatmap();
+  }, [drawHeatmap, mapInstance, containerRef]);
 
   useEffect(() => {
     if (!mapInstance || !visible) return;
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
-    kakao.maps.event.addListener(mapInstance, 'idle', scheduleRedraw);
-    kakao.maps.event.addListener(mapInstance, 'zoom_changed', scheduleRedraw);
-    kakao.maps.event.addListener(mapInstance, 'dragend', scheduleRedraw);
+    const handleUpdate = () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
+    };
 
-    scheduleRedraw();
+    const handleZoomChanged = () => {
+      const level = mapInstance.getLevel();
+      if (level < HEATMAP_MIN_LEVEL) {
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        clearCanvas();
+        return;
+      }
+      handleUpdate();
+    };
+
+    kakao.maps.event.addListener(mapInstance, 'idle', handleUpdate);
+    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleZoomChanged);
+    kakao.maps.event.addListener(mapInstance, 'dragend', handleUpdate);
+
+    handleUpdate();
 
     return () => {
-      kakao.maps.event.removeListener(mapInstance, 'idle', scheduleRedraw);
-      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', scheduleRedraw);
-      kakao.maps.event.removeListener(mapInstance, 'dragend', scheduleRedraw);
+      kakao.maps.event.removeListener(mapInstance, 'idle', handleUpdate);
+      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleZoomChanged);
+      kakao.maps.event.removeListener(mapInstance, 'dragend', handleUpdate);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [mapInstance, visible, scheduleRedraw]);
+  }, [mapInstance, visible, resizeCanvas, clearCanvas]);
 
   useEffect(() => {
     if (!visible) {
@@ -224,16 +246,17 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
   useEffect(() => {
     if (!visible) return;
-    scheduleRedraw();
-  }, [points, visible, scheduleRedraw]);
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
+  }, [points, visible, resizeCanvas]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const ro = new ResizeObserver(() => scheduleRedraw());
+    const ro = new ResizeObserver(() => resizeCanvas());
     ro.observe(container);
     return () => ro.disconnect();
-  }, [scheduleRedraw, containerRef]);
+  }, [resizeCanvas, containerRef]);
 
   if (!visible) return null;
 
