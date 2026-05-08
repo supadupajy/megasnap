@@ -1537,7 +1537,7 @@ const Index = () => {
                     <line x1="19.5" y1="18" x2="20" y2="18" />
                   </svg>
                 </button>
-                <button onClick={() => { shutterRef.current?.trigger(() => setIsSearchOpen(true)); }} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Search className="w-6 h-6" /></button>
+                <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Search className="w-6 h-6" /></button>
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Navigation className="w-6 h-6 fill-gray-700" /></button>
               </div>
 
