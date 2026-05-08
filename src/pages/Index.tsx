@@ -1663,7 +1663,7 @@ const Index = () => {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'rgba(0,0,0,0.30)',
+                  background: 'rgba(0,0,0,0.40)',
                   backdropFilter: 'blur(8px)',
                   borderRadius: '16px',
                   padding: '12px 10px',
