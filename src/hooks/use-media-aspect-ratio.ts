@@ -6,10 +6,8 @@ const getDisplayRatio = (width: number, height: number) => {
   if (!width || !height) return '1 / 1';
   const ratio = width / height;
 
-  if (ratio <= 0.8) return '9 / 16';
-  if (ratio >= 1.55) return '16 / 9';
-  if (ratio >= 1.15) return '4 / 3';
-  return '1 / 1';
+  if (ratio >= 0.9 && ratio <= 1.1) return '1 / 1';
+  return '3 / 4';
 };
 
 export const useMediaAspectRatio = (src?: string | null, type: MediaType = 'image') => {
