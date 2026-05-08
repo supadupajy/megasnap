@@ -1650,6 +1650,37 @@ const Index = () => {
               maxHeight="calc(100dvh - env(safe-area-inset-top, 0px) - 74px - env(safe-area-inset-bottom, 0px) - 3rem - 74px)"
             />
           </div>
+
+          {/* 히트맵 범례: 레벨 7 이상일 때 TrendingPosts 패널 오른쪽 아래에 세로로 표시 */}
+          {currentZoom >= 7 && !isTrendingExpanded && (
+            <div
+              className="absolute right-0 pointer-events-none"
+              style={{ top: 'calc(100% + 8px)' }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: 'rgba(0,0,0,0.60)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: '16px',
+                  padding: '10px 10px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.20)',
+                }}
+              >
+                <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
+                <div style={{
+                  width: '8px',
+                  height: '56px',
+                  borderRadius: '4px',
+                  background: 'linear-gradient(to bottom, #c80000, #ff8c00, #ffee30, #64d2ff)',
+                }} />
+                <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

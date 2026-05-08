@@ -1534,38 +1534,7 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 레벨 7 이상 히트맵 안내 메시지 */}
-      {level >= 7 && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 52px + 8px + 16px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: 'rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: '20px',
-            padding: '8px 16px',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {/* 히트맵 범례 */}
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 500 }}>적음</span>
-          <div style={{
-            width: '64px',
-            height: '8px',
-            borderRadius: '4px',
-            background: 'linear-gradient(to right, #64d2ff, #ffee30, #ff8c00, #c80000)',
-          }} />
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: 500 }}>많음</span>
-        </div>
-      )}
+      {/* 히트맵 범례는 Index.tsx의 TrendingPosts 패널 아래로 이동됨 */}
 
       {/* 마커 숨김 상태 안내 */}
       {uiState === 'hidden' && (
