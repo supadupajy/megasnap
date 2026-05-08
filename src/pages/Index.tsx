@@ -1655,7 +1655,7 @@ const Index = () => {
           {currentZoom >= 7 && !isTrendingExpanded && (
             <div
               className="absolute right-0 pointer-events-none"
-              style={{ top: 'calc(100% + 30px)' }}
+              style={{ top: 'calc(100% + 40px)' }}
             >
               <div
                 style={{
