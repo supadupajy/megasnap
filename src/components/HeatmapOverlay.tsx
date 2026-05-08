@@ -15,19 +15,14 @@ interface HeatmapOverlayProps {
 // 포인트 하나의 영향 반경 (미터). 작을수록 각 마커가 좁게 표시됨.
 const HEATMAP_RADIUS_METERS = 600;
 
-// 히트맵을 표시할 최소 지도 레벨
-const HEATMAP_MIN_LEVEL = 7;
-
 // 색상 팔레트: intensity 0~1 → RGBA
-// 마커가 적으면 하늘색, 많아질수록 초록→노랑→주황→빨강 순으로 변함
-// 빨강/보라는 매우 밀집된 경우에만 나타나도록 상위 구간에 배치
 const PALETTE: Array<[number, [number, number, number, number]]> = [
   [0.00, [100, 210, 255,   0]],  // 투명 (없음)
   [0.08, [100, 210, 255,  70]],  // 하늘색 (희박)
   [0.20, [ 60, 220, 160, 130]],  // 청록
   [0.35, [120, 220,  40, 170]],  // 초록
   [0.50, [210, 230,   0, 195]],  // 연두
-  [0.65, [255, 220,   0, 210]],  // 노랑 ← 넓은 구간
+  [0.65, [255, 220,   0, 210]],  // 노랑
   [0.78, [255, 160,   0, 220]],  // 주황
   [0.88, [255,  60,   0, 228]],  // 빨강 (매우 밀집)
   [0.95, [160,   0,  30, 238]],  // 진빨강
@@ -72,12 +67,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     if (!kakao?.maps) return;
 
     const map = mapInstance;
-
-    // 그리는 시점에 항상 레벨 직접 체크 (React 리렌더 갭 방지)
-    if (typeof map.getLevel === 'function' && map.getLevel() < HEATMAP_MIN_LEVEL) {
-      clearCanvas();
-      return;
-    }
 
     const bounds = map.getBounds();
     const sw = bounds.getSouthWest();
@@ -141,21 +130,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       }
     }
 
-    // buf의 실제 최댓값으로 정규화
-    // → 가장 밀집된 곳이 항상 팔레트 최고값에 매핑되지 않고,
-    //   전체 포인트 밀도에 비례해서 색이 결정됨
     let maxVal = 0;
     for (let i = 0; i < buf.length; i++) {
       if (buf[i] > maxVal) maxVal = buf[i];
     }
     if (maxVal === 0) return;
 
-    // 포인트 수에 따라 최대 intensity 상한을 동적으로 조정
-    // - 포인트 1~3개:  최대 ~0.45 → 하늘~초록 구간
-    // - 포인트 ~10개:  최대 ~0.60 → 초록~노랑 구간
-    // - 포인트 ~30개:  최대 ~0.72 → 노랑~주황 구간
-    // - 포인트 ~80개:  최대 ~0.88 → 주황~빨강 진입
-    // - 포인트 150개+: 최대 1.0  → 진빨강 (극단적 밀집)
     const densityScale = Math.min(1.0, Math.log1p(visiblePoints.length) / Math.log1p(150));
     const maxIntensity = 0.40 + densityScale * 0.60; // 0.40 ~ 1.0
 
@@ -169,7 +149,6 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         const raw = buf[sy * SW + sx];
         if (raw < 0.005) continue;
 
-        // 각 픽셀의 상대적 밀도(0~1) × maxIntensity
         const intensity = Math.min((raw / maxVal) * maxIntensity, 1.0);
         const [r, g, b, a] = getColor(intensity);
 
@@ -207,28 +186,15 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       animFrameRef.current = requestAnimationFrame(() => resizeCanvas());
     };
 
-    const handleZoomChanged = () => {
-      const level = mapInstance.getLevel();
-      if (level < HEATMAP_MIN_LEVEL) {
-        if (animFrameRef.current) {
-          cancelAnimationFrame(animFrameRef.current);
-          animFrameRef.current = null;
-        }
-        clearCanvas();
-        return;
-      }
-      handleUpdate();
-    };
-
     kakao.maps.event.addListener(mapInstance, 'idle', handleUpdate);
-    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleZoomChanged);
+    kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleUpdate);
     kakao.maps.event.addListener(mapInstance, 'dragend', handleUpdate);
 
     handleUpdate();
 
     return () => {
       kakao.maps.event.removeListener(mapInstance, 'idle', handleUpdate);
-      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleZoomChanged);
+      kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleUpdate);
       kakao.maps.event.removeListener(mapInstance, 'dragend', handleUpdate);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
@@ -270,7 +236,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: 10,
+        zIndex: 2,
       }}
     />
   );
