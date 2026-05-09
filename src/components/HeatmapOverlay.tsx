@@ -16,6 +16,9 @@ interface HeatmapOverlayProps {
 const HEATMAP_RADIUS_METERS = 600;
 const HEATMAP_INTENSITY_MAX = 4.5;
 const OVERSCAN_RATIO = 0.65;
+const MARKER_CUTOUT_RADIUS_X = 46;
+const MARKER_CUTOUT_RADIUS_Y = 54;
+const MARKER_CUTOUT_OFFSET_Y = -28;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -130,6 +133,32 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
           1.0: 'rgba(180,0,0,0.97)',
         })
         .draw(0.05);
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        for (const [x, y] of data) {
+          const cutoutX = x;
+          const cutoutY = y + MARKER_CUTOUT_OFFSET_Y;
+          const gradient = ctx.createRadialGradient(
+            cutoutX,
+            cutoutY,
+            Math.min(MARKER_CUTOUT_RADIUS_X, MARKER_CUTOUT_RADIUS_Y) * 0.45,
+            cutoutX,
+            cutoutY,
+            Math.max(MARKER_CUTOUT_RADIUS_X, MARKER_CUTOUT_RADIUS_Y)
+          );
+          gradient.addColorStop(0, 'rgba(0,0,0,1)');
+          gradient.addColorStop(0.68, 'rgba(0,0,0,0.92)');
+          gradient.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.ellipse(cutoutX, cutoutY, MARKER_CUTOUT_RADIUS_X, MARKER_CUTOUT_RADIUS_Y, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
     }
 
     canvas.style.transform = 'translate3d(0, 0, 0)';
