@@ -58,9 +58,10 @@ const R = 15;                 // 메인 원 반지름
 const CIRCLE_CY = S / 2;      // 26 — 원 중심 (정중앙). 회전 기준점도 동일
 const EDGE = 10;
 
-// 방향을 가리키는 작은 인디고 점
-const DOT_R = 4;        // 작은 점 반지름
-const DOT_OFFSET = R;   // 원 중심에서 점 중심까지의 거리 = R → 점이 원 가장자리에 정확히 반 걸침
+// 방향을 가리키는 작은 인디고 삼각형 (마커 방향을 가리키는 화살촉)
+const TRI_HALF_W = 5;   // 삼각형 밑변의 절반 너비
+const TRI_HEIGHT = 9;   // 삼각형 높이 (밑변에서 꼭짓점까지)
+const TRI_OFFSET = R;   // 원 중심에서 삼각형 "기하 중심"까지의 거리 = R → 흰 원 가장자리에 반 걸침
 const INDIGO = 'rgb(79,70,229)';
 
 function computeIndicators(
@@ -226,11 +227,13 @@ const DropIndicator: React.FC<{
     lineHeight: 1,
   };
 
-  // 점의 위치: 원 중심(CX, CIRCLE_CY) 기준 위쪽(angle 0일 때 top)
-  // angleDeg=0 → top, 90 → right, 180 → bottom, -90/270 → left
-  // 회전 변환은 dotLayer가 담당하므로 여기서는 angle=0 위치(=위쪽)에 고정해서 그림.
-  const dotCx = CX;
-  const dotCy = CIRCLE_CY - DOT_OFFSET;
+  // 삼각형 위치: angle=0(위쪽)을 기준으로 그림. 회전은 dotLayer가 담당.
+  // 삼각형의 기하 중심(centroid)이 원 가장자리 위에 오도록 배치 → 절반은 안, 절반은 바깥
+  // 꼭짓점은 바깥(위)을 향함, 밑변은 안쪽(아래)
+  const triCenterY = CIRCLE_CY - TRI_OFFSET;
+  const triApexY = triCenterY - (TRI_HEIGHT * 2) / 3;        // 꼭짓점 (centroid에서 위로 2h/3)
+  const triBaseY = triCenterY + TRI_HEIGHT / 3;              // 밑변 (centroid에서 아래로 h/3)
+  const trianglePoints = `${CX},${triApexY} ${CX - TRI_HALF_W},${triBaseY} ${CX + TRI_HALF_W},${triBaseY}`;
 
   return (
     <div
@@ -254,10 +257,16 @@ const DropIndicator: React.FC<{
         </svg>
       </div>
 
-      {/* 회전하는 작은 인디고 점 (방향 표시) */}
+      {/* 회전하는 인디고 삼각형 (방향 표시 + 흰 테두리) */}
       <div style={dotLayerStyle}>
         <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
-          <circle cx={dotCx} cy={dotCy} r={DOT_R} fill={INDIGO} />
+          <polygon
+            points={trianglePoints}
+            fill={INDIGO}
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
         </svg>
       </div>
 
@@ -328,8 +337,10 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
     lineHeight: 1,
   };
 
-  const dotCx = CX;
-  const dotCy = CIRCLE_CY - DOT_OFFSET;
+  const triCenterY = CIRCLE_CY - TRI_OFFSET;
+  const triApexY = triCenterY - (TRI_HEIGHT * 2) / 3;
+  const triBaseY = triCenterY + TRI_HEIGHT / 3;
+  const trianglePoints = `${CX},${triApexY} ${CX - TRI_HALF_W},${triBaseY} ${CX + TRI_HALF_W},${triBaseY}`;
 
   return (
     <div style={containerStyle}>
@@ -349,7 +360,13 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
 
       <div style={dotLayerStyle}>
         <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
-          <circle cx={dotCx} cy={dotCy} r={DOT_R} fill={INDIGO} />
+          <polygon
+            points={trianglePoints}
+            fill={INDIGO}
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+          />
         </svg>
       </div>
 
