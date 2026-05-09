@@ -297,11 +297,16 @@ const Profile = () => {
 
   const handleScrollToPosts = () => {
     if (scrollRef.current && postListStartRef.current) {
-      const postListTop = postListStartRef.current.offsetTop;
-      // sticky 헤더의 실제 높이를 측정해서 빼주면, 모바일/웹 모두 탭바가 sticky 헤더 바로 아래에 정확히 붙음
+      // 탭바 요소(postListStartRef) 다음 형제가 "지도에서 보기" 섹션을 포함한 컨텐츠 영역
+      // "지도에서 보기" 섹션이 sticky 헤더 바로 아래에 딱 맞게 위치하도록 스크롤
+      const tabBarEl = postListStartRef.current;
+      const tabBarHeight = tabBarEl.offsetHeight;
+      const postListTop = tabBarEl.offsetTop;
       const headerHeight = stickyHeaderRef.current?.offsetHeight ?? 0;
+      // sticky 헤더 높이 + 탭바 높이만큼 빼주면, 탭바는 위로 스크롤되어 사라지고
+      // "지도에서 보기" 섹션이 sticky 헤더 바로 아래에 딱 붙음 (모바일/웹 동일하게 동작)
       scrollRef.current.scrollTo({
-        top: postListTop - headerHeight,
+        top: postListTop + tabBarHeight - headerHeight,
         behavior: 'smooth',
       });
     }
