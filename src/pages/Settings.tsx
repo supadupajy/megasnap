@@ -197,6 +197,45 @@ const Settings = () => {
           </div>
         </div>
 
+        {/* ── 고객 지원 ── */}
+        <div className="px-4 pt-4 pb-1">
+          <SectionHeader title="고객 지원" />
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+            <SettingItem
+              icon={BookOpen}
+              label="공지사항"
+              sublabel="서비스 업데이트 및 점검 안내"
+              iconBg="bg-blue-50"
+              iconColor="text-blue-500"
+              onClick={() => navigate('/settings/notices')}
+            />
+            <SettingItem
+              icon={HelpCircle}
+              label="자주 묻는 질문 (FAQ)"
+              sublabel="궁금한 점을 빠르게 해결하세요"
+              iconBg="bg-cyan-50"
+              iconColor="text-cyan-500"
+              onClick={() => navigate('/settings/faq')}
+            />
+            <SettingItem
+              icon={MessageSquare}
+              label="1:1 문의"
+              sublabel="직접 문의하기"
+              iconBg="bg-indigo-50"
+              iconColor="text-indigo-500"
+              onClick={() => navigate('/settings/inquiry')}
+            />
+            <SettingItem
+              icon={Bug}
+              label="버그 신고"
+              sublabel="불편한 점을 알려주세요"
+              iconBg="bg-orange-50"
+              iconColor="text-orange-500"
+              onClick={() => setShowBugReport(true)}
+            />
+          </div>
+        </div>
+
         {/* ── 계정 설정 ── */}
         <div className="px-4 pt-4 pb-1">
           <SectionHeader title="계정 설정" />
@@ -269,45 +308,6 @@ const Settings = () => {
               iconBg="bg-rose-50"
               iconColor="text-rose-500"
               onClick={() => navigate('/settings/privacy')}
-            />
-          </div>
-        </div>
-
-        {/* ── 고객 지원 ── */}
-        <div className="px-4 pt-4 pb-1">
-          <SectionHeader title="고객 지원" />
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-            <SettingItem
-              icon={BookOpen}
-              label="공지사항"
-              sublabel="서비스 업데이트 및 점검 안내"
-              iconBg="bg-blue-50"
-              iconColor="text-blue-500"
-              onClick={() => navigate('/settings/notices')}
-            />
-            <SettingItem
-              icon={HelpCircle}
-              label="자주 묻는 질문 (FAQ)"
-              sublabel="궁금한 점을 빠르게 해결하세요"
-              iconBg="bg-cyan-50"
-              iconColor="text-cyan-500"
-              onClick={() => navigate('/settings/faq')}
-            />
-            <SettingItem
-              icon={MessageSquare}
-              label="1:1 문의"
-              sublabel="직접 문의하기"
-              iconBg="bg-indigo-50"
-              iconColor="text-indigo-500"
-              onClick={() => navigate('/settings/inquiry')}
-            />
-            <SettingItem
-              icon={Bug}
-              label="버그 신고"
-              sublabel="불편한 점을 알려주세요"
-              iconBg="bg-orange-50"
-              iconColor="text-orange-500"
-              onClick={() => setShowBugReport(true)}
             />
           </div>
         </div>
