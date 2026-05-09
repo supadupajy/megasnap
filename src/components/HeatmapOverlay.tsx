@@ -137,18 +137,15 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         .max(HEATMAP_INTENSITY_MAX)
         .radius(radiusPx, blurPx)
         .gradient({
-          0.00: 'rgba(100,210,255,0)',
-          0.04: 'rgba(100,210,255,0.34)',
-          0.08: 'rgba(40,200,180,0.46)',
-          0.12: 'rgba(140,225,60,0.58)',
-          0.14: 'rgba(255,220,0,0.68)',
-          0.34: 'rgba(255,205,0,0.70)',
-          0.54: 'rgba(255,175,0,0.72)',
-          0.74: 'rgba(255,135,0,0.73)',
-          0.92: 'rgba(255,90,0,0.74)',
-          1.00: 'rgba(220,40,0,0.76)',
+          0.00: 'rgba(0,0,255,0)',
+          0.18: 'rgba(0,0,255,0.34)',
+          0.40: 'rgba(0,255,255,0.48)',
+          0.60: 'rgba(0,255,0,0.58)',
+          0.78: 'rgba(255,255,0,0.68)',
+          0.92: 'rgba(255,150,0,0.72)',
+          1.00: 'rgba(255,0,0,0.76)',
         })
-        .draw(0.05);
+        .draw(0.08);
     }
 
     pendingRedrawRef.current = false;
