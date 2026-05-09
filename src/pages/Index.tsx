@@ -1425,7 +1425,9 @@ const Index = () => {
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
           {/* 모두보기 카메라 셔터 애니메이션 - 지도 영역 안에만 표시 */}
           <ShutterOverlay ref={shutterRef} />
-          <div className="absolute inset-0">
+          {/* isolate: 히트맵 캔버스의 zIndex(100)가 부모 내부에 갇히도록 새 stacking context 생성
+              → 좌/우 버튼(z-20), 지도 레벨 인디케이터(z-[35]) 등이 히트맵 위로 올라옴 */}
+          <div className="absolute inset-0 isolate">
             <MapContainer
               posts={displayedMarkers}
               viewedPostIds={viewedIds}
