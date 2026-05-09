@@ -212,11 +212,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     };
 
     const handleZoomChanged = () => {
-      if (redrawTimerRef.current) clearTimeout(redrawTimerRef.current);
-      redrawTimerRef.current = setTimeout(() => {
-        redrawTimerRef.current = null;
-        scheduleRedraw();
-      }, 180);
+      scheduleRedraw();
     };
 
     const handleIdle = () => {
@@ -284,7 +280,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         top: 0,
         left: 0,
         pointerEvents: 'none',
-        zIndex: 100,
+        zIndex: 1,
         willChange: 'transform',
         transform: 'translate3d(0, 0, 0)',
         transformOrigin: '0 0',
