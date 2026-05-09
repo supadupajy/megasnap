@@ -575,7 +575,7 @@ const Write = () => {
                 ) : (
                   <div
                     onClick={() => mediaInputRef.current?.click()}
-                    className="w-full rounded-[32px] bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-4"
+                    className="w-full rounded-[32px] bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-4 pb-12"
                     style={{ aspectRatio: '3 / 4' }}
                   >
                     <div className="flex flex-col items-center gap-3">
