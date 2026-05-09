@@ -1433,8 +1433,8 @@ const MapContainer = ({
     let influencerClass = "";
 
     if (isMine) {
-      inlineBorderStyle = "border: 4.5px solid #FFFFF0;";
-      inlineShadow = "none";
+      inlineBorderStyle = "border: 3px solid #90EE90;";
+      inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
     }
     else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; inlineShadow = "none"; influencerClass = ""; }
     else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)"; }
