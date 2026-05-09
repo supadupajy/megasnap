@@ -113,34 +113,6 @@ const MapContainer = ({
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  const liftMarkerOverlayLayer = useCallback((content?: HTMLElement | null) => {
-    const mapEl = containerRef.current;
-    if (!mapEl) return;
-
-    const lift = (markerEl: HTMLElement) => {
-      let el: HTMLElement | null = markerEl.parentElement;
-      let depth = 0;
-      while (el && el !== mapEl && depth < 6) {
-        el.style.zIndex = '10000';
-        el = el.parentElement;
-        depth += 1;
-      }
-    };
-
-    if (content) {
-      lift(content);
-      return;
-    }
-
-    mapEl.querySelectorAll<HTMLElement>('.marker-container').forEach(lift);
-  }, []);
-
-  useEffect(() => {
-    if (!isMapReady) return;
-    const frame = requestAnimationFrame(() => liftMarkerOverlayLayer());
-    return () => cancelAnimationFrame(frame);
-  }, [isMapReady, posts.length, level, liftMarkerOverlayLayer]);
-
   // ── 마커 DOM 직접 숨김/표시 (클래스 토글로 !important CSS 활용) ──────
   const hideAllMarkersDom = useCallback(() => {
     overlaysRef.current.forEach((overlay) => {
@@ -659,7 +631,6 @@ const MapContainer = ({
         });
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
-        requestAnimationFrame(() => liftMarkerOverlayLayer(content));
 
         // 비디오 포스트이고 썸네일이 없으면 비동기로 추출
         if (!post.isAd && post.videoUrl) {
@@ -689,7 +660,7 @@ const MapContainer = ({
         }
       }
     });
-  }, [posts, isMapReady, authUser, liftMarkerOverlayLayer]);
+  }, [posts, isMapReady, authUser]);
 
   useEffect(() => {
     if (!isMapReady) return;
