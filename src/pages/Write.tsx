@@ -427,7 +427,7 @@ const Write = () => {
             </div>
           </div>
 
-          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
