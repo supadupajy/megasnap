@@ -72,6 +72,7 @@ const Profile = () => {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const postListStartRef = useRef<HTMLDivElement>(null);
+  const stickyHeaderRef = useRef<HTMLDivElement>(null);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
@@ -297,7 +298,12 @@ const Profile = () => {
   const handleScrollToPosts = () => {
     if (scrollRef.current && postListStartRef.current) {
       const postListTop = postListStartRef.current.offsetTop;
-      scrollRef.current.scrollTo({ top: postListTop - 100, behavior: 'smooth' });
+      // sticky 헤더의 실제 높이를 측정해서 빼주면, 모바일/웹 모두 탭바가 sticky 헤더 바로 아래에 정확히 붙음
+      const headerHeight = stickyHeaderRef.current?.offsetHeight ?? 0;
+      scrollRef.current.scrollTo({
+        top: postListTop - headerHeight,
+        behavior: 'smooth',
+      });
     }
   };
 
@@ -312,7 +318,7 @@ const Profile = () => {
   return (
     <div className="h-screen flex flex-col bg-white" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 상단 고정 헤더 */}
-      <div className="sticky top-0 z-40 bg-white pt-[64px]">
+      <div ref={stickyHeaderRef} className="sticky top-0 z-40 bg-white pt-[64px]">
         <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
