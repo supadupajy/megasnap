@@ -133,6 +133,13 @@ const AnimatedRoutes = () => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       console.log('[App] Back button pressed. Path:', location.pathname);
 
+      // 0순위: PlaceSearch가 열려 있으면 닫기 (지도 위 최상단 오버레이)
+      if ((window as any).__isPlaceSearchOpen === true) {
+        console.log('[App] Intercepting back button to close PlaceSearch');
+        window.dispatchEvent(new CustomEvent('close-place-search-by-back'));
+        return;
+      }
+
       // 1순위: PostDetail이 열려 있으면 닫기
       if ((window as any).__isPostDetailOpen === true) {
         console.log('[App] Intercepting back button to close PostDetail');

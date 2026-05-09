@@ -38,6 +38,22 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
   const isSearching = useRef(false);
   const lastQuery = useRef('');
 
+  // Expose open state on window so the App-level back-button handler can detect it.
+  useEffect(() => {
+    (window as any).__isPlaceSearchOpen = isOpen;
+    return () => {
+      if (isOpen) (window as any).__isPlaceSearchOpen = false;
+    };
+  }, [isOpen]);
+
+  // Listen for the close event dispatched by the back-button handler.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleCloseByBack = () => onClose();
+    window.addEventListener('close-place-search-by-back', handleCloseByBack);
+    return () => window.removeEventListener('close-place-search-by-back', handleCloseByBack);
+  }, [isOpen, onClose]);
+
   useEffect(() => {
     const kakao = (window as any).kakao;
     if (isOpen && kakao?.maps?.services) {

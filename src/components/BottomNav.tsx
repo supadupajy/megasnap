@@ -15,6 +15,19 @@ const navItems = [
   { icon: User, label: '내정보', path: '/profile' },
 ];
 
+// 하위 경로(예: /settings, /search 등)에 들어갔을 때도 부모 탭이 활성 상태로 유지되도록 매핑
+// path 우선순위: 첫 번째로 매치되는 것이 사용됨
+const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[] = [
+  // 친구 탭: /friends 하위 경로 + /search (친구 검색)
+  { match: (p) => p === '/search' || p.startsWith('/friends'), tabPath: '/friends' },
+  // 인기 탭: /popular 하위 경로 + /video-search (포스팅 검색)
+  { match: (p) => p === '/video-search' || p.startsWith('/popular'), tabPath: '/popular' },
+  // 내정보 탭: /profile, /settings 하위 경로
+  { match: (p) => p.startsWith('/profile') || p.startsWith('/settings'), tabPath: '/profile' },
+  // 업로드 탭
+  { match: (p) => p.startsWith('/write'), tabPath: '/write' },
+];
+
 const PILL_WIDTH = 64;
 const PILL_HEIGHT = 60;
 
@@ -26,7 +39,19 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
 
-  const activeIndex = navItems.findIndex((item) => item.path === location.pathname);
+  const resolveActiveIndex = () => {
+    const exact = navItems.findIndex((item) => item.path === location.pathname);
+    if (exact !== -1) return exact;
+
+    const matched = subRouteToTab.find((entry) => entry.match(location.pathname));
+    if (matched) {
+      const idx = navItems.findIndex((item) => item.path === matched.tabPath);
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+
+  const activeIndex = resolveActiveIndex();
   const safeIndex = activeIndex === -1 ? 0 : activeIndex;
 
   useEffect(() => {
