@@ -428,7 +428,7 @@ const Write = () => {
         </div>
 
         <main className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+          <div className="px-5 py-6 space-y-6" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px) + 24px)' }}>
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
@@ -625,6 +625,63 @@ const Write = () => {
                 </div>
               </div>
             )}
+
+            {/* 액션 버튼 - 콘텐츠와 함께 스크롤 */}
+            <div className="pt-2">
+              {currentPage === 1 ? (
+                <button
+                  className={cn(
+                    "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
+                    mediaFiles.length === 0
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
+                  )}
+                  onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
+                  disabled={mediaFiles.length === 0}
+                >
+                  <span className="flex-1 text-left font-normal pl-1">다음 단계로</span>
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                    mediaFiles.length === 0
+                      ? "bg-gray-200 text-gray-400"
+                      : "bg-indigo-500 text-white"
+                  )}>
+                    <ChevronRight className="w-5 h-5" />
+                  </div>
+                </button>
+              ) : (
+                <div className="relative">
+                  {(!content.trim() || mediaFiles.length === 0) && (
+                    <p className="mb-1.5 text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                      {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
+                    </p>
+                  )}
+                  <button
+                    className={cn(
+                      "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
+                      isSubmitting
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
+                    )}
+                    onClick={handlePost}
+                    disabled={isSubmitting}
+                  >
+                    <span className="flex-1 text-left font-normal pl-1">게시물 등록하기</span>
+                    <div className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                      isSubmitting
+                        ? "bg-gray-200 text-gray-400"
+                        : "bg-indigo-500 text-white"
+                    )}>
+                      {isSubmitting
+                        ? <Loader2 className="w-5 h-5 animate-spin" />
+                        : <Check className="w-5 h-5" />
+                      }
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </main>
       </div>
