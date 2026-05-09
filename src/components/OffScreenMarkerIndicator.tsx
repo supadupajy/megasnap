@@ -59,8 +59,8 @@ const CIRCLE_CY = S / 2;      // 26 — 원 중심 (정중앙). 회전 기준점
 const EDGE = 10;
 
 // 방향을 가리키는 작은 인디고 점
-const DOT_R = 3.2;                  // 작은 점 반지름
-const DOT_OFFSET = R - DOT_R - 1.5; // 원 중심에서 점 중심까지의 거리 (원 가장자리 안쪽에 위치)
+const DOT_R = 4;        // 작은 점 반지름
+const DOT_OFFSET = R;   // 원 중심에서 점 중심까지의 거리 = R → 점이 원 가장자리에 정확히 반 걸침
 const INDIGO = 'rgb(79,70,229)';
 
 function computeIndicators(
