@@ -15,6 +15,7 @@ interface HeatmapOverlayProps {
 
 const HEATMAP_RADIUS_METERS = 600;
 const HEATMAP_INTENSITY_MAX = 4.5;
+const SINGLE_POINT_HEATMAP_MAX = 1.55;
 const OVERSCAN_RATIO = 0.65;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
@@ -114,9 +115,11 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     heat.clear();
 
     if (data.length > 0) {
+      const intensityMax = data.length === 1 ? SINGLE_POINT_HEATMAP_MAX : HEATMAP_INTENSITY_MAX;
+
       heat
         .data(data)
-        .max(HEATMAP_INTENSITY_MAX)
+        .max(intensityMax)
         .radius(radiusPx, blurPx)
         .gradient({
           0.0: 'rgba(100,210,255,0)',
