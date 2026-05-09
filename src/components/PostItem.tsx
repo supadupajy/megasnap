@@ -548,7 +548,19 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
               <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
             </button>
-            {renderCategoryBadge()}
+            {!isAd && renderCategoryBadge()}
+            {isAd && (
+              <a
+                href={post.link_url ? (post.link_url.startsWith('http') ? post.link_url : `https://${post.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 shrink-0 whitespace-nowrap"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
+                <span className="text-[10px] font-black">보러가기</span>
+              </a>
+            )}
             {lat !== undefined && lng !== undefined && (
               <button
                 onClick={(e) => onLocationClick(e, lat, lng)}
@@ -561,22 +573,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             )}
           </div>
         </div>
-
-        {/* 하단: 광고 전용 주문하기 버튼 (광고일 때만 표시) */}
-        {isAd && (
-          <div className="flex justify-end mt-[-4px]">
-            <a 
-              href="https://s.baemin.com/t3000fBqlbHGL" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              onClick={(e) => e.stopPropagation()} 
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
-            >
-              <ShoppingBag className="w-3.5 h-3.5 fill-white" />
-              <span className="text-[10px] font-black">보러가기</span>
-            </a>
-          </div>
-        )}
       </div>
     );
   };
