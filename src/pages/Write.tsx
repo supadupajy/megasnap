@@ -431,7 +431,7 @@ const Write = () => {
           "flex-1 min-h-0 no-scrollbar overscroll-contain bg-white",
           currentPage === 1 ? "overflow-hidden" : "overflow-y-auto"
         )}>
-          <div className="px-5 py-6 space-y-6" style={{ paddingBottom: currentPage === 1 ? '0' : 'calc(5rem + env(safe-area-inset-bottom, 0px) + 24px)' }}>
+          <div className="px-5 py-6 space-y-6" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px) + 24px)' }}>
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
@@ -593,6 +593,26 @@ const Write = () => {
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">(선택)</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-900">등록</span>
+                      <button
+                        type="button"
+                        onClick={handlePost}
+                        disabled={isSubmitting || !content.trim() || mediaFiles.length === 0}
+                        aria-label="게시물 등록하기"
+                        className={cn(
+                          "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                          (isSubmitting || !content.trim() || mediaFiles.length === 0)
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-indigo-500 text-white shadow-md shadow-indigo-200 active:scale-90"
+                        )}
+                      >
+                        {isSubmitting
+                          ? <Loader2 className="w-5 h-5 animate-spin" />
+                          : <Check className="w-5 h-5" />
+                        }
+                      </button>
+                    </div>
                   </div>
                   <div
                     onClick={() => navigate('/', { state: { startSelection: true } })}
@@ -646,40 +666,11 @@ const Write = () => {
               </div>
             )}
 
-            {/* 액션 버튼 - 콘텐츠와 함께 스크롤 (페이지 2에서만 표시) */}
-            {currentPage === 2 && (
-              <div className="pt-2">
-                <div className="relative">
-                  {(!content.trim() || mediaFiles.length === 0) && (
-                    <p className="mb-1.5 text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                      {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
-                    </p>
-                  )}
-                  <button
-                    className={cn(
-                      "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
-                      isSubmitting
-                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
-                    )}
-                    onClick={handlePost}
-                    disabled={isSubmitting}
-                  >
-                    <span className="flex-1 text-left font-normal pl-1">게시물 등록하기</span>
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                      isSubmitting
-                        ? "bg-gray-200 text-gray-400"
-                        : "bg-indigo-500 text-white"
-                    )}>
-                      {isSubmitting
-                        ? <Loader2 className="w-5 h-5 animate-spin" />
-                        : <Check className="w-5 h-5" />
-                      }
-                    </div>
-                  </button>
-                </div>
-              </div>
+            {/* 페이지 2 하단 안내 (필수 항목 미입력 시) */}
+            {currentPage === 2 && (!content.trim() || mediaFiles.length === 0) && (
+              <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
+              </p>
             )}
           </div>
         </main>
