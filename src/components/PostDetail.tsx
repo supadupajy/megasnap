@@ -813,8 +813,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
               <div className="relative flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 min-h-0 relative pointer-events-auto">
                   {/* ===== 통합 포스트 레이아웃 (지도 마커 / 광고 마커 동일) ===== */}
-                  <div className={cn("w-full h-full", isAd && "ad-post-wrapper")}>
-                    <div className={cn("w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative", isAd && "ad-post-inner")} onClick={onClose}>
+                  <div className="w-full h-full">
+                    <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                       <div className="flex-1 min-h-0 flex flex-col relative bg-white">
                         {/* 닉네임 헤더 + 콘텐츠 - 스크롤 */}
                         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
