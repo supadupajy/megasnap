@@ -15,10 +15,9 @@ interface HeatmapOverlayProps {
 
 const HEATMAP_RADIUS_METERS = 600;
 const HEATMAP_INTENSITY_MAX = 4.5;
-const HEATMAP_POINT_WEIGHT = 3;
-const LOW_DENSITY_POINT_THRESHOLD = 12;
-const SINGLE_POINT_MIN_RADIUS_PX = 58;
-const SINGLE_POINT_RADIUS_MULTIPLIER = 1.55;
+const HEATMAP_POINT_WEIGHT = 1;
+const SINGLE_POINT_MIN_RADIUS_PX = 36;
+const SINGLE_POINT_RADIUS_MULTIPLIER = 0.82;
 const OVERSCAN_RATIO = 0.65;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
@@ -71,16 +70,23 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
+    const ctx = canvas.getContext('2d');
+    const clearCanvas = () => {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      heatRef.current?.clear?.();
+    };
+
     const actualLevel = mapInstance.getLevel?.();
     if (typeof actualLevel === 'number' && actualLevel < 7) {
-      const ctx = canvas.getContext('2d');
-      ctx?.clearRect(0, 0, canvas.width, canvas.height);
-      heatRef.current?.clear?.();
+      clearCanvas();
       pendingRedrawRef.current = false;
       return;
     }
 
     if (!applyCanvasSize()) return;
+    canvas.style.transform = 'translate3d(0, 0, 0)';
+    canvas.style.transformOrigin = '0 0';
 
     const map = mapInstance;
     const bounds = map.getBounds();
@@ -125,55 +131,47 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     }
 
     heat.clear();
+    clearCanvas();
 
     if (data.length > 0) {
-      if (data.length <= LOW_DENSITY_POINT_THRESHOLD) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const singleRadius = Math.max(SINGLE_POINT_MIN_RADIUS_PX, radiusPx * SINGLE_POINT_RADIUS_MULTIPLIER);
+      heat
+        .data(data)
+        .max(HEATMAP_INTENSITY_MAX)
+        .radius(radiusPx, blurPx)
+        .gradient({
+          0.0: 'rgba(100,210,255,0)',
+          0.05: 'rgba(100,210,255,0.5)',
+          0.20: 'rgba(40,200,180,0.67)',
+          0.35: 'rgba(60,210,80,0.76)',
+          0.50: 'rgba(180,230,30,0.82)',
+          0.65: 'rgba(255,220,0,0.86)',
+          0.78: 'rgba(255,120,0,0.91)',
+          0.90: 'rgba(255,30,0,0.94)',
+          1.0: 'rgba(180,0,0,0.97)',
+        })
+        .draw(0.05);
 
-          ctx.save();
-          ctx.globalCompositeOperation = 'source-over';
+      if (data.length === 1 && ctx) {
+        const [x, y] = data[0];
+        const singleRadius = Math.max(SINGLE_POINT_MIN_RADIUS_PX, radiusPx * SINGLE_POINT_RADIUS_MULTIPLIER);
+        const gradient = ctx.createRadialGradient(x, y, 0, x, y, singleRadius);
 
-          data.forEach(([x, y]) => {
-            const gradient = ctx.createRadialGradient(x, y, 0, x, y, singleRadius);
-            gradient.addColorStop(0.0, 'rgba(255,220,0,0.95)');
-            gradient.addColorStop(0.22, 'rgba(255,220,0,0.88)');
-            gradient.addColorStop(0.40, 'rgba(180,230,30,0.72)');
-            gradient.addColorStop(0.62, 'rgba(60,210,80,0.44)');
-            gradient.addColorStop(0.82, 'rgba(40,200,180,0.24)');
-            gradient.addColorStop(1.0, 'rgba(100,210,255,0)');
+        gradient.addColorStop(0.0, 'rgba(255,220,0,0.42)');
+        gradient.addColorStop(0.28, 'rgba(255,220,0,0.34)');
+        gradient.addColorStop(0.52, 'rgba(180,230,30,0.22)');
+        gradient.addColorStop(0.76, 'rgba(40,200,180,0.12)');
+        gradient.addColorStop(1.0, 'rgba(100,210,255,0)');
 
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(x, y, singleRadius, 0, Math.PI * 2);
-            ctx.fill();
-          });
-
-          ctx.restore();
-        }
-      } else {
-        heat
-          .data(data)
-          .max(HEATMAP_INTENSITY_MAX)
-          .radius(radiusPx, blurPx)
-          .gradient({
-            0.0: 'rgba(100,210,255,0)',
-            0.05: 'rgba(100,210,255,0.5)',
-            0.20: 'rgba(40,200,180,0.67)',
-            0.35: 'rgba(60,210,80,0.76)',
-            0.50: 'rgba(180,230,30,0.82)',
-            0.65: 'rgba(255,220,0,0.86)',
-            0.78: 'rgba(255,120,0,0.91)',
-            0.90: 'rgba(255,30,0,0.94)',
-            1.0: 'rgba(180,0,0,0.97)',
-          })
-          .draw(0.05);
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, singleRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
 
-    canvas.style.transform = 'translate3d(0, 0, 0)';
-    canvas.style.transformOrigin = '0 0';
     pendingRedrawRef.current = false;
   }, [applyCanvasSize, mapInstance]);
 
