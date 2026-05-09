@@ -185,6 +185,34 @@ const PostListOverlay = ({
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // ── Collapsing header: 스크롤 진행도 (0 = 펼침, 1 = 축소) ──────
+  const [headerProgress, setHeaderProgress] = useState(0);
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || !isOpen) return;
+
+    const COLLAPSE_THRESHOLD = 80;
+    let rafId = 0;
+
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        const y = el.scrollTop;
+        const next = Math.max(0, Math.min(1, y / COLLAPSE_THRESHOLD));
+        setHeaderProgress(next);
+        rafId = 0;
+      });
+    };
+
+    el.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [isOpen]);
+
   // 광고 삽입 간격을 posts 변경과 무관하게 안정적으로 유지
   // useMemo 안에서 Math.random()을 쓰면 posts가 바뀔 때마다 광고 위치가 달라지는 문제 발생
   const adIntervalsRef = useRef<number[]>([]);
@@ -424,29 +452,68 @@ const PostListOverlay = ({
       style={{ willChange: 'transform, opacity', transformOrigin: 'center center', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
       className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
     >
-      {/* Header */}
-      <div className="shrink-0 bg-white">
-        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                <LayoutGrid className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-gray-900 tracking-tight">여기 보기</h2>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}</p>
+      {/* Header — Collapsing */}
+      {(() => {
+        const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+        const padY = lerp(16, 8, headerProgress);
+        const iconBox = lerp(40, 28, headerProgress);
+        const iconSize = lerp(20, 14, headerProgress);
+        const titleSize = lerp(18, 15, headerProgress);
+        const gap = lerp(12, 8, headerProgress);
+        const subtitleOpacity = Math.max(0, 1 - headerProgress * 1.8);
+        const subtitleHeight = lerp(14, 0, Math.min(1, headerProgress * 1.2));
+        const closeBox = lerp(36, 28, headerProgress);
+        const closeIcon = lerp(16, 14, headerProgress);
+        return (
+          <div className="shrink-0 bg-white">
+            <div
+              className="px-4 bg-gray-50 border-b border-gray-100"
+              style={{ paddingTop: padY, paddingBottom: padY }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center min-w-0" style={{ gap: `${gap}px` }}>
+                  <div
+                    className="bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm shrink-0"
+                    style={{ width: iconBox, height: iconBox }}
+                  >
+                    <LayoutGrid
+                      className="text-indigo-600"
+                      style={{ width: iconSize, height: iconSize }}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h2
+                      className="font-black text-gray-900 tracking-tight leading-tight"
+                      style={{ fontSize: `${titleSize}px` }}
+                    >
+                      여기 보기
+                    </h2>
+                    <p
+                      className="text-[10px] font-bold text-gray-400 uppercase tracking-widest overflow-hidden whitespace-nowrap"
+                      style={{
+                        opacity: subtitleOpacity,
+                        height: `${subtitleHeight}px`,
+                        lineHeight: '14px',
+                        marginTop: subtitleHeight > 0 ? '1px' : '0px',
+                      }}
+                    >
+                      Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={onClose}
+                  aria-label="닫기"
+                  className="flex items-center justify-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0"
+                  style={{ width: closeBox, height: closeBox }}
+                >
+                  <X className="text-gray-900" style={{ width: closeIcon, height: closeIcon }} />
+                </button>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              aria-label="닫기"
-              className="w-9 h-9 flex items-center justify-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
-            >
-              <X className="w-4 h-4 text-gray-900" />
-            </button>
           </div>
-        </div>
-      </div>
+        );
+      })()}
   
 
       {/* List Content */}
