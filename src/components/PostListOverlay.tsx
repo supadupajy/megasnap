@@ -443,17 +443,15 @@ const PostListOverlay = ({
 
   return (
     <div
-      style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
-      className="post-list-overlay-enter fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white shadow-none overflow-hidden"
+      ref={scrollContainerRef}
+      style={{
+        bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
+        paddingBottom: '24px'
+      }}
+      className="post-list-overlay-enter fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] overflow-y-auto bg-white no-scrollbar shadow-none"
     >
-      {/* Popular 페이지와 동일한 구조: 외부 스크롤 컨테이너 + sticky 헤더 */}
-      <div
-        ref={scrollContainerRef}
-        className="h-full overflow-y-auto bg-white no-scrollbar"
-        style={{ paddingBottom: '24px' }}
-      >
-        {/* Sticky 헤더 (Popular와 동일) */}
-        <div className="sticky top-0 z-40 bg-white">
+      {/* Sticky 헤더 (Popular와 동일) */}
+      <div className="sticky top-0 z-40 bg-white">
           <CollapsingHeader
             progress={headerProgress}
             Icon={LayoutGrid}
@@ -536,7 +534,6 @@ const PostListOverlay = ({
             <p className="text-gray-400 text-xs">필터를 변경하거나 지도를 이동해보세요</p>
           </div>
         )}
-      </div>
     </div>
   );
 };

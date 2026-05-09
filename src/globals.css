@@ -673,6 +673,6 @@
 }
 
 .post-list-overlay-enter {
-  animation: post-list-overlay-enter 0.2s cubic-bezier(0.42, 0, 1, 1) both;
+  animation: post-list-overlay-enter 0.2s cubic-bezier(0.42, 0, 1, 1);
   transform-origin: center center;
 }
