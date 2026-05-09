@@ -1577,7 +1577,7 @@ const MapContainer = ({
           .filter(p => p.lat != null && p.lng != null)
           .map(p => ({ lat: p.lat, lng: p.lng }))}
         mapInstance={mapInstanceState}
-        visible={level >= 7}
+        visible={true}
       />
       <div
         ref={containerRef}
