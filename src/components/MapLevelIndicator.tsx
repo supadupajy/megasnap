@@ -48,7 +48,7 @@ const MapLevelIndicator = ({
           </div>
 
           <div
-            className="absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg transition-[top,background-color] duration-200"
+            className="absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg transition-[top,background-color] duration-500 ease-out"
             style={{
               top: `${progress}%`,
               backgroundColor: markerVisible ? '#10b981' : '#fb7185',
@@ -65,7 +65,7 @@ const MapLevelIndicator = ({
         <div className="mt-1 text-[10px] font-black leading-none text-slate-600">{safeLevel}</div>
         <div
           className={cn(
-            'mt-1.5 flex w-8 items-center justify-center whitespace-nowrap rounded-full border px-0.5 py-1 text-[7px] font-black leading-none tracking-[-0.12em] shadow-sm',
+            'mt-1.5 flex w-8 items-center justify-center whitespace-nowrap rounded-full border px-0.5 py-1 text-[7px] font-black leading-none tracking-[-0.12em] shadow-sm transition-colors duration-500 ease-out',
             markerVisible
               ? 'border-emerald-200 bg-emerald-50/95 text-emerald-700'
               : 'border-rose-200 bg-rose-50/95 text-rose-700',

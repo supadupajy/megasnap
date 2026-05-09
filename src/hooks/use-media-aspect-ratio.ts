@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 
 type MediaType = 'image' | 'video';
 
+const DEFAULT_RATIO = '3 / 4';
+
 const getDisplayRatio = (width: number, height: number) => {
-  if (!width || !height) return '1 / 1';
+  if (!width || !height) return DEFAULT_RATIO;
   const ratio = width / height;
 
   if (ratio >= 0.9 && ratio <= 1.1) return '1 / 1';
@@ -11,11 +13,11 @@ const getDisplayRatio = (width: number, height: number) => {
 };
 
 export const useMediaAspectRatio = (src?: string | null, type: MediaType = 'image') => {
-  const [aspectRatio, setAspectRatio] = useState('1 / 1');
+  const [aspectRatio, setAspectRatio] = useState(DEFAULT_RATIO);
 
   useEffect(() => {
     if (!src || src === '/placeholder.svg') {
-      setAspectRatio('1 / 1');
+      setAspectRatio(DEFAULT_RATIO);
       return;
     }
 
@@ -40,7 +42,7 @@ export const useMediaAspectRatio = (src?: string | null, type: MediaType = 'imag
       };
 
       video.onerror = () => {
-        if (!cancelled) setAspectRatio('1 / 1');
+        if (!cancelled) setAspectRatio(DEFAULT_RATIO);
         cleanup();
       };
 
@@ -60,7 +62,7 @@ export const useMediaAspectRatio = (src?: string | null, type: MediaType = 'imag
       }
     };
     img.onerror = () => {
-      if (!cancelled) setAspectRatio('1 / 1');
+      if (!cancelled) setAspectRatio(DEFAULT_RATIO);
     };
     img.src = src;
 

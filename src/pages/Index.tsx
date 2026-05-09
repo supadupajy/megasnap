@@ -1559,27 +1559,32 @@ const Index = () => {
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Navigation className="w-6 h-6 fill-gray-700" /></button>
               </div>
 
-              {/* 히트맵 범례: 레벨 7 이상일 때 지도 레벨 인디케이터 반대편 좌측에 표시 */}
-              {currentZoom >= 7 && (
-                <div
-                  style={{
-                    top: `${indicatorTopOffset + 8}px`,
-                    left: '1rem',
-                  }}
-                  className="fixed z-[35] pointer-events-none"
-                >
-                  <div className="flex h-[220px] w-10 flex-col items-center justify-between rounded-[18px] border border-white/70 bg-white/45 px-1 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
-                    <span className="text-[10px] font-black leading-none text-slate-800">많음</span>
-                    <div
-                      className="h-[124px] w-1.5 rounded-full"
-                      style={{
-                        background: 'linear-gradient(to bottom, #b40000, #ff1e00, #ff7800, #ffdc00, #b4e61e, #3cd250, #28c8b4, #64d2ff, transparent)',
-                      }}
-                    />
-                    <span className="text-[10px] font-black leading-none text-slate-700">적음</span>
+              {/* 히트맵 범례: 항상 표시하되 레벨 7 미만이면 비활성화 모습 */}
+              {(() => {
+                const heatmapActive = currentZoom >= 7;
+                return (
+                  <div
+                    style={{
+                      top: `${indicatorTopOffset + 8}px`,
+                      left: '1rem',
+                      opacity: heatmapActive ? 1 : 0.45,
+                      filter: heatmapActive ? 'none' : 'grayscale(0.85) saturate(0.6)',
+                    }}
+                    className="fixed z-[35] pointer-events-none transition-[opacity,filter] duration-500 ease-out"
+                  >
+                    <div className="flex h-[220px] w-10 flex-col items-center justify-between rounded-[18px] border border-white/70 bg-white/45 px-1 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+                      <span className="text-[10px] font-black leading-none text-slate-800 transition-colors duration-500">많음</span>
+                      <div
+                        className="h-[124px] w-1.5 rounded-full transition-opacity duration-500"
+                        style={{
+                          background: 'linear-gradient(to bottom, #b40000, #ff1e00, #ff7800, #ffdc00, #b4e61e, #3cd250, #28c8b4, #64d2ff, transparent)',
+                        }}
+                      />
+                      <span className="text-[10px] font-black leading-none text-slate-700 transition-colors duration-500">적음</span>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
