@@ -451,32 +451,29 @@ const PostListOverlay = ({
         ease: [0.42, 0, 1, 1] // ease-in cubic-bezier
       }}
       style={{ willChange: 'transform, opacity', transformOrigin: 'center center', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
-      className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
+      className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white shadow-none overflow-hidden"
     >
-      {/* Header — Popular와 동일한 방식 */}
-      <div className="shrink-0 bg-white">
-        <CollapsingHeader
-          progress={headerProgress}
-          Icon={LayoutGrid}
-          iconBgClass="bg-indigo-100"
-          iconColorClass="text-indigo-600"
-          title="여기 보기"
-          subtitle={`Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`}
-          ActionIcon={X}
-          actionLabel="닫기"
-          onActionClick={onClose}
-        />
-      </div>
-  
-
-      {/* List Content */}
+      {/* Popular 페이지와 동일한 구조: 외부 스크롤 컨테이너 + sticky 헤더 */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden bg-white custom-scrollbar touch-pan-y overscroll-contain"
-        style={{
-          paddingBottom: '24px'
-        }}
+        className="h-full overflow-y-auto overflow-x-hidden bg-white custom-scrollbar touch-pan-y overscroll-contain"
+        style={{ paddingBottom: '24px' }}
       >
+        {/* Sticky 헤더 (Popular와 동일) */}
+        <div className="sticky top-0 z-40 bg-white">
+          <CollapsingHeader
+            progress={headerProgress}
+            Icon={LayoutGrid}
+            iconBgClass="bg-indigo-100"
+            iconColorClass="text-indigo-600"
+            title="여기 보기"
+            subtitle={`Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`}
+            ActionIcon={X}
+            actionLabel="닫기"
+            onActionClick={onClose}
+          />
+        </div>
+
         {posts.length > 0 ? (
           <div className="flex flex-col">
             {(() => {
