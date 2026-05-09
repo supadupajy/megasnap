@@ -120,15 +120,6 @@
   transform-origin: 50% 100%;
 }
 
-/* 지도 내부 레이어만 격리하고, 마커의 직접 오버레이 레이어만 히트맵 위로 올림 */
-#kakao-map {
-  isolation: isolate;
-}
-
-#kakao-map div:has(> .marker-container) {
-  z-index: 200 !important;
-}
-
 /* zoom-7: 광고 마커만 표시 */
 #kakao-map.zoom-7 .marker-container {
   display: none !important;
