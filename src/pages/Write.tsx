@@ -438,20 +438,23 @@ const Write = () => {
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
-                    <button
-                      type="button"
-                      onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
-                      disabled={mediaFiles.length === 0}
-                      aria-label="다음 단계로"
-                      className={cn(
-                        "ml-auto w-9 h-9 rounded-full flex items-center justify-center transition-all",
-                        mediaFiles.length === 0
-                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                          : "bg-indigo-500 text-white shadow-md shadow-indigo-200 active:scale-90"
-                      )}
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
+                    <div className="ml-auto flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-900">다음</span>
+                      <button
+                        type="button"
+                        onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
+                        disabled={mediaFiles.length === 0}
+                        aria-label="다음 단계로"
+                        className={cn(
+                          "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                          mediaFiles.length === 0
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-indigo-500 text-white shadow-md shadow-indigo-200 active:scale-90"
+                        )}
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                   <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
                 </div>
