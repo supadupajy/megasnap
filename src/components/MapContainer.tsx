@@ -69,6 +69,7 @@ const MapContainer = ({
   const isDragging = useRef(false);
   const lastDragEnd = useRef(0);
   const currentLevelRef = useRef<number>(6);
+  const lastReportedLevelRef = useRef<number | null>(null);
   const postsRef = useRef<any[]>(posts);
   const viewedPostIdsRef = useRef<Set<any>>(viewedPostIds);
   const internalViewedIdsRef = useRef<Set<string>>(new Set());
@@ -470,6 +471,13 @@ const MapContainer = ({
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
           const mapLevel = map.getLevel();
+          currentLevelRef.current = mapLevel;
+          lastReportedLevelRef.current = mapLevel;
+          setCurrentLevel(prev => (prev === mapLevel ? prev : mapLevel));
+          if (levelTimerRef.current) {
+            clearTimeout(levelTimerRef.current);
+            levelTimerRef.current = null;
+          }
           updateZoomClass();
           const boundsData = {
             sw: { lat: sw.getLat(), lng: sw.getLng() },
@@ -803,6 +811,13 @@ const MapContainer = ({
 
     const handleZoom = () => {
       const level = map.getLevel();
+      currentLevelRef.current = level;
+      lastReportedLevelRef.current = level;
+      setCurrentLevel(prev => (prev === level ? prev : level));
+      if (levelTimerRef.current) {
+        clearTimeout(levelTimerRef.current);
+        levelTimerRef.current = null;
+      }
 
       // 레벨 7 이상이면 React 렌더 사이클을 기다리지 않고 즉시 모든 마커 제거
       // disappear 애니메이션 없이 즉시 제거해야 깜빡임이 없음
@@ -861,31 +876,37 @@ const MapContainer = ({
   const applyLevel = useCallback((targetLevel: number) => {
     const map = mapInstance.current;
     if (!map) return;
-    map.setLevel(targetLevel, { animate: { duration: 300 } });
+
+    const currentMapLevel = map.getLevel();
+    if (currentMapLevel === targetLevel) {
+      currentLevelRef.current = currentMapLevel;
+      lastReportedLevelRef.current = currentMapLevel;
+      setCurrentLevel(prev => (prev === currentMapLevel ? prev : currentMapLevel));
+      pendingLevelRef.current = null;
+      return;
+    }
+
+    map.setLevel(targetLevel, { animate: false });
     const newLevel = map.getLevel();
     setCurrentLevel(newLevel);
     currentLevelRef.current = newLevel;
+    lastReportedLevelRef.current = newLevel;
     pendingLevelRef.current = null;
   }, []);
 
   useEffect(() => {
     if (!isMapReady || !mapInstance.current || level === undefined) return;
-    if (levelTimerRef.current) clearTimeout(levelTimerRef.current);
-    levelTimerRef.current = setTimeout(() => {
-      levelTimerRef.current = null;
-      if (animationFrameRef.current) {
-        // smoothMoveTo 진행 중 → 완료 후 적용하도록 pending에 저장
-        pendingLevelRef.current = level;
-      } else {
-        applyLevel(level);
-      }
-    }, 100);
-    return () => {
-      if (levelTimerRef.current) {
-        clearTimeout(levelTimerRef.current);
-        levelTimerRef.current = null;
-      }
-    };
+
+    const currentMapLevel = mapInstance.current.getLevel();
+    if (currentMapLevel === level || lastReportedLevelRef.current === level) return;
+
+    if (animationFrameRef.current) {
+      // smoothMoveTo 진행 중 → 완료 후 적용하도록 pending에 저장
+      pendingLevelRef.current = level;
+      return;
+    }
+
+    applyLevel(level);
   }, [level, isMapReady, applyLevel]);
 
   const smoothMoveTo = (targetLat: number, targetLng: number, onComplete?: () => void) => {
