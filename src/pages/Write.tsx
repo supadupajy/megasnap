@@ -649,11 +649,15 @@ const Write = () => {
             {/* 페이지 2 등록 버튼 영역 */}
             {currentPage === 2 && (
               <div className="pt-2 space-y-1.5">
-                {(!content.trim() || mediaFiles.length === 0) && (
-                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                    {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
-                  </p>
-                )}
+                <p
+                  className={cn(
+                    "text-[10px] text-center font-bold text-rose-500 animate-pulse",
+                    (!content.trim() || mediaFiles.length === 0) ? "visible" : "invisible"
+                  )}
+                  aria-hidden={!(!content.trim() || mediaFiles.length === 0)}
+                >
+                  {!content.trim() ? '내용을 입력해주세요' : (mediaFiles.length === 0 ? '사진이나 동영상을 선택해주세요' : '\u00A0')}
+                </p>
                 {(() => {
                   const isDisabled = isSubmitting || !content.trim() || mediaFiles.length === 0;
                   return (
