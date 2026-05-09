@@ -16,6 +16,7 @@ import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-p
 import { showError } from '@/utils/toast';
 import AdMobBanner from './AdMobBanner';
 import CollapsingHeader from './CollapsingHeader';
+import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
 
 const ObservedPostItem = React.memo(({
   post, 
@@ -185,35 +186,10 @@ const PostListOverlay = ({
   const [playingPostId, setPlayingPostId] = useState<string | null>(null);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // ── Collapsing header: Popular 페이지와 동일한 방식 (state 기반) ──
-  const [headerProgress, setHeaderProgress] = useState(0);
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el || !isOpen) return;
-
-    const COLLAPSE_THRESHOLD = 80;
-    let rafId = 0;
-
-    const onScroll = () => {
-      if (rafId) return;
-      rafId = requestAnimationFrame(() => {
-        const y = el.scrollTop;
-        const next = Math.max(0, Math.min(1, y / COLLAPSE_THRESHOLD));
-        setHeaderProgress(next);
-        rafId = 0;
-      });
-    };
-
-    el.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-
-    return () => {
-      el.removeEventListener('scroll', onScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [isOpen]);
+  // Popular 페이지와 동일한 collapsing header 훅 사용
+  // 오버레이는 닫힌 상태에서 null을 렌더하므로, 열릴 때 리스너를 다시 붙이도록 isOpen을 관찰합니다.
+  const { scrollRef: scrollContainerRef, progress: headerProgress } = useCollapsingHeader(80, [isOpen]);
 
   // 광고 삽입 간격을 posts 변경과 무관하게 안정적으로 유지
   // useMemo 안에서 Math.random()을 쓰면 posts가 바뀔 때마다 광고 위치가 달라지는 문제 발생

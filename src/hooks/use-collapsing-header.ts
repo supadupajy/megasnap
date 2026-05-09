@@ -13,7 +13,7 @@ import { useEffect, useRef, useState, RefObject } from 'react';
  * 반환된 progress 값을 보간(interpolation)에 사용해
  * 헤더 높이, 폰트 크기, opacity 등을 동적으로 조절할 수 있습니다.
  */
-export function useCollapsingHeader(threshold: number = 80) {
+export function useCollapsingHeader(threshold: number = 80, observeDeps: unknown[] = []) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
 
@@ -41,7 +41,7 @@ export function useCollapsingHeader(threshold: number = 80) {
       el.removeEventListener('scroll', onScroll);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [threshold]);
+  }, [threshold, ...observeDeps]);
 
   return { scrollRef: scrollRef as RefObject<HTMLDivElement>, progress };
 }
