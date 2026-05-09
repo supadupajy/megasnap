@@ -252,11 +252,28 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       scheduleRedraw();
     };
 
+    // smoothMoveTo (programmatic 이동) 동안에는 캔버스를 transform으로 따라가게 해
+    // 매 프레임 setCenter마다 전체 redraw가 발생하지 않도록 처리.
+    const handleProgrammaticMoveStart = () => handleDragStart();
+    const handleProgrammaticMoveTick = () => handleDrag();
+    const handleProgrammaticMoveEnd = () => handleDragEnd();
+
     kakao.maps.event.addListener(mapInstance, 'dragstart', handleDragStart);
     kakao.maps.event.addListener(mapInstance, 'drag', handleDrag);
     kakao.maps.event.addListener(mapInstance, 'dragend', handleDragEnd);
     kakao.maps.event.addListener(mapInstance, 'zoom_changed', handleZoomChanged);
     kakao.maps.event.addListener(mapInstance, 'idle', handleIdle);
+
+    // setCenter는 카카오맵의 'drag' 이벤트를 발생시키지 않으므로
+    // center_changed로 대체 추적 (programmatic 이동 시 캔버스 따라가기)
+    const handleCenterChanged = () => {
+      if (!isDraggingRef.current) return;
+      handleDrag();
+    };
+    kakao.maps.event.addListener(mapInstance, 'center_changed', handleCenterChanged);
+
+    window.addEventListener('map-programmatic-move-start', handleProgrammaticMoveStart);
+    window.addEventListener('map-programmatic-move-end', handleProgrammaticMoveEnd);
 
     scheduleRedraw();
 
@@ -266,6 +283,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
       kakao.maps.event.removeListener(mapInstance, 'dragend', handleDragEnd);
       kakao.maps.event.removeListener(mapInstance, 'zoom_changed', handleZoomChanged);
       kakao.maps.event.removeListener(mapInstance, 'idle', handleIdle);
+      kakao.maps.event.removeListener(mapInstance, 'center_changed', handleCenterChanged);
+      window.removeEventListener('map-programmatic-move-start', handleProgrammaticMoveStart);
+      window.removeEventListener('map-programmatic-move-end', handleProgrammaticMoveEnd);
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;

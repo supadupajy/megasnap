@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
@@ -86,6 +86,15 @@ const MapContainer = ({
   const levelRef = useRef(6);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
+
+  // 히트맵 points: 좌표 시그니처가 같으면 같은 배열 참조를 유지해
+  // HeatmapOverlay의 redraw 트리거가 불필요하게 발생하지 않도록 메모화
+  const heatmapPoints = useMemo(() => {
+    return posts
+      .filter(p => p.lat != null && p.lng != null)
+      .map(p => ({ lat: p.lat as number, lng: p.lng as number }));
+    // posts 자체가 변경됐을 때만 재계산
+  }, [posts]);
 
   // draggable prop 변경 시 카카오맵 드래그 활성/비활성
   useEffect(() => {
@@ -931,6 +940,12 @@ const MapContainer = ({
     const duration = Math.min(Math.max(dist * 1200, 700), 1500);
     const startTime = performance.now();
 
+    // 히트맵 등 부가 레이어가 setCenter 매 프레임 redraw하지 않도록
+    // programmatic 이동 시작을 알림 (캔버스 transform으로 따라가기 위함)
+    try {
+      window.dispatchEvent(new CustomEvent('map-programmatic-move-start'));
+    } catch (e) {}
+
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
@@ -949,6 +964,9 @@ const MapContainer = ({
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
         animationFrameRef.current = null;
+        try {
+          window.dispatchEvent(new CustomEvent('map-programmatic-move-end'));
+        } catch (e) {}
         // 이동 완료 후 pending level 적용
         if (pendingLevelRef.current !== null) {
           applyLevel(pendingLevelRef.current);
@@ -1594,9 +1612,7 @@ const MapContainer = ({
 
       {/* 히트맵 오버레이 */}
       <HeatmapOverlay
-        points={posts
-          .filter(p => p.lat != null && p.lng != null)
-          .map(p => ({ lat: p.lat, lng: p.lng }))}
+        points={heatmapPoints}
         mapInstance={mapInstanceState}
         visible={level >= 7}
       />
