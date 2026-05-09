@@ -1608,11 +1608,17 @@ const Index = () => {
                           const insertAt = Math.floor(Math.random() * (finalList.length + 1));
                           finalList.splice(insertAt, 0, ad);
                         });
-                        setPostListInitialPosts(finalList);
+                        sessionStorage.setItem('nearby-posts-payload', JSON.stringify({
+                          initialPosts: finalList,
+                          mapCenter: mapCenter || { lat: 37.5665, lng: 126.9780 },
+                          currentBounds: bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } },
+                          selectedCategories,
+                          openedViewedIds: Array.from(new Set([...viewedIds, ...adIds])),
+                        }));
 
-                        // 플래시 애니메이션 - state 변경 없이 ref로 직접 실행
+                        // 인기 포스팅처럼 일반 라우트 페이지로 이동
                         shutterRef.current?.trigger(() => {
-                          setIsPostListOpen(true);
+                          navigate('/nearby-posts');
                         });
                       }
                     }}
