@@ -10,7 +10,8 @@ import PostItem from './PostItem';
 import { Post } from '@/types';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
-import { motion, AnimatePresence } from 'framer-motion';
+// motion 제거: transform이 적용된 부모는 자식의 sticky 동작과 iOS 스크롤 이벤트 타이밍을 망가뜨림
+// 진입 애니메이션은 CSS keyframe으로 처리
 import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-posts';
 import { showError } from '@/utils/toast';
 import AdMobBanner from './AdMobBanner';
@@ -441,22 +442,14 @@ const PostListOverlay = ({
   const firstViewedIndex = posts.findIndex(p => openedViewedIds.has(p.id));
 
   return (
-    <motion.div
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      exit={{ scale: 0.95, opacity: 0 }}
-      transition={{
-        type: 'tween',
-        duration: 0.2,
-        ease: [0.42, 0, 1, 1] // ease-in cubic-bezier
-      }}
-      style={{ transformOrigin: 'center center', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
-      className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white shadow-none overflow-hidden"
+    <div
+      style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
+      className="post-list-overlay-enter fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white shadow-none overflow-hidden"
     >
       {/* Popular 페이지와 동일한 구조: 외부 스크롤 컨테이너 + sticky 헤더 */}
       <div
         ref={scrollContainerRef}
-        className="h-full overflow-y-auto overflow-x-hidden bg-white custom-scrollbar touch-pan-y overscroll-contain"
+        className="h-full overflow-y-auto bg-white no-scrollbar"
         style={{ paddingBottom: '24px' }}
       >
         {/* Sticky 헤더 (Popular와 동일) */}
@@ -544,7 +537,7 @@ const PostListOverlay = ({
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 

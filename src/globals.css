@@ -654,3 +654,25 @@
   55%  { opacity: 0.85; }
   100% { opacity: 0; }
 }
+
+/* =============================================
+   PostListOverlay 진입 애니메이션
+   - framer-motion 대신 CSS keyframe 사용
+   - 애니메이션이 끝나면 transform이 자동 해제되어
+     자식 sticky/스크롤 이벤트가 Popular 페이지와 동일하게 동작
+   ============================================= */
+@keyframes post-list-overlay-enter {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.post-list-overlay-enter {
+  animation: post-list-overlay-enter 0.2s cubic-bezier(0.42, 0, 1, 1) both;
+  transform-origin: center center;
+}
