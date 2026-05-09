@@ -400,34 +400,35 @@ const Write = () => {
   return (
     <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
       {/* 고정 헤더(Header.tsx) 높이만큼만 정확히 공간 확보 - pt-16으로 통일 */}
-      <div className="pt-16 h-full overflow-hidden">
-        <main className="h-full overflow-y-auto no-scrollbar overscroll-contain bg-white">
-          <div className="bg-gray-50/50 border-y border-gray-100">
-            <div className="px-5 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                    <PenLine className="w-6 h-6 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black text-gray-900 tracking-tight">
-                      {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
-                    </h2>
-                    <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
-                  </div>
+      <div className="pt-16 h-full flex flex-col overflow-hidden">
+        {/* 고정 타이틀 영역 */}
+        <div className="bg-gray-50/50 border-y border-gray-100 shrink-0">
+          <div className="px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                  <PenLine className="w-6 h-6 text-indigo-600" />
                 </div>
-                <div className="flex items-center gap-2">
-                  {currentPage === 2 && (
-                    <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                  )}
+                <div>
+                  <h2 className="text-lg font-black text-gray-900 tracking-tight">
+                    {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
+                  </h2>
+                  <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {currentPage === 2 && (
+                  <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+        <main className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+          <div className="px-5 py-6 space-y-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
