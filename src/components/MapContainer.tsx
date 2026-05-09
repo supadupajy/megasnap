@@ -1425,7 +1425,7 @@ const MapContainer = ({
     if (isAd) animationClass = '';
     else if (!isMine && (isInfluencer || isPopular)) animationClass = 'animate-marker-float';
 
-    const isSpecialPost = !isAd && (isInfluencer || isPopular);
+    const isSpecialPost = isAd || isInfluencer || isPopular;
     const shineClass = isSpecialPost ? 'shine-overlay' : '';
 
     let inlineBorderStyle = "border: 3px solid #ffffff;";
@@ -1433,7 +1433,7 @@ const MapContainer = ({
     let influencerClass = "";
 
     if (isMine) {
-      inlineBorderStyle = "border: 4.5px solid #2D2D2D;";
+      inlineBorderStyle = "border: 4.5px solid #111827;";
       inlineShadow = "none";
     }
     else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; inlineShadow = "none"; influencerClass = ""; }
