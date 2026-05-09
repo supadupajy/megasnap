@@ -593,26 +593,6 @@ const Write = () => {
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">(선택)</span>
-                    <div className="ml-auto flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-900">등록</span>
-                      <button
-                        type="button"
-                        onClick={handlePost}
-                        disabled={isSubmitting || !content.trim() || mediaFiles.length === 0}
-                        aria-label="게시물 등록하기"
-                        className={cn(
-                          "w-9 h-9 rounded-full flex items-center justify-center transition-all",
-                          (isSubmitting || !content.trim() || mediaFiles.length === 0)
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-indigo-500 text-white shadow-md shadow-indigo-200 active:scale-90"
-                        )}
-                      >
-                        {isSubmitting
-                          ? <Loader2 className="w-5 h-5 animate-spin" />
-                          : <Check className="w-5 h-5" />
-                        }
-                      </button>
-                    </div>
                   </div>
                   <div
                     onClick={() => navigate('/', { state: { startSelection: true } })}
@@ -666,11 +646,38 @@ const Write = () => {
               </div>
             )}
 
-            {/* 페이지 2 하단 안내 (필수 항목 미입력 시) */}
-            {currentPage === 2 && (!content.trim() || mediaFiles.length === 0) && (
-              <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
-              </p>
+            {/* 페이지 2 등록 버튼 영역 */}
+            {currentPage === 2 && (
+              <div className="pt-2 space-y-1.5">
+                {(!content.trim() || mediaFiles.length === 0) && (
+                  <p className="text-[10px] text-center font-bold text-rose-500 animate-pulse">
+                    {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
+                  </p>
+                )}
+                {(() => {
+                  const isDisabled = isSubmitting || !content.trim() || mediaFiles.length === 0;
+                  return (
+                    <button
+                      type="button"
+                      onClick={handlePost}
+                      disabled={isDisabled}
+                      className={cn(
+                        "w-full h-14 rounded-2xl flex items-center justify-center gap-2 text-base font-black tracking-tight transition-all",
+                        isDisabled
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-indigo-600 text-white shadow-lg shadow-indigo-200 active:scale-[0.98]"
+                      )}
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Check className="w-5 h-5" />
+                      )}
+                      <span>등록하기</span>
+                    </button>
+                  );
+                })()}
+              </div>
             )}
           </div>
         </main>
