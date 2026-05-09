@@ -67,14 +67,13 @@ const MapLevelIndicator = ({
 
       <div
         className={cn(
-          'mx-auto mt-1.5 flex w-9 flex-col items-center rounded-2xl border px-1.5 py-1 text-[9px] font-black leading-[1.05] shadow-sm backdrop-blur-xl',
+          'mx-auto mt-1.5 flex w-9 items-center justify-center rounded-2xl border px-1.5 py-1 text-[9px] font-black leading-none shadow-sm backdrop-blur-xl',
           markerVisible
             ? 'border-emerald-200 bg-emerald-50/90 text-emerald-700'
             : 'border-rose-200 bg-rose-50/90 text-rose-700',
         )}
       >
-        <span>마커</span>
-        <span>{markerVisible ? '표시' : '숨김'}</span>
+        {markerVisible ? '마커' : '히트맵'}
       </div>
     </div>
   );
