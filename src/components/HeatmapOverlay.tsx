@@ -15,7 +15,8 @@ interface HeatmapOverlayProps {
 
 const HEATMAP_RADIUS_METERS = 600;
 const HEATMAP_INTENSITY_MAX = 4.5;
-const LOW_DENSITY_POINT_THRESHOLD = 3;
+const HEATMAP_POINT_WEIGHT = 3;
+const LOW_DENSITY_POINT_THRESHOLD = 12;
 const SINGLE_POINT_MIN_RADIUS_PX = 58;
 const SINGLE_POINT_RADIUS_MULTIPLIER = 1.55;
 const OVERSCAN_RATIO = 0.65;
@@ -70,6 +71,15 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
+    const actualLevel = mapInstance.getLevel?.();
+    if (typeof actualLevel === 'number' && actualLevel < 7) {
+      const ctx = canvas.getContext('2d');
+      ctx?.clearRect(0, 0, canvas.width, canvas.height);
+      heatRef.current?.clear?.();
+      pendingRedrawRef.current = false;
+      return;
+    }
+
     if (!applyCanvasSize()) return;
 
     const map = mapInstance;
@@ -111,7 +121,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     for (const point of pointsRef.current) {
       const { x, y } = toPixel(point.lat, point.lng);
       if (x < -margin || x > canvasWidth + margin || y < -margin || y > canvasHeight + margin) continue;
-      data.push([x, y, 1]);
+      data.push([x, y, HEATMAP_POINT_WEIGHT]);
     }
 
     heat.clear();
@@ -242,6 +252,19 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     };
 
     const handleZoomChanged = () => {
+      const canvas = canvasRef.current;
+      const level = mapInstance.getLevel?.();
+      if (typeof level === 'number' && level < 7) {
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        const ctx = canvas?.getContext('2d');
+        if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        heatRef.current?.clear?.();
+        pendingRedrawRef.current = false;
+        return;
+      }
       scheduleRedraw();
     };
 
