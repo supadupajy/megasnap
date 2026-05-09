@@ -120,12 +120,6 @@
   transform-origin: 50% 100%;
 }
 
-/* 히트맵 캔버스보다 카카오 커스텀 오버레이 마커 레이어가 항상 위에 오도록 보정 */
-#kakao-map div:has(> .marker-container),
-#kakao-map div:has(.marker-container) {
-  z-index: 10000 !important;
-}
-
 /* zoom-7: 광고 마커만 표시 */
 #kakao-map.zoom-7 .marker-container {
   display: none !important;
