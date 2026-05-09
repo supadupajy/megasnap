@@ -14,8 +14,7 @@ interface HeatmapOverlayProps {
 }
 
 const HEATMAP_RADIUS_METERS = 600;
-const HEATMAP_INTENSITY_MAX = 4.5;
-const SINGLE_VISIBLE_POINT_INTENSITY_MAX = 1.48;
+const HEATMAP_INTENSITY_MAX = 1.55;
 const HEATMAP_POINT_WEIGHT = 1;
 const OVERSCAN_RATIO = 0.65;
 
@@ -122,13 +121,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     const margin = radiusPx;
     const data: [number, number, number][] = [];
-    const viewportData: [number, number][] = [];
 
     for (const point of pointsRef.current) {
       const { x, y } = toPixel(point.lat, point.lng);
-      if (x >= overscanX && x <= overscanX + viewportWidth && y >= overscanY && y <= overscanY + viewportHeight) {
-        viewportData.push([x, y]);
-      }
       if (x < -margin || x > canvasWidth + margin || y < -margin || y > canvasHeight + margin) continue;
       data.push([x, y, HEATMAP_POINT_WEIGHT]);
     }
@@ -137,12 +132,9 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     clearCanvas();
 
     if (data.length > 0) {
-      const isSingleVisiblePoint = viewportData.length === 1;
-      const intensityMax = isSingleVisiblePoint ? SINGLE_VISIBLE_POINT_INTENSITY_MAX : HEATMAP_INTENSITY_MAX;
-
       heat
         .data(data)
-        .max(intensityMax)
+        .max(HEATMAP_INTENSITY_MAX)
         .radius(radiusPx, blurPx)
         .gradient({
           0.0: 'rgba(100,210,255,0)',
