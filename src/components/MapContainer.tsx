@@ -19,6 +19,7 @@ interface MapContainerProps {
   userLocation?: { lat: number; lng: number } | null;
   draggable?: boolean;
   hideUserLocation?: boolean;
+  hideHeatmap?: boolean;
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg";
@@ -39,6 +40,7 @@ const MapContainer = ({
   userLocation,
   draggable = true,
   hideUserLocation = false,
+  hideHeatmap = false,
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -1614,7 +1616,7 @@ const MapContainer = ({
       <HeatmapOverlay
         points={heatmapPoints}
         mapInstance={mapInstanceState}
-        visible={level >= 7}
+        visible={level >= 7 && !hideHeatmap}
       />
       <div
         ref={containerRef}
