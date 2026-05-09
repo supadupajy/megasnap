@@ -431,7 +431,13 @@ const Write = () => {
           "flex-1 min-h-0 no-scrollbar overscroll-contain bg-white",
           currentPage === 1 ? "overflow-hidden" : "overflow-y-auto"
         )}>
-          <div className="px-5 py-6 space-y-6" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px) + 24px)' }}>
+          <div
+            className={cn(
+              "px-5 space-y-6",
+              currentPage === 1 ? "pt-3" : "pt-6"
+            )}
+            style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px) + 24px)' }}
+          >
             {currentPage === 1 ? (
               <div className="space-y-6">
                 <div className="space-y-3">
