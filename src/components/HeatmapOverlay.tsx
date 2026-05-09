@@ -15,9 +15,8 @@ interface HeatmapOverlayProps {
 
 const HEATMAP_RADIUS_METERS = 600;
 const HEATMAP_INTENSITY_MAX = 4.5;
+const SINGLE_VISIBLE_POINT_INTENSITY_MAX = 1.48;
 const HEATMAP_POINT_WEIGHT = 1;
-const SINGLE_POINT_MIN_RADIUS_PX = 46;
-const SINGLE_POINT_RADIUS_MULTIPLIER = 0.95;
 const OVERSCAN_RATIO = 0.65;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
@@ -138,42 +137,25 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     clearCanvas();
 
     if (data.length > 0) {
+      const isSingleVisiblePoint = viewportData.length === 1;
+      const intensityMax = isSingleVisiblePoint ? SINGLE_VISIBLE_POINT_INTENSITY_MAX : HEATMAP_INTENSITY_MAX;
+
       heat
         .data(data)
-        .max(HEATMAP_INTENSITY_MAX)
+        .max(intensityMax)
         .radius(radiusPx, blurPx)
         .gradient({
           0.0: 'rgba(100,210,255,0)',
-          0.05: 'rgba(100,210,255,0.5)',
-          0.20: 'rgba(40,200,180,0.67)',
-          0.35: 'rgba(60,210,80,0.76)',
-          0.50: 'rgba(180,230,30,0.82)',
-          0.65: 'rgba(255,220,0,0.86)',
-          0.78: 'rgba(255,120,0,0.91)',
-          0.90: 'rgba(255,30,0,0.94)',
-          1.0: 'rgba(180,0,0,0.97)',
+          0.05: 'rgba(100,210,255,0.42)',
+          0.20: 'rgba(40,200,180,0.55)',
+          0.35: 'rgba(60,210,80,0.62)',
+          0.50: 'rgba(180,230,30,0.66)',
+          0.65: 'rgba(255,220,0,0.68)',
+          0.78: 'rgba(255,160,0,0.72)',
+          0.90: 'rgba(255,80,0,0.74)',
+          1.0: 'rgba(220,20,0,0.76)',
         })
         .draw(0.05);
-
-      if (viewportData.length === 1 && ctx) {
-        const [x, y] = viewportData[0];
-        const singleRadius = Math.max(SINGLE_POINT_MIN_RADIUS_PX, radiusPx * SINGLE_POINT_RADIUS_MULTIPLIER);
-        const gradient = ctx.createRadialGradient(x, y, 0, x, y, singleRadius);
-
-        gradient.addColorStop(0.0, 'rgba(255,220,0,0.68)');
-        gradient.addColorStop(0.20, 'rgba(255,220,0,0.54)');
-        gradient.addColorStop(0.44, 'rgba(180,230,30,0.32)');
-        gradient.addColorStop(0.70, 'rgba(40,200,180,0.15)');
-        gradient.addColorStop(1.0, 'rgba(100,210,255,0)');
-
-        ctx.save();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(x, y, singleRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
     }
 
     pendingRedrawRef.current = false;
