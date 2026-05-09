@@ -14,7 +14,7 @@ interface HeatmapOverlayProps {
 }
 
 const HEATMAP_RADIUS_METERS = 600;
-const HEATMAP_INTENSITY_MAX = 1.55;
+const HEATMAP_INTENSITY_MAX = 2.4;
 const HEATMAP_POINT_WEIGHT = 1;
 const OVERSCAN_RATIO = 0.65;
 
@@ -137,15 +137,17 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         .max(HEATMAP_INTENSITY_MAX)
         .radius(radiusPx, blurPx)
         .gradient({
-          0.0: 'rgba(100,210,255,0)',
+          0.00: 'rgba(100,210,255,0)',
           0.05: 'rgba(100,210,255,0.42)',
-          0.20: 'rgba(40,200,180,0.55)',
-          0.35: 'rgba(60,210,80,0.62)',
-          0.50: 'rgba(180,230,30,0.66)',
-          0.65: 'rgba(255,220,0,0.68)',
-          0.78: 'rgba(255,160,0,0.72)',
-          0.90: 'rgba(255,80,0,0.74)',
-          1.0: 'rgba(220,20,0,0.76)',
+          0.18: 'rgba(40,200,180,0.55)',
+          0.32: 'rgba(60,210,80,0.62)',
+          0.42: 'rgba(180,230,30,0.66)',
+          0.50: 'rgba(255,220,0,0.68)',
+          0.62: 'rgba(255,200,0,0.70)',
+          0.74: 'rgba(255,170,0,0.72)',
+          0.86: 'rgba(255,140,0,0.72)',
+          0.96: 'rgba(255,110,0,0.74)',
+          1.00: 'rgba(220,40,0,0.76)',
         })
         .draw(0.05);
     }
