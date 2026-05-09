@@ -15,7 +15,7 @@ const Header = () => {
   if (isHiddenPage) return null;
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[9998] bg-white border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 z-[12600] bg-white border-b border-gray-100">
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
       <div className="h-16 px-4 flex items-center gap-2 max-w-lg mx-auto">
