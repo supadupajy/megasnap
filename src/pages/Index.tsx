@@ -10,6 +10,7 @@ import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
 import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
+import MapLevelIndicator from '@/components/MapLevelIndicator';
 import { RefreshCw, Navigation, Search, Check, X } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getFallbackImage } from '@/lib/utils';
@@ -1387,25 +1388,34 @@ const Index = () => {
         {/* 화면 밖 마커 방향 표시 - overflow-hidden 밖에 fixed로 배치 */}
         {/* bounds와 dbCounts는 항상 stableSnapshot에서 함께 가져와 일관성 보장 (깜빡임 방지) */}
         {!isSelectingLocation && !isSelectingAdLocation && (
-          <div className="fixed inset-0 z-[25] pointer-events-none">
-            <OffScreenMarkerIndicator
-              bounds={stableSnapshot.bounds || null}
-              onClickDirection={(dir, pts) => {
-                const c = mapDataRef.current?.center || mapCenter;
-                if (!c || pts.length === 0) return;
-                let nearest = pts[0];
-                let minDist = Infinity;
-                for (const p of pts) {
-                  const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
-                  if (d < minDist) { minDist = d; nearest = p; }
-                }
-                setMapCenter({ lat: nearest.lat, lng: nearest.lng });
-              }}
-              topOffset={indicatorTopOffset}
-              bottomOffset={indicatorBottomOffset}
-              dbCounts={useClientSideCounts ? clientOffScreenCounts : stableSnapshot.dbCounts}
+          <>
+            <div className="fixed inset-0 z-[25] pointer-events-none">
+              <OffScreenMarkerIndicator
+                bounds={stableSnapshot.bounds || null}
+                onClickDirection={(dir, pts) => {
+                  const c = mapDataRef.current?.center || mapCenter;
+                  if (!c || pts.length === 0) return;
+                  let nearest = pts[0];
+                  let minDist = Infinity;
+                  for (const p of pts) {
+                    const d = Math.pow(p.lat - c.lat, 2) + Math.pow(p.lng - c.lng, 2);
+                    if (d < minDist) { minDist = d; nearest = p; }
+                  }
+                  setMapCenter({ lat: nearest.lat, lng: nearest.lng });
+                }}
+                topOffset={indicatorTopOffset}
+                bottomOffset={indicatorBottomOffset}
+                dbCounts={useClientSideCounts ? clientOffScreenCounts : stableSnapshot.dbCounts}
+              />
+            </div>
+            <MapLevelIndicator
+              level={currentZoom}
+              minLevel={3}
+              maxLevel={11}
+              markerHiddenFrom={7}
+              style={{ top: `${indicatorTopOffset + 8}px` }}
             />
-          </div>
+          </>
         )}
 
         <div ref={mapAreaRef} className="flex-1 relative overflow-hidden flex flex-col">
