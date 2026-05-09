@@ -16,8 +16,8 @@ interface HeatmapOverlayProps {
 const HEATMAP_RADIUS_METERS = 600;
 const HEATMAP_INTENSITY_MAX = 4.5;
 const HEATMAP_POINT_WEIGHT = 1;
-const SINGLE_POINT_MIN_RADIUS_PX = 36;
-const SINGLE_POINT_RADIUS_MULTIPLIER = 0.82;
+const SINGLE_POINT_MIN_RADIUS_PX = 46;
+const SINGLE_POINT_RADIUS_MULTIPLIER = 0.95;
 const OVERSCAN_RATIO = 0.65;
 
 const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, visible }) => {
@@ -123,9 +123,13 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
 
     const margin = radiusPx;
     const data: [number, number, number][] = [];
+    const viewportData: [number, number][] = [];
 
     for (const point of pointsRef.current) {
       const { x, y } = toPixel(point.lat, point.lng);
+      if (x >= overscanX && x <= overscanX + viewportWidth && y >= overscanY && y <= overscanY + viewportHeight) {
+        viewportData.push([x, y]);
+      }
       if (x < -margin || x > canvasWidth + margin || y < -margin || y > canvasHeight + margin) continue;
       data.push([x, y, HEATMAP_POINT_WEIGHT]);
     }
@@ -151,15 +155,15 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
         })
         .draw(0.05);
 
-      if (data.length === 1 && ctx) {
-        const [x, y] = data[0];
+      if (viewportData.length === 1 && ctx) {
+        const [x, y] = viewportData[0];
         const singleRadius = Math.max(SINGLE_POINT_MIN_RADIUS_PX, radiusPx * SINGLE_POINT_RADIUS_MULTIPLIER);
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, singleRadius);
 
-        gradient.addColorStop(0.0, 'rgba(255,220,0,0.42)');
-        gradient.addColorStop(0.28, 'rgba(255,220,0,0.34)');
-        gradient.addColorStop(0.52, 'rgba(180,230,30,0.22)');
-        gradient.addColorStop(0.76, 'rgba(40,200,180,0.12)');
+        gradient.addColorStop(0.0, 'rgba(255,220,0,0.68)');
+        gradient.addColorStop(0.20, 'rgba(255,220,0,0.54)');
+        gradient.addColorStop(0.44, 'rgba(180,230,30,0.32)');
+        gradient.addColorStop(0.70, 'rgba(40,200,180,0.15)');
         gradient.addColorStop(1.0, 'rgba(100,210,255,0)');
 
         ctx.save();
