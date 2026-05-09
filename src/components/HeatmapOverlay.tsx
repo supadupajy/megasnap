@@ -146,7 +146,7 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
           0.62: 'rgba(255,200,0,0.70)',
           0.74: 'rgba(255,170,0,0.72)',
           0.86: 'rgba(255,140,0,0.72)',
-          0.96: 'rgba(255,110,0,0.74)',
+          0.985: 'rgba(255,110,0,0.74)',
           1.00: 'rgba(220,40,0,0.76)',
         })
         .draw(0.05);
