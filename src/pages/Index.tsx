@@ -1433,8 +1433,7 @@ const Index = () => {
               onMapClick={() => setSearchResultLocation(null)}
               userLocation={userLocation}
               draggable={!isTrendingExpanded}
-              hideUserLocation={!!selectedPostId || isPostListOpen || isCategoryOpen || isSearchOpen}
-              hideHeatmap={isCategoryOpen || isSearchOpen}
+              hideUserLocation={!!selectedPostId || isPostListOpen}
             />
           </div>
 
@@ -1561,7 +1560,7 @@ const Index = () => {
               </div>
 
               {/* 히트맵 범례: 레벨 7 이상일 때 지도 레벨 인디케이터 반대편 좌측에 표시 */}
-              {currentZoom >= 7 && !isCategoryOpen && !isSearchOpen && (
+              {currentZoom >= 7 && (
                 <div
                   style={{
                     top: `${indicatorTopOffset + 8}px`,
@@ -1673,7 +1672,7 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      {!isPostListOpen && !isSearchOpen && !isCategoryOpen && (
+      {!isPostListOpen && !isSearchOpen && (
         <div
           ref={trendingDivRef}
           className={cn(

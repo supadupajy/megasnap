@@ -213,7 +213,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
             duration: 0.2,
             ease: [0.42, 0, 1, 1]
           }}
-          className="fixed inset-0 z-[40] bg-white flex flex-col overflow-hidden"
+          className="fixed inset-0 z-[12500] bg-white flex flex-col overflow-hidden"
           style={{ 
             paddingTop: 'calc(env(safe-area-inset-top, 0px) + 74px)',
             paddingBottom: isKeyboardOpen 
