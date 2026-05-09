@@ -54,18 +54,14 @@ function useWindowSize() {
 // SVG 치수
 const S = 52;
 const CX = S / 2;             // 26
-const R = 15;
-const TIP_Y = 3;             // 꼭짓점 위치 (높을수록 꼬리 짧아짐)
-const CIRCLE_CY = S / 2 + 2; // 28 — 원(숫자) 중심, 회전 기준점
+const R = 15;                 // 메인 원 반지름
+const CIRCLE_CY = S / 2;      // 26 — 원 중심 (정중앙). 회전 기준점도 동일
 const EDGE = 10;
 
-const DROP_PATH = [
-  `M ${CX} ${TIP_Y}`,
-  `C ${CX - 9} ${TIP_Y + 12}, ${CX - R} ${CIRCLE_CY - R * 0.55}, ${CX - R} ${CIRCLE_CY}`,
-  `A ${R} ${R} 0 1 0 ${CX + R} ${CIRCLE_CY}`,
-  `C ${CX + R} ${CIRCLE_CY - R * 0.55}, ${CX + 9} ${TIP_Y + 12}, ${CX} ${TIP_Y}`,
-  'Z',
-].join(' ');
+// 방향을 가리키는 작은 인디고 점
+const DOT_R = 3.2;                  // 작은 점 반지름
+const DOT_OFFSET = R - DOT_R - 1.5; // 원 중심에서 점 중심까지의 거리 (원 가장자리 안쪽에 위치)
+const INDIGO = 'rgb(79,70,229)';
 
 function computeIndicators(
   allPoints: { lat: number; lng: number }[],
@@ -142,7 +138,6 @@ function computeIndicators(
 const DropIndicator: React.FC<{
   state: IndicatorState;
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
-  // 현재 표시 중인 displayAngle/displayCount를 부모에게 알림 (사라질 때 스냅샷용)
   onDisplayAngleChange: (dir: Direction, angle: number) => void;
   onDisplayCountChange: (dir: Direction, count: number) => void;
 }> = ({ state, onClickDirection, onDisplayAngleChange, onDisplayCountChange }) => {
@@ -154,7 +149,6 @@ const DropIndicator: React.FC<{
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // 각도는 지도가 멈춘 직후 즉시 반영
   const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
 
@@ -172,7 +166,6 @@ const DropIndicator: React.FC<{
     onDisplayAngleChange(dir, nextAngle);
   }, [angleDeg, dir, onDisplayAngleChange]);
 
-  // 숫자도 방향 재계산과 동시에 반영
   const [displayCount, setDisplayCount] = useState(count);
 
   useEffect(() => {
@@ -197,13 +190,21 @@ const DropIndicator: React.FC<{
     transition: 'opacity 0.3s ease, transform 0.35s ease-out',
   };
 
-  const dropStyle: React.CSSProperties = {
+  // 원 + 텍스트는 고정. 작은 점만 회전.
+  const circleWrapStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
+    pointerEvents: 'none',
+  };
+
+  // 작은 인디고 점만 회전시키는 레이어
+  const dotLayerStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
     transform: `rotate(${displayAngle}deg)`,
     transformOrigin: `${originX}px ${originY}px`,
     transition: 'transform 0.16s ease-out',
-    filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
     willChange: 'transform',
     pointerEvents: 'none',
   };
@@ -216,15 +217,20 @@ const DropIndicator: React.FC<{
     height: `${S}px`,
     pointerEvents: 'none',
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: `${CIRCLE_CY - fontSize / 2 - 1}px`,
     fontSize: `${fontSize}px`,
     fontWeight: 900,
-    color: 'rgb(79,70,229)',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    color: INDIGO,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", 
     lineHeight: 1,
   };
+
+  // 점의 위치: 원 중심(CX, CIRCLE_CY) 기준 위쪽(angle 0일 때 top)
+  // angleDeg=0 → top, 90 → right, 180 → bottom, -90/270 → left
+  // 회전 변환은 dotLayer가 담당하므로 여기서는 angle=0 위치(=위쪽)에 고정해서 그림.
+  const dotCx = CX;
+  const dotCy = CIRCLE_CY - DOT_OFFSET;
 
   return (
     <div
@@ -233,17 +239,29 @@ const DropIndicator: React.FC<{
       onMouseDown={e => e.stopPropagation()}
       style={containerStyle}
     >
-      <div style={dropStyle}>
+      {/* 고정 원 (배경) */}
+      <div style={circleWrapStyle}>
         <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
           <defs>
-            <clipPath id={`drop-clip-${dir}`}><path d={DROP_PATH} /></clipPath>
+            <clipPath id={`circle-clip-${dir}`}>
+              <circle cx={CX} cy={CIRCLE_CY} r={R} />
+            </clipPath>
           </defs>
-          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-${dir})`}>
+          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#circle-clip-${dir})`}>
             <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
           </foreignObject>
-          <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
+          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
         </svg>
       </div>
+
+      {/* 회전하는 작은 인디고 점 (방향 표시) */}
+      <div style={dotLayerStyle}>
+        <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
+          <circle cx={dotCx} cy={dotCy} r={DOT_R} fill={INDIGO} />
+        </svg>
+      </div>
+
+      {/* 가운데 숫자 (회전하지 않음) */}
       <div style={textStyle}>{label}</div>
     </div>
   );
@@ -278,13 +296,19 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
     transition: 'opacity 0.3s ease, transform 0.3s ease',
   };
 
-  // 사라질 때는 마지막으로 화면에 표시되던 각도(displayAngle)를 그대로 유지
-  const dropStyle: React.CSSProperties = {
+  const circleWrapStyle: React.CSSProperties = {
+    position: 'absolute',
+    inset: 0,
+    filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
+    pointerEvents: 'none',
+  };
+
+  const dotLayerStyle: React.CSSProperties = {
     position: 'absolute',
     inset: 0,
     transform: `rotate(${state.displayAngle}deg)`,
     transformOrigin: `${state.originX}px ${state.originY}px`,
-    filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20))',
+    pointerEvents: 'none',
   };
 
   const textStyle: React.CSSProperties = {
@@ -295,29 +319,40 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
     height: `${S}px`,
     pointerEvents: 'none',
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: `${CIRCLE_CY - fontSize / 2 - 1}px`,
     fontSize: `${fontSize}px`,
     fontWeight: 900,
-    color: 'rgb(79,70,229)',
+    color: INDIGO,
     fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
     lineHeight: 1,
   };
 
+  const dotCx = CX;
+  const dotCy = CIRCLE_CY - DOT_OFFSET;
+
   return (
     <div style={containerStyle}>
-      <div style={dropStyle}>
+      <div style={circleWrapStyle}>
         <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
           <defs>
-            <clipPath id={`drop-clip-fading-${state.dir}`}><path d={DROP_PATH} /></clipPath>
+            <clipPath id={`circle-clip-fading-${state.dir}`}>
+              <circle cx={CX} cy={CIRCLE_CY} r={R} />
+            </clipPath>
           </defs>
-          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#drop-clip-fading-${state.dir})`}>
+          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#circle-clip-fading-${state.dir})`}>
             <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
           </foreignObject>
-          <path d={DROP_PATH} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" strokeLinejoin="round" />
+          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
         </svg>
       </div>
+
+      <div style={dotLayerStyle}>
+        <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
+          <circle cx={dotCx} cy={dotCy} r={DOT_R} fill={INDIGO} />
+        </svg>
+      </div>
+
       <div style={textStyle}>{label}</div>
     </div>
   );
