@@ -724,7 +724,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
             <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
           </button>
-          {renderCategoryBadge()}
+          {!isAd && renderCategoryBadge()}
           {currentPost.lat !== undefined && currentPost.lng !== undefined && (
             <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all"
               style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
