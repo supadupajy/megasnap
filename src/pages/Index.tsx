@@ -1608,12 +1608,19 @@ const Index = () => {
                           const insertAt = Math.floor(Math.random() * (finalList.length + 1));
                           finalList.splice(insertAt, 0, ad);
                         });
+                        const returnCenter = mapData?.center || mapCache.lastCenter || mapCenter || { lat: 37.5665, lng: 126.9780 };
+                        const returnZoom = currentZoomRef.current || currentZoom;
+                        mapCache.lastCenter = returnCenter;
+                        mapCache.lastZoom = returnZoom;
+                        mapCache.keepPosition = true;
+
                         sessionStorage.setItem('nearby-posts-payload', JSON.stringify({
                           initialPosts: finalList,
-                          mapCenter: mapCenter || { lat: 37.5665, lng: 126.9780 },
+                          mapCenter: returnCenter,
                           currentBounds: bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } },
                           selectedCategories,
                           openedViewedIds: Array.from(new Set([...viewedIds, ...adIds])),
+                          zoom: returnZoom,
                         }));
 
                         // 인기 포스팅처럼 일반 라우트 페이지로 이동

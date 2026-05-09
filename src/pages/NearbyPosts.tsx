@@ -15,6 +15,7 @@ import CollapsingHeader from '@/components/CollapsingHeader';
 import PostItem from '@/components/PostItem';
 import AdMobBanner from '@/components/AdMobBanner';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
+import { mapCache } from '@/utils/map-cache';
 
 interface NearbyPostsPayload {
   initialPosts: Post[];
@@ -22,6 +23,7 @@ interface NearbyPostsPayload {
   currentBounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } };
   selectedCategories: string[];
   openedViewedIds: string[];
+  zoom?: number;
 }
 
 const STORAGE_KEY = 'nearby-posts-payload';
@@ -212,6 +214,18 @@ const NearbyPosts = () => {
 
   if (!payload) return null;
 
+  const handleClose = () => {
+    mapCache.keepPosition = true;
+    mapCache.lastCenter = payload.mapCenter;
+    if (payload.zoom != null) mapCache.lastZoom = payload.zoom;
+    navigate('/', {
+      state: {
+        center: payload.mapCenter,
+        zoom: payload.zoom,
+      },
+    });
+  };
+
   return (
     <div ref={scrollRef} className="h-screen overflow-y-auto bg-white no-scrollbar" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
       <div className="sticky top-0 z-40 bg-white pt-[64px]">
@@ -224,7 +238,7 @@ const NearbyPosts = () => {
           subtitle={`Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`}
           ActionIcon={X}
           actionLabel="닫기"
-          onActionClick={() => navigate('/')}
+          onActionClick={handleClose}
           collapseActionToIcon
         />
       </div>
