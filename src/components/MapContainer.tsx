@@ -1433,7 +1433,7 @@ const MapContainer = ({
     let influencerClass = "";
 
     if (isMine) {
-      inlineBorderStyle = "border: 3px solid #90EE90;";
+      inlineBorderStyle = "border: 3px solid #4f46e5;";
       inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
     }
     else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; inlineShadow = "none"; influencerClass = ""; }
