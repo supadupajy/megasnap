@@ -398,10 +398,10 @@ const Write = () => {
   const currentMedia = mediaFiles[currentSlide];
 
   return (
-    <div className="min-h-screen bg-white flex flex-col relative overflow-hidden">
+    <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
       {/* 고정 헤더(Header.tsx) 높이만큼만 정확히 공간 확보 - pt-16으로 통일 */}
-      <div className="pt-16">
-        <main className="overflow-y-auto no-scrollbar overscroll-contain bg-white">
+      <div className="pt-16 h-full overflow-hidden">
+        <main className="h-full overflow-y-auto no-scrollbar overscroll-contain bg-white">
           <div className="bg-gray-50/50 border-y border-gray-100">
             <div className="px-5 py-4">
               <div className="flex items-center justify-between">
@@ -442,7 +442,7 @@ const Write = () => {
                   <div
                     ref={containerRef}
                     className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
-                    style={{ aspectRatio: '1 / 1' }}
+                    style={{ aspectRatio: '3 / 4' }}
                   >
                     {currentMedia?.type === 'image' ? (
                       <img
@@ -555,7 +555,7 @@ const Write = () => {
                   <div
                     onClick={() => mediaInputRef.current?.click()}
                     className="w-full rounded-[32px] bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-4"
-                    style={{ aspectRatio: '1 / 1' }}
+                    style={{ aspectRatio: '3 / 4' }}
                   >
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-20 h-20 bg-indigo-50 rounded-[20px] flex items-center justify-center shadow-sm">
@@ -626,66 +626,6 @@ const Write = () => {
             )}
           </div>
         </main>
-
-        {/* 하단 고정 버튼 영역 - BottomNav(h-16) 위에 fixed로 위치 */}
-        <div
-          className="fixed left-0 right-0 bg-transparent px-5 z-[1000]"
-          style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px) + 24px)' }}
-        >
-          {currentPage === 1 ? (
-            <button
-              className={cn(
-                "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
-                mediaFiles.length === 0
-                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
-              )}
-              onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
-              disabled={mediaFiles.length === 0}
-            >
-              <span className="flex-1 text-left font-normal pl-1">다음 단계로</span>
-              <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                mediaFiles.length === 0
-                  ? "bg-gray-200 text-gray-400"
-                  : "bg-indigo-500 text-white"
-              )}>
-                <ChevronRight className="w-5 h-5" />
-              </div>
-            </button>
-          ) : (
-            <div className="relative">
-              {(!content.trim() || mediaFiles.length === 0) && (
-                <p className="mb-1.5 text-[10px] text-center font-bold text-rose-500 animate-pulse">
-                  {!content.trim() ? '내용을 입력해주세요' : '사진이나 동영상을 선택해주세요'}
-                </p>
-              )}
-              <button
-                className={cn(
-                  "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
-                  isSubmitting
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
-                )}
-                onClick={handlePost}
-                disabled={isSubmitting}
-              >
-                <span className="flex-1 text-left font-normal pl-1">게시물 등록하기</span>
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                  isSubmitting
-                    ? "bg-gray-200 text-gray-400"
-                    : "bg-indigo-500 text-white"
-                )}>
-                  {isSubmitting
-                    ? <Loader2 className="w-5 h-5 animate-spin" />
-                    : <Check className="w-5 h-5" />
-                  }
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
