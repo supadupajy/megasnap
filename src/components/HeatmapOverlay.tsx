@@ -274,13 +274,12 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
   return (
     <canvas
       ref={canvasRef}
-      data-heatmap-overlay="true"
       style={{
         position: 'absolute',
         top: 0,
         left: 0,
         pointerEvents: 'none',
-        zIndex: 1,
+        zIndex: 100,
         willChange: 'transform',
         transform: 'translate3d(0, 0, 0)',
         transformOrigin: '0 0',

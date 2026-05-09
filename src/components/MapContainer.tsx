@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
@@ -1573,16 +1572,13 @@ const MapContainer = ({
       )}
 
       {/* 히트맵 오버레이 */}
-      {containerRef.current && createPortal(
-        <HeatmapOverlay
-          points={posts
-            .filter(p => p.lat != null && p.lng != null)
-            .map(p => ({ lat: p.lat, lng: p.lng }))}
-          mapInstance={mapInstanceState}
-          visible={true}
-        />,
-        containerRef.current
-      )}
+      <HeatmapOverlay
+        points={posts
+          .filter(p => p.lat != null && p.lng != null)
+          .map(p => ({ lat: p.lat, lng: p.lng }))}
+        mapInstance={mapInstanceState}
+        visible={true}
+      />
       <div
         ref={containerRef}
         id="kakao-map"
