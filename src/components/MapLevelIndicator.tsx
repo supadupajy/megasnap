@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 interface MapLevelIndicatorProps {
@@ -8,6 +8,7 @@ interface MapLevelIndicatorProps {
   markerHiddenFrom?: number;
   className?: string;
   style?: React.CSSProperties;
+  onLevelChange?: (level: number) => void;
 }
 
 const MapLevelIndicator = ({
@@ -17,16 +18,93 @@ const MapLevelIndicator = ({
   markerHiddenFrom = 7,
   className,
   style,
+  onLevelChange,
 }: MapLevelIndicatorProps) => {
   const safeLevel = Math.min(Math.max(Math.round(level), minLevel), maxLevel);
   const markerVisible = safeLevel < markerHiddenFrom;
   const progress = ((safeLevel - minLevel) / (maxLevel - minLevel)) * 100;
   const hiddenStart = ((markerHiddenFrom - minLevel) / (maxLevel - minLevel)) * 100;
 
+  const trackRef = useRef<HTMLDivElement>(null);
+  const lastEmittedLevelRef = useRef<number>(safeLevel);
+
+  const computeLevelFromClientY = useCallback(
+    (clientY: number): number | null => {
+      const trackEl = trackRef.current;
+      if (!trackEl) return null;
+      const rect = trackEl.getBoundingClientRect();
+      if (rect.height <= 0) return null;
+      const rawRatio = (clientY - rect.top) / rect.height;
+      const ratio = Math.min(Math.max(rawRatio, 0), 1);
+      // 위쪽(0%) = minLevel(가장 확대), 아래쪽(100%) = maxLevel(가장 축소)
+      const next = Math.round(minLevel + ratio * (maxLevel - minLevel));
+      return Math.min(Math.max(next, minLevel), maxLevel);
+    },
+    [minLevel, maxLevel],
+  );
+
+  const emit = useCallback(
+    (clientY: number) => {
+      if (!onLevelChange) return;
+      const next = computeLevelFromClientY(clientY);
+      if (next === null) return;
+      if (next === lastEmittedLevelRef.current) return;
+      lastEmittedLevelRef.current = next;
+      onLevelChange(next);
+    },
+    [onLevelChange, computeLevelFromClientY],
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!onLevelChange) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const target = e.currentTarget;
+      try {
+        target.setPointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+      lastEmittedLevelRef.current = safeLevel;
+      emit(e.clientY);
+    },
+    [onLevelChange, emit, safeLevel],
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!onLevelChange) return;
+      const target = e.currentTarget;
+      if (!target.hasPointerCapture(e.pointerId)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      emit(e.clientY);
+    },
+    [onLevelChange, emit],
+  );
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const target = e.currentTarget;
+      if (target.hasPointerCapture(e.pointerId)) {
+        try {
+          target.releasePointerCapture(e.pointerId);
+        } catch {
+          // ignore
+        }
+      }
+    },
+    [],
+  );
+
+  const interactive = !!onLevelChange;
+
   return (
     <div
       className={cn(
-        'pointer-events-none fixed right-4 z-[35] select-none',
+        'fixed right-4 z-[35] select-none',
+        interactive ? 'pointer-events-auto' : 'pointer-events-none',
         className,
       )}
       style={style}
@@ -35,8 +113,19 @@ const MapLevelIndicator = ({
       <div className="flex h-[220px] w-10 flex-col items-center rounded-[18px] border border-white/70 bg-white/45 px-1 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
         <div className="text-[13px] font-black leading-none text-slate-800">+</div>
 
-        <div className="relative my-1.5 h-[124px] w-4">
-          <div className="absolute left-1/2 top-0 h-full w-1.5 -translate-x-1/2 overflow-hidden rounded-full bg-slate-200/80">
+        <div
+          ref={trackRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          className={cn(
+            'relative my-1.5 h-[124px] w-6',
+            interactive ? 'cursor-grab active:cursor-grabbing touch-none' : '',
+          )}
+          style={interactive ? { touchAction: 'none' } : undefined}
+        >
+          <div className="absolute left-1/2 top-0 h-full w-1.5 -translate-x-1/2 overflow-hidden rounded-full bg-slate-200/80 pointer-events-none">
             <div
               className="absolute left-0 top-0 w-full bg-emerald-500"
               style={{ height: `${hiddenStart}%` }}
@@ -48,7 +137,7 @@ const MapLevelIndicator = ({
           </div>
 
           <div
-            className="absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg transition-[top,background-color] duration-500 ease-out"
+            className="absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg transition-[top,background-color] duration-300 ease-out pointer-events-none"
             style={{
               top: `${progress}%`,
               backgroundColor: markerVisible ? '#10b981' : '#fb7185',
@@ -56,7 +145,7 @@ const MapLevelIndicator = ({
           />
 
           <div
-            className="absolute left-1/2 h-px w-3.5 -translate-x-1/2 bg-white/90 shadow-sm"
+            className="absolute left-1/2 h-px w-3.5 -translate-x-1/2 bg-white/90 shadow-sm pointer-events-none"
             style={{ top: `${hiddenStart}%` }}
           />
         </div>

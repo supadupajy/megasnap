@@ -1414,6 +1414,10 @@ const Index = () => {
               maxLevel={11}
               markerHiddenFrom={7}
               style={{ top: `${indicatorTopOffset + 8}px` }}
+              onLevelChange={(lvl) => {
+                setCurrentZoom(lvl);
+                currentZoomRef.current = lvl;
+              }}
             />
           </>
         )}
