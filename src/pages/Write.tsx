@@ -435,6 +435,20 @@ const Write = () => {
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
+                    <button
+                      type="button"
+                      onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
+                      disabled={mediaFiles.length === 0}
+                      aria-label="다음 단계로"
+                      className={cn(
+                        "ml-auto w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                        mediaFiles.length === 0
+                          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                          : "bg-indigo-500 text-white shadow-md shadow-indigo-200 active:scale-90"
+                      )}
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
                   </div>
                   <input type="file" ref={mediaInputRef} className="hidden" accept="image/*,video/*" multiple onChange={handleMediaSelect} />
                 </div>
@@ -626,30 +640,9 @@ const Write = () => {
               </div>
             )}
 
-            {/* 액션 버튼 - 콘텐츠와 함께 스크롤 */}
-            <div className="pt-2">
-              {currentPage === 1 ? (
-                <button
-                  className={cn(
-                    "w-full h-16 rounded-2xl text-lg font-black transition-all flex items-center px-5",
-                    mediaFiles.length === 0
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-gray-900 text-white shadow-xl shadow-gray-200 active:scale-[0.98]"
-                  )}
-                  onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
-                  disabled={mediaFiles.length === 0}
-                >
-                  <span className="flex-1 text-left font-normal pl-1">다음 단계로</span>
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                    mediaFiles.length === 0
-                      ? "bg-gray-200 text-gray-400"
-                      : "bg-indigo-500 text-white"
-                  )}>
-                    <ChevronRight className="w-5 h-5" />
-                  </div>
-                </button>
-              ) : (
+            {/* 액션 버튼 - 콘텐츠와 함께 스크롤 (페이지 2에서만 표시) */}
+            {currentPage === 2 && (
+              <div className="pt-2">
                 <div className="relative">
                   {(!content.trim() || mediaFiles.length === 0) && (
                     <p className="mb-1.5 text-[10px] text-center font-bold text-rose-500 animate-pulse">
@@ -680,8 +673,8 @@ const Write = () => {
                     </div>
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
