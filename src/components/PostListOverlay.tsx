@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-posts';
 import { showError } from '@/utils/toast';
 import AdMobBanner from './AdMobBanner';
+import CollapsingHeader from './CollapsingHeader';
 
 const ObservedPostItem = React.memo(({
   post, 
@@ -184,36 +185,31 @@ const PostListOverlay = ({
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const headerHostRef = useRef<HTMLDivElement>(null);
 
-  // ── Collapsing header: 스크롤에 따라 DOM에 직접 CSS 변수만 갱신 (리렌더 0회) ──
-  // PostListOverlay는 무거운 자식들(영상 자동재생, 옵저버 등)을 렌더하므로
-  // setState로 매 프레임 리렌더하면 스크롤이 버벅거림 → CSS 변수 직접 조작으로 해결
+  // ── Collapsing header: Popular 페이지와 동일한 방식 (state 기반) ──
+  const [headerProgress, setHeaderProgress] = useState(0);
   useEffect(() => {
-    const scrollEl = scrollContainerRef.current;
-    const hostEl = headerHostRef.current;
-    if (!scrollEl || !hostEl || !isOpen) return;
+    const el = scrollContainerRef.current;
+    if (!el || !isOpen) return;
 
     const COLLAPSE_THRESHOLD = 80;
     let rafId = 0;
 
-    const apply = () => {
-      const y = scrollEl.scrollTop;
-      const p = Math.max(0, Math.min(1, y / COLLAPSE_THRESHOLD));
-      hostEl.style.setProperty('--collapse-progress', String(p));
-      rafId = 0;
-    };
-
     const onScroll = () => {
       if (rafId) return;
-      rafId = requestAnimationFrame(apply);
+      rafId = requestAnimationFrame(() => {
+        const y = el.scrollTop;
+        const next = Math.max(0, Math.min(1, y / COLLAPSE_THRESHOLD));
+        setHeaderProgress(next);
+        rafId = 0;
+      });
     };
 
-    scrollEl.addEventListener('scroll', onScroll, { passive: true });
-    apply();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
 
     return () => {
-      scrollEl.removeEventListener('scroll', onScroll);
+      el.removeEventListener('scroll', onScroll);
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, [isOpen]);
@@ -457,35 +453,19 @@ const PostListOverlay = ({
       style={{ willChange: 'transform, opacity', transformOrigin: 'center center', bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))' }}
       className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
     >
-      {/* Header — Collapsing (CSS 변수로 리렌더 없이 동작) */}
-      <div
-        ref={headerHostRef}
-        className="shrink-0 bg-white collapsing-header-host"
-      >
-        <div className="px-4 bg-gray-50 border-b border-gray-100 collapsing-header-row">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center min-w-0 collapsing-header-left">
-              <div className="bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm shrink-0 collapsing-header-icon-box">
-                <LayoutGrid className="text-indigo-600 collapsing-header-icon" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-black text-gray-900 tracking-tight leading-tight collapsing-header-title">
-                  여기 보기
-                </h2>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest overflow-hidden whitespace-nowrap collapsing-header-subtitle">
-                  Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="flex items-center gap-1.5 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 collapsing-header-action"
-            >
-              <X className="w-4 h-4 text-gray-900" />
-              <span className="text-sm font-normal text-gray-900 whitespace-nowrap">닫기</span>
-            </button>
-          </div>
-        </div>
+      {/* Header — Popular와 동일한 방식 */}
+      <div className="shrink-0 bg-white">
+        <CollapsingHeader
+          progress={headerProgress}
+          Icon={LayoutGrid}
+          iconBgClass="bg-indigo-100"
+          iconColorClass="text-indigo-600"
+          title="여기 보기"
+          subtitle={`Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`}
+          ActionIcon={X}
+          actionLabel="닫기"
+          onActionClick={onClose}
+        />
       </div>
   
 
