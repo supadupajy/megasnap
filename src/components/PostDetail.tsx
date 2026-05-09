@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink, LayoutGrid } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn, getFallbackImage, getOptimizedDetailImage, getOptimizedMarkerImage } from '@/lib/utils';
@@ -812,120 +812,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             <div className="relative flex-1 flex flex-col min-h-0">
               <div className="relative flex-1 min-h-0 flex flex-col">
                 <div className="flex-1 min-h-0 relative pointer-events-auto">
-                  {isAd ? (
-                    /* ===== 광고 포스트 ===== */
-                    <div className="ad-post-wrapper w-full h-full">
-                      <div className="ad-post-inner w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
-                        <div className="flex-1 min-h-0 flex flex-col relative bg-white">
-                          {/* 광고 마커 상단 헤더 - 고정 */}
-                          <div className="px-4 py-4 bg-gray-50 border-b border-gray-100 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                                  <LayoutGrid className="w-5 h-5 text-indigo-600" />
-                                </div>
-                                <div>
-                                  <h2 className="text-lg font-black text-gray-900 tracking-tight">광고 마커</h2>
-                                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Advertisement Marker</p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={onClose}
-                                className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
-                              >
-                                <X className="w-4 h-4 text-gray-900" />
-                                <span className="text-sm font-normal text-gray-900">닫기</span>
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* 닉네임 헤더 + 콘텐츠 - 스크롤 */}
-                          <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-                            <div className="flex items-center justify-between px-4 py-4 bg-white border-b border-gray-50" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                                {renderAvatarForAd()}
-                                <div>
-                                  <div className="flex items-center gap-1.5">
-                                    <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
-                                    <div className="ad-badge-fancy"><span>AD</span></div>
-                                  </div>
-                                  <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
-                                    <MapPin className="w-3 h-3" />
-                                    <span className="text-[10px] font-medium hover:underline">{displayLocation || '알 수 없는 장소'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
-                                {renderDropdownMenu()}
-                              </div>
-                            </div>
-
-                            <div className="flex flex-col">
-                              <div className="px-4 mt-2">
-                                {renderMediaArea()}
-                              </div>
-                            </div>
-
-                            <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()}>
-                              {renderActionButtons()}
-                              <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
-                                <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
-                                <div className="flex gap-2 items-start">
-                                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
-                                  <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
-                                    <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
-                                    {!contentExpanded && isContentClamped && (
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
-                                        className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
-                                      >
-                                        더 보기
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              {renderCommentSection()}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* ===== 일반 포스트 ===== */
-                    <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
+                  {/* ===== 통합 포스트 레이아웃 (지도 마커 / 광고 마커 동일) ===== */}
+                  <div className={cn("w-full h-full", isAd && "ad-post-wrapper")}>
+                    <div className={cn("w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative", isAd && "ad-post-inner")} onClick={onClose}>
                       <div className="flex-1 min-h-0 flex flex-col relative bg-white">
-                        {/* 지도 마커 상단 헤더 - 고정 */}
-                        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                                <LayoutGrid className="w-5 h-5 text-indigo-600" />
-                              </div>
-                              <div>
-                                <h2 className="text-lg font-black text-gray-900 tracking-tight">지도 마커</h2>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">MAP MARKER</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={onClose}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
-                            >
-                              <X className="w-4 h-4 text-gray-900" />
-                              <span className="text-sm font-normal text-gray-900">닫기</span>
-                            </button>
-                          </div>
-                        </div>
-
                         {/* 닉네임 헤더 + 콘텐츠 - 스크롤 */}
                         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                           <div className="flex items-center justify-between px-4 py-4 bg-white border-b border-gray-50" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                              {renderAvatarForNormal()}
+                              {isAd ? renderAvatarForAd() : renderAvatarForNormal()}
                               <div>
                                 <div className="flex items-center gap-1.5">
                                   <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
+                                  {isAd && <div className="ad-badge-fancy"><span>AD</span></div>}
                                 </div>
                                 <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
                                   <MapPin className="w-3 h-3" />
@@ -936,6 +835,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}
+                              <button
+                                onClick={onClose}
+                                className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+                                aria-label="닫기"
+                              >
+                                <X className="w-5 h-5" />
+                              </button>
                             </div>
                           </div>
 
@@ -969,7 +875,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
