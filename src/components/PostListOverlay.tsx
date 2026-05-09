@@ -474,7 +474,6 @@ const PostListOverlay = ({
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden bg-white custom-scrollbar touch-pan-y overscroll-contain"
         style={{
-          WebkitOverflowScrolling: 'touch',
           paddingBottom: '24px'
         }}
       >
