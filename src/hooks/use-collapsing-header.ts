@@ -5,13 +5,6 @@ import { useEffect, useRef, useState, RefObject } from 'react';
  * 스크롤 위치에 따라 0~1 사이의 진행도(progress)를 반환합니다.
  * - 0: 헤더가 완전히 펼쳐진 상태
  * - 1: 헤더가 완전히 축소된 상태
- *
- * 사용법:
- *   const { scrollRef, progress } = useCollapsingHeader();
- *   <div ref={scrollRef} className="overflow-y-auto"> ... </div>
- *
- * 반환된 progress 값을 보간(interpolation)에 사용해
- * 헤더 높이, 폰트 크기, opacity 등을 동적으로 조절할 수 있습니다.
  */
 export function useCollapsingHeader(threshold: number = 80, observeDeps: unknown[] = []) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -22,23 +15,48 @@ export function useCollapsingHeader(threshold: number = 80, observeDeps: unknown
     if (!el) return;
 
     let rafId = 0;
+    let touchStartY = 0;
+    let touchStartScrollTop = 0;
 
-    const onScroll = () => {
+    const updateFromScrollTop = (scrollTop: number) => {
+      const next = Math.max(0, Math.min(1, scrollTop / threshold));
+      setProgress(next);
+    };
+
+    const scheduleFromActualScroll = () => {
       if (rafId) return;
       rafId = requestAnimationFrame(() => {
-        const y = el.scrollTop;
-        const next = Math.max(0, Math.min(1, y / threshold));
-        setProgress(next);
+        updateFromScrollTop(el.scrollTop);
         rafId = 0;
       });
     };
 
-    el.addEventListener('scroll', onScroll, { passive: true });
-    // 초기 상태 계산
-    onScroll();
+    const onTouchStart = (event: TouchEvent) => {
+      touchStartY = event.touches[0]?.clientY ?? 0;
+      touchStartScrollTop = el.scrollTop;
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const currentY = event.touches[0]?.clientY ?? touchStartY;
+      const estimatedScrollTop = touchStartScrollTop + (touchStartY - currentY);
+      updateFromScrollTop(estimatedScrollTop);
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      updateFromScrollTop(el.scrollTop + event.deltaY);
+    };
+
+    el.addEventListener('scroll', scheduleFromActualScroll, { passive: true });
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: true });
+    el.addEventListener('wheel', onWheel, { passive: true });
+    scheduleFromActualScroll();
 
     return () => {
-      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('scroll', scheduleFromActualScroll);
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('wheel', onWheel);
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, [threshold, ...observeDeps]);
