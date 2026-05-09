@@ -154,64 +154,31 @@ const DropIndicator: React.FC<{
     return () => cancelAnimationFrame(t);
   }, []);
 
-  // 각도 디바운스
+  // 각도는 지도가 멈춘 직후 즉시 반영
   const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
-  const isFirstAngle = useRef(true);
-  const angleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingAngleRef = useRef<number>(angleDeg);
 
   useEffect(() => {
-    if (isFirstAngle.current) {
-      isFirstAngle.current = false;
-      accAngleRef.current = angleDeg;
-      pendingAngleRef.current = angleDeg;
-      setDisplayAngle(angleDeg);
-      onDisplayAngleChange(dir, angleDeg);
-      return;
-    }
-    pendingAngleRef.current = angleDeg;
-    if (angleDebounceRef.current) clearTimeout(angleDebounceRef.current);
-    angleDebounceRef.current = setTimeout(() => {
-      angleDebounceRef.current = null;
-      const target = pendingAngleRef.current;
-      const current = accAngleRef.current;
-      const curNorm = ((current % 360) + 360) % 360;
-      const tgtNorm = ((target % 360) + 360) % 360;
-      let delta = tgtNorm - curNorm;
-      if (delta > 180) delta -= 360;
-      if (delta < -180) delta += 360;
-      if (Math.abs(delta) < 5) return;
-      accAngleRef.current = current + delta;
-      setDisplayAngle(accAngleRef.current);
-      onDisplayAngleChange(dir, accAngleRef.current);
-    }, 300);
-    return () => { if (angleDebounceRef.current) clearTimeout(angleDebounceRef.current); };
-  }, [angleDeg]);
+    const current = accAngleRef.current;
+    const curNorm = ((current % 360) + 360) % 360;
+    const tgtNorm = ((angleDeg % 360) + 360) % 360;
+    let delta = tgtNorm - curNorm;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
 
-  // 숫자 디바운스
+    const nextAngle = current + delta;
+    accAngleRef.current = nextAngle;
+    setDisplayAngle(nextAngle);
+    onDisplayAngleChange(dir, nextAngle);
+  }, [angleDeg, dir, onDisplayAngleChange]);
+
+  // 숫자도 방향 재계산과 동시에 반영
   const [displayCount, setDisplayCount] = useState(count);
-  const pendingCountRef = useRef<number>(count);
-  const countDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstCount = useRef(true);
 
   useEffect(() => {
-    if (isFirstCount.current) {
-      isFirstCount.current = false;
-      setDisplayCount(count);
-      pendingCountRef.current = count;
-      onDisplayCountChange(dir, count);
-      return;
-    }
-    pendingCountRef.current = count;
-    if (countDebounceRef.current) clearTimeout(countDebounceRef.current);
-    countDebounceRef.current = setTimeout(() => {
-      countDebounceRef.current = null;
-      setDisplayCount(pendingCountRef.current);
-      onDisplayCountChange(dir, pendingCountRef.current);
-    }, 300);
-    return () => { if (countDebounceRef.current) clearTimeout(countDebounceRef.current); };
-  }, [count]);
+    setDisplayCount(count);
+    onDisplayCountChange(dir, count);
+  }, [count, dir, onDisplayCountChange]);
 
   const label = displayCount > 999 ? '999+' : String(displayCount);
   const fontSize = label.length >= 4 ? 9 : label.length === 3 ? 11 : 13;
@@ -235,7 +202,7 @@ const DropIndicator: React.FC<{
     inset: 0,
     transform: `rotate(${displayAngle}deg)`,
     transformOrigin: `${originX}px ${originY}px`,
-    transition: 'transform 0.35s ease-out',
+    transition: 'transform 0.16s ease-out',
     filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.20)) drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
     willChange: 'transform',
     pointerEvents: 'none',
