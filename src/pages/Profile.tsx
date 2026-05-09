@@ -24,6 +24,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
 
 import { toggleLikeInDb } from '@/utils/like-utils';
+import CollapsingHeader from '@/components/CollapsingHeader';
+import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
@@ -73,6 +75,14 @@ const Profile = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const postListStartRef = useRef<HTMLDivElement>(null);
   const stickyHeaderRef = useRef<HTMLDivElement>(null);
+
+  const { scrollRef: collapsingScrollRef, progress: headerProgress } = useCollapsingHeader(80);
+
+  // 두 ref를 동일한 element에 연결하기 위한 콜백 ref
+  const setScrollRef = useCallback((node: HTMLDivElement | null) => {
+    (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    (collapsingScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+  }, [collapsingScrollRef]);
 
   const userId = authUser?.id;
   const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
@@ -324,30 +334,21 @@ const Profile = () => {
     <div className="h-screen flex flex-col bg-white" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 상단 고정 헤더 */}
       <div ref={stickyHeaderRef} className="sticky top-0 z-40 bg-white pt-[64px]">
-        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
-                <UserIcon className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-gray-900 tracking-tight">내 프로필</h2>
-                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">My Activity</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/settings')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
-            >
-              <Settings className="w-4 h-4 text-gray-900" />
-              <span className="text-sm font-normal text-gray-900">설정</span>
-            </button>
-          </div>
-        </div>
+        <CollapsingHeader
+          progress={headerProgress}
+          Icon={UserIcon}
+          iconBgClass="bg-indigo-100"
+          iconColorClass="text-indigo-600"
+          title="내 프로필"
+          subtitle="My Activity"
+          ActionIcon={Settings}
+          actionLabel="설정"
+          onActionClick={() => navigate('/settings')}
+        />
       </div>
 
       {/* 스크롤 영역 */}
-      <div className="flex-1 overflow-y-auto bg-white no-scrollbar" ref={scrollRef}>
+      <div className="flex-1 overflow-y-auto bg-white no-scrollbar" ref={setScrollRef}>
         {isDataLoading && myPosts.length === 0 ? (
           <ProfileHeaderSkeleton />
         ) : (

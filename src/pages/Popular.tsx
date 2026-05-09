@@ -15,6 +15,8 @@ import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
 import AdMobBanner from '@/components/AdMobBanner';
 import { showError } from '@/utils/toast';
+import CollapsingHeader from '@/components/CollapsingHeader';
+import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
 
 const getTierFromFollowers = (followers: number) => {
   if (followers >= 10000000) return 'diamond';
@@ -57,6 +59,8 @@ const Popular = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+
+  const { scrollRef, progress } = useCollapsingHeader(80);
 
   // 셔플된 전체 풀을 보관 (페이지네이션은 이 배열에서 슬라이싱)
   const shuffledPoolRef = useRef<Post[]>([]);
@@ -200,29 +204,21 @@ const Popular = () => {
   }, [handleLikeToggle]);
 
   return (
-    <div className="h-screen overflow-y-auto bg-white no-scrollbar" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div ref={scrollRef} className="h-screen overflow-y-auto bg-white no-scrollbar" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 고정 상단 헤더 */}
       <div className="sticky top-0 z-40 bg-white pt-[64px]">
-        <div className="px-4 py-4 bg-gray-50 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-2xl flex items-center justify-center shadow-sm">
-                <Flame className="w-6 h-6 text-orange-600 fill-orange-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-gray-900 tracking-tight">인기 포스팅</h2>
-                <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Trending Now</p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate('/video-search')}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform"
-            >
-              <Search className="w-4 h-4 text-gray-900" />
-              <span className="text-sm font-normal text-gray-900">포스팅 검색</span>
-            </button>
-          </div>
-        </div>
+        <CollapsingHeader
+          progress={progress}
+          Icon={Flame}
+          iconBgClass="bg-orange-100"
+          iconColorClass="text-orange-600"
+          iconFilled
+          title="인기 포스팅"
+          subtitle="Trending Now"
+          ActionIcon={Search}
+          actionLabel="포스팅 검색"
+          onActionClick={() => navigate('/video-search')}
+        />
       </div>
 
       <div>
