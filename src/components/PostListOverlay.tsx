@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-posts';
 import { showError } from '@/utils/toast';
 import AdMobBanner from './AdMobBanner';
+import CollapsingHeader from './CollapsingHeader';
 
 const ObservedPostItem = React.memo(({
   post, 
@@ -453,67 +454,19 @@ const PostListOverlay = ({
       className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] bg-white flex flex-col shadow-none overflow-hidden"
     >
       {/* Header — Collapsing */}
-      {(() => {
-        const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-        const padY = lerp(16, 8, headerProgress);
-        const iconBox = lerp(40, 28, headerProgress);
-        const iconSize = lerp(20, 14, headerProgress);
-        const titleSize = lerp(18, 15, headerProgress);
-        const gap = lerp(12, 8, headerProgress);
-        const subtitleOpacity = Math.max(0, 1 - headerProgress * 1.8);
-        const subtitleHeight = lerp(14, 0, Math.min(1, headerProgress * 1.2));
-        const closeBox = lerp(36, 28, headerProgress);
-        const closeIcon = lerp(16, 14, headerProgress);
-        return (
-          <div className="shrink-0 bg-white">
-            <div
-              className="px-4 bg-gray-50 border-b border-gray-100"
-              style={{ paddingTop: padY, paddingBottom: padY }}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center min-w-0" style={{ gap: `${gap}px` }}>
-                  <div
-                    className="bg-indigo-100 rounded-2xl flex items-center justify-center shadow-sm shrink-0"
-                    style={{ width: iconBox, height: iconBox }}
-                  >
-                    <LayoutGrid
-                      className="text-indigo-600"
-                      style={{ width: iconSize, height: iconSize }}
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <h2
-                      className="font-black text-gray-900 tracking-tight leading-tight"
-                      style={{ fontSize: `${titleSize}px` }}
-                    >
-                      여기 보기
-                    </h2>
-                    <p
-                      className="text-[10px] font-bold text-gray-400 uppercase tracking-widest overflow-hidden whitespace-nowrap"
-                      style={{
-                        opacity: subtitleOpacity,
-                        height: `${subtitleHeight}px`,
-                        lineHeight: '14px',
-                        marginTop: subtitleHeight > 0 ? '1px' : '0px',
-                      }}
-                    >
-                      Total {posts.length} {posts.length === 1 ? 'Post' : 'Posts'}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={onClose}
-                  aria-label="닫기"
-                  className="flex items-center justify-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0"
-                  style={{ width: closeBox, height: closeBox }}
-                >
-                  <X className="text-gray-900" style={{ width: closeIcon, height: closeIcon }} />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      <div className="shrink-0 bg-white">
+        <CollapsingHeader
+          progress={headerProgress}
+          Icon={LayoutGrid}
+          iconBgClass="bg-indigo-100"
+          iconColorClass="text-indigo-600"
+          title="여기 보기"
+          subtitle={`Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`}
+          ActionIcon={X}
+          actionLabel="닫기"
+          onActionClick={onClose}
+        />
+      </div>
   
 
       {/* List Content */}
