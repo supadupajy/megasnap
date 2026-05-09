@@ -32,7 +32,7 @@ const MapLevelIndicator = ({
       style={style}
       aria-label={`지도 레벨 ${safeLevel}, ${markerVisible ? '마커 표시 중' : '마커 숨김 상태'}`}
     >
-      <div className="flex w-10 flex-col items-center rounded-[18px] border border-white/70 bg-white/45 px-1 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+      <div className="flex h-[180px] w-10 flex-col items-center rounded-[18px] border border-white/70 bg-white/45 px-1 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
         <div className="text-[13px] font-black leading-none text-slate-800">+</div>
 
         <div className="relative my-1.5 h-[84px] w-4">

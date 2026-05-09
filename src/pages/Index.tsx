@@ -1568,15 +1568,15 @@ const Index = () => {
                   }}
                   className="fixed z-[35] pointer-events-none"
                 >
-                  <div className="flex flex-col items-center gap-2 bg-white/30 backdrop-blur-xl border border-white/50 shadow-lg rounded-2xl px-2.5 py-3">
-                    <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>많음</span>
-                    <div style={{
-                      width: '8px',
-                      height: '100px',
-                      borderRadius: '4px',
-                      background: 'linear-gradient(to bottom, #b40000, #ff1e00, #ff7800, #ffdc00, #b4e61e, #3cd250, #28c8b4, #64d2ff, transparent)',
-                    }} />
-                    <span style={{ color: '#111827', fontSize: '10px', fontWeight: 600, lineHeight: 1 }}>적음</span>
+                  <div className="flex h-[180px] w-10 flex-col items-center justify-between rounded-[18px] border border-white/70 bg-white/45 px-1 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+                    <span className="text-[10px] font-black leading-none text-slate-800">많음</span>
+                    <div
+                      className="h-[84px] w-1.5 rounded-full"
+                      style={{
+                        background: 'linear-gradient(to bottom, #b40000, #ff1e00, #ff7800, #ffdc00, #b4e61e, #3cd250, #28c8b4, #64d2ff, transparent)',
+                      }}
+                    />
+                    <span className="text-[10px] font-black leading-none text-slate-700">적음</span>
                   </div>
                 </div>
               )}
