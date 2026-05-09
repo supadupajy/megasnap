@@ -725,6 +725,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
             <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
           </button>
           {!isAd && renderCategoryBadge()}
+          {isAd && (
+            <a
+              href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-black">보러가기</span>
+            </a>
+          )}
           {currentPost.lat !== undefined && currentPost.lng !== undefined && (
             <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all"
               style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
@@ -735,20 +747,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           )}
         </div>
       </div>
-      {isAd && (
-        <div className="flex justify-end mt-[-4px]">
-          <a
-            href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 min-w-[78px]"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-black">보러가기</span>
-          </a>
-        </div>
-      )}
     </div>
   );
 
