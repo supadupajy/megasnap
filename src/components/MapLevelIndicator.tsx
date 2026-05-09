@@ -32,10 +32,10 @@ const MapLevelIndicator = ({
       style={style}
       aria-label={`지도 레벨 ${safeLevel}, ${markerVisible ? '마커 표시 중' : '마커 숨김 상태'}`}
     >
-      <div className="flex flex-col items-center rounded-[20px] border border-white/70 bg-white/45 px-2 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+      <div className="flex flex-col items-center rounded-[21px] border border-white/70 bg-white/45 px-1.5 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
         <div className="text-[13px] font-black leading-none text-slate-800">+</div>
 
-        <div className="relative my-1.5 h-[76px] w-5">
+        <div className="relative my-1.5 h-[84px] w-5">
           <div className="absolute left-1/2 top-0 h-full w-1.5 -translate-x-1/2 overflow-hidden rounded-full bg-slate-200/80">
             <div
               className="absolute left-0 top-0 w-full bg-emerald-500"
@@ -63,17 +63,16 @@ const MapLevelIndicator = ({
 
         <div className="text-[13px] font-black leading-none text-slate-700">−</div>
         <div className="mt-1 text-[10px] font-black leading-none text-slate-600">{safeLevel}</div>
-      </div>
-
-      <div
-        className={cn(
-          'mx-auto mt-1.5 flex w-9 items-center justify-center whitespace-nowrap rounded-2xl border px-1 py-1 text-[8px] font-black leading-none tracking-[-0.08em] shadow-sm backdrop-blur-xl',
-          markerVisible
-            ? 'border-emerald-200 bg-emerald-50/90 text-emerald-700'
-            : 'border-rose-200 bg-rose-50/90 text-rose-700',
-        )}
-      >
-        {markerVisible ? '마커' : '히트맵'}
+        <div
+          className={cn(
+            'mt-1.5 flex w-10 items-center justify-center whitespace-nowrap rounded-full border px-1 py-1 text-[8px] font-black leading-none tracking-[-0.08em] shadow-sm',
+            markerVisible
+              ? 'border-emerald-200 bg-emerald-50/95 text-emerald-700'
+              : 'border-rose-200 bg-rose-50/95 text-rose-700',
+          )}
+        >
+          {markerVisible ? '마커' : '히트맵'}
+        </div>
       </div>
     </div>
   );
