@@ -15,6 +15,7 @@ interface HeatmapOverlayProps {
 
 const HEATMAP_RADIUS_METERS = 600;
 const HEATMAP_INTENSITY_MAX = 4.5;
+const LOW_DENSITY_POINT_THRESHOLD = 3;
 const SINGLE_POINT_MIN_RADIUS_PX = 58;
 const SINGLE_POINT_RADIUS_MULTIPLIER = 1.55;
 const OVERSCAN_RATIO = 0.65;
@@ -116,26 +117,29 @@ const HeatmapOverlay: React.FC<HeatmapOverlayProps> = ({ points, mapInstance, vi
     heat.clear();
 
     if (data.length > 0) {
-      if (data.length === 1) {
+      if (data.length <= LOW_DENSITY_POINT_THRESHOLD) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          const [x, y] = data[0];
           const singleRadius = Math.max(SINGLE_POINT_MIN_RADIUS_PX, radiusPx * SINGLE_POINT_RADIUS_MULTIPLIER);
-          const gradient = ctx.createRadialGradient(x, y, 0, x, y, singleRadius);
-
-          gradient.addColorStop(0.0, 'rgba(255,220,0,0.92)');
-          gradient.addColorStop(0.18, 'rgba(255,220,0,0.86)');
-          gradient.addColorStop(0.34, 'rgba(180,230,30,0.74)');
-          gradient.addColorStop(0.56, 'rgba(60,210,80,0.48)');
-          gradient.addColorStop(0.78, 'rgba(40,200,180,0.28)');
-          gradient.addColorStop(1.0, 'rgba(100,210,255,0)');
 
           ctx.save();
           ctx.globalCompositeOperation = 'source-over';
-          ctx.fillStyle = gradient;
-          ctx.beginPath();
-          ctx.arc(x, y, singleRadius, 0, Math.PI * 2);
-          ctx.fill();
+
+          data.forEach(([x, y]) => {
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, singleRadius);
+            gradient.addColorStop(0.0, 'rgba(255,220,0,0.95)');
+            gradient.addColorStop(0.22, 'rgba(255,220,0,0.88)');
+            gradient.addColorStop(0.40, 'rgba(180,230,30,0.72)');
+            gradient.addColorStop(0.62, 'rgba(60,210,80,0.44)');
+            gradient.addColorStop(0.82, 'rgba(40,200,180,0.24)');
+            gradient.addColorStop(1.0, 'rgba(100,210,255,0)');
+
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(x, y, singleRadius, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
           ctx.restore();
         }
       } else {
