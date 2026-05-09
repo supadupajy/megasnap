@@ -14,7 +14,7 @@ interface HeatmapOverlayProps {
 }
 
 const HEATMAP_RADIUS_METERS = 600;
-const HEATMAP_INTENSITY_MAX = 14;
+const HEATMAP_INTENSITY_MAX = 7;
 const HEATMAP_POINT_WEIGHT = 1;
 const OVERSCAN_RATIO = 0.65;
 
