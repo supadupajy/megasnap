@@ -225,6 +225,7 @@ const NearbyPosts = () => {
           ActionIcon={X}
           actionLabel="닫기"
           onActionClick={() => navigate('/')}
+          collapseActionToIcon
         />
       </div>
 

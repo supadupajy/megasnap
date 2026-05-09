@@ -24,6 +24,8 @@ interface CollapsingHeaderProps {
   actionLabel: string;
   /** 우측 버튼 클릭 핸들러 */
   onActionClick: () => void;
+  /** 축소 시 우측 버튼을 숨기지 않고 아이콘 버튼으로 유지 */
+  collapseActionToIcon?: boolean;
 }
 
 /**
@@ -45,6 +47,7 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
   ActionIcon,
   actionLabel,
   onActionClick,
+  collapseActionToIcon = false,
 }) => {
   // 보간 함수 (lerp)
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -63,11 +66,15 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
   const subtitleOpacity = Math.max(0, 1 - progress * 1.8);
   const subtitleHeight = lerp(14, 0, Math.min(1, progress * 1.2));
   // 액션 버튼 opacity + translateX
-  const actionOpacity = Math.max(0, 1 - progress * 1.6);
-  const actionTranslate = progress * 24;
+  const actionOpacity = collapseActionToIcon ? 1 : Math.max(0, 1 - progress * 1.6);
+  const actionTranslate = collapseActionToIcon ? 0 : progress * 24;
   // 액션 버튼 보더 라디우스 (둥근 알약 형태 유지)
-  const actionPadX = lerp(16, 12, progress);
-  const actionPadY = lerp(8, 6, progress);
+  const actionPadX = collapseActionToIcon ? lerp(16, 10, progress) : lerp(16, 12, progress);
+  const actionPadY = collapseActionToIcon ? lerp(8, 8, progress) : lerp(8, 6, progress);
+  const actionGap = collapseActionToIcon ? lerp(6, 0, progress) : 6;
+  const actionLabelProgress = Math.min(1, progress * 1.5);
+  const actionLabelOpacity = collapseActionToIcon ? Math.max(0, 1 - progress * 1.8) : 1;
+  const actionLabelMaxWidth = collapseActionToIcon ? lerp(48, 0, actionLabelProgress) : undefined;
 
   return (
     <div
@@ -112,8 +119,9 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
 
         <button
           onClick={onActionClick}
-          className="flex items-center gap-1.5 bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0"
+          className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
           style={{
+            gap: `${actionGap}px`,
             opacity: actionOpacity,
             transform: `translateX(${actionTranslate}px)`,
             pointerEvents: actionOpacity < 0.1 ? 'none' : 'auto',
@@ -123,8 +131,16 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
             paddingBottom: actionPadY,
           }}
         >
-          <ActionIcon className="w-4 h-4 text-gray-900" />
-          <span className="text-sm font-normal text-gray-900 whitespace-nowrap">{actionLabel}</span>
+          <ActionIcon className="w-4 h-4 text-gray-900 shrink-0" />
+          <span
+            className="text-sm font-normal text-gray-900 whitespace-nowrap overflow-hidden"
+            style={{
+              opacity: actionLabelOpacity,
+              maxWidth: actionLabelMaxWidth,
+            }}
+          >
+            {actionLabel}
+          </span>
         </button>
       </div>
     </div>
