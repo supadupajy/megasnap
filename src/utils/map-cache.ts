@@ -11,4 +11,6 @@ export const mapCache = {
   lastZoom: 6,
   // Write 페이지 등에서 돌아올 때 현재 위치로 자동이동하지 않도록 하는 플래그
   keepPosition: false,
+  // 앱 세션에서 지도 최초 진입 시 자동 현재위치 이동을 이미 시도했는지 여부
+  didInitialAutoLocate: false,
 };

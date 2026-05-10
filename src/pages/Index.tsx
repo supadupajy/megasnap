@@ -1094,9 +1094,10 @@ const Index = () => {
   }, [fetchGlobalTrending]);
 
   // ── 현재 위치 ────────────────────────────────────────────────
-  const moveToCurrentLocation = useCallback(async (showToast = true) => {
-    // route state로 위치가 이미 지정된 경우 geolocation으로 덮어쓰지 않음
-    if (locationLockedRef.current) return;
+  const moveToCurrentLocation = useCallback(async (showToast = true, force = false) => {
+    // route state로 위치가 이미 지정된 경우 자동 geolocation으로 덮어쓰지 않음
+    // 단, 사용자가 현재위치 버튼을 직접 누른 경우에는 명시적 동작이므로 허용
+    if (!force && locationLockedRef.current) return;
 
     const toastId = showToast ? showLoading('현재 위치를 확인 중입니다...') : null;
 
@@ -1195,14 +1196,16 @@ const Index = () => {
     }
   }, []);
 
-  const handleCurrentLocation = () => moveToCurrentLocation(true);
+  const handleCurrentLocation = () => moveToCurrentLocation(true, true);
 
-  // ── 앱 시작 시 현재 위치로 자동 이동 (마운트 1회만) ──────────
-  // initialFocusRef가 있거나 startSelection 상태이거나 keepPosition 플래그가 있으면 geolocation 건너뜀
-  const didAutoLocateRef = useRef(false);
+  // ── 앱 시작 시 현재 위치로 자동 이동 (앱 세션 최초 1회만) ──────────
+  // 다른 탭/페이지에서 뒤로가기로 지도에 돌아오는 경우에는 현재위치로 자동 이동하지 않음
   useEffect(() => {
-    if (didAutoLocateRef.current) return;
-    didAutoLocateRef.current = true;
+    if (mapCache.didInitialAutoLocate) {
+      if (mapCache.keepPosition) mapCache.keepPosition = false;
+      return;
+    }
+    mapCache.didInitialAutoLocate = true;
 
     if (initialFocusRef.current) {
       sessionStorage.removeItem('pendingMapFocus');
@@ -1216,7 +1219,7 @@ const Index = () => {
       return;
     }
     moveToCurrentLocation(false);
-  }, []);
+  }, [moveToCurrentLocation]);
 
   // ── 좋아요 토글 ──────────────────────────────────────────────
   const handleLikeToggle = useCallback((postId: string) => {
