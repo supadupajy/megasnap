@@ -351,8 +351,10 @@ const Index = () => {
 
   // safe-area-inset-bottom을 JS로 읽기
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(() => window.visualViewport?.height ?? window.innerHeight);
   useEffect(() => {
     const update = () => {
+      setViewportHeight(window.visualViewport?.height ?? window.innerHeight);
       const val = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0', 10);
       // CSS 변수가 없으면 env() 직접 계산
       const el = document.createElement('div');
@@ -364,7 +366,11 @@ const Index = () => {
     };
     update();
     window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    window.visualViewport?.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('resize', update);
+    };
   }, []);
 
   // 인디케이터 상단 오프셋: 트렌딩 패널 접힌 상태의 높이를 최초 1회만 기록
@@ -379,6 +385,11 @@ const Index = () => {
   // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 위치 배너 공간
   // 물방울 마커가 하단 위치 배너와 겹치지 않도록 여유를 더 확보
   const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 56;
+  const rightMarkerIndicatorTop = ((indicatorTopOffset + (viewportHeight - (indicatorBottomOffset + 8))) / 2) - 26;
+  const mapLevelIndicatorTop = Math.max(
+    indicatorTopOffset + 8,
+    Math.round((indicatorTopOffset + rightMarkerIndicatorTop - 184) / 2),
+  );
 
   // ── 포스트 매핑 헬퍼 ────────────────────────────────────────
   const mapRawToPost = (p: any, prev?: Post | null): Post => {
@@ -1515,7 +1526,7 @@ const Index = () => {
               minLevel={3}
               maxLevel={11}
               markerHiddenFrom={7}
-              style={{ top: `${indicatorTopOffset + 8}px` }}
+              style={{ top: `${mapLevelIndicatorTop}px` }}
               onLevelChange={(lvl) => {
                 setCurrentZoom(lvl);
                 currentZoomRef.current = lvl;
