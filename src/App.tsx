@@ -48,6 +48,7 @@ import TermsOfService from "./pages/TermsOfService";
 import CompanyInfo from "./pages/CompanyInfo";
 import AppearanceSettings from "./pages/AppearanceSettings";
 import StorageSettings from "./pages/StorageSettings";
+import DBImageCompression from "./pages/DBImageCompression";
 import DeleteAccount from "./pages/DeleteAccount";
 import AuthCallback from "./pages/AuthCallback";
 import VideoSearch from "./pages/VideoSearch";
@@ -235,6 +236,7 @@ const AnimatedRoutes = () => {
               <Route path="/settings/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
               <Route path="/settings/appearance" element={<ProtectedRoute><AppearanceSettings /></ProtectedRoute>} />
               <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
+              <Route path="/settings/db-image-compression" element={<ProtectedRoute><DBImageCompression /></ProtectedRoute>} />
               <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
               <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />

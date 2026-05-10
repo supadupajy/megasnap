@@ -361,6 +361,21 @@ const Settings = () => {
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
               </button>
+              <button
+                onClick={() => navigate('/settings/db-image-compression')}
+                className="w-full flex items-center justify-between py-3 px-4 hover:bg-orange-50 active:bg-orange-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-orange-100 text-orange-600">
+                    <Database className="w-5 h-5" />
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="text-sm font-bold text-orange-600">DB 원본 이미지 압축</span>
+                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">원본 이미지를 최대 1920px / JPEG 82% 기준으로 최적화합니다.</span>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300" />
+              </button>
             </div>
           </div>
         )}

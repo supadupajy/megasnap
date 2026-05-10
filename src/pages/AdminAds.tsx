@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn, compressImage } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 
 const reverseGeocode = (lat: number, lng: number): Promise<string> => {
@@ -767,180 +767,6 @@ const AdCard = ({
   );
 };
 
-// ─── 기존 이미지 일괄 재압축 패널 ────────────────────────────────────────────
-const ImageRecompressPanel = () => {
-  const [status, setStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
-  const [log, setLog] = useState<string[]>([]);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
-
-  const addLog = (msg: string) => setLog(prev => [...prev, msg]);
-
-  const getSupabasePath = (url: string): { bucket: string; path: string } | null => {
-    try {
-      const parsed = new URL(url);
-      const match = parsed.pathname.match(/^\/storage\/v1\/(?:object|render\/image)\/public\/([^/]+)\/(.+)$/);
-      if (!match) return null;
-      return { bucket: decodeURIComponent(match[1]), path: decodeURIComponent(match[2]) };
-    } catch {
-      return null;
-    }
-  };
-
-  const recompressUrl = async (url: string): Promise<string | null> => {
-    const source = getSupabasePath(url);
-    if (!source) return null;
-    // 비디오 썸네일(-thumb.jpg)이 아닌 일반 이미지만 처리
-    if (source.bucket === 'post-videos') return null;
-
-    // 원본 이미지 fetch
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`fetch 실패: ${res.status}`);
-    const blob = await res.blob();
-    if (!blob.type.startsWith('image/')) return null;
-
-    const file = new File([blob], 'img.jpg', { type: blob.type });
-    const compressed = await compressImage(file, 1920, 0.82);
-
-    // 같은 경로에 덮어쓰기 (upsert: true)
-    const { error } = await supabase.storage
-      .from(source.bucket)
-      .upload(source.path, compressed, {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: 'image/jpeg',
-      });
-
-    if (error) throw error;
-    return url; // URL은 동일하게 유지됨
-  };
-
-  const handleRun = async () => {
-    setStatus('running');
-    setLog([]);
-    setProgress({ done: 0, total: 0 });
-
-    try {
-      // 모든 포스트의 이미지 URL 수집
-      const { data: posts, error } = await supabase
-        .from('posts')
-        .select('id, image_url, images')
-        .not('image_url', 'is', null);
-
-      if (error) throw error;
-
-      // 중복 제거된 전체 이미지 URL 목록
-      const urlSet = new Set<string>();
-      for (const post of posts || []) {
-        if (post.image_url) urlSet.add(post.image_url);
-        if (Array.isArray(post.images)) {
-          post.images.forEach((u: string) => u && urlSet.add(u));
-        }
-      }
-
-      const urls = Array.from(urlSet);
-      setProgress({ done: 0, total: urls.length });
-      addLog(`총 ${urls.length}개 이미지 발견`);
-
-      let successCount = 0;
-      let skipCount = 0;
-      let failCount = 0;
-
-      for (let i = 0; i < urls.length; i++) {
-        const url = urls[i];
-        const shortUrl = url.split('/').slice(-2).join('/');
-        try {
-          const result = await recompressUrl(url);
-          if (result) {
-            successCount++;
-            addLog(`✅ [${i + 1}/${urls.length}] ${shortUrl}`);
-          } else {
-            skipCount++;
-            addLog(`⏭️ [${i + 1}/${urls.length}] 건너뜀: ${shortUrl}`);
-          }
-        } catch (err: any) {
-          failCount++;
-          addLog(`❌ [${i + 1}/${urls.length}] 실패: ${shortUrl} — ${err.message}`);
-        }
-        setProgress({ done: i + 1, total: urls.length });
-      }
-
-      addLog(`\n완료! 성공 ${successCount}개 / 건너뜀 ${skipCount}개 / 실패 ${failCount}개`);
-      setStatus('done');
-      if (failCount === 0) showSuccess(`${successCount}개 이미지 재압축 완료! 🎉`);
-    } catch (err: any) {
-      addLog(`치명적 오류: ${err.message}`);
-      setStatus('error');
-      showError('재압축 중 오류가 발생했습니다.');
-    }
-  };
-
-  const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
-
-  return (
-    <div className="mx-4 mt-5 bg-white rounded-3xl border border-amber-100 overflow-hidden shadow-sm">
-      <div className="p-4 border-b border-amber-50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-amber-50 rounded-2xl flex items-center justify-center shrink-0">
-            <Image className="w-5 h-5 text-amber-500" />
-          </div>
-          <div>
-            <p className="text-[13px] font-black text-gray-900" style={{ letterSpacing: '-0.04em' }}>기존 이미지 일괄 재압축</p>
-            <p className="text-[10px] text-gray-400 font-medium">DB에 저장된 원본 이미지를 최대 1920px / JPEG 82%로 압축합니다</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-3">
-        {status === 'running' && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-bold text-gray-500">
-              <span>{progress.done} / {progress.total} 처리 중...</span>
-              <span>{progressPct}%</span>
-            </div>
-            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-amber-400 rounded-full transition-all duration-300"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-          </div>
-        )}
-
-        {log.length > 0 && (
-          <div className="bg-gray-50 rounded-2xl p-3 max-h-48 overflow-y-auto space-y-0.5">
-            {log.map((line, i) => (
-              <p key={i} className="text-[10px] font-mono text-gray-600 leading-relaxed whitespace-pre-wrap">{line}</p>
-            ))}
-          </div>
-        )}
-
-        <Button
-          onClick={handleRun}
-          disabled={status === 'running'}
-          className={cn(
-            'w-full h-11 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2',
-            status === 'done'
-              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100'
-              : status === 'error'
-              ? 'bg-red-500 text-white'
-              : 'bg-amber-500 text-white shadow-lg shadow-amber-100 hover:bg-amber-600 disabled:opacity-50'
-          )}
-        >
-          {status === 'running'
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> 재압축 중...</>
-            : status === 'done'
-            ? <><CheckCircle2 className="w-4 h-4" /> 완료됨 (다시 실행)</>
-            : <><Upload className="w-4 h-4" /> 기존 이미지 재압축 시작</>}
-        </Button>
-
-        <p className="text-[10px] text-gray-400 font-medium text-center leading-relaxed">
-          ⚠️ 이미 압축된 이미지는 화질이 더 낮아질 수 있으니 한 번만 실행하세요
-        </p>
-      </div>
-    </div>
-  );
-};
-
 // ─── 메인 페이지 ──────────────────────────────────────────────────────────────
 const AdminAds = () => {
   const navigate = useNavigate();
@@ -1184,9 +1010,6 @@ const AdminAds = () => {
             </div>
           </div>
         </div>
-
-        {/* 기존 이미지 재압축 패널 */}
-        <ImageRecompressPanel />
 
         {/* 일반 광고 카드 목록 */}
         <div className="px-4 pt-5 space-y-3">
