@@ -1607,7 +1607,7 @@ const Index = () => {
                 initial={{ opacity: 0, y: 10, x: '-50%', scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
-                style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 14px)' }}
+                style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className="absolute left-1/2 z-[21] flex h-8 w-[min(13.5rem,calc(100vw-11rem))] items-center justify-center gap-1.5 rounded-full border border-white/70 bg-white/72 px-2.5 shadow-[0_10px_28px_rgba(79,70,229,0.18)] backdrop-blur-2xl"
               >
                 <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-indigo-500 text-white shadow-sm">
