@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { X, Search, Edit, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
+import { X, Search, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -326,15 +326,7 @@ const Messages = () => {
     >
       <div className="pt-16">
         <div className="sticky top-0 z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
-          <div className="flex justify-start">
-            <button
-              onClick={() => navigate('/friends')}
-              className="p-2 hover:bg-white/70 rounded-full transition-colors active:scale-95"
-              aria-label="새 메시지"
-            >
-              <Edit className="w-6 h-6 text-indigo-600" />
-            </button>
-          </div>
+          <div />
           <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
           <div className="flex justify-end">
             <button
