@@ -69,12 +69,13 @@ const BottomNav = () => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     const seenKey = `${FRIEND_POST_SEEN_KEY_PREFIX}${authUser.id}`;
 
-    const setupFriendPostBadge = async () => {
-      let seenAt = localStorage.getItem(seenKey);
-      if (!seenAt) {
-        seenAt = new Date().toISOString();
-        localStorage.setItem(seenKey, seenAt);
+    const checkFriendPostBadge = async () => {
+      if (isFriendsPage) {
+        markFriendPostsSeen();
+        return;
       }
+
+      const seenAt = localStorage.getItem(seenKey) || '1970-01-01T00:00:00.000Z';
 
       const { data: followsData } = await supabase
         .from('follows')
@@ -83,26 +84,42 @@ const BottomNav = () => {
 
       if (cancelled) return;
 
-      const followingIds = (followsData || []).map((follow: any) => follow.following_id).filter(Boolean);
-      const followingSet = new Set(followingIds);
+      const followingIds = (followsData || [])
+        .map((follow: any) => follow.following_id)
+        .filter(Boolean);
 
       if (followingIds.length === 0) {
         setHasNewFriendPost(false);
         return;
       }
 
-      if (!isFriendsPage) {
-        const { data: recentPosts } = await supabase
-          .from('posts')
-          .select('id')
-          .in('user_id', followingIds)
-          .gt('created_at', seenAt)
-          .limit(1);
+      const { data: recentPosts } = await supabase
+        .from('posts')
+        .select('id')
+        .in('user_id', followingIds)
+        .gt('created_at', seenAt)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-        if (!cancelled) {
-          setHasNewFriendPost((recentPosts?.length ?? 0) > 0);
-        }
+      if (!cancelled) {
+        setHasNewFriendPost((recentPosts?.length ?? 0) > 0);
       }
+    };
+
+    const subscribeToFriendPosts = async () => {
+      const { data: followsData } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', authUser.id);
+
+      if (cancelled) return;
+
+      const followingIds = (followsData || [])
+        .map((follow: any) => follow.following_id)
+        .filter(Boolean);
+      const followingSet = new Set(followingIds);
+
+      if (followingSet.size === 0) return;
 
       channel = supabase
         .channel(`friend-post-badge-${authUser.id}`)
@@ -124,21 +141,24 @@ const BottomNav = () => {
         .subscribe();
     };
 
-    setupFriendPostBadge();
+    checkFriendPostBadge();
+    subscribeToFriendPosts();
 
-    const handleRefresh = () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-        channel = null;
-      }
-      setupFriendPostBadge();
+    const handleRefresh = () => checkFriendPostBadge();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') checkFriendPostBadge();
     };
+    const intervalId = window.setInterval(checkFriendPostBadge, 15000);
+
     window.addEventListener('focus', handleRefresh);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('refresh-friend-post-badge', handleRefresh);
 
     return () => {
       cancelled = true;
+      window.clearInterval(intervalId);
       window.removeEventListener('focus', handleRefresh);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('refresh-friend-post-badge', handleRefresh);
       if (channel) supabase.removeChannel(channel);
     };
