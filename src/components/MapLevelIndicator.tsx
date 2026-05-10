@@ -110,8 +110,8 @@ const MapLevelIndicator = ({
       style={style}
       aria-label={`지도 레벨 ${safeLevel}, ${markerVisible ? '마커 표시 중' : '마커 숨김 상태'}`}
     >
-      <div className="flex h-[220px] w-10 flex-col items-center rounded-[18px] border border-white/70 bg-white/45 px-1 py-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
-        <div className="text-[13px] font-black leading-none text-slate-800">+</div>
+      <div className="flex h-[184px] w-9 flex-col items-center rounded-[17px] border border-white/70 bg-white/45 px-1 py-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+        <div className="text-[12px] font-black leading-none text-slate-800">+</div>
 
         <div
           ref={trackRef}
@@ -120,7 +120,7 @@ const MapLevelIndicator = ({
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           className={cn(
-            'relative my-1.5 h-[124px] w-6',
+            'relative my-1 h-[96px] w-5',
             interactive ? 'cursor-grab active:cursor-grabbing touch-none' : '',
           )}
           style={interactive ? { touchAction: 'none' } : undefined}
@@ -150,11 +150,11 @@ const MapLevelIndicator = ({
           />
         </div>
 
-        <div className="text-[13px] font-black leading-none text-slate-700">−</div>
-        <div className="mt-1 text-[10px] font-black leading-none text-slate-600">{safeLevel}</div>
+        <div className="text-[12px] font-black leading-none text-slate-700">−</div>
+        <div className="mt-0.5 text-[9px] font-black leading-none text-slate-600">{safeLevel}</div>
         <div
           className={cn(
-            'mt-1.5 flex w-8 items-center justify-center whitespace-nowrap rounded-full border px-0.5 py-1 text-[7px] font-black leading-none tracking-[-0.12em] shadow-sm transition-colors duration-500 ease-out',
+            'mt-1 flex w-7 items-center justify-center whitespace-nowrap rounded-full border px-0.5 py-0.5 text-[7px] font-black leading-none tracking-[-0.12em] shadow-sm transition-colors duration-500 ease-out',
             markerVisible
               ? 'border-emerald-200 bg-emerald-50/95 text-emerald-700'
               : 'border-rose-200 bg-rose-50/95 text-rose-700',
