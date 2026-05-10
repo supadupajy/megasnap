@@ -346,7 +346,7 @@ const Messages = () => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 placeholder="대화 상대 또는 메시지 검색"
-                className="w-full pl-12 h-11 bg-gray-50/50 border-2 border-indigo-600 rounded-full outline-none font-bold placeholder:text-gray-400"
+                className="w-full pl-12 h-11 bg-gray-50/50 border-2 border-indigo-600 rounded-full outline-none font-normal placeholder:text-gray-400"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
