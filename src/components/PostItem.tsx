@@ -33,10 +33,10 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Comment } from '@/types';
 import { useAuth } from './AuthProvider';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { showSuccess, showError } from '@/utils/toast';
@@ -231,18 +231,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
   const displayLocation = useLocationDisplay(post.location || '', lat, lng);
 
-  const rawImages = useMemo(() => {
-    const baseImages = isAd
-      ? [post.image_url || post.image]
-      : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
-    return baseImages.filter(Boolean) as string[];
-  }, [post.images, post.image, post.image_url, isAd]);
-
-  const mediaAspectRatio = useMediaAspectRatio(
-    !isAd && post.videoUrl ? post.videoUrl : (rawImages[currentImageIndex] || rawImages[0]),
-    !isAd && post.videoUrl ? 'video' : 'image'
-  );
-
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
 
   const renderMedia = () => {
@@ -250,11 +238,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     if (!isAd && post.videoUrl) {
 
       return (
-        <div className="w-full h-full relative">
+        <div className="relative h-full w-full bg-gray-200">
+          <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
           <video
             ref={videoRef}
             src={post.videoUrl}
-            className="w-full h-full object-cover"
+            className="relative z-[1] w-full h-full object-cover bg-gray-200"
             muted
             loop
             playsInline
@@ -265,7 +254,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             <img 
               src={currentImage} 
               alt="" 
-              className="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"
+              className="absolute inset-0 z-10 w-full h-full object-cover bg-gray-200 pointer-events-none"
               onError={handleImageError}
             />
           )}
@@ -275,11 +264,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
 
     // 3. 일반 이미지 슬라이더 처리
     return (
-      <div className="relative w-full h-full group/slider">
+      <div className="relative w-full h-full bg-gray-200 group/slider">
+        <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
         <div
           ref={imageScrollRef}
           className={cn(
-            "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
+            "relative z-[1] flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
             isDragging && "cursor-grabbing snap-none" // 드래그 중에는 스냅 일시 중지하여 부드럽게
           )}
           onScroll={handleImageScroll}
@@ -291,12 +281,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           {displayImages.map((img, index) => (
             <div
               key={index}
-              className="w-full h-full shrink-0 snap-center snap-always relative"
+              className="relative w-full h-full shrink-0 snap-center snap-always bg-gray-200"
             >
+              <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
               <img
                 src={img}
                 alt={`Content ${index}`}
-                className="w-full h-full object-cover pointer-events-none"
+                loading="lazy"
+                decoding="async"
+                className="relative z-[1] w-full h-full object-cover bg-gray-200 pointer-events-none"
                 onError={handleImageError}
               />
             </div>
@@ -614,10 +607,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
             </div>
 
             {/* Media Section */}
-            <div
-              className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner transition-[height] duration-300"
-              style={{ aspectRatio: mediaAspectRatio }}
-            >
+            <div className="relative mx-4 aspect-[3/4] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner">
+              <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
               {renderMedia()}
             </div>
 
@@ -728,10 +719,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
           </div>
 
           {/* Media Section */}
-          <div
-            className="relative mx-4 rounded-2xl overflow-hidden bg-gray-100 group shadow-inner transition-[height] duration-300"
-            style={{ aspectRatio: mediaAspectRatio }}
-          >
+          <div className="relative mx-4 aspect-[3/4] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner">
+            <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
             {renderMedia()}
           </div>
 
