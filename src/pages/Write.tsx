@@ -193,6 +193,31 @@ const Write = () => {
     setMediaFiles(newMedia);
   };
 
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.isPrimary || mediaFiles[currentSlide]?.type !== 'image') return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    handleDragStart(e.clientX, e.clientY);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.isPrimary || !isDraggingRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    handleDragMove(e.clientX, e.clientY);
+  };
+
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.isPrimary) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    handleDragEnd();
+  };
+
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -524,14 +549,19 @@ const Write = () => {
                       {/* 드래그 오버레이 */}
                       <div
                         className="absolute inset-0 z-10"
-                        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-                        onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
-                        onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
-                        onMouseUp={handleDragEnd}
-                        onMouseLeave={handleDragEnd}
-                        onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
-                        onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
-                        onTouchEnd={handleDragEnd}
+                        style={{
+                          cursor: currentMedia?.type === 'image' ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                          touchAction: currentMedia?.type === 'image' ? 'none' : 'auto',
+                          WebkitUserSelect: 'none',
+                          userSelect: 'none',
+                        }}
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerEnd}
+                        onPointerCancel={handlePointerEnd}
+                        onPointerLeave={(e) => {
+                          if (e.pointerType === 'mouse') handlePointerEnd(e);
+                        }}
                       />
 
                       {/* 삭제 버튼 */}
@@ -582,11 +612,6 @@ const Write = () => {
                         </>
                       )}
                     </div>
-                    {currentMedia?.type === 'image' && (
-                      <p className="text-center text-xs font-bold text-slate-500">
-                        사진을 움직여 프레임에 맞춰주세요. 보이는 그대로 업로드돼요.
-                      </p>
-                    )}
                   </div>
                 ) : (
                   <div
