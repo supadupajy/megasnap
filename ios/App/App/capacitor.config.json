@@ -2,6 +2,11 @@
 	"appId": "com.chorasnap.chorasnap",
 	"appName": "ChoraSnap",
 	"webDir": "dist",
+	"ios": {
+		"allowsLinkPreview": false,
+		"scrollEnabled": false,
+		"limitsNavigationsToAppBoundDomains": false
+	},
 	"plugins": {
 		"Keyboard": {
 			"resize": "body",

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/components/AuthProvider';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
 import HeatmapOverlay from '@/components/HeatmapOverlay';
@@ -23,6 +23,59 @@ interface MapContainerProps {
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
+const KAKAO_MAPS_SDK_URL = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer&autoload=false';
+const KAKAO_MAPS_SCRIPT_ID = 'kakao-maps-sdk';
+let kakaoMapsSdkPromise: Promise<void> | null = null;
+
+const loadKakaoMapsSdk = () => {
+  const win = window as any;
+  if (win.kakao?.maps?.Map && win.kakao?.maps?.LatLng) return Promise.resolve();
+  if (kakaoMapsSdkPromise) return kakaoMapsSdkPromise;
+
+  kakaoMapsSdkPromise = new Promise<void>((resolve, reject) => {
+    const completeLoad = () => {
+      const kakao = (window as any).kakao;
+      if (!kakao?.maps) {
+        reject(new Error('Kakao Maps SDK is unavailable'));
+        return;
+      }
+      if (kakao.maps.Map && kakao.maps.LatLng) {
+        resolve();
+        return;
+      }
+      if (typeof kakao.maps.load === 'function') {
+        kakao.maps.load(() => resolve());
+      } else {
+        resolve();
+      }
+    };
+
+    const existingScript = document.getElementById(KAKAO_MAPS_SCRIPT_ID) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      if ((window as any).kakao?.maps) completeLoad();
+      else {
+        existingScript.addEventListener('load', completeLoad, { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load Kakao Maps SDK')), { once: true });
+      }
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.id = KAKAO_MAPS_SCRIPT_ID;
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = KAKAO_MAPS_SDK_URL;
+    script.onload = completeLoad;
+    script.onerror = () => reject(new Error('Failed to load Kakao Maps SDK'));
+    document.head.appendChild(script);
+  }).catch((error) => {
+    kakaoMapsSdkPromise = null;
+    throw error;
+  });
+
+  return kakaoMapsSdkPromise;
+};
 
 const LONG_PRESS_DURATION = 1000; // 1초
 const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그 감지를 빠르게)
@@ -44,6 +97,7 @@ const MapContainer = ({
   const mapInstance = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [mapLoadError, setMapLoadError] = useState<string | null>(null);
   const [currentLevel, setCurrentLevel] = useState<number>(6);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
   const [mapInstanceState, setMapInstanceState] = useState<any>(null);
@@ -443,10 +497,15 @@ const MapContainer = ({
   const initMap = useCallback(() => {
     try {
       const kakao = (window as any).kakao;
-      if (!kakao?.maps?.Map || !kakao?.maps?.LatLng) return false;
-      if (mapInstance.current) return true;
+      if (!kakao?.maps?.Map || !kakao?.maps?.LatLng || !containerRef.current) return false;
+      if (mapInstance.current) {
+        setIsLoading(false);
+        setMapLoadError(null);
+        return true;
+      }
 
       // 카카오맵 초기 위치는 항상 mapCache.lastCenter(이전 세션 마지막 위치) 사용
+
       // centerRef.current(현재 prop)를 사용하면 routeState로 즉시 post 위치가 들어와
       // smoothMoveTo가 작동하지 않고 순간이동처럼 보이는 문제 발생
       const initialCenter = mapCache.lastCenter || { lat: 37.5665, lng: 126.9780 };
@@ -504,8 +563,19 @@ const MapContainer = ({
 
       setIsMapReady(true);
       setIsLoading(false);
+      setMapLoadError(null);
 
       updateZoomClass();
+
+      const relayoutInitialMap = () => {
+        try {
+          map.relayout();
+          map.setCenter(new kakao.maps.LatLng(initialCenter.lat, initialCenter.lng));
+          updateZoomClass();
+        } catch (e) {}
+      };
+      requestAnimationFrame(relayoutInitialMap);
+      setTimeout(relayoutInitialMap, 250);
 
       // 카카오맵은 최초 생성 시 idle 이벤트를 발생시키지 않으므로
       // 지도 초기화 직후 수동으로 onMapChange를 호출해 초기 bounds fetch를 트리거.
@@ -553,22 +623,53 @@ const MapContainer = ({
   }, []);
 
   useEffect(() => {
-    const checkMap = setInterval(() => {
-      if ((window as any).kakao?.maps) {
-        const isInit = initMap();
-        if (isInit) {
-          clearInterval(checkMap);
-          if (mapInstance.current) {
-            // level prop 값을 우선 사용 (routeState로 zoom 전달 시 반영)
-            const targetLevel = levelRef.current ?? 6;
-            mapInstance.current.setLevel(targetLevel, { animate: false });
-            setCurrentLevel(targetLevel);
-            currentLevelRef.current = targetLevel;
-          }
-        }
+    let cancelled = false;
+    const timers: number[] = [];
+
+    const schedule = (callback: () => void, delay: number) => {
+      const timer = window.setTimeout(callback, delay);
+      timers.push(timer);
+    };
+
+    const applyInitialLevel = () => {
+      if (mapInstance.current) {
+        const targetLevel = levelRef.current ?? 6;
+        mapInstance.current.setLevel(targetLevel, { animate: false });
+        setCurrentLevel(targetLevel);
+        currentLevelRef.current = targetLevel;
       }
-    }, 100);
-    return () => clearInterval(checkMap);
+    };
+
+    const tryInitializeMap = (retryCount = 0) => {
+      if (cancelled) return;
+      const isInit = initMap();
+      if (isInit) {
+        applyInitialLevel();
+        return;
+      }
+      if (retryCount < 40) {
+        schedule(() => tryInitializeMap(retryCount + 1), 100);
+        return;
+      }
+      setIsLoading(false);
+      setMapLoadError('카카오지도를 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.');
+    };
+
+    setIsLoading(true);
+    setMapLoadError(null);
+
+    loadKakaoMapsSdk()
+      .then(() => tryInitializeMap())
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+        setMapLoadError('카카오지도 SDK 로딩에 실패했습니다. iOS에서 계속 발생하면 Kakao Developers의 Web 플랫폼 도메인에 capacitor://localhost가 등록되어 있는지 확인해주세요.');
+      });
+
+    return () => {
+      cancelled = true;
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
   }, [initMap]);
 
   // level prop 변경 시 setLevel은 아래 isMapReady-gated useEffect 하나에서만 처리
@@ -866,17 +967,6 @@ const MapContainer = ({
       kakao.maps.event.removeListener(map, 'idle', handleIdle);
     };
   }, [isMapReady]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      try {
-        if (initMap()) clearInterval(timer);
-      } catch (e) {
-        console.error('Map init interval error:', e);
-      }
-    }, 100);
-    return () => clearInterval(timer);
-  }, [initMap]);
 
   // level prop이 바뀌면 pendingLevelRef에 저장해두고,
   // smoothMoveTo가 진행 중이 아닐 때만 실제로 setLevel 적용
@@ -1531,6 +1621,36 @@ const MapContainer = ({
       {isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/50 backdrop-blur-sm">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        </div>
+      )}
+      {mapLoadError && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-50/90 px-6 text-center backdrop-blur-sm">
+          <div className="max-w-xs rounded-3xl border border-indigo-100 bg-white p-5 shadow-xl">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+              <RefreshCw className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-extrabold text-slate-900">지도를 불러올 수 없어요</p>
+            <p className="mt-2 text-xs leading-relaxed text-slate-600">{mapLoadError}</p>
+            <button
+              type="button"
+              className="mt-4 rounded-full bg-indigo-600 px-5 py-2 text-xs font-extrabold text-white shadow-lg shadow-indigo-200 active:scale-95"
+              onClick={() => {
+                setMapLoadError(null);
+                setIsLoading(true);
+                loadKakaoMapsSdk()
+                  .then(() => {
+                    const isInit = initMap();
+                    if (!isInit) throw new Error('Map container is not ready');
+                  })
+                  .catch(() => {
+                    setIsLoading(false);
+                    setMapLoadError('다시 시도해도 지도를 불러오지 못했습니다. 잠시 후 재시도해주세요.');
+                  });
+              }}
+            >
+              다시 시도
+            </button>
+          </div>
         </div>
       )}
 

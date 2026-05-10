@@ -3,8 +3,9 @@ PODS:
     - CapacitorCordova
   - CapacitorApp (8.1.0):
     - Capacitor
-  - CapacitorCamera (8.0.2):
+  - CapacitorCamera (8.1.0):
     - Capacitor
+    - IONCameraLib (~> 1.0.0)
   - CapacitorCordova (8.3.1)
   - CapacitorGeolocation (8.2.0):
     - Capacitor
@@ -13,47 +14,50 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (8.0.2):
     - Capacitor
+  - IONCameraLib (1.0.4)
   - IONGeolocationLib (2.1.0)
 
 DEPENDENCIES:
-  - "Capacitor (from `../../node_modules/@capacitor/ios`)"
-  - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
-  - "CapacitorCamera (from `../../node_modules/@capacitor/camera`)"
-  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
-  - "CapacitorGeolocation (from `../../node_modules/@capacitor/geolocation`)"
-  - "CapacitorPushNotifications (from `../../node_modules/@capacitor/push-notifications`)"
-  - "CapacitorStatusBar (from `../../node_modules/@capacitor/status-bar`)"
+  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@8.3.1_@capacitor+core@8.3.3/node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.3.3/node_modules/@capacitor/app`)"
+  - "CapacitorCamera (from `../../node_modules/.pnpm/@capacitor+camera@8.1.0_@capacitor+core@8.3.3/node_modules/@capacitor/camera`)"
+  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@8.3.1_@capacitor+core@8.3.3/node_modules/@capacitor/ios`)"
+  - "CapacitorGeolocation (from `../../node_modules/.pnpm/@capacitor+geolocation@8.2.0_@capacitor+core@8.3.3/node_modules/@capacitor/geolocation`)"
+  - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@8.0.3_@capacitor+core@8.3.3/node_modules/@capacitor/push-notifications`)"
+  - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/status-bar`)"
 
 SPEC REPOS:
   trunk:
+    - IONCameraLib
     - IONGeolocationLib
 
 EXTERNAL SOURCES:
   Capacitor:
-    :path: "../../node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@8.3.1_@capacitor+core@8.3.3/node_modules/@capacitor/ios"
   CapacitorApp:
-    :path: "../../node_modules/@capacitor/app"
+    :path: "../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.3.3/node_modules/@capacitor/app"
   CapacitorCamera:
-    :path: "../../node_modules/@capacitor/camera"
+    :path: "../../node_modules/.pnpm/@capacitor+camera@8.1.0_@capacitor+core@8.3.3/node_modules/@capacitor/camera"
   CapacitorCordova:
-    :path: "../../node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@8.3.1_@capacitor+core@8.3.3/node_modules/@capacitor/ios"
   CapacitorGeolocation:
-    :path: "../../node_modules/@capacitor/geolocation"
+    :path: "../../node_modules/.pnpm/@capacitor+geolocation@8.2.0_@capacitor+core@8.3.3/node_modules/@capacitor/geolocation"
   CapacitorPushNotifications:
-    :path: "../../node_modules/@capacitor/push-notifications"
+    :path: "../../node_modules/.pnpm/@capacitor+push-notifications@8.0.3_@capacitor+core@8.3.3/node_modules/@capacitor/push-notifications"
   CapacitorStatusBar:
-    :path: "../../node_modules/@capacitor/status-bar"
+    :path: "../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/status-bar"
 
 SPEC CHECKSUMS:
   Capacitor: 46dbaa89c1d1cd121b9fc2dc839c1f39cc49e326
   CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
-  CapacitorCamera: 66bb9c4ea1703a5acf2a328bac0e613d278c399c
+  CapacitorCamera: 6e43e76d276ba69b45639a4e61365e3d56324c6c
   CapacitorCordova: 9010447fe25e869705fcf525e5f490facde87608
   CapacitorGeolocation: b36f6287bfc9f2eefa04dc900496f2c8ae666136
   CapacitorPushNotifications: e4437b4ec1b2070685bf032c210f346432214c5f
   CapacitorStatusBar: 01d5763b4ed720de5ce2edbc938de6a98f4c8f32
+  IONCameraLib: f2349804460bd9e3f892e42109b8d996ab3fa19d
   IONGeolocationLib: 6a7b6f76063fb1b01cfb14fae7d0f526e3c9b271
 
-PODFILE CHECKSUM: 0f756b5eca1ce62ff011a03d0c2206f53efac2ec
+PODFILE CHECKSUM: 2c5c43c091e9f804be7a6af80b5ae2fe0bd07797
 
 COCOAPODS: 1.16.2
