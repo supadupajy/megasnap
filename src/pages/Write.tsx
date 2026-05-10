@@ -52,9 +52,12 @@ const Write = () => {
   // ✅ 이미지 로드 완료 여부를 state로 관리
   const [imgLoaded, setImgLoaded] = useState(false);
   const [previewTransform, setPreviewTransform] = useState('translate3d(0px, 0px, 0) scale(1)');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const initialLocation = location.state?.location;
   const mediaInputRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,6 +105,51 @@ const Write = () => {
     mapCache.keepPosition = true;
     return () => { document.body.style.overflow = ''; };
   }, []);
+
+  useEffect(() => {
+    let baseHeight = Math.max(window.innerHeight, window.visualViewport?.height ?? 0);
+
+    const updateKeyboardHeight = () => {
+      const viewport = window.visualViewport;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      baseHeight = Math.max(baseHeight, window.innerHeight, viewportHeight);
+      const height = Math.max(0, baseHeight - viewportHeight - viewportTop);
+      setKeyboardHeight(height > 120 ? height : 0);
+    };
+
+    updateKeyboardHeight();
+    window.visualViewport?.addEventListener('resize', updateKeyboardHeight);
+    window.visualViewport?.addEventListener('scroll', updateKeyboardHeight);
+    window.addEventListener('resize', updateKeyboardHeight);
+    window.addEventListener('orientationchange', updateKeyboardHeight);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateKeyboardHeight);
+      window.visualViewport?.removeEventListener('scroll', updateKeyboardHeight);
+      window.removeEventListener('resize', updateKeyboardHeight);
+      window.removeEventListener('orientationchange', updateKeyboardHeight);
+    };
+  }, []);
+
+  const bringTextareaAboveKeyboard = () => {
+    window.setTimeout(() => {
+      const textarea = textareaRef.current;
+      const scrollArea = scrollAreaRef.current;
+      if (!textarea || !scrollArea) return;
+
+      const viewport = window.visualViewport;
+      const visibleBottom = (viewport?.height ?? window.innerHeight) + (viewport?.offsetTop ?? 0) - 24;
+      const rect = textarea.getBoundingClientRect();
+      const overflow = rect.bottom - visibleBottom;
+
+      if (overflow > 0) {
+        scrollArea.scrollBy({ top: overflow + 24, behavior: 'smooth' });
+      } else {
+        textarea.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 260);
+  };
 
   useEffect(() => {
     cropPixelRef.current = { x: 0, y: 0 };
@@ -601,16 +649,23 @@ const Write = () => {
           </div>
         </div>
 
-        <main className={cn(
-          "flex-1 min-h-0 no-scrollbar overscroll-contain bg-white",
-          currentPage === 1 ? "overflow-hidden" : "overflow-y-auto"
-        )}>
+        <main
+          ref={scrollAreaRef}
+          className={cn(
+            "flex-1 min-h-0 no-scrollbar overscroll-contain bg-white",
+            currentPage === 1 ? "overflow-hidden" : "overflow-y-auto"
+          )}
+        >
           <div
             className={cn(
               "px-5 space-y-6",
               currentPage === 1 ? "pt-3" : "pt-6"
             )}
-            style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px) + 24px)' }}
+            style={{
+              paddingBottom: keyboardHeight > 0
+                ? `calc(${keyboardHeight}px + 3rem + env(safe-area-inset-bottom, 0px))`
+                : 'calc(5rem + env(safe-area-inset-bottom, 0px) + 24px)'
+            }}
           >
             {currentPage === 1 ? (
               <div className="space-y-6">
@@ -830,9 +885,11 @@ const Write = () => {
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                   </div>
                   <Textarea
+                    ref={textareaRef}
                     placeholder="이 장소에서의 추억을 기록해보세요."
                     className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-normal placeholder:font-normal focus-visible:ring-2 focus-visible:ring-indigo-600"
                     value={content}
+                    onFocus={bringTextareaAboveKeyboard}
                     onChange={(e) => setContent(e.target.value)}
                   />
                 </div>
