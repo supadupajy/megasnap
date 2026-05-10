@@ -5,6 +5,7 @@ import { Bell, MessageSquare } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { useNotifications } from '@/components/NotificationProvider';
+import { mapCache } from '@/utils/map-cache';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -13,6 +14,11 @@ const Header = () => {
 
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
   if (isHiddenPage) return null;
+
+  const navigateKeepingMapPosition = (path: string) => {
+    mapCache.keepPosition = true;
+    navigate(path);
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[12600] bg-white border-b border-gray-100">
@@ -34,7 +40,7 @@ const Header = () => {
         <div className="flex items-center gap-4 shrink-0 ml-auto">
           <button 
             className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-            onClick={() => navigate('/notifications')}
+            onClick={() => navigateKeepingMapPosition('/notifications')}
           >
             <Bell className="w-6 h-6 text-gray-600" />
             {unreadNotifs > 0 && (
@@ -45,7 +51,7 @@ const Header = () => {
           </button>
           <button 
             className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
-            onClick={() => navigate('/messages')}
+            onClick={() => navigateKeepingMapPosition('/messages')}
           >
             <MessageSquare className="w-6 h-6 text-gray-600" />
             {unreadMessages > 0 && (
