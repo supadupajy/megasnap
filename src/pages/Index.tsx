@@ -1114,6 +1114,10 @@ const Index = () => {
         }
         if (permStatus.location === 'prompt' || permStatus.location === 'prompt-with-rationale') {
           const requested = await Geolocation.requestPermissions();
+          window.setTimeout(() => {
+            window.dispatchEvent(new Event('request-push-permission-now'));
+          }, 250);
+
           if (requested.location === 'denied') {
             if (toastId) dismissToast(toastId);
             if (showToast) showError('위치 권한이 거부되었습니다. 기기 설정에서 위치 권한을 허용해주세요.');

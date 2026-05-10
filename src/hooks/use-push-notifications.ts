@@ -59,8 +59,9 @@ export const usePushNotifications = () => {
     if (!authUser || !isMobilePlatform()) return;
 
     let cancelled = false;
+    let registerInFlight = false;
 
-    const requestStartupPermission = async () => {
+    const requestStartupPermission = async (delays = [0, 1600, 3500, 6000]) => {
       let permStatus = await PushNotifications.checkPermissions();
       console.log('[Push] Permission status:', permStatus.receive);
 
@@ -68,7 +69,7 @@ export const usePushNotifications = () => {
 
       // 앱 시작 시 위치 권한 팝업이 먼저 떠 있으면 알림 권한 팝업이 무시/지연될 수 있어
       // 짧은 간격으로 재확인해 사용자가 위치 팝업을 닫은 직후 알림 팝업도 이어서 표시되도록 한다.
-      for (const delay of [0, 1600, 3500, 6000]) {
+      for (const delay of delays) {
         if (cancelled) return permStatus;
         if (delay > 0) await wait(delay);
 
@@ -87,7 +88,10 @@ export const usePushNotifications = () => {
       return permStatus;
     };
 
-    const register = async () => {
+    const register = async (forceImmediate = false) => {
+      if (registerInFlight && !forceImmediate) return;
+      registerInFlight = true;
+
       try {
         await PushNotifications.createChannel({
           id: 'messages_v5',
@@ -105,7 +109,7 @@ export const usePushNotifications = () => {
           return;
         }
 
-        const permStatus = await requestStartupPermission();
+        const permStatus = await requestStartupPermission(forceImmediate ? [0] : undefined);
 
         if (permStatus.receive !== 'granted') {
           console.warn('[Push] Permission not granted:', permStatus.receive);
@@ -116,6 +120,8 @@ export const usePushNotifications = () => {
         await PushNotifications.register();
       } catch (error) {
         console.error('Error registering push notifications:', error);
+      } finally {
+        registerInFlight = false;
       }
     };
 
@@ -180,11 +186,17 @@ export const usePushNotifications = () => {
       });
     };
 
+    const handleRequestPermissionNow = () => {
+      register(true);
+    };
+
+    window.addEventListener('request-push-permission-now', handleRequestPermissionNow);
     register();
     addListeners();
 
     return () => {
       cancelled = true;
+      window.removeEventListener('request-push-permission-now', handleRequestPermissionNow);
     };
   }, [authUser, navigate]);
 };
