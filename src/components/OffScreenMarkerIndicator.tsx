@@ -247,15 +247,12 @@ const DropIndicator: React.FC<{
         </svg>
       </div>
 
-      {/* 회전하는 인디고 삼각형 (방향 표시 + 흰 테두리) */}
+      {/* 회전하는 인디고 삼각형 (방향 표시) */}
       <div style={dotLayerStyle}>
         <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
           <polygon
             points={trianglePoints}
             fill={INDIGO}
-            stroke="white"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
           />
         </svg>
       </div>
@@ -345,9 +342,6 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
           <polygon
             points={trianglePoints}
             fill={INDIGO}
-            stroke="white"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
           />
         </svg>
       </div>
