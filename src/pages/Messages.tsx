@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { X, Search, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { chatStore } from '@/utils/chat-store';
@@ -142,6 +142,7 @@ const SwipeConversationItem: React.FC<SwipeConvItemProps> = ({
 
 const Messages = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authUser } = useAuth();
   const [query, setQuery] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -315,6 +316,17 @@ const Messages = () => {
   };
 
   const handleBack = () => {
+    const routeState = location.state as any;
+    const fromPath = routeState?.fromPath;
+
+    if (fromPath && fromPath !== location.pathname) {
+      navigate(fromPath, {
+        replace: true,
+        state: routeState?.fromState ?? null,
+      });
+      return;
+    }
+
     navigate('/', { replace: true, state: { direction: 'back' } });
   };
 

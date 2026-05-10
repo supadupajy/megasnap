@@ -17,7 +17,12 @@ const Header = () => {
 
   const navigateKeepingMapPosition = (path: string) => {
     mapCache.keepPosition = true;
-    navigate(path);
+    navigate(path, {
+      state: {
+        fromPath: `${location.pathname}${location.search}${location.hash}`,
+        fromState: location.state ?? null,
+      },
+    });
   };
 
   return (

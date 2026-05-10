@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Trash2, Loader2, Bell } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -121,6 +121,7 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authUser } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,11 +129,22 @@ const Notifications = () => {
   const hasLoaded = useRef(false);
 
   const handleBack = useCallback(() => {
-    navigate('/', { 
-      replace: true, 
-      state: { direction: 'back' } 
+    const routeState = location.state as any;
+    const fromPath = routeState?.fromPath;
+
+    if (fromPath && fromPath !== location.pathname) {
+      navigate(fromPath, {
+        replace: true,
+        state: routeState?.fromState ?? null,
+      });
+      return;
+    }
+
+    navigate('/', {
+      replace: true,
+      state: { direction: 'back' },
     });
-  }, [navigate]);
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     const handleOpenWrite = () => {};
