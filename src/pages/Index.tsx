@@ -11,7 +11,7 @@ import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
 import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
 import MapLevelIndicator from '@/components/MapLevelIndicator';
-import { RefreshCw, Navigation, Search, Check, X } from 'lucide-react';
+import { RefreshCw, Navigation, Search, Check, X, MapPin } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getFallbackImage } from '@/lib/utils';
 
@@ -37,6 +37,30 @@ const fireConfetti = (options: any) => {
     const f = (window as any).confetti || confetti;
     if (f) f(options);
   } catch (e) {}
+};
+
+const normalizeCityName = (city: string) => {
+  const metroMap: Record<string, string> = {
+    서울: '서울시',
+    부산: '부산시',
+    인천: '인천시',
+    대구: '대구시',
+    대전: '대전시',
+    광주: '광주시',
+    울산: '울산시',
+    세종특별자치시: '세종시',
+  };
+  return metroMap[city] || city;
+};
+
+const formatMapAddress = (result: any, lat: number, lng: number) => {
+  const addr = result?.[0]?.address;
+  if (!addr) return resolveOfflineLocationName(lat, lng);
+
+  const city = normalizeCityName(addr.region_1depth_name || '');
+  const district = addr.region_2depth_name || '';
+  const dong = addr.region_3depth_name || addr.region_3depth_h_name || '';
+  return [city, district, dong].filter(Boolean).join(' ') || resolveOfflineLocationName(lat, lng);
 };
 
 function clusterByAngleClient(
@@ -181,6 +205,11 @@ const Index = () => {
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
   // routeState로 위치가 지정된 경우 focusPostOnMap에서 setMapCenter를 호출 → 부드러운 smoothMoveTo
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  const [centerAddress, setCenterAddress] = useState(() => (
+    mapCache.lastCenter
+      ? resolveOfflineLocationName(mapCache.lastCenter.lat, mapCache.lastCenter.lng)
+      : '위치 확인 중'
+  ));
   // 인디케이터용 통합 스냅샷: bounds, dbCounts, posts를 항상 동시에 업데이트
   // → 인디케이터가 (bounds, points)를 일관된 짝으로 받아 깜빡임 방지
   const [stableSnapshot, setStableSnapshot] = useState<{
@@ -330,9 +359,9 @@ const Index = () => {
     }
   }, [trendingBottom]);
   const indicatorTopOffset = (collapsedTrendingBottomRef.current || trendingBottom) + 8;
-  // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 충분한 여유
-  // 물방울 마커 높이(52px)가 BottomNav에 가려지지 않도록 16px 추가 여유
-  const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 16;
+  // 인디케이터 하단 오프셋: BottomNav(64) + safe-area-inset-bottom + 위치 배너 공간
+  // 물방울 마커가 하단 위치 배너와 겹치지 않도록 여유를 더 확보
+  const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 56;
 
   // ── 포스트 매핑 헬퍼 ────────────────────────────────────────
   const mapRawToPost = (p: any, prev?: Post | null): Post => {
@@ -873,6 +902,36 @@ const Index = () => {
       throttleTimer.current = null;
     }, 300);
   }, []);
+
+  useEffect(() => {
+    const center = mapData?.center || mapCenter || mapCache.lastCenter;
+    if (!center?.lat || !center?.lng) return;
+
+    const fallback = resolveOfflineLocationName(center.lat, center.lng);
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const kakao = (window as any).kakao;
+      if (!kakao?.maps?.services) {
+        if (!cancelled) setCenterAddress(fallback);
+        return;
+      }
+
+      const geocoder = new kakao.maps.services.Geocoder();
+      geocoder.coord2Address(center.lng, center.lat, (result: any, status: any) => {
+        if (cancelled) return;
+        if (status === kakao.maps.services.Status.OK) {
+          setCenterAddress(formatMapAddress(result, center.lat, center.lng));
+        } else {
+          setCenterAddress(fallback);
+        }
+      });
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [mapData?.center?.lat, mapData?.center?.lng, mapCenter?.lat, mapCenter?.lng]);
 
   // ── 포스트 포커스 ────────────────────────────────────────────
   const focusPostOnMap = useCallback((post: Post, center?: { lat: number; lng: number }) => {
@@ -1544,6 +1603,21 @@ const Index = () => {
 
           {!isSelectingLocation && !isSelectingAdLocation && (
             <>
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+                style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 14px)' }}
+                className="absolute left-1/2 z-[21] flex h-9 w-[min(18rem,calc(100vw-10rem))] -translate-x-1/2 items-center justify-center gap-1.5 rounded-full border border-white/70 bg-white/72 px-3 shadow-[0_10px_28px_rgba(79,70,229,0.18)] backdrop-blur-2xl"
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-white shadow-sm">
+                  <MapPin className="h-3 w-3 fill-white/20" />
+                </span>
+                <span className="min-w-0 truncate text-[11px] font-black tracking-[-0.02em] text-slate-800">
+                  {centerAddress}
+                </span>
+              </motion.div>
+
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute left-4 z-20 flex flex-col gap-2", isTrendingExpanded && "pointer-events-none")}
