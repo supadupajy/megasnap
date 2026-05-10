@@ -189,7 +189,7 @@ const PostDetailOverlay = ({
         </div>
       ) : (
         <div
-          className="flex-1 overflow-y-auto no-scrollbar"
+          className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-x-none"
           style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
         >
           {allPosts.map((p) => (
@@ -324,7 +324,7 @@ const VideoSearch = () => {
       </div>
 
       {/* 결과 영역 */}
-      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain bg-white">
         {!hasSearched ? (
           <div className="px-4 py-20 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4">

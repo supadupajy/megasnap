@@ -254,7 +254,7 @@ const PostDetail = () => {
 
       {/* Scrollable Content Area */}
       <div
-        className="flex-1 overflow-y-auto no-scrollbar"
+        className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-x-none"
         style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {allPosts.map((p) => (

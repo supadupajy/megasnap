@@ -78,11 +78,11 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
 
   return (
     <div
-      className="px-4 bg-gray-50 border-b border-gray-100 transition-colors"
+      className="w-full max-w-full overflow-hidden px-4 bg-gray-50 border-b border-gray-100 transition-colors"
       style={{ paddingTop: padY, paddingBottom: padY }}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center" style={{ gap: `${gap}px` }}>
+      <div className="flex min-w-0 items-center justify-between">
+        <div className="flex min-w-0 items-center" style={{ gap: `${gap}px` }}>
           <div
             className={`${iconBgClass} rounded-2xl flex items-center justify-center shadow-sm shrink-0`}
             style={{ width: iconBox, height: iconBox }}

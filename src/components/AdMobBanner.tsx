@@ -18,7 +18,7 @@ interface AdMobBannerProps {
  */
 const AdMobBanner: React.FC<AdMobBannerProps> = ({ className = '' }) => {
   return (
-    <div className={`w-full bg-white border-b border-gray-100 ${className}`}>
+    <div className={`w-full max-w-full overflow-x-hidden bg-white border-b border-gray-100 ${className}`}>
       {/* 광고 헤더 - 포스팅 유저 정보처럼 */}
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-3">
@@ -66,8 +66,8 @@ const AdMobBanner: React.FC<AdMobBannerProps> = ({ className = '' }) => {
               실제 출시 후 AdMob 광고가<br />이 자리에 표시됩니다
             </p>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-indigo-100">
-            <p className="text-[10px] text-indigo-400 font-mono font-bold">{ADMOB_TEST_NATIVE_ID}</p>
+          <div className="max-w-full bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-indigo-100">
+            <p className="max-w-[calc(100vw-4rem)] truncate text-[10px] text-indigo-400 font-mono font-bold">{ADMOB_TEST_NATIVE_ID}</p>
           </div>
         </div>
       </div>

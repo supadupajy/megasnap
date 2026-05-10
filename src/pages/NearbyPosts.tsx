@@ -227,8 +227,8 @@ const NearbyPosts = () => {
   };
 
   return (
-    <div ref={scrollRef} className="h-screen overflow-y-auto bg-white no-scrollbar" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
-      <div className="sticky top-0 z-40 bg-white pt-[64px]">
+    <div ref={scrollRef} className="h-screen w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={progress}
           Icon={LayoutGrid}

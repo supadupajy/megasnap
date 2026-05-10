@@ -581,7 +581,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     <div
       ref={containerRef}
       className={cn(
-        "transition-none",
+        "w-full max-w-full overflow-x-hidden transition-none",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >

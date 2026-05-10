@@ -424,10 +424,10 @@ const PostListOverlay = ({
         bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
         paddingBottom: '24px'
       }}
-      className="post-list-overlay-enter fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] overflow-y-auto bg-white no-scrollbar shadow-none"
+      className="post-list-overlay-enter fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] overflow-y-auto overflow-x-hidden bg-white no-scrollbar shadow-none overscroll-x-none"
     >
       {/* Sticky 헤더 (Popular와 동일) */}
-      <div className="sticky top-0 z-40 bg-white">
+      <div className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white">
           <CollapsingHeader
             progress={headerProgress}
             Icon={LayoutGrid}
