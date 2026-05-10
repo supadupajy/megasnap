@@ -4,12 +4,17 @@ const config: CapacitorConfig = {
   appId: 'com.chorasnap.chorasnap',
   appName: 'ChoraSnap',
   webDir: 'dist',
+  server: {
+    hostname: 'localhost',
+    iosScheme: 'http',
+  },
   ios: {
     allowsLinkPreview: false,
     scrollEnabled: false,
     limitsNavigationsToAppBoundDomains: false,
   },
   plugins: {
+
     Keyboard: {
       resize: "body",
       style: "light",
