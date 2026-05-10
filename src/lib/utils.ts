@@ -213,6 +213,85 @@ export const compressImage = (
   });
 };
 
+export const cropImageToAspectRatio = (
+  file: File,
+  crop: { x: number; y: number } = { x: 50, y: 50 },
+  aspectRatio = 3 / 4,
+  maxHeight = 1920,
+  quality = 0.86
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const sourceW = img.naturalWidth;
+      const sourceH = img.naturalHeight;
+      if (!sourceW || !sourceH) {
+        reject(new Error('이미지 크기를 확인할 수 없습니다.'));
+        return;
+      }
+
+      const sourceAspect = sourceW / sourceH;
+      let cropW = sourceW;
+      let cropH = sourceH;
+      let sourceX = 0;
+      let sourceY = 0;
+
+      const cropXPercent = Math.max(0, Math.min(100, crop.x));
+      const cropYPercent = Math.max(0, Math.min(100, crop.y));
+
+      if (sourceAspect > aspectRatio) {
+        cropW = sourceH * aspectRatio;
+        sourceX = ((sourceW - cropW) * cropXPercent) / 100;
+      } else if (sourceAspect < aspectRatio) {
+        cropH = sourceW / aspectRatio;
+        sourceY = ((sourceH - cropH) * cropYPercent) / 100;
+      }
+
+      const outputH = Math.min(maxHeight, Math.round(cropH));
+      const outputW = Math.round(outputH * aspectRatio);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = outputW;
+      canvas.height = outputH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas context를 생성할 수 없습니다.'));
+        return;
+      }
+
+      ctx.drawImage(img, sourceX, sourceY, cropW, cropH, 0, 0, outputW, outputH);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('이미지 크롭에 실패했습니다.'));
+            return;
+          }
+          const baseName = file.name.replace(/\.[^.]+$/, '');
+          const cropped = new File([blob], `${baseName}-3x4.jpg`, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(cropped);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('이미지를 로드할 수 없습니다.'));
+    };
+
+    img.src = url;
+  });
+};
+
 export const createVideoThumbnail = async (file: File): Promise<Blob> => {
   const objectUrl = URL.createObjectURL(file);
 

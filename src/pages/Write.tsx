@@ -6,7 +6,7 @@ import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn, createVideoThumbnail, compressImage } from '@/lib/utils';
+import { cn, createVideoThumbnail, cropImageToAspectRatio } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
@@ -250,9 +250,9 @@ const Write = () => {
         const fileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
-        // 이미지인 경우 업로드 전 압축 (최대 1920px, JPEG 82%)
+        // 이미지인 경우 3:4 프레임에서 사용자가 맞춘 위치 그대로 잘라서 업로드
         const fileToUpload = media.type === 'image'
-          ? await compressImage(media.file).catch(() => media.file)
+          ? await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }).catch(() => media.file)
           : media.file;
 
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, fileToUpload, {
@@ -444,6 +444,9 @@ const Write = () => {
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
+                    {mediaFiles.length > 0 && currentMedia?.type === 'image' && (
+                      <span className="ml-1 rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600">드래그로 위치 조정</span>
+                    )}
                     <div className="ml-auto flex items-center gap-2">
                       <span className="text-sm font-bold text-gray-900">다음</span>
                       <button
@@ -466,116 +469,123 @@ const Write = () => {
                 </div>
 
                 {mediaFiles.length > 0 ? (
-                  <div
-                    ref={containerRef}
-                    className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none"
-                    style={{ aspectRatio: '3 / 4' }}
-                  >
-                    {currentMedia?.type === 'image' ? (
-                      <img
-                        ref={imgRef}
-                        src={currentMedia.url}
-                        className="pointer-events-none"
-                        onLoad={(e) => {
-                          const img = e.currentTarget;
-                          const container = containerRef.current;
-                          if (!container) return;
-                          const conW = container.offsetWidth;
-                          const conH = container.offsetHeight;
-                          const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
-                          const renderedW = img.naturalWidth * scale;
-                          const renderedH = img.naturalHeight * scale;
-                          const cropX = currentMedia.crop?.x ?? 50;
-                          const cropY = currentMedia.crop?.y ?? 50;
-                          cropPixelRef.current = {
-                            x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-                            y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-                          };
-                          // ✅ 로드 완료 → 렌더링 트리거
-                          setImgLoaded(true);
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-                          // ✅ 로드 전엔 invisible, 로드 후 보임
-                          opacity: imgLoaded ? 1 : 0,
-                          transition: isDragging
-                            ? 'none'
-                            : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.2s ease',
-                        }}
-                      />
-                    ) : (
-                      <video
-                        src={currentMedia?.url}
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-                        autoPlay muted loop playsInline
-                      />
-                    )}
-
-                    {/* 드래그 오버레이 */}
+                  <div className="space-y-3">
                     <div
-                      className="absolute inset-0 z-10"
-                      style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-                      onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
-                      onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
-                      onMouseUp={handleDragEnd}
-                      onMouseLeave={handleDragEnd}
-                      onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
-                      onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
-                      onTouchEnd={handleDragEnd}
-                    />
-
-                    {/* 삭제 버튼 */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const newFiles = [...mediaFiles];
-                        newFiles.splice(currentSlide, 1);
-                        setMediaFiles(newFiles);
-                        setCurrentSlide(prev => Math.min(prev, Math.max(0, newFiles.length - 1)));
-                      }}
-                      className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
+                      ref={containerRef}
+                      className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none bg-slate-100"
+                      style={{ aspectRatio: '3 / 4', touchAction: currentMedia?.type === 'image' ? 'none' : 'auto' }}
                     >
-                      <X className="w-4 h-4" />
-                    </button>
+                      {currentMedia?.type === 'image' ? (
+                        <img
+                          ref={imgRef}
+                          src={currentMedia.url}
+                          className="pointer-events-none"
+                          onLoad={(e) => {
+                            const img = e.currentTarget;
+                            const container = containerRef.current;
+                            if (!container) return;
+                            const conW = container.offsetWidth;
+                            const conH = container.offsetHeight;
+                            const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
+                            const renderedW = img.naturalWidth * scale;
+                            const renderedH = img.naturalHeight * scale;
+                            const cropX = currentMedia.crop?.x ?? 50;
+                            const cropY = currentMedia.crop?.y ?? 50;
+                            cropPixelRef.current = {
+                              x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
+                              y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
+                            };
+                            // ✅ 로드 완료 → 렌더링 트리거
+                            setImgLoaded(true);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+                            // ✅ 로드 전엔 invisible, 로드 후 보임
+                            opacity: imgLoaded ? 1 : 0,
+                            transition: isDragging
+                              ? 'none'
+                              : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.2s ease',
+                          }}
+                        />
+                      ) : (
+                        <video
+                          src={currentMedia?.url}
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                          autoPlay muted loop playsInline
+                        />
+                      )}
 
-                    {/* 슬라이드 전환 + 인디케이터 */}
-                    {mediaFiles.length > 1 && (
-                      <>
-                        {/* 왼쪽 화살표 버튼 */}
-                        {currentSlide > 0 && (
-                          <button
-                            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
-                            onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => Math.max(0, prev - 1)); }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => e.stopPropagation()}
-                          >
-                            <ChevronLeft className="w-5 h-5" />
-                          </button>
-                        )}
-                        {/* 오른쪽 화살표 버튼 */}
-                        {currentSlide < mediaFiles.length - 1 && (
-                          <button
-                            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
-                            onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1)); }}
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onTouchStart={(e) => e.stopPropagation()}
-                          >
-                            <ChevronRight className="w-5 h-5" />
-                          </button>
-                        )}
-                        {/* 인디케이터 */}
-                        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-                          {mediaFiles.map((_, i) => (
-                            <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
-                          ))}
-                        </div>
-                      </>
+                      {/* 드래그 오버레이 */}
+                      <div
+                        className="absolute inset-0 z-10"
+                        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                        onMouseDown={(e) => { e.preventDefault(); handleDragStart(e.clientX, e.clientY); }}
+                        onMouseMove={(e) => handleDragMove(e.clientX, e.clientY)}
+                        onMouseUp={handleDragEnd}
+                        onMouseLeave={handleDragEnd}
+                        onTouchStart={(e) => { e.stopPropagation(); handleDragStart(e.touches[0].clientX, e.touches[0].clientY); }}
+                        onTouchMove={(e) => { e.stopPropagation(); handleDragMove(e.touches[0].clientX, e.touches[0].clientY); }}
+                        onTouchEnd={handleDragEnd}
+                      />
+
+                      {/* 삭제 버튼 */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newFiles = [...mediaFiles];
+                          newFiles.splice(currentSlide, 1);
+                          setMediaFiles(newFiles);
+                          setCurrentSlide(prev => Math.min(prev, Math.max(0, newFiles.length - 1)));
+                        }}
+                        className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white z-30"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      {/* 슬라이드 전환 + 인디케이터 */}
+                      {mediaFiles.length > 1 && (
+                        <>
+                          {/* 왼쪽 화살표 버튼 */}
+                          {currentSlide > 0 && (
+                            <button
+                              className="absolute left-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
+                              onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => Math.max(0, prev - 1)); }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onTouchStart={(e) => e.stopPropagation()}
+                            >
+                              <ChevronLeft className="w-5 h-5" />
+                            </button>
+                          )}
+                          {/* 오른쪽 화살표 버튼 */}
+                          {currentSlide < mediaFiles.length - 1 && (
+                            <button
+                              className="absolute right-3 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all"
+                              onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => Math.min(mediaFiles.length - 1, prev + 1)); }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onTouchStart={(e) => e.stopPropagation()}
+                            >
+                              <ChevronRight className="w-5 h-5" />
+                            </button>
+                          )}
+                          {/* 인디케이터 */}
+                          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
+                            {mediaFiles.map((_, i) => (
+                              <div key={i} className={cn("h-1.5 rounded-full transition-all", currentSlide === i ? "bg-white w-6" : "bg-white/40 w-1.5")} />
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    {currentMedia?.type === 'image' && (
+                      <p className="text-center text-xs font-bold text-slate-500">
+                        사진을 잡고 움직여 3:4 프레임에 맞춰주세요. 보이는 그대로 업로드돼요.
+                      </p>
                     )}
                   </div>
                 ) : (
