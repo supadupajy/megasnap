@@ -59,8 +59,6 @@ const queryClient = new QueryClient();
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
   
-  usePushNotifications();
-
   if (loading) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-white">
@@ -74,6 +72,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
   
   return <>{children}</>;
+};
+
+const PushNotificationBootstrap = () => {
+  usePushNotifications();
+  return null;
 };
 
 const AnimatedRoutes = () => {
@@ -273,6 +276,7 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <PushNotificationBootstrap />
             <NotificationProvider>
             <div className="min-h-[100dvh] w-full bg-white overflow-x-hidden">
               <AnimatePresence mode="wait">

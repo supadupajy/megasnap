@@ -9,6 +9,8 @@ import { isMobilePlatform } from '@/lib/utils';
 
 const NOTIFICATION_SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3';
 
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // 포그라운드 상태를 DB에 업데이트
 const updateForegroundState = async (userId: string, isForeground: boolean) => {
   try {
@@ -56,6 +58,35 @@ export const usePushNotifications = () => {
   useEffect(() => {
     if (!authUser || !isMobilePlatform()) return;
 
+    let cancelled = false;
+
+    const requestStartupPermission = async () => {
+      let permStatus = await PushNotifications.checkPermissions();
+      console.log('[Push] Permission status:', permStatus.receive);
+
+      if (permStatus.receive !== 'prompt') return permStatus;
+
+      // 앱 시작 시 위치 권한 팝업이 먼저 떠 있으면 알림 권한 팝업이 무시/지연될 수 있어
+      // 짧은 간격으로 재확인해 사용자가 위치 팝업을 닫은 직후 알림 팝업도 이어서 표시되도록 한다.
+      for (const delay of [0, 1600, 3500, 6000]) {
+        if (cancelled) return permStatus;
+        if (delay > 0) await wait(delay);
+
+        permStatus = await PushNotifications.checkPermissions();
+        if (permStatus.receive !== 'prompt') return permStatus;
+
+        try {
+          permStatus = await PushNotifications.requestPermissions();
+          console.log('[Push] After request, permission status:', permStatus.receive);
+          if (permStatus.receive !== 'prompt') return permStatus;
+        } catch (error) {
+          console.warn('[Push] Permission request was delayed or interrupted:', error);
+        }
+      }
+
+      return permStatus;
+    };
+
     const register = async () => {
       try {
         await PushNotifications.createChannel({
@@ -74,13 +105,7 @@ export const usePushNotifications = () => {
           return;
         }
 
-        let permStatus = await PushNotifications.checkPermissions();
-        console.log('[Push] Permission status:', permStatus.receive);
-
-        if (permStatus.receive === 'prompt') {
-          permStatus = await PushNotifications.requestPermissions();
-          console.log('[Push] After request, permission status:', permStatus.receive);
-        }
+        const permStatus = await requestStartupPermission();
 
         if (permStatus.receive !== 'granted') {
           console.warn('[Push] Permission not granted:', permStatus.receive);
@@ -158,6 +183,8 @@ export const usePushNotifications = () => {
     register();
     addListeners();
 
-    return () => {};
+    return () => {
+      cancelled = true;
+    };
   }, [authUser, navigate]);
 };
