@@ -38,6 +38,7 @@ const BottomNav = () => {
   const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
+  const lastActiveTabIndexRef = useRef(0);
 
   const getTabIndexForPath = (path: string) => {
     const pathname = path.split(/[?#]/)[0] || '/';
@@ -60,13 +61,22 @@ const BottomNav = () => {
         const previousTabIndex = getTabIndexForPath(fromPath);
         if (previousTabIndex !== -1) return previousTabIndex;
       }
+      return lastActiveTabIndexRef.current;
     }
 
     return getTabIndexForPath(location.pathname);
   };
 
   const activeIndex = resolveActiveIndex();
-  const safeIndex = activeIndex === -1 ? 0 : activeIndex;
+  const safeIndex = activeIndex === -1 ? lastActiveTabIndexRef.current : activeIndex;
+
+  useEffect(() => {
+    if (location.pathname === '/notifications' || location.pathname === '/messages') return;
+    const currentTabIndex = getTabIndexForPath(location.pathname);
+    if (currentTabIndex !== -1) {
+      lastActiveTabIndexRef.current = currentTabIndex;
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     const iconEl = iconRefs.current[safeIndex];
