@@ -39,17 +39,30 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
 
-  const resolveActiveIndex = () => {
+  const getTabIndexForPath = (path: string) => {
+    const pathname = path.split(/[?#]/)[0] || '/';
 
-    const exact = navItems.findIndex((item) => item.path === location.pathname);
+    const exact = navItems.findIndex((item) => item.path === pathname);
     if (exact !== -1) return exact;
 
-    const matched = subRouteToTab.find((entry) => entry.match(location.pathname));
+    const matched = subRouteToTab.find((entry) => entry.match(pathname));
     if (matched) {
-      const idx = navItems.findIndex((item) => item.path === matched.tabPath);
-      if (idx !== -1) return idx;
+      return navItems.findIndex((item) => item.path === matched.tabPath);
     }
+
     return -1;
+  };
+
+  const resolveActiveIndex = () => {
+    if (location.pathname === '/notifications' || location.pathname === '/messages') {
+      const fromPath = (location.state as any)?.fromPath;
+      if (fromPath) {
+        const previousTabIndex = getTabIndexForPath(fromPath);
+        if (previousTabIndex !== -1) return previousTabIndex;
+      }
+    }
+
+    return getTabIndexForPath(location.pathname);
   };
 
   const activeIndex = resolveActiveIndex();
