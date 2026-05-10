@@ -159,29 +159,11 @@ const Write = () => {
 
   const applyPreviewPlacement = () => {
     const img = imgRef.current;
-    const container = containerRef.current;
-    if (!img || !container || !img.naturalWidth || !img.naturalHeight) return null;
-
-    const conW = container.offsetWidth;
-    const conH = container.offsetHeight;
-    const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight) * currentZoomRef.current;
-    const renderedW = img.naturalWidth * scale;
-    const renderedH = img.naturalHeight * scale;
-    const maxX = Math.max(0, (renderedW - conW) / 2);
-    const maxY = Math.max(0, (renderedH - conH) / 2);
-
-    cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x));
-    cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y));
-
-    img.style.width = `${renderedW}px`;
-    img.style.height = `${renderedH}px`;
-    img.style.left = `${(conW - renderedW) / 2 - cropPixelRef.current.x}px`;
-    img.style.top = `${(conH - renderedH) / 2 - cropPixelRef.current.y}px`;
-    img.style.objectFit = 'fill';
-    img.style.objectPosition = 'center';
-    img.style.transform = 'none';
-
-    return pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
+    if (!img) return null;
+    const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
+    img.style.objectPosition = `${x}% ${y}%`;
+    img.style.transform = `scale(${currentZoomRef.current})`;
+    return { x, y };
   };
 
   const applyDrag = (deltaX: number, deltaY: number) => {
@@ -201,7 +183,6 @@ const Write = () => {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (mediaFiles[currentSlide]?.type !== 'image') return;
-    e.preventDefault();
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -220,7 +201,6 @@ const Write = () => {
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!e.isPrimary && !activePointersRef.current.has(e.pointerId)) return;
     if (!activePointersRef.current.has(e.pointerId) && !isDraggingRef.current) return;
-    e.preventDefault();
     e.stopPropagation();
     activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -237,7 +217,6 @@ const Write = () => {
 
   const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!e.isPrimary && !activePointersRef.current.has(e.pointerId)) return;
-    e.preventDefault();
     e.stopPropagation();
     activePointersRef.current.delete(e.pointerId);
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
@@ -258,7 +237,6 @@ const Write = () => {
 
   const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
     if (mediaFiles[currentSlide]?.type !== 'image') return;
-    e.preventDefault();
     e.stopPropagation();
     updateCurrentMediaTransform(currentZoomRef.current * (e.deltaY < 0 ? 1.06 : 0.94));
   };
@@ -283,9 +261,6 @@ const Write = () => {
         x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
         y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
       };
-      applyPreviewPlacement();
-      // ✅ 로드 완료 → 렌더링 트리거
-      setImgLoaded(true);
     }
     isDraggingRef.current = true;
     setIsDragging(true);
@@ -625,12 +600,13 @@ const Write = () => {
                             height: '100%',
                             objectFit: 'cover',
                             objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+                            transform: `scale(${currentMedia.zoom ?? 1})`,
                             transformOrigin: 'center center',
                             // ✅ 로드 전엔 invisible, 로드 후 보임
                             opacity: imgLoaded ? 1 : 0,
                             transition: isDragging
                               ? 'none'
-                              : 'left 0.2s ease, top 0.2s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease',
+                              : 'object-position 0.2s ease, transform 0.2s ease, opacity 0.2s ease',
                           }}
                         />
                       ) : (
