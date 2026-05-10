@@ -38,10 +38,9 @@ const BottomNav = () => {
   const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   const resolveActiveIndex = () => {
+
     const exact = navItems.findIndex((item) => item.path === location.pathname);
     if (exact !== -1) return exact;
 
@@ -127,13 +126,6 @@ const BottomNav = () => {
           );
         })}
       </div>
-      {isIOS && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 h-1 w-32 -translate-x-1/2 rounded-full bg-slate-900/35"
-          style={{ bottom: '6px' }}
-        />
-      )}
     </nav>
   );
 };
