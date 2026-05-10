@@ -216,6 +216,7 @@ export const compressImage = (
 export const cropImageToAspectRatio = (
   file: File,
   crop: { x: number; y: number } = { x: 50, y: 50 },
+  zoom = 1,
   aspectRatio = 3 / 4,
   maxHeight = 1920,
   quality = 0.86
@@ -235,23 +236,25 @@ export const cropImageToAspectRatio = (
       }
 
       const sourceAspect = sourceW / sourceH;
-      let cropW = sourceW;
-      let cropH = sourceH;
-      let sourceX = 0;
-      let sourceY = 0;
+      let baseCropW = sourceW;
+      let baseCropH = sourceH;
+
+      if (sourceAspect > aspectRatio) {
+        baseCropW = sourceH * aspectRatio;
+      } else if (sourceAspect < aspectRatio) {
+        baseCropH = sourceW / aspectRatio;
+      }
+
+      const safeZoom = Math.max(1, zoom || 1);
+      const cropW = Math.min(sourceW, baseCropW / safeZoom);
+      const cropH = Math.min(sourceH, baseCropH / safeZoom);
 
       const cropXPercent = Math.max(0, Math.min(100, crop.x));
       const cropYPercent = Math.max(0, Math.min(100, crop.y));
+      const sourceX = ((sourceW - cropW) * cropXPercent) / 100;
+      const sourceY = ((sourceH - cropH) * cropYPercent) / 100;
 
-      if (sourceAspect > aspectRatio) {
-        cropW = sourceH * aspectRatio;
-        sourceX = ((sourceW - cropW) * cropXPercent) / 100;
-      } else if (sourceAspect < aspectRatio) {
-        cropH = sourceW / aspectRatio;
-        sourceY = ((sourceH - cropH) * cropYPercent) / 100;
-      }
-
-      const outputH = Math.min(maxHeight, Math.round(cropH));
+      const outputH = Math.min(maxHeight, Math.round(baseCropH));
       const outputW = Math.round(outputH * aspectRatio);
 
       const canvas = document.createElement('canvas');

@@ -22,6 +22,7 @@ interface MediaFile {
   thumbnail?: string;
   thumbnailBlob?: Blob; // 동영상 썸네일 미리 생성해둔 Blob
   crop?: { x: number; y: number };
+  zoom?: number;
   orientation?: 'landscape' | 'portrait';
 }
 
@@ -58,6 +59,9 @@ const Write = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cropPixelRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
+  const currentZoomRef = useRef(1);
+  const activePointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchStartRef = useRef({ distance: 0, zoom: 1 });
 
   useEffect(() => {
     if (!initialLocation) {
@@ -99,6 +103,8 @@ const Write = () => {
 
   useEffect(() => {
     cropPixelRef.current = { x: 0, y: 0 };
+    currentZoomRef.current = mediaFiles[currentSlide]?.zoom ?? 1;
+    activePointersRef.current.clear();
     // ✅ 슬라이드 변경 시 로드 상태 초기화
     setImgLoaded(false);
   }, [currentSlide]);
@@ -113,8 +119,9 @@ const Write = () => {
     const conW = container.offsetWidth;
     const conH = container.offsetHeight;
     const scale = Math.max(conW / natW, conH / natH);
-    const renderedW = natW * scale;
-    const renderedH = natH * scale;
+    const zoom = currentZoomRef.current;
+    const renderedW = natW * scale * zoom;
+    const renderedH = natH * scale * zoom;
     return {
       maxX: Math.max(0, (renderedW - conW) / 2),
       maxY: Math.max(0, (renderedH - conH) / 2),
@@ -131,11 +138,29 @@ const Write = () => {
     const conW = container.offsetWidth;
     const conH = container.offsetHeight;
     const scale = Math.max(conW / natW, conH / natH);
-    const renderedW = natW * scale;
-    const renderedH = natH * scale;
+    const zoom = currentZoomRef.current;
+    const renderedW = natW * scale * zoom;
+    const renderedH = natH * scale * zoom;
     const x = renderedW <= conW ? 50 : 50 + (offsetX / (renderedW - conW)) * 100;
     const y = renderedH <= conH ? 50 : 50 + (offsetY / (renderedH - conH)) * 100;
     return { x, y };
+  };
+
+  const updateCurrentMediaTransform = (zoom = currentZoomRef.current) => {
+    const media = mediaFiles[currentSlide];
+    if (!media || media.type !== 'image') return;
+    currentZoomRef.current = Math.max(1, Math.min(4, zoom));
+    const { maxX, maxY } = getMaxOffset();
+    cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x));
+    cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y));
+    const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
+    if (imgRef.current) {
+      imgRef.current.style.objectPosition = `${x}% ${y}%`;
+      imgRef.current.style.transform = `scale(${currentZoomRef.current})`;
+    }
+    const newMedia = [...mediaFiles];
+    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: { x, y }, zoom: currentZoomRef.current };
+    setMediaFiles(newMedia);
   };
 
   const applyDrag = (deltaX: number, deltaY: number) => {
@@ -150,6 +175,74 @@ const Write = () => {
     }
   };
 
+  const getPointerDistance = () => {
+    const points = Array.from(activePointersRef.current.values());
+    if (points.length < 2) return 0;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointersRef.current.size === 2) {
+      isDraggingRef.current = false;
+      const distance = getPointerDistance();
+      pinchStartRef.current = { distance, zoom: currentZoomRef.current };
+      setIsDragging(true);
+      return;
+    }
+
+    handleDragStart(e.clientX, e.clientY);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.isPrimary && !activePointersRef.current.has(e.pointerId)) return;
+    if (!activePointersRef.current.has(e.pointerId) && !isDraggingRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointersRef.current.size >= 2) {
+      const distance = getPointerDistance();
+      if (pinchStartRef.current.distance > 0) {
+        updateCurrentMediaTransform(pinchStartRef.current.zoom * (distance / pinchStartRef.current.distance));
+      }
+      return;
+    }
+
+    if (isDraggingRef.current) handleDragMove(e.clientX, e.clientY);
+  };
+
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!e.isPrimary && !activePointersRef.current.has(e.pointerId)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    activePointersRef.current.delete(e.pointerId);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+
+    if (activePointersRef.current.size === 1) {
+      const remaining = Array.from(activePointersRef.current.values())[0];
+      handleDragStart(remaining.x, remaining.y);
+      return;
+    }
+
+    setIsDragging(false);
+    handleDragEnd();
+  };
+
+  const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    e.preventDefault();
+    e.stopPropagation();
+    updateCurrentMediaTransform(currentZoomRef.current * (e.deltaY < 0 ? 1.06 : 0.94));
+  };
+
   const handleDragStart = (clientX: number, clientY: number) => {
     const media = mediaFiles[currentSlide];
     if (!media || media.type !== 'image') return;
@@ -160,9 +253,10 @@ const Write = () => {
       const natH = img.naturalHeight;
       const conW = container.offsetWidth;
       const conH = container.offsetHeight;
+      currentZoomRef.current = media.zoom ?? 1;
       const scale = Math.max(conW / natW, conH / natH);
-      const renderedW = natW * scale;
-      const renderedH = natH * scale;
+      const renderedW = natW * scale * currentZoomRef.current;
+      const renderedH = natH * scale * currentZoomRef.current;
       const cropX = media.crop?.x ?? 50;
       const cropY = media.crop?.y ?? 50;
       cropPixelRef.current = {
@@ -189,33 +283,8 @@ const Write = () => {
     setIsDragging(false);
     const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
     const newMedia = [...mediaFiles];
-    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: { x, y } };
+    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: { x, y }, zoom: currentZoomRef.current };
     setMediaFiles(newMedia);
-  };
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!e.isPrimary || mediaFiles[currentSlide]?.type !== 'image') return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    handleDragStart(e.clientX, e.clientY);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!e.isPrimary || !isDraggingRef.current) return;
-    e.preventDefault();
-    e.stopPropagation();
-    handleDragMove(e.clientX, e.clientY);
-  };
-
-  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!e.isPrimary) return;
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    }
-    handleDragEnd();
   };
 
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,7 +316,7 @@ const Write = () => {
         }
       }
 
-      return { file, url, type, crop: { x: 50, y: 50 }, orientation, thumbnailBlob } as MediaFile;
+      return { file, url, type, crop: { x: 50, y: 50 }, zoom: 1, orientation, thumbnailBlob } as MediaFile;
     }));
 
     setMediaFiles([...mediaFiles, ...newItems]);
@@ -277,7 +346,7 @@ const Write = () => {
         
         // 이미지인 경우 3:4 프레임에서 사용자가 맞춘 위치 그대로 잘라서 업로드
         const fileToUpload = media.type === 'image'
-          ? await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }).catch(() => media.file)
+          ? await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
           : media.file;
 
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, fileToUpload, {
@@ -512,8 +581,9 @@ const Write = () => {
                             const conW = container.offsetWidth;
                             const conH = container.offsetHeight;
                             const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
-                            const renderedW = img.naturalWidth * scale;
-                            const renderedH = img.naturalHeight * scale;
+                            currentZoomRef.current = currentMedia.zoom ?? 1;
+                            const renderedW = img.naturalWidth * scale * currentZoomRef.current;
+                            const renderedH = img.naturalHeight * scale * currentZoomRef.current;
                             const cropX = currentMedia.crop?.x ?? 50;
                             const cropY = currentMedia.crop?.y ?? 50;
                             cropPixelRef.current = {
@@ -531,6 +601,8 @@ const Write = () => {
                             height: '100%',
                             objectFit: 'cover',
                             objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
+                            transform: `scale(${currentMedia.zoom ?? 1})`,
+                            transformOrigin: 'center center',
                             // ✅ 로드 전엔 invisible, 로드 후 보임
                             opacity: imgLoaded ? 1 : 0,
                             transition: isDragging
@@ -562,6 +634,7 @@ const Write = () => {
                         onPointerLeave={(e) => {
                           if (e.pointerType === 'mouse') handlePointerEnd(e);
                         }}
+                        onWheel={handleWheelZoom}
                       />
 
                       {/* 삭제 버튼 */}
