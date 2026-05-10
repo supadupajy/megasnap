@@ -11,7 +11,7 @@ import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
 import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
 import MapLevelIndicator from '@/components/MapLevelIndicator';
-import { RefreshCw, Navigation, Search, Check, X, MapPin } from 'lucide-react';
+import { Navigation, Search, Check, X, MapPin } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getFallbackImage } from '@/lib/utils';
 
@@ -107,8 +107,6 @@ const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, session } = useAuth();
-
-  const MAX_VISIBLE_MARKERS = 30;
 
   // ── 초기 마운트 시 routeState 또는 sessionStorage에서 위치 정보 복원 ─────
   // 이렇게 하면 mapCenter 초기값이 처음부터 올바른 포스팅 위치로 설정되어
@@ -301,7 +299,6 @@ const Index = () => {
   const trendingDivRef = useRef<HTMLDivElement>(null);
   const [trendingBottom, setTrendingBottom] = useState(160);
   const bottomNavHeight = 64; // BottomNav 높이(px)
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSelectingLocation, setIsSelectingLocation] = useState(false);
   const [tempSelectedLocation, setTempSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isSelectingAdLocation, setIsSelectingAdLocation] = useState(false);
@@ -881,9 +878,6 @@ const Index = () => {
   // 배지 숫자: viewport 안 전체 포스트 수
   const displayedPostCount = viewportPostCount;
 
-  // 새로고침 버튼 비활성화 조건용
-  const visiblePostCount = viewportPostCount;
-
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
   const mapChangeCalledRef = useRef(false);
@@ -1049,60 +1043,6 @@ const Index = () => {
       console.error('[Index] marker click fetch error:', err);
     }
   }, []);
-
-  // ── 새로고침 ─────────────────────────────────────────────────
-  const handleRefresh = useCallback(async () => {
-    // ref에서 최신 mapData를 읽음 → stale closure 문제 해결
-    const currentMapData = mapDataRef.current;
-
-    setIsRefreshing(true);
-    await fetchGlobalTrending(true); // 강제 새로고침
-
-    if (currentMapData?.bounds) {
-      const { sw, ne } = currentMapData.bounds;
-      const zoom = currentMapData.level ?? 6;
-      const center = currentMapData.center;
-
-      // 새로고침은 캐시 무시
-      lastBoundsKeyRef.current = '';
-
-      const raw = await fetchPostsInBounds(sw, ne, zoom, center);
-      setAllPosts(prev => {
-        const existingMap = new Map(prev.map(p => [p.id, p]));
-
-        // DB에서 반환된 포스트 ID 집합
-        const fetchedIds = new Set(raw.map((r: any) => String(r.id)));
-
-        // 현재 bounds 안에 있는 일반 포스트 중 DB에서 돌아오지 않은 것은 삭제된 것으로 제거
-        existingMap.forEach((post, id) => {
-          if (String(id).startsWith('ad-map-marker-')) return;
-          if (post.lat == null || post.lng == null) return;
-          const inBounds =
-            post.lat >= Math.min(sw.lat, ne.lat) &&
-            post.lat <= Math.max(sw.lat, ne.lat) &&
-            post.lng >= Math.min(sw.lng, ne.lng) &&
-            post.lng <= Math.max(sw.lng, ne.lng);
-          if (inBounds && !fetchedIds.has(id)) {
-            existingMap.delete(id);
-          }
-        });
-
-        // 광고 마커는 ads 테이블에서 별도 관리 — 새로고침으로 덮어쓰지 않음
-        raw.forEach((r: any) => {
-          if (String(r.id).startsWith('ad-map-marker-')) return;
-          const prevPost = existingMap.get(r.id) || null;
-          existingMap.set(r.id, mapRawToPost(r, prevPost));
-        });
-
-        const combined = Array.from(existingMap.values()).slice(0, 5000);
-        mapCache.posts = combined;
-        return combined;
-      });
-    }
-
-    setIsRefreshing(false);
-    showSuccess('데이터를 새로고침했습니다.');
-  }, [fetchGlobalTrending]);
 
   // ── 현재 위치 ────────────────────────────────────────────────
   const moveToCurrentLocation = useCallback(async (showToast = true, force = false) => {
@@ -1697,10 +1637,6 @@ const Index = () => {
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4", isTrendingExpanded && "pointer-events-none")}
               >
-                <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/20 backdrop-blur-2xl rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-lg shadow-black/10 active:scale-90 transition-all disabled:bg-white/10 disabled:text-indigo-400/60 disabled:shadow-none border border-white/60">
-                  <RefreshCw className={cn("w-6 h-6 stroke-[2.5px]", isRefreshing && "animate-spin")} />
-                  <span className="text-[9px] font-black mt-1">새로고침</span>
-                </button>
                 <div className="relative">
                   <button
                     ref={viewAllBtnRef}
