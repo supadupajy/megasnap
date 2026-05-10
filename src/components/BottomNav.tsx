@@ -43,9 +43,47 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const lastActiveTabIndexRef = useRef(0);
+  const viewportBaseHeightRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
+
+  useEffect(() => {
+    const getViewportHeight = () => window.visualViewport?.height ?? window.innerHeight;
+    viewportBaseHeightRef.current = Math.max(window.innerHeight, getViewportHeight());
+
+    const updateKeyboardOffset = () => {
+      const viewport = window.visualViewport;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      viewportBaseHeightRef.current = Math.max(viewportBaseHeightRef.current, window.innerHeight, viewportHeight);
+
+      const offset = Math.max(0, viewportBaseHeightRef.current - viewportHeight - viewportTop);
+      setKeyboardOffset(offset > 120 ? offset : 0);
+    };
+
+    const handleFocusOut = () => {
+      window.setTimeout(updateKeyboardOffset, 120);
+    };
+
+    updateKeyboardOffset();
+    window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
+    window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
+    window.addEventListener('resize', updateKeyboardOffset);
+    window.addEventListener('orientationchange', updateKeyboardOffset);
+    window.addEventListener('focusin', updateKeyboardOffset);
+    window.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateKeyboardOffset);
+      window.visualViewport?.removeEventListener('scroll', updateKeyboardOffset);
+      window.removeEventListener('resize', updateKeyboardOffset);
+      window.removeEventListener('orientationchange', updateKeyboardOffset);
+      window.removeEventListener('focusin', updateKeyboardOffset);
+      window.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
@@ -171,8 +209,12 @@ const BottomNav = () => {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000]"
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
+      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000] will-change-transform"
+      style={{
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+        transform: keyboardOffset > 0 ? `translate3d(0, ${keyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
+        transition: keyboardOffset > 0 ? 'none' : 'transform 160ms ease-out',
+      }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
         {/* Sliding pill background */}
