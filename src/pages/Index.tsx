@@ -1661,7 +1661,7 @@ const Index = () => {
                 initial={{ opacity: 0, y: 10, x: '-50%', scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
                 transition={{ duration: 0.22, ease: 'easeOut' }}
-                style={{ bottom: 'calc(64px + 8px + max(8px - env(safe-area-inset-bottom, 0px), 0px))' }}
+                style={{ bottom: 'calc(64px + 8px)' }}
                 className="absolute left-1/2 z-[21] flex h-8 w-[min(13.5rem,calc(100vw-11rem))] items-center justify-center gap-1.5 rounded-full border border-white/70 bg-white/72 px-2.5 shadow-[0_10px_28px_rgba(79,70,229,0.18)] backdrop-blur-2xl"
               >
                 <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full bg-indigo-500 text-white shadow-sm">
@@ -1673,7 +1673,7 @@ const Index = () => {
               </motion.div>
 
               <div
-                style={{ bottom: 'calc(64px + 8px + max(8px - env(safe-area-inset-bottom, 0px), 0px))' }}
+                style={{ bottom: 'calc(64px + 8px)' }}
                 className={cn("absolute left-4 z-20 flex flex-col gap-2", isTrendingExpanded && "pointer-events-none")}
               >
                 <button onClick={() => setIsCategoryOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50">
@@ -1694,7 +1694,7 @@ const Index = () => {
               </div>
 
               <div
-                style={{ bottom: 'calc(64px + 8px + max(8px - env(safe-area-inset-bottom, 0px), 0px))' }}
+                style={{ bottom: 'calc(64px + 8px)' }}
                 className={cn("absolute right-4 z-20 flex flex-col items-center gap-4", isTrendingExpanded && "pointer-events-none")}
               >
                 <button onClick={handleRefresh} disabled={isRefreshing || visiblePostCount <= MAX_VISIBLE_MARKERS} className="w-14 h-14 bg-white/20 backdrop-blur-2xl rounded-2xl flex flex-col items-center justify-center text-indigo-600 shadow-lg shadow-black/10 active:scale-90 transition-all disabled:bg-white/10 disabled:text-indigo-400/60 disabled:shadow-none border border-white/60">
