@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ChevronLeft, Trash2, Loader2, Bell } from 'lucide-react';
+import { X, Trash2, Loader2, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { motion, AnimatePresence, useMotionValue, animate } from 'framer-motion';
@@ -253,15 +253,17 @@ const Notifications = () => {
       onClick={() => setSwipedId(null)}
     >
       <div className="pt-16">
-        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
-          <button
-            onClick={handleBack}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
+        <div className="sticky top-0 z-40 bg-white grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-50">
+          <div />
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
+          <div className="flex justify-end">
+            <button
+              onClick={handleBack}
+              className="h-10 px-4 bg-white rounded-full flex items-center gap-2 text-gray-900 font-bold shadow-[0_4px_14px_rgba(15,23,42,0.12)] border border-gray-100 active:scale-95 transition-all"
+            >
+              <X className="w-5 h-5" />
+              <span>닫기</span>
+            </button>
           </div>
         </div>
 
