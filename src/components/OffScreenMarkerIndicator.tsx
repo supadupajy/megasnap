@@ -61,7 +61,6 @@ const EDGE = 10;
 // 방향을 가리키는 작은 인디고 삼각형 (마커 방향을 가리키는 화살촉)
 const TRI_HALF_W = 5;   // 삼각형 밑변의 절반 너비
 const TRI_HEIGHT = 9;   // 삼각형 높이 (밑변에서 꼭짓점까지)
-const TRI_OFFSET = R;   // 원 중심에서 삼각형 "기하 중심"까지의 거리 = R → 흰 원 가장자리에 반 걸침
 const INDIGO = 'rgb(79,70,229)';
 
 function computeIndicators(
@@ -228,11 +227,9 @@ const DropIndicator: React.FC<{
   };
 
   // 삼각형 위치: angle=0(위쪽)을 기준으로 그림. 회전은 dotLayer가 담당.
-  // 삼각형의 기하 중심(centroid)이 원 가장자리 위에 오도록 배치 → 절반은 안, 절반은 바깥
-  // 꼭짓점은 바깥(위)을 향함, 밑변은 안쪽(아래)
-  const triCenterY = CIRCLE_CY - TRI_OFFSET;
-  const triApexY = triCenterY - (TRI_HEIGHT * 2) / 3;        // 꼭짓점 (centroid에서 위로 2h/3)
-  const triBaseY = triCenterY + TRI_HEIGHT / 3;              // 밑변 (centroid에서 아래로 h/3)
+  // 삼각형 밑변을 원의 경계선에 맞춰 두 선이 자연스럽게 겹치도록 배치합니다.
+  const triBaseY = CIRCLE_CY - R;
+  const triApexY = triBaseY - TRI_HEIGHT;
   const trianglePoints = `${CX},${triApexY} ${CX - TRI_HALF_W},${triBaseY} ${CX + TRI_HALF_W},${triBaseY}`;
 
   return (
@@ -337,9 +334,8 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
     lineHeight: 1,
   };
 
-  const triCenterY = CIRCLE_CY - TRI_OFFSET;
-  const triApexY = triCenterY - (TRI_HEIGHT * 2) / 3;
-  const triBaseY = triCenterY + TRI_HEIGHT / 3;
+  const triBaseY = CIRCLE_CY - R;
+  const triApexY = triBaseY - TRI_HEIGHT;
   const trianglePoints = `${CX},${triApexY} ${CX - TRI_HALF_W},${triBaseY} ${CX + TRI_HALF_W},${triBaseY}`;
 
   return (
