@@ -16,9 +16,9 @@ const config: CapacitorConfig = {
   plugins: {
 
     Keyboard: {
-      resize: "body",
+      resize: "none",
       style: "light",
-      resizeOnFullScreen: true,
+      resizeOnFullScreen: false,
     },
 
     Geolocation: {

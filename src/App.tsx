@@ -88,19 +88,6 @@ const AnimatedRoutes = () => {
   const isChatPage = location.pathname.startsWith("/chat");
   const isWritePage = location.pathname === "/write";
 
-  // 키보드가 올라오면 BottomNav 숨기기
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const handleResize = () => {
-      const heightDiff = window.innerHeight - vv.height;
-      setIsKeyboardVisible(heightDiff > 150);
-    };
-    vv.addEventListener('resize', handleResize);
-    return () => vv.removeEventListener('resize', handleResize);
-  }, []);
-
   // App 레벨 Header를 숨길 페이지 (login/splash만)
   const hideAppChrome =
     location.pathname === "/login" ||
@@ -248,7 +235,7 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {(!hideBottomNav || isWritePage) && session && !isKeyboardVisible && <BottomNav />}
+      {(!hideBottomNav || isWritePage) && session && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
