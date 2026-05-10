@@ -584,7 +584,7 @@ const Write = () => {
                     </div>
                     {currentMedia?.type === 'image' && (
                       <p className="text-center text-xs font-bold text-slate-500">
-                        사진을 잡고 움직여 3:4 프레임에 맞춰주세요. 보이는 그대로 업로드돼요.
+                        사진을 움직여 프레임에 맞춰주세요. 보이는 그대로 업로드돼요.
                       </p>
                     )}
                   </div>
