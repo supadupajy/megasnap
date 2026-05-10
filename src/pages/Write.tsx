@@ -59,6 +59,8 @@ const Write = () => {
   const scrollAreaRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submitAreaRef = useRef<HTMLDivElement>(null);
+  const scrollTimerRef = useRef<number | null>(null);
+  const scrollAnimationRef = useRef<number | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -133,24 +135,58 @@ const Write = () => {
     };
   }, []);
 
+  const animateScrollAreaTo = (targetTop: number) => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+
+    if (scrollAnimationRef.current) {
+      cancelAnimationFrame(scrollAnimationRef.current);
+      scrollAnimationRef.current = null;
+    }
+
+    const startTop = scrollArea.scrollTop;
+    const distance = targetTop - startTop;
+    if (Math.abs(distance) < 2) return;
+
+    const duration = 150;
+    const startTime = performance.now();
+
+    const step = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      scrollArea.scrollTop = startTop + distance * eased;
+
+      if (progress < 1) {
+        scrollAnimationRef.current = requestAnimationFrame(step);
+      } else {
+        scrollAnimationRef.current = null;
+      }
+    };
+
+    scrollAnimationRef.current = requestAnimationFrame(step);
+  };
+
   const bringTextareaAboveKeyboard = () => {
-    window.setTimeout(() => {
+    if (scrollTimerRef.current) {
+      window.clearTimeout(scrollTimerRef.current);
+    }
+
+    scrollTimerRef.current = window.setTimeout(() => {
+      scrollTimerRef.current = null;
       const textarea = textareaRef.current;
       const submitArea = submitAreaRef.current;
       const scrollArea = scrollAreaRef.current;
       if (!textarea || !scrollArea) return;
 
       const viewport = window.visualViewport;
-      const visibleBottom = (viewport?.height ?? window.innerHeight) + (viewport?.offsetTop ?? 0) - 24;
+      const visibleBottom = (viewport?.height ?? window.innerHeight) + (viewport?.offsetTop ?? 0) - 18;
       const targetRect = (submitArea ?? textarea).getBoundingClientRect();
       const overflow = targetRect.bottom - visibleBottom;
 
       if (overflow > 0) {
-        scrollArea.scrollBy({ top: overflow + 28, behavior: 'smooth' });
-      } else {
-        textarea.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        animateScrollAreaTo(scrollArea.scrollTop + overflow + 22);
       }
-    }, 260);
+    }, 120);
   };
 
   useEffect(() => {
@@ -158,6 +194,13 @@ const Write = () => {
       bringTextareaAboveKeyboard();
     }
   }, [keyboardHeight, currentPage]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
+      if (scrollAnimationRef.current) cancelAnimationFrame(scrollAnimationRef.current);
+    };
+  }, []);
 
   const handleTextareaInteraction = () => {
     bringTextareaAboveKeyboard();
