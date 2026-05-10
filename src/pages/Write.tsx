@@ -51,6 +51,7 @@ const Write = () => {
   const [isDragging, setIsDragging] = useState(false);
   // ✅ 이미지 로드 완료 여부를 state로 관리
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [previewTransform, setPreviewTransform] = useState('translate3d(0px, 0px, 0) scale(1)');
 
   const initialLocation = location.state?.location;
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -106,6 +107,7 @@ const Write = () => {
     cropPixelRef.current = { x: 0, y: 0 };
     currentZoomRef.current = mediaFiles[currentSlide]?.zoom ?? 1;
     activePointersRef.current.clear();
+    setPreviewTransform(`translate3d(0px, 0px, 0) scale(${currentZoomRef.current})`);
     // ✅ 슬라이드 변경 시 로드 상태 초기화
     setImgLoaded(false);
   }, [currentSlide]);
@@ -165,20 +167,31 @@ const Write = () => {
     const media = mediaFiles[currentSlide];
     if (!media || media.type !== 'image') return;
     currentZoomRef.current = Math.max(1, Math.min(4, zoom));
-    const placement = applyPreviewPlacement();
-    if (!placement) return;
-    const newMedia = [...mediaFiles];
-    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: placement, zoom: currentZoomRef.current };
-    setMediaFiles(newMedia);
+    applyPreviewPlacement();
   };
 
   const applyPreviewPlacement = () => {
     const img = imgRef.current;
     if (!img) return null;
+    const { maxX, maxY } = getMaxOffset();
+    cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x));
+    cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y));
     const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
+    const transform = `translate3d(${-cropPixelRef.current.x}px, ${-cropPixelRef.current.y}px, 0) scale(${currentZoomRef.current})`;
     img.style.objectPosition = '50% 50%';
-    img.style.transform = `translate3d(${-cropPixelRef.current.x}px, ${-cropPixelRef.current.y}px, 0) scale(${currentZoomRef.current})`;
-    return { x, y };
+    img.style.transform = transform;
+    return { x, y, transform };
+  };
+
+  const commitCurrentMediaPlacement = () => {
+    const media = mediaFiles[currentSlide];
+    if (!media || media.type !== 'image') return;
+    const placement = applyPreviewPlacement();
+    if (!placement) return;
+    setPreviewTransform(placement.transform);
+    const newMedia = [...mediaFiles];
+    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: placement, zoom: currentZoomRef.current };
+    setMediaFiles(newMedia);
   };
 
   const applyDrag = (deltaX: number, deltaY: number) => {
@@ -251,8 +264,9 @@ const Write = () => {
       return;
     }
 
+    isDraggingRef.current = false;
     setIsDragging(false);
-    handleDragEnd();
+    commitCurrentMediaPlacement();
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -308,14 +322,16 @@ const Write = () => {
       return;
     }
 
+    isDraggingRef.current = false;
     setIsDragging(false);
-    handleDragEnd();
+    commitCurrentMediaPlacement();
   };
 
   const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
     if (mediaFiles[currentSlide]?.type !== 'image') return;
     e.stopPropagation();
     updateCurrentMediaTransform(currentZoomRef.current * (e.deltaY < 0 ? 1.06 : 0.94));
+    commitCurrentMediaPlacement();
   };
 
   const handleDragStart = (clientX: number, clientY: number) => {
@@ -348,10 +364,7 @@ const Write = () => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     setIsDragging(false);
-    const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
-    const newMedia = [...mediaFiles];
-    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: { x, y }, zoom: currentZoomRef.current };
-    setMediaFiles(newMedia);
+    commitCurrentMediaPlacement();
   };
 
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -650,7 +663,8 @@ const Write = () => {
                             const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
                             currentZoomRef.current = currentMedia.zoom ?? 1;
                             cropPixelRef.current = percentToPixel(currentMedia.crop ?? { x: 50, y: 50 }, currentZoomRef.current);
-                            applyPreviewPlacement();
+                            const placement = applyPreviewPlacement();
+                            if (placement) setPreviewTransform(placement.transform);
                             // ✅ 로드 완료 → 렌더링 트리거
                             setImgLoaded(true);
                           }}
@@ -662,7 +676,7 @@ const Write = () => {
                             height: '100%',
                             objectFit: 'cover',
                             objectPosition: '50% 50%',
-                            transform: `translate3d(0px, 0px, 0) scale(${currentMedia.zoom ?? 1})`,
+                            transform: previewTransform,
                             transformOrigin: 'center center',
                             // ✅ 로드 전엔 invisible, 로드 후 보임
                             opacity: imgLoaded ? 1 : 0,
