@@ -150,17 +150,38 @@ const Write = () => {
     const media = mediaFiles[currentSlide];
     if (!media || media.type !== 'image') return;
     currentZoomRef.current = Math.max(1, Math.min(4, zoom));
-    const { maxX, maxY } = getMaxOffset();
+    const placement = applyPreviewPlacement();
+    if (!placement) return;
+    const newMedia = [...mediaFiles];
+    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: placement, zoom: currentZoomRef.current };
+    setMediaFiles(newMedia);
+  };
+
+  const applyPreviewPlacement = () => {
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (!img || !container || !img.naturalWidth || !img.naturalHeight) return null;
+
+    const conW = container.offsetWidth;
+    const conH = container.offsetHeight;
+    const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight) * currentZoomRef.current;
+    const renderedW = img.naturalWidth * scale;
+    const renderedH = img.naturalHeight * scale;
+    const maxX = Math.max(0, (renderedW - conW) / 2);
+    const maxY = Math.max(0, (renderedH - conH) / 2);
+
     cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x));
     cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y));
-    const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
-    if (imgRef.current) {
-      imgRef.current.style.objectPosition = `${x}% ${y}%`;
-      imgRef.current.style.transform = `scale(${currentZoomRef.current})`;
-    }
-    const newMedia = [...mediaFiles];
-    newMedia[currentSlide] = { ...newMedia[currentSlide], crop: { x, y }, zoom: currentZoomRef.current };
-    setMediaFiles(newMedia);
+
+    img.style.width = `${renderedW}px`;
+    img.style.height = `${renderedH}px`;
+    img.style.left = `${(conW - renderedW) / 2 - cropPixelRef.current.x}px`;
+    img.style.top = `${(conH - renderedH) / 2 - cropPixelRef.current.y}px`;
+    img.style.objectFit = 'fill';
+    img.style.objectPosition = 'center';
+    img.style.transform = 'none';
+
+    return pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
   };
 
   const applyDrag = (deltaX: number, deltaY: number) => {
@@ -169,10 +190,7 @@ const Write = () => {
     const { maxX, maxY } = getMaxOffset();
     cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x - deltaX));
     cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y - deltaY));
-    if (imgRef.current) {
-      const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
-      imgRef.current.style.objectPosition = `${x}% ${y}%`;
-    }
+    applyPreviewPlacement();
   };
 
   const getPointerDistance = () => {
@@ -228,7 +246,9 @@ const Write = () => {
 
     if (activePointersRef.current.size === 1) {
       const remaining = Array.from(activePointersRef.current.values())[0];
-      handleDragStart(remaining.x, remaining.y);
+      isDraggingRef.current = true;
+      setIsDragging(true);
+      dragStartRef.current = remaining;
       return;
     }
 
@@ -253,7 +273,7 @@ const Write = () => {
       const natH = img.naturalHeight;
       const conW = container.offsetWidth;
       const conH = container.offsetHeight;
-      currentZoomRef.current = media.zoom ?? 1;
+      currentZoomRef.current = Math.max(currentZoomRef.current, media.zoom ?? 1);
       const scale = Math.max(conW / natW, conH / natH);
       const renderedW = natW * scale * currentZoomRef.current;
       const renderedH = natH * scale * currentZoomRef.current;
@@ -263,6 +283,9 @@ const Write = () => {
         x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
         y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
       };
+      applyPreviewPlacement();
+      // ✅ 로드 완료 → 렌더링 트리거
+      setImgLoaded(true);
     }
     isDraggingRef.current = true;
     setIsDragging(true);
@@ -590,6 +613,7 @@ const Write = () => {
                               x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
                               y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
                             };
+                            applyPreviewPlacement();
                             // ✅ 로드 완료 → 렌더링 트리거
                             setImgLoaded(true);
                           }}
@@ -601,13 +625,12 @@ const Write = () => {
                             height: '100%',
                             objectFit: 'cover',
                             objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-                            transform: `scale(${currentMedia.zoom ?? 1})`,
                             transformOrigin: 'center center',
                             // ✅ 로드 전엔 invisible, 로드 후 보임
                             opacity: imgLoaded ? 1 : 0,
                             transition: isDragging
                               ? 'none'
-                              : 'object-position 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.2s ease',
+                              : 'left 0.2s ease, top 0.2s ease, width 0.2s ease, height 0.2s ease, opacity 0.2s ease',
                           }}
                         />
                       ) : (
