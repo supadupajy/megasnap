@@ -62,6 +62,7 @@ const Write = () => {
   const currentZoomRef = useRef(1);
   const activePointersRef = useRef(new Map<number, { x: number; y: number }>());
   const pinchStartRef = useRef({ distance: 0, zoom: 1 });
+  const touchPinchStartRef = useRef({ distance: 0, zoom: 1 });
 
   useEffect(() => {
     if (!initialLocation) {
@@ -181,7 +182,67 @@ const Write = () => {
     return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
   };
 
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    return Math.hypot(
+      touches[0].clientX - touches[1].clientX,
+      touches[0].clientY - touches[1].clientY
+    );
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    e.stopPropagation();
+
+    if (e.touches.length >= 2) {
+      isDraggingRef.current = false;
+      touchPinchStartRef.current = {
+        distance: getTouchDistance(e.touches),
+        zoom: currentZoomRef.current,
+      };
+      setIsDragging(true);
+      return;
+    }
+
+    if (e.touches.length === 1) {
+      handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    e.stopPropagation();
+
+    if (e.touches.length >= 2) {
+      const distance = getTouchDistance(e.touches);
+      if (touchPinchStartRef.current.distance > 0) {
+        updateCurrentMediaTransform(touchPinchStartRef.current.zoom * (distance / touchPinchStartRef.current.distance));
+      }
+      return;
+    }
+
+    if (e.touches.length === 1 && isDraggingRef.current) {
+      handleDragMove(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    e.stopPropagation();
+
+    if (e.touches.length === 1) {
+      isDraggingRef.current = true;
+      setIsDragging(true);
+      dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      return;
+    }
+
+    setIsDragging(false);
+    handleDragEnd();
+  };
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
     if (mediaFiles[currentSlide]?.type !== 'image') return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -199,6 +260,7 @@ const Write = () => {
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
     if (!e.isPrimary && !activePointersRef.current.has(e.pointerId)) return;
     if (!activePointersRef.current.has(e.pointerId) && !isDraggingRef.current) return;
     e.stopPropagation();
@@ -216,6 +278,7 @@ const Write = () => {
   };
 
   const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
     if (!e.isPrimary && !activePointersRef.current.has(e.pointerId)) return;
     e.stopPropagation();
     activePointersRef.current.delete(e.pointerId);
@@ -633,6 +696,10 @@ const Write = () => {
                         onPointerLeave={(e) => {
                           if (e.pointerType === 'mouse') handlePointerEnd(e);
                         }}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        onTouchCancel={handleTouchEnd}
                         onWheel={handleWheelZoom}
                       />
 
