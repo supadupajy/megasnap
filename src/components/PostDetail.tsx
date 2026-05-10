@@ -751,7 +751,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   );
 
   const renderDropdownMenu = () => (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
           <MoreHorizontal className="w-5 h-5" />
@@ -759,7 +759,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[13010]">
         {(isMine || isAdmin) ? (
-          <DropdownMenuItem onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.setTimeout(() => setIsDeleteDialogOpen(true), 0); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
             <Trash2 className="w-4 h-4 text-red-600" />
             <span className="text-sm font-bold text-red-600">삭제하기</span>
           </DropdownMenuItem>

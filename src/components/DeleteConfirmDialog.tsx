@@ -38,7 +38,7 @@ const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialog
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) { forceUnlockBody(); onClose(); } }}>
       <AlertDialogContent
-        className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl z-[2000] pointer-events-auto"
+        className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl z-[20000] pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <AlertDialogHeader className="space-y-3">
