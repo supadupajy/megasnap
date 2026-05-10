@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, Search, Edit, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
+import { X, Search, Edit, Loader2, MessageSquare, UserPlus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -325,22 +325,27 @@ const Messages = () => {
       onClick={() => setSwipedId(null)}
     >
       <div className="pt-16">
-        <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50">
-          <button
-            onClick={handleBack}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
+        <div className="sticky top-0 z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
+          <div className="flex justify-start">
+            <button
+              onClick={() => navigate('/friends')}
+              className="p-2 hover:bg-white/70 rounded-full transition-colors active:scale-95"
+              aria-label="새 메시지"
+            >
+              <Edit className="w-6 h-6 text-indigo-600" />
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/friends')}
-            className="ml-auto p-2 hover:bg-gray-50 rounded-full transition-colors"
-          >
-            <Edit className="w-6 h-6 text-indigo-600" />
-          </button>
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
+          <div className="flex justify-end">
+            <button
+              onClick={handleBack}
+              className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
+              style={{ gap: '6px', padding: '8px 16px' }}
+            >
+              <X className="w-4 h-4 text-gray-900 shrink-0" />
+              <span className="text-sm font-normal text-gray-900 whitespace-nowrap">닫기</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-col">
