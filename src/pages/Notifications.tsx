@@ -259,10 +259,11 @@ const Notifications = () => {
           <div className="flex justify-end">
             <button
               onClick={handleBack}
-              className="h-10 px-4 bg-white rounded-full flex items-center gap-2 text-gray-900 font-bold shadow-[0_4px_14px_rgba(15,23,42,0.12)] border border-gray-100 active:scale-95 transition-all"
+              className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
+              style={{ gap: '6px', padding: '8px 16px' }}
             >
-              <X className="w-5 h-5" />
-              <span>닫기</span>
+              <X className="w-4 h-4 text-gray-900 shrink-0" />
+              <span className="text-sm font-normal text-gray-900 whitespace-nowrap">닫기</span>
             </button>
           </div>
         </div>
