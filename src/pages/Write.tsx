@@ -129,7 +129,7 @@ const Write = () => {
     };
   };
 
-  const pixelToPercent = (offsetX: number, offsetY: number) => {
+  const pixelToPercent = (offsetX: number, offsetY: number, zoom = currentZoomRef.current) => {
     const img = imgRef.current;
     const container = containerRef.current;
     if (!img || !container) return { x: 50, y: 50 };
@@ -139,12 +139,26 @@ const Write = () => {
     const conW = container.offsetWidth;
     const conH = container.offsetHeight;
     const scale = Math.max(conW / natW, conH / natH);
-    const zoom = currentZoomRef.current;
     const renderedW = natW * scale * zoom;
     const renderedH = natH * scale * zoom;
     const x = renderedW <= conW ? 50 : 50 + (offsetX / (renderedW - conW)) * 100;
     const y = renderedH <= conH ? 50 : 50 + (offsetY / (renderedH - conH)) * 100;
     return { x, y };
+  };
+
+  const percentToPixel = (crop = { x: 50, y: 50 }, zoom = currentZoomRef.current) => {
+    const img = imgRef.current;
+    const container = containerRef.current;
+    if (!img || !container || !img.naturalWidth || !img.naturalHeight) return { x: 0, y: 0 };
+    const conW = container.offsetWidth;
+    const conH = container.offsetHeight;
+    const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
+    const renderedW = img.naturalWidth * scale * zoom;
+    const renderedH = img.naturalHeight * scale * zoom;
+    return {
+      x: renderedW <= conW ? 0 : ((crop.x - 50) / 100) * (renderedW - conW),
+      y: renderedH <= conH ? 0 : ((crop.y - 50) / 100) * (renderedH - conH),
+    };
   };
 
   const updateCurrentMediaTransform = (zoom = currentZoomRef.current) => {
@@ -162,8 +176,8 @@ const Write = () => {
     const img = imgRef.current;
     if (!img) return null;
     const { x, y } = pixelToPercent(cropPixelRef.current.x, cropPixelRef.current.y);
-    img.style.objectPosition = `${x}% ${y}%`;
-    img.style.transform = `scale(${currentZoomRef.current})`;
+    img.style.objectPosition = '50% 50%';
+    img.style.transform = `translate3d(${-cropPixelRef.current.x}px, ${-cropPixelRef.current.y}px, 0) scale(${currentZoomRef.current})`;
     return { x, y };
   };
 
@@ -315,15 +329,7 @@ const Write = () => {
       const conW = container.offsetWidth;
       const conH = container.offsetHeight;
       currentZoomRef.current = Math.max(currentZoomRef.current, media.zoom ?? 1);
-      const scale = Math.max(conW / natW, conH / natH);
-      const renderedW = natW * scale * currentZoomRef.current;
-      const renderedH = natH * scale * currentZoomRef.current;
-      const cropX = media.crop?.x ?? 50;
-      const cropY = media.crop?.y ?? 50;
-      cropPixelRef.current = {
-        x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-        y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-      };
+      cropPixelRef.current = percentToPixel(media.crop ?? { x: 50, y: 50 }, currentZoomRef.current);
     }
     isDraggingRef.current = true;
     setIsDragging(true);
@@ -643,14 +649,7 @@ const Write = () => {
                             const conH = container.offsetHeight;
                             const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
                             currentZoomRef.current = currentMedia.zoom ?? 1;
-                            const renderedW = img.naturalWidth * scale * currentZoomRef.current;
-                            const renderedH = img.naturalHeight * scale * currentZoomRef.current;
-                            const cropX = currentMedia.crop?.x ?? 50;
-                            const cropY = currentMedia.crop?.y ?? 50;
-                            cropPixelRef.current = {
-                              x: renderedW <= conW ? 0 : ((cropX - 50) / 100) * (renderedW - conW),
-                              y: renderedH <= conH ? 0 : ((cropY - 50) / 100) * (renderedH - conH),
-                            };
+                            cropPixelRef.current = percentToPixel(currentMedia.crop ?? { x: 50, y: 50 }, currentZoomRef.current);
                             applyPreviewPlacement();
                             // ✅ 로드 완료 → 렌더링 트리거
                             setImgLoaded(true);
@@ -662,14 +661,14 @@ const Write = () => {
                             width: '100%',
                             height: '100%',
                             objectFit: 'cover',
-                            objectPosition: `${currentMedia.crop?.x ?? 50}% ${currentMedia.crop?.y ?? 50}%`,
-                            transform: `scale(${currentMedia.zoom ?? 1})`,
+                            objectPosition: '50% 50%',
+                            transform: `translate3d(0px, 0px, 0) scale(${currentMedia.zoom ?? 1})`,
                             transformOrigin: 'center center',
                             // ✅ 로드 전엔 invisible, 로드 후 보임
                             opacity: imgLoaded ? 1 : 0,
                             transition: isDragging
                               ? 'none'
-                              : 'object-position 0.2s ease, transform 0.2s ease, opacity 0.2s ease',
+                              : 'transform 0.2s ease, opacity 0.2s ease',
                           }}
                         />
                       ) : (
