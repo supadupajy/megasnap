@@ -66,10 +66,9 @@ const BottomNav = () => {
     }
 
     let cancelled = false;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
     const seenKey = `${FRIEND_POST_SEEN_KEY_PREFIX}${authUser.id}`;
 
-    const checkFriendPostBadge = async () => {
+    const checkFriendPostBadgeOnce = async () => {
       if (isFriendsPage) {
         markFriendPostsSeen();
         return;
@@ -106,63 +105,12 @@ const BottomNav = () => {
       }
     };
 
-    const subscribeToFriendPosts = async () => {
-      const { data: followsData } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', authUser.id);
-
-      if (cancelled) return;
-
-      const followingIds = (followsData || [])
-        .map((follow: any) => follow.following_id)
-        .filter(Boolean);
-      const followingSet = new Set(followingIds);
-
-      if (followingSet.size === 0) return;
-
-      channel = supabase
-        .channel(`friend-post-badge-${authUser.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'posts' },
-          (payload) => {
-            const postUserId = (payload.new as any)?.user_id;
-            if (!postUserId || !followingSet.has(postUserId)) return;
-
-            if (isFriendsPage) {
-              markFriendPostsSeen();
-              return;
-            }
-
-            setHasNewFriendPost(true);
-          }
-        )
-        .subscribe();
-    };
-
-    checkFriendPostBadge();
-    subscribeToFriendPosts();
-
-    const handleRefresh = () => checkFriendPostBadge();
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') checkFriendPostBadge();
-    };
-    const intervalId = window.setInterval(checkFriendPostBadge, 15000);
-
-    window.addEventListener('focus', handleRefresh);
-    window.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('refresh-friend-post-badge', handleRefresh);
+    checkFriendPostBadgeOnce();
 
     return () => {
       cancelled = true;
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', handleRefresh);
-      window.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('refresh-friend-post-badge', handleRefresh);
-      if (channel) supabase.removeChannel(channel);
     };
-  }, [authUser?.id, isFriendsPage, markFriendPostsSeen]);
+  }, [authUser?.id]);
 
   const getTabIndexForPath = (path: string) => {
     const pathname = path.split(/[?#]/)[0] || '/';
