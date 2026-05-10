@@ -371,7 +371,7 @@ const Settings = () => {
                   </div>
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-bold text-orange-600">DB 원본 이미지 압축</span>
-                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">원본 이미지를 최대 1920px / JPEG 82% 기준으로 최적화합니다.</span>
+                    <span className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">원본 이미지를 최적화합니다.</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300" />
