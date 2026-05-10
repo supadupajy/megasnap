@@ -253,7 +253,7 @@ const Notifications = () => {
       onClick={() => setSwipedId(null)}
     >
       <div className="pt-16">
-        <div className="sticky top-0 z-40 bg-white grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-50">
+        <div className="sticky top-0 z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
           <div />
           <h2 className="text-lg font-black text-gray-900 tracking-tight">알림</h2>
           <div className="flex justify-end">
