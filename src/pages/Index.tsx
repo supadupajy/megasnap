@@ -63,6 +63,10 @@ const formatMapAddress = (result: any, lat: number, lng: number) => {
   return [city, district, dong].filter(Boolean).join(' ') || resolveOfflineLocationName(lat, lng);
 };
 
+const getMapAddressCacheKey = (lat: number, lng: number) => `${lat.toFixed(4)},${lng.toFixed(4)}`;
+const MAP_ADDRESS_CACHE_STORAGE_KEY = 'map-center-address-cache';
+const MAP_ADDRESS_CACHE_LIMIT = 160;
+
 function clusterByAngleClient(
   points: { lat: number; lng: number }[],
   centerLat: number, centerLng: number,
@@ -317,6 +321,19 @@ const Index = () => {
   const throttleTimer = useRef<any>(null);
   const fetchingRef = useRef(false);
   const mapDataRef = useRef<any>(null);
+  const addressCacheRef = useRef<Map<string, string>>(new Map());
+  const addressCacheLoadedRef = useRef(false);
+  if (!addressCacheLoadedRef.current) {
+    addressCacheLoadedRef.current = true;
+    try {
+      const stored = sessionStorage.getItem(MAP_ADDRESS_CACHE_STORAGE_KEY);
+      if (stored) {
+        addressCacheRef.current = new Map(JSON.parse(stored));
+      }
+    } catch (e) {
+      addressCacheRef.current = new Map();
+    }
+  }
   const spreadMarkersRef = useRef<Post[]>([]);
   // route state로 위치가 지정된 경우 geolocation이 덮어쓰지 못하도록 보호
   // 초기 마운트 시 initialFocusRef가 있거나 startSelection 상태이면 즉시 잠금 (geolocation race condition 차단)
@@ -907,23 +924,42 @@ const Index = () => {
     const center = mapData?.center || mapCenter || mapCache.lastCenter;
     if (!center?.lat || !center?.lng) return;
 
+    const cacheKey = getMapAddressCacheKey(center.lat, center.lng);
+    const cachedAddress = addressCacheRef.current.get(cacheKey);
+    if (cachedAddress) {
+      setCenterAddress(cachedAddress);
+      return;
+    }
+
+    const saveAddressCache = (address: string) => {
+      addressCacheRef.current.set(cacheKey, address);
+      const entries = Array.from(addressCacheRef.current.entries()).slice(-MAP_ADDRESS_CACHE_LIMIT);
+      addressCacheRef.current = new Map(entries);
+      try {
+        sessionStorage.setItem(MAP_ADDRESS_CACHE_STORAGE_KEY, JSON.stringify(entries));
+      } catch (e) {}
+    };
+
     const fallback = resolveOfflineLocationName(center.lat, center.lng);
     let cancelled = false;
     const timer = setTimeout(() => {
       const kakao = (window as any).kakao;
       if (!kakao?.maps?.services) {
-        if (!cancelled) setCenterAddress(fallback);
+        if (!cancelled) {
+          saveAddressCache(fallback);
+          setCenterAddress(fallback);
+        }
         return;
       }
 
       const geocoder = new kakao.maps.services.Geocoder();
       geocoder.coord2Address(center.lng, center.lat, (result: any, status: any) => {
         if (cancelled) return;
-        if (status === kakao.maps.services.Status.OK) {
-          setCenterAddress(formatMapAddress(result, center.lat, center.lng));
-        } else {
-          setCenterAddress(fallback);
-        }
+        const address = status === kakao.maps.services.Status.OK
+          ? formatMapAddress(result, center.lat, center.lng)
+          : fallback;
+        saveAddressCache(address);
+        setCenterAddress(address);
       });
     }, 450);
 
