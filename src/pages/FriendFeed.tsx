@@ -66,10 +66,10 @@ const PostSkeleton = () => (
   </div>
 );
 
-// 2~3개 포스팅마다 광고를 삽입하는 헬퍼
-const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
+const AD_INSERT_INTERVAL = 3;
 
 const FriendFeed = () => {
+
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, loading: authLoading } = useAuth();
@@ -228,11 +228,9 @@ const FriendFeed = () => {
           <div className="flex flex-col">
             {(() => {
               const items: React.ReactNode[] = [];
-              let nextAdAt = getAdInterval();
               let postCount = 0;
-              let adCount = 0;
 
-              filteredPosts.forEach((post, index) => {
+              filteredPosts.forEach((post) => {
                 items.push(
                   <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
                     <PostItem
@@ -248,13 +246,10 @@ const FriendFeed = () => {
 
                 postCount++;
 
-                if (postCount >= nextAdAt) {
-                  adCount++;
+                if (postCount % AD_INSERT_INTERVAL === 0) {
                   items.push(
-                    <AdMobBanner key={`ad-${adCount}-${index}`} />
+                    <AdMobBanner key={`ad-after-${post.id}`} />
                   );
-                  postCount = 0;
-                  nextAdAt = getAdInterval();
                 }
               });
 

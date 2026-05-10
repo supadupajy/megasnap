@@ -28,9 +28,10 @@ interface NearbyPostsPayload {
 
 const STORAGE_KEY = 'nearby-posts-payload';
 const PAGE_SIZE = 12;
-const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
+const AD_INSERT_INTERVAL = 3;
 
 const normalizePost = (post: any): Post => ({
+
   ...post,
   createdAt: post.createdAt ? new Date(post.createdAt) : new Date(),
 });
@@ -246,11 +247,10 @@ const NearbyPosts = () => {
       <div className="flex flex-col">
         {(() => {
           const items: React.ReactNode[] = [];
-          let nextAdAt = getAdInterval();
           let postCount = 0;
-          let adCount = 0;
 
           filteredPosts.forEach((post, index) => {
+
             if (firstViewedIndex !== -1 && index === firstViewedIndex) {
               items.push(
                 <div key="divider" className="flex items-center gap-3 px-4 py-3 bg-white">
@@ -281,12 +281,10 @@ const NearbyPosts = () => {
             );
 
             if (!post.isAd) postCount++;
-            if (postCount >= nextAdAt) {
-              adCount++;
-              items.push(<AdMobBanner key={`ad-${adCount}-${index}`} />);
-              postCount = 0;
-              nextAdAt = getAdInterval();
+            if (postCount > 0 && postCount % AD_INSERT_INTERVAL === 0) {
+              items.push(<AdMobBanner key={`ad-after-${post.id}`} />);
             }
+
           });
 
           return items;

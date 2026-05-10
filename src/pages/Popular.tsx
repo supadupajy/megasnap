@@ -26,10 +26,10 @@ const getTierFromFollowers = (followers: number) => {
 };
 
 const PAGE_SIZE = 15;
-// 광고 삽입 간격을 렌더 외부에서 한 번만 계산 (매 렌더마다 Math.random() 호출 방지)
-const getAdInterval = () => Math.floor(Math.random() * 2) + 2;
+const AD_INSERT_INTERVAL = 3;
 
 // Skeleton 카드 컴포넌트
+
 const PostSkeleton = () => (
   <div className="border-b border-gray-100 p-4 space-y-3">
     <div className="flex items-center gap-3">
@@ -231,11 +231,9 @@ const Popular = () => {
           <div className="flex flex-col">
             {(() => {
               const items: React.ReactNode[] = [];
-              let nextAdAt = getAdInterval();
               let postCount = 0;
-              let adCount = 0;
 
-              filteredPosts.forEach((post, index) => {
+              filteredPosts.forEach((post) => {
                 items.push(
                   <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
                     <PostItem
@@ -251,18 +249,16 @@ const Popular = () => {
 
                 postCount++;
 
-                if (postCount >= nextAdAt) {
-                  adCount++;
+                if (postCount % AD_INSERT_INTERVAL === 0) {
                   items.push(
-                    <AdMobBanner key={`ad-${adCount}-${index}`} />
+                    <AdMobBanner key={`ad-after-${post.id}`} />
                   );
-                  postCount = 0;
-                  nextAdAt = getAdInterval();
                 }
               });
 
               return items;
             })()}
+
             {!isLoading && filteredPosts.length === 0 && (
               <div className="text-center py-20 text-gray-400 font-medium px-10">
                 표시할 인기 포스팅이 없습니다.

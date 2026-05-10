@@ -18,6 +18,8 @@ import AdMobBanner from './AdMobBanner';
 import CollapsingHeader from './CollapsingHeader';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
 
+const AD_INSERT_INTERVAL = 3;
+
 const ObservedPostItem = React.memo(({
   post, 
   onVisible, 
@@ -191,11 +193,8 @@ const PostListOverlay = ({
   // 오버레이는 닫힌 상태에서 null을 렌더하므로, 열릴 때 리스너를 다시 붙이도록 isOpen을 관찰합니다.
   const { scrollRef: scrollContainerRef, progress: headerProgress } = useCollapsingHeader(80, [isOpen]);
 
-  // 광고 삽입 간격을 posts 변경과 무관하게 안정적으로 유지
-  // useMemo 안에서 Math.random()을 쓰면 posts가 바뀔 때마다 광고 위치가 달라지는 문제 발생
-  const adIntervalsRef = useRef<number[]>([]);
-
   // ── 뒤로가기 버튼으로 닫기 (Android/브라우저 back 버튼) ──────
+
   const onCloseRef = useRef(onClose);
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
@@ -386,24 +385,15 @@ const PostListOverlay = ({
     }
   }, [authUserId, posts]);
 
-  // 2~3개 포스팅마다 광고를 삽입할 인덱스를 미리 계산 (posts가 바뀔 때만 재계산)
   const adIndices = useMemo(() => {
     const indices = new Set<number>();
     let postCount = 0;
-    let adIntervalIdx = 0;
 
-    // 기존 간격이 부족하면 새로 생성 (한 번 생성된 간격은 재사용)
     posts.forEach((post, index) => {
       if (!post.isAd) {
         postCount++;
-        if (adIntervalIdx >= adIntervalsRef.current.length) {
-          adIntervalsRef.current.push(Math.floor(Math.random() * 2) + 2);
-        }
-        const nextAdAt = adIntervalsRef.current[adIntervalIdx];
-        if (postCount >= nextAdAt) {
+        if (postCount % AD_INSERT_INTERVAL === 0) {
           indices.add(index);
-          postCount = 0;
-          adIntervalIdx++;
         }
       }
     });
@@ -445,9 +435,9 @@ const PostListOverlay = ({
           <div className="flex flex-col">
             {(() => {
               const items: React.ReactNode[] = [];
-              let adCount = 0;
 
               posts.forEach((post, index) => {
+
                 // 이미 본 포스팅 구분선
                 if (firstViewedIndex !== -1 && index === firstViewedIndex) {
                   items.push(
@@ -477,13 +467,13 @@ const PostListOverlay = ({
                   />
                 );
 
-                // 미리 계산된 인덱스에 해당하면 광고 삽입
+                // 안정적인 포스트 id 기준으로 광고 슬롯 고정
                 if (adIndices.has(index)) {
-                  adCount++;
                   items.push(
-                    <AdMobBanner key={`ad-${adCount}-${index}`} />
+                    <AdMobBanner key={`ad-after-${post.id}`} />
                   );
                 }
+
               });
 
               return items;
