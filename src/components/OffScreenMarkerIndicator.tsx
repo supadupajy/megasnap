@@ -253,6 +253,9 @@ const DropIndicator: React.FC<{
           <polygon
             points={trianglePoints}
             fill={INDIGO}
+            stroke="rgba(255,255,255,0.95)"
+            strokeWidth="1"
+            strokeLinejoin="round"
           />
         </svg>
       </div>
@@ -342,6 +345,9 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
           <polygon
             points={trianglePoints}
             fill={INDIGO}
+            stroke="rgba(255,255,255,0.95)"
+            strokeWidth="1"
+            strokeLinejoin="round"
           />
         </svg>
       </div>
