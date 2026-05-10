@@ -152,6 +152,16 @@ const Write = () => {
   };
 
   useEffect(() => {
+    if (keyboardHeight > 0 && currentPage === 2 && document.activeElement === textareaRef.current) {
+      bringTextareaAboveKeyboard();
+    }
+  }, [keyboardHeight, currentPage]);
+
+  const handleTextareaInteraction = () => {
+    bringTextareaAboveKeyboard();
+  };
+
+  useEffect(() => {
     cropPixelRef.current = { x: 0, y: 0 };
     currentZoomRef.current = mediaFiles[currentSlide]?.zoom ?? 1;
     activePointersRef.current.clear();
@@ -889,7 +899,9 @@ const Write = () => {
                     placeholder="이 장소에서의 추억을 기록해보세요."
                     className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-normal placeholder:font-normal focus-visible:ring-2 focus-visible:ring-indigo-600"
                     value={content}
-                    onFocus={bringTextareaAboveKeyboard}
+                    onFocus={handleTextareaInteraction}
+                    onClick={handleTextareaInteraction}
+                    onTouchStart={handleTextareaInteraction}
                     onChange={(e) => setContent(e.target.value)}
                   />
                 </div>
