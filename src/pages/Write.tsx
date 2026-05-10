@@ -58,6 +58,7 @@ const Write = () => {
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const submitAreaRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -135,16 +136,17 @@ const Write = () => {
   const bringTextareaAboveKeyboard = () => {
     window.setTimeout(() => {
       const textarea = textareaRef.current;
+      const submitArea = submitAreaRef.current;
       const scrollArea = scrollAreaRef.current;
       if (!textarea || !scrollArea) return;
 
       const viewport = window.visualViewport;
       const visibleBottom = (viewport?.height ?? window.innerHeight) + (viewport?.offsetTop ?? 0) - 24;
-      const rect = textarea.getBoundingClientRect();
-      const overflow = rect.bottom - visibleBottom;
+      const targetRect = (submitArea ?? textarea).getBoundingClientRect();
+      const overflow = targetRect.bottom - visibleBottom;
 
       if (overflow > 0) {
-        scrollArea.scrollBy({ top: overflow + 24, behavior: 'smooth' });
+        scrollArea.scrollBy({ top: overflow + 28, behavior: 'smooth' });
       } else {
         textarea.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       }
@@ -910,7 +912,7 @@ const Write = () => {
 
             {/* 페이지 2 등록 버튼 영역 */}
             {currentPage === 2 && (
-              <div className="pt-2 space-y-1.5">
+              <div ref={submitAreaRef} className="pt-2 space-y-1.5">
                 <p
                   className={cn(
                     "text-[10px] text-center font-bold text-rose-500 animate-pulse",
