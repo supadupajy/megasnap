@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Map, Flame, PlusCircle, UsersRound, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { mapCache } from '@/utils/map-cache';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
@@ -30,15 +32,117 @@ const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[]
 
 const PILL_WIDTH = 64;
 const PILL_HEIGHT = 60;
+const FRIEND_POST_SEEN_KEY_PREFIX = 'chorasnap:friend-posts-seen-at:';
 
 const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const navRef = useRef<HTMLDivElement>(null);
   const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
+  const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
   const lastActiveTabIndexRef = useRef(0);
+
+  const isFriendsPage = location.pathname.startsWith('/friends');
+
+  const markFriendPostsSeen = useCallback(() => {
+    if (!authUser?.id) return;
+    localStorage.setItem(`${FRIEND_POST_SEEN_KEY_PREFIX}${authUser.id}`, new Date().toISOString());
+    setHasNewFriendPost(false);
+  }, [authUser?.id]);
+
+  useEffect(() => {
+    if (isFriendsPage) {
+      markFriendPostsSeen();
+    }
+  }, [isFriendsPage, markFriendPostsSeen]);
+
+  useEffect(() => {
+    if (!authUser?.id) {
+      setHasNewFriendPost(false);
+      return;
+    }
+
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    const seenKey = `${FRIEND_POST_SEEN_KEY_PREFIX}${authUser.id}`;
+
+    const setupFriendPostBadge = async () => {
+      let seenAt = localStorage.getItem(seenKey);
+      if (!seenAt) {
+        seenAt = new Date().toISOString();
+        localStorage.setItem(seenKey, seenAt);
+      }
+
+      const { data: followsData } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', authUser.id);
+
+      if (cancelled) return;
+
+      const followingIds = (followsData || []).map((follow: any) => follow.following_id).filter(Boolean);
+      const followingSet = new Set(followingIds);
+
+      if (followingIds.length === 0) {
+        setHasNewFriendPost(false);
+        return;
+      }
+
+      if (!isFriendsPage) {
+        const { data: recentPosts } = await supabase
+          .from('posts')
+          .select('id')
+          .in('user_id', followingIds)
+          .gt('created_at', seenAt)
+          .limit(1);
+
+        if (!cancelled) {
+          setHasNewFriendPost((recentPosts?.length ?? 0) > 0);
+        }
+      }
+
+      channel = supabase
+        .channel(`friend-post-badge-${authUser.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'posts' },
+          (payload) => {
+            const postUserId = (payload.new as any)?.user_id;
+            if (!postUserId || !followingSet.has(postUserId)) return;
+
+            if (isFriendsPage) {
+              markFriendPostsSeen();
+              return;
+            }
+
+            setHasNewFriendPost(true);
+          }
+        )
+        .subscribe();
+    };
+
+    setupFriendPostBadge();
+
+    const handleRefresh = () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+        channel = null;
+      }
+      setupFriendPostBadge();
+    };
+    window.addEventListener('focus', handleRefresh);
+    window.addEventListener('refresh-friend-post-badge', handleRefresh);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', handleRefresh);
+      window.removeEventListener('refresh-friend-post-badge', handleRefresh);
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [authUser?.id, isFriendsPage, markFriendPostsSeen]);
 
   const getTabIndexForPath = (path: string) => {
     const pathname = path.split(/[?#]/)[0] || '/';
@@ -127,7 +231,7 @@ const BottomNav = () => {
               {/* Icon wrapper */}
               <div
                 ref={(el) => { iconRefs.current[index] = el; }}
-                className="flex items-center justify-center w-[52px] h-9"
+                className="relative flex items-center justify-center w-[52px] h-9"
               >
                 <Icon
                   className={cn(
@@ -135,6 +239,9 @@ const BottomNav = () => {
                     isActive ? 'scale-110 text-gray-900' : 'scale-100 text-gray-400'
                   )}
                 />
+                {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
+                  <span className="absolute right-2 top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white shadow-sm" />
+                )}
               </div>
               {/* Label */}
               <span
