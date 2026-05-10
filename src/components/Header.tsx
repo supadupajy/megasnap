@@ -16,11 +16,22 @@ const Header = () => {
   if (isHiddenPage) return null;
 
   const navigateKeepingMapPosition = (path: string) => {
+    if (location.pathname === path) return;
+
     mapCache.keepPosition = true;
+
+    const isTransientPage = location.pathname === '/notifications' || location.pathname === '/messages';
+    const currentState = location.state as any;
+
     navigate(path, {
+      replace: isTransientPage,
       state: {
-        fromPath: `${location.pathname}${location.search}${location.hash}`,
-        fromState: location.state ?? null,
+        fromPath: isTransientPage && currentState?.fromPath
+          ? currentState.fromPath
+          : `${location.pathname}${location.search}${location.hash}`,
+        fromState: isTransientPage
+          ? currentState?.fromState ?? null
+          : location.state ?? null,
       },
     });
   };
