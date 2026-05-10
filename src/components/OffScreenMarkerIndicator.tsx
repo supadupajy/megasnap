@@ -242,15 +242,8 @@ const DropIndicator: React.FC<{
       {/* 고정 원 (배경) */}
       <div style={circleWrapStyle}>
         <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
-          <defs>
-            <clipPath id={`circle-clip-${dir}`}>
-              <circle cx={CX} cy={CIRCLE_CY} r={R} />
-            </clipPath>
-          </defs>
-          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#circle-clip-${dir})`}>
-            <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
-          </foreignObject>
-          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
+          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="rgba(255,255,255,0.86)" />
+          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" />
         </svg>
       </div>
 
@@ -342,15 +335,8 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
     <div style={containerStyle}>
       <div style={circleWrapStyle}>
         <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ display: 'block', overflow: 'visible' }}>
-          <defs>
-            <clipPath id={`circle-clip-fading-${state.dir}`}>
-              <circle cx={CX} cy={CIRCLE_CY} r={R} />
-            </clipPath>
-          </defs>
-          <foreignObject x="0" y="0" width={S} height={S} clipPath={`url(#circle-clip-fading-${state.dir})`}>
-            <div style={{ width: '100%', height: '100%', background: 'rgba(255,255,255,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }} />
-          </foreignObject>
-          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5" />
+          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="rgba(255,255,255,0.76)" />
+          <circle cx={CX} cy={CIRCLE_CY} r={R} fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5" />
         </svg>
       </div>
 
