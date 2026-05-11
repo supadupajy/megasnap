@@ -26,7 +26,7 @@ import { Geolocation } from '@capacitor/geolocation';
 import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { postDraftStore } from '@/utils/post-draft-store';
-import { toggleLikeInDb } from '@/utils/like-utils';
+import { fetchLikedPostIds, toggleLikeInDb } from '@/utils/like-utils';
 import { useMapMarkerAds, resolveActiveSlot } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import confetti from 'canvas-confetti';
@@ -439,7 +439,7 @@ const Index = () => {
       image: img,
       image_url: img,
       images,
-      isLiked: prev?.isLiked ?? false,
+      isLiked: p.isLiked ?? prev?.isLiked ?? false,
       videoUrl,
       category: isAd ? 'food' : (p.category ?? prev?.category ?? 'none'),
       createdAt: p.created_at ? new Date(p.created_at) : (prev?.createdAt ?? new Date()),
@@ -459,7 +459,8 @@ const Index = () => {
     try {
       const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 20 });
       if (!error && data) {
-        const mapped = data.map((p: any) => ({ ...mapRawToPost(p), likes_per_hour: Number(p.likes_per_hour ?? 0) }));
+        const likedIds = await fetchLikedPostIds(data.map((p: any) => p.id), authUserIdRef.current);
+        const mapped = data.map((p: any) => ({ ...mapRawToPost({ ...p, isLiked: likedIds.has(String(p.id)) }), likes_per_hour: Number(p.likes_per_hour ?? 0) }));
         const trending = mapped.slice(0, 20).map((p: any, i: number) => ({ ...p, rank: i + 1 }));
         setGlobalTrendingPosts(trending);
         trendingFetchedAtRef.current = now;
@@ -506,6 +507,9 @@ const Index = () => {
         ]);
         if (cancelled) return;
 
+        const likedIds = await fetchLikedPostIds(raw.map((r: any) => r.id), authUserIdRef.current);
+        if (cancelled) return;
+
         // allPosts 업데이트 + stableSnapshot 단일 갱신 (React 18 automatic batching)
         setAllPosts(prev => {
           const existingMap = new Map(prev.map(p => [p.id, p]));
@@ -528,7 +532,7 @@ const Index = () => {
           raw.forEach((r: any) => {
             if (String(r.id).startsWith('ad-map-marker-')) return;
             const prevPost = existingMap.get(r.id) || null;
-            existingMap.set(r.id, mapRawToPost(r, prevPost));
+            existingMap.set(r.id, mapRawToPost({ ...r, isLiked: likedIds.has(String(r.id)) }, prevPost));
           });
 
           const combined = Array.from(existingMap.values()).slice(0, 5000);
@@ -569,6 +573,28 @@ const Index = () => {
   useEffect(() => { useClientSideCountsRef.current = useClientSideCounts; }, [useClientSideCounts]);
   useEffect(() => { selectedCategoriesRef.current = selectedCategories; }, [selectedCategories]);
   useEffect(() => { authUserIdRef.current = authUser?.id || null; }, [authUser?.id]);
+
+  useEffect(() => {
+    lastBoundsKeyRef.current = '';
+
+    const syncLikedState = async () => {
+      const userId = authUser?.id;
+      if (!userId) {
+        const clearLiked = (post: Post) => ({ ...post, isLiked: false });
+        setAllPosts(prev => prev.map(clearLiked));
+        setGlobalTrendingPosts(prev => prev.map(clearLiked));
+        return;
+      }
+
+      const ids = Array.from(new Set([...allPosts, ...globalTrendingPosts].map(post => post.id)));
+      const likedIds = await fetchLikedPostIds(ids, userId);
+      const applyLiked = (post: Post) => ({ ...post, isLiked: likedIds.has(String(post.id)) });
+      setAllPosts(prev => prev.map(applyLiked));
+      setGlobalTrendingPosts(prev => prev.map(applyLiked));
+    };
+
+    syncLikedState();
+  }, [authUser?.id]);
 
   // 클라이언트 계산: stableSnapshot 기반 (posts + bounds 항상 동기화)
   const clientOffScreenCounts = useMemo((): DirectionCounts | null => {
@@ -1180,7 +1206,7 @@ const Index = () => {
     const updater = (p: Post) => {
       if (p.id !== postId) return p;
       currentlyLiked = p.isLiked;
-      return { ...p, isLiked: !p.isLiked, likes: !p.isLiked ? p.likes + 1 : p.likes - 1 };
+      return { ...p, isLiked: !p.isLiked, likes: !p.isLiked ? p.likes + 1 : Math.max(0, p.likes - 1) };
     };
     setAllPosts(prev => prev.map(updater));
     setGlobalTrendingPosts(prev => prev.map(updater));
@@ -1189,7 +1215,7 @@ const Index = () => {
       if (!ok) {
         // 실패 시 롤백
         const rollback = (p: Post) => p.id === postId
-          ? { ...p, isLiked: currentlyLiked, likes: currentlyLiked ? p.likes + 1 : p.likes - 1 }
+          ? { ...p, isLiked: currentlyLiked, likes: currentlyLiked ? p.likes + 1 : Math.max(0, p.likes - 1) }
           : p;
         setAllPosts(prev => prev.map(rollback));
         setGlobalTrendingPosts(prev => prev.map(rollback));

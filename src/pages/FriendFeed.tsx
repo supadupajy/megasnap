@@ -10,7 +10,7 @@ import { cn, getFallbackImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
-import { toggleLikeInDb } from '@/utils/like-utils';
+import { fetchLikedPostIds, toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
 import AdMobBanner from '@/components/AdMobBanner';
 import CollapsingHeader from '@/components/CollapsingHeader';
@@ -201,7 +201,8 @@ const FriendFeed = () => {
 
       if (!error) {
         if (!data || data.length < PAGE_SIZE) setHasMore(false);
-        setPosts((data || []).map(mapPostImmediate));
+        const likedIds = await fetchLikedPostIds((data || []).map((p: any) => p.id), authUser.id);
+        setPosts((data || []).map((p: any) => ({ ...mapPostImmediate(p), isLiked: likedIds.has(String(p.id)) })));
       }
 
       setIsInitialLoading(false);
@@ -227,12 +228,13 @@ const FriendFeed = () => {
       .range(from, to);
 
     if (!error && data && data.length > 0) {
-      setPosts(prev => [...prev, ...data.map(mapPostImmediate)]);
+      const likedIds = await fetchLikedPostIds(data.map((p: any) => p.id), authUser?.id);
+      setPosts(prev => [...prev, ...data.map((p: any) => ({ ...mapPostImmediate(p), isLiked: likedIds.has(String(p.id)) }))]);
       setPage(nextPage);
     }
     if (!data || data.length < PAGE_SIZE) setHasMore(false);
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMore, page, followingIds]);
+  }, [isLoadingMore, hasMore, page, followingIds, authUser?.id]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   useEffect(() => {

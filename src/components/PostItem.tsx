@@ -244,6 +244,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     setIsEditingContent(false);
   }, [post.id, post.content]);
 
+  useEffect(() => {
+    setIsLiked(post.isLiked);
+    setLikesCount(post.likes || 0);
+  }, [post.id, post.isLiked, post.likes]);
+
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
 
@@ -775,7 +780,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
-              <Heart className={cn("w-6 h-6 transition-colors", post.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
             </button>
             <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
               <MessageCircle className="w-6 h-6 text-gray-700" />

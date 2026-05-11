@@ -12,11 +12,12 @@ import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 // motion 제거: transform이 적용된 부모는 자식의 sticky 동작과 iOS 스크롤 이벤트 타이밍을 망가뜨림
 // 진입 애니메이션은 CSS keyframe으로 처리
-import { fetchPostsInBounds, getTierFromFollowers } from '@/hooks/use-supabase-posts';
+import { getTierFromFollowers } from '@/hooks/use-supabase-posts';
 import { showError } from '@/utils/toast';
 import AdMobBanner from './AdMobBanner';
 import CollapsingHeader from './CollapsingHeader';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
+import { fetchLikedPostIds, toggleLikeInDb } from '@/utils/like-utils';
 
 const AD_INSERT_INTERVAL = 3;
 
@@ -276,7 +277,7 @@ const PostListOverlay = ({
         return;
       }
 
-      // REMOVED: 별도 profiles 쿼리 (N+1 패턴) - JOIN 결과를 직접 사용
+      const likedIds = await fetchLikedPostIds(data.map((p: any) => p.id), authUserId);
 
       const newPosts: Post[] = data.map((p: any) => {
         const profile = (p as any).profiles;
@@ -308,7 +309,7 @@ const PostListOverlay = ({
           createdAt: new Date(p.created_at),
           category: p.category || 'none',
           commentsCount: 0, comments: [],
-          isLiked: false, isAd: false, isGif: false,
+          isLiked: likedIds.has(String(p.id)), isAd: false, isGif: false,
           isInfluencer: borderType === 'silver' || borderType === 'gold' || borderType === 'diamond',
           borderType,
         };
@@ -325,7 +326,7 @@ const PostListOverlay = ({
     } finally {
       setIsLoadingMore(false);
     }
-  }, [posts, isLoadingMore, hasMore, currentBounds]);
+  }, [posts, isLoadingMore, hasMore, currentBounds, authUserId]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -382,12 +383,16 @@ const PostListOverlay = ({
     }));
 
     try {
-      if (!isLiked) {
-        await supabase.from('likes').upsert({ post_id: postId, user_id: authUserId }, { onConflict: 'post_id,user_id', ignoreDuplicates: true });
-        await supabase.rpc('increment_likes', { post_id: postId });
-      } else {
-        await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', authUserId);
-        await supabase.rpc('decrement_likes', { post_id: postId });
+      const ok = await toggleLikeInDb(postId, authUserId, isLiked);
+      if (!ok) {
+        setPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p;
+          return {
+            ...p,
+            isLiked,
+            likes: isLiked ? p.likes + 1 : Math.max(0, p.likes - 1),
+          };
+        }));
       }
     } catch (err) {
       console.error('[PostListOverlay] Like toggle error:', err);
