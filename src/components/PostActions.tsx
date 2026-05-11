@@ -40,10 +40,48 @@ const PostActions = ({
 }: PostActionsProps) => {
   const AdIcon = adIcon === 'shopping-bag' ? ShoppingBag : ExternalLink;
   const adIconClassName = adIcon === 'shopping-bag' ? 'w-3.5 h-3.5 fill-white' : 'w-3.5 h-3.5';
+  const adHref = linkUrl ? (linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`) : 'https://s.baemin.com/t3000fBqlbHGL';
+  const canShowLocation = lat !== undefined && lng !== undefined && onLocationClick;
+
+  const saveButton = (
+    <button
+      type="button"
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 transition-all hover:bg-gray-100 active:scale-95"
+      onClick={onSaveClick}
+      aria-label="저장하기"
+    >
+      <Bookmark className={cn('h-[18px] w-[18px] transition-colors', isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-600')} />
+    </button>
+  );
+
+  const adButton = isAd ? (
+    <a
+      href={adHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="inline-flex h-9 items-center justify-center gap-1.5 px-3 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 shrink-0 whitespace-nowrap"
+    >
+      <AdIcon className={adIconClassName} />
+      <span className="text-[10px] font-black leading-none">보러가기</span>
+    </a>
+  ) : null;
+
+  const locationButton = canShowLocation ? (
+    <button
+      type="button"
+      onClick={(e) => onLocationClick(e, lat, lng)}
+      className="inline-flex h-9 items-center justify-center gap-1.5 px-3 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
+      style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
+    >
+      <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
+      <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5', lineHeight: 1 }}>위치보기</span>
+    </button>
+  ) : null;
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      <div className="flex items-center justify-between gap-3">
+      <div className={cn('flex gap-3', isAd && canShowLocation ? 'items-start justify-between' : 'items-center justify-between')}>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
@@ -78,37 +116,18 @@ const PostActions = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 transition-all hover:bg-gray-100 active:scale-95"
-            onClick={onSaveClick}
-            aria-label="저장하기"
-          >
-            <Bookmark className={cn('h-[18px] w-[18px] transition-colors', isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-600')} />
-          </button>
-          {isAd && (
-            <a
-              href={linkUrl ? (linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex h-9 items-center justify-center gap-1.5 px-3 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 shrink-0 whitespace-nowrap"
-            >
-              <AdIcon className={adIconClassName} />
-              <span className="text-[10px] font-black leading-none">보러가기</span>
-            </a>
-          )}
-          {lat !== undefined && lng !== undefined && onLocationClick && (
-            <button
-              type="button"
-              onClick={(e) => onLocationClick(e, lat, lng)}
-              className="inline-flex h-9 items-center justify-center gap-1.5 px-3 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
-              style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
-            >
-              <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
-              <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5', lineHeight: 1 }}>위치보기</span>
-            </button>
+        <div className={cn('flex shrink-0 gap-2', isAd && canShowLocation ? 'items-start' : 'items-center')}>
+          {saveButton}
+          {isAd && canShowLocation ? (
+            <div className="flex flex-col items-end gap-2">
+              {locationButton}
+              {adButton}
+            </div>
+          ) : (
+            <>
+              {adButton}
+              {locationButton}
+            </>
           )}
         </div>
       </div>
