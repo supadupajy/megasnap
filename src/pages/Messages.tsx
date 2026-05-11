@@ -332,12 +332,15 @@ const Messages = () => {
 
   return (
     <div
-      className="min-h-screen bg-white no-scrollbar"
-      style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
+      className="h-screen min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-contain"
+      style={{
+        paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))',
+        WebkitOverflowScrolling: 'touch',
+      }}
       onClick={() => setSwipedId(null)}
     >
       <div className="pt-16">
-        <div className="sticky top-0 z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
+        <div className="sticky top-16 z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
           <div />
           <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
           <div className="flex justify-end">
