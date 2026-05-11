@@ -722,7 +722,7 @@ const MapContainer = ({
       const isAdPendingKey = !!(post as any).isAdPending;
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = (!post.isAd && post.videoUrl) ? (videoThumbCacheRef.current.has(post.id) ? '1' : '0') : '';
-      const contentStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
+      const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -784,24 +784,9 @@ const MapContainer = ({
 
   useEffect(() => {
     if (!isMapReady) return;
-    const combinedViewedIds = new Set([...Array.from(viewedPostIds), ...Array.from(internalViewedIds)]);
-    overlaysRef.current.forEach((overlay, id) => {
-      if (highlightingIdsRef.current.has(id)) return;
-      const content = overlay.getContent() as HTMLElement;
-      if (!content) return;
-      const stateKey = content.getAttribute('data-content-state') || '';
-      const isViewed = combinedViewedIds.has(id);
-      const currentIsViewed = stateKey.startsWith('true');
-      if (isViewed === currentIsViewed) return;
-      const p = postsRef.current.find(item => item.id === id);
-      if (!p) return;
-      const isMineKey = !!(authUserRef.current && String(((p as any).owner_id || (p as any).user_id || '')) === String(authUserRef.current.id));
-      const isAdPendingKey = !!(p as any).isAdPending;
-      const newStateKey = `${isViewed}-${p.borderType}-${p.isAd}-${!!p.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${p.likes}`;
-      content.innerHTML = getMarkerInnerHtmlRef.current(p, isViewed);
-      content.setAttribute('data-content-state', newStateKey);
-      scheduleOverlapBadgeUpdateRef.current();
-    });
+    // 조회 상태는 포스트 리스트/상세 오버레이에서만 사용하고,
+    // 지도 마커 DOM은 이미 로딩된 모양을 유지한다.
+    // viewedPostIds 변경 때마다 innerHTML을 교체하면 지도 복귀 시 마커가 다시 로딩되는 것처럼 보인다.
   }, [viewedPostIds, internalViewedIds, isMapReady]);
 
   // 'pre-highlight-marker' 이벤트: focusPostOnMap에서 setAllPosts 직후 즉시 보호 시작
@@ -850,15 +835,11 @@ const MapContainer = ({
             // (highlighted 중 React 리렌더가 일어나도 contentStateKey 일치 → innerHTML 교체 안 함)
             const pNow = postsRef.current.find(item => item.id === postId);
             if (pNow) {
-              const combinedViewedNow = new Set([
-                ...Array.from(viewedPostIdsRef.current),
-                ...Array.from(internalViewedIdsRef.current),
-              ]);
-              const isViewedNow = combinedViewedNow.has(postId);
               const isMineKeyNow = !!(authUserRef.current && String(((pNow as any).owner_id || (pNow as any).user_id || '')) === String(authUserRef.current.id));
               const isAdPendingKeyNow = !!(pNow as any).isAdPending;
-              const nowStateKey = `${isViewedNow}-${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}`;
-              content.innerHTML = getMarkerInnerHtmlRef.current(pNow, isViewedNow);
+              const hasThumbKeyNow = (!pNow.isAd && pNow.videoUrl) ? (videoThumbCacheRef.current.has(pNow.id) ? '1' : '0') : '';
+              const nowStateKey = `${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}-${hasThumbKeyNow}`;
+              content.innerHTML = getMarkerInnerHtmlRef.current(pNow, false);
               content.setAttribute('data-content-state', nowStateKey);
               scheduleOverlapBadgeUpdateRef.current();
             }
@@ -879,15 +860,11 @@ const MapContainer = ({
               // (highlightingIdsRef 보호 해제 후 React 리렌더가 잘못된 isMine으로 교체하는 것 방지)
               const p2 = postsRef.current.find(item => item.id === postId);
               if (p2) {
-                const combinedViewed = new Set([
-                  ...Array.from(viewedPostIdsRef.current),
-                  ...Array.from(internalViewedIdsRef.current),
-                ]);
-                const isViewed2 = combinedViewed.has(postId);
                 const isMineKey2 = !!(authUserRef.current && String(((p2 as any).owner_id || (p2 as any).user_id || '')) === String(authUserRef.current.id));
                 const isAdPendingKey2 = !!(p2 as any).isAdPending;
-                const finalStateKey = `${isViewed2}-${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}`;
-                content.innerHTML = getMarkerInnerHtmlRef.current(p2, isViewed2);
+                const hasThumbKey2 = (!p2.isAd && p2.videoUrl) ? (videoThumbCacheRef.current.has(p2.id) ? '1' : '0') : '';
+                const finalStateKey = `${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}-${hasThumbKey2}`;
+                content.innerHTML = getMarkerInnerHtmlRef.current(p2, false);
                 content.setAttribute('data-content-state', finalStateKey);
                 scheduleOverlapBadgeUpdateRef.current();
               }
@@ -1393,15 +1370,10 @@ const MapContainer = ({
             // postsRef에서 해당 포스트를 찾아 최신 HTML로 교체 (캐시가 이미 set된 상태)
             const post = postsRef.current.find(p => p.id === postId);
             if (post) {
-              const combinedViewedIds = new Set([
-                ...Array.from(viewedPostIdsRef.current),
-                ...Array.from(internalViewedIdsRef.current),
-              ]);
-              const isViewed = combinedViewedIds.has(postId);
               const isMineKey = !!(authUserRef.current && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUserRef.current.id));
               const isAdPendingKey = !!(post as any).isAdPending;
-              const newStateKey = `${isViewed}-${post.borderType}-${post.isAd}-${!!post.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${post.likes}-1`;
-              content.innerHTML = getMarkerInnerHtmlRef.current(post, isViewed);
+              const newStateKey = `${post.borderType}-${post.isAd}-${!!post.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${post.likes}-1`;
+              content.innerHTML = getMarkerInnerHtmlRef.current(post, false);
               content.setAttribute('data-content-state', newStateKey);
             }
           }

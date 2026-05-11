@@ -212,6 +212,7 @@ const Index = () => {
   const isMapFrozenByCommentsRef = useRef(false);
   const frozenMapViewRef = useRef<{ center?: { lat: number; lng: number }; level: number } | null>(null);
   const isPostDetailOpenRef = useRef(false);
+  const isPostListOverlayOpenRef = useRef(false);
   const suppressMapChangesUntilRef = useRef(0);
 
   const { viewedIds, markAsViewed } = useViewedPosts();
@@ -911,6 +912,18 @@ const Index = () => {
     isPostDetailOpenRef.current = false;
   }, [selectedPostId]);
 
+  useEffect(() => {
+    if (isPostListOpen) {
+      isPostListOverlayOpenRef.current = true;
+      return;
+    }
+
+    if (isPostListOverlayOpenRef.current) {
+      suppressMapChangesUntilRef.current = Date.now() + 700;
+    }
+    isPostListOverlayOpenRef.current = false;
+  }, [isPostListOpen]);
+
   // 트렌딩 포스트 div의 실제 bottom 위치 측정
   // 펼침 애니메이션 중 ResizeObserver → setState → 전체 리렌더가 반복되지 않도록
   // 접힌 상태에서만 측정값을 상태에 반영한다.
@@ -962,7 +975,7 @@ const Index = () => {
     if (
       !isSelectingLocationRef.current &&
       !isSelectingAdLocationRef.current &&
-      (isMapFrozenByCommentsRef.current || isPostDetailOpenRef.current || Date.now() < suppressMapChangesUntilRef.current)
+      (isMapFrozenByCommentsRef.current || isPostDetailOpenRef.current || isPostListOverlayOpenRef.current || Date.now() < suppressMapChangesUntilRef.current)
     ) {
       return;
     }
