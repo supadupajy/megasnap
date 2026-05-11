@@ -206,10 +206,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
     if (document.activeElement === commentInputRef.current) return;
     e.preventDefault();
+    window.dispatchEvent(new CustomEvent('comment-input-keyboard-focus'));
     commentInputRef.current?.focus({ preventScroll: true });
   };
 
+  const releaseCommentKeyboardMapLock = () => {
+    window.dispatchEvent(new CustomEvent('comment-input-keyboard-blur'));
+  };
+
   const handleCommentInputFocus = () => {
+    window.dispatchEvent(new CustomEvent('comment-input-keyboard-focus'));
     lockNearestScrollParentDuringFocus();
     keyboardScrollTimersRef.current.forEach(window.clearTimeout);
     keyboardScrollTimersRef.current = [60, 180, 360, 620].map((delay, index) =>
@@ -803,13 +809,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         <Input
           ref={commentInputRef}
           placeholder="댓글 달기..."
-          className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
           value={commentInput}
           onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
           maxLength={COMMENT_MAX_LENGTH}
-          disabled={isSubmittingComment}
           onFocus={handleCommentInputFocus}
+          onBlur={releaseCommentKeyboardMapLock}
           onPointerDown={focusCommentInputWithoutNativeScroll}
+          disabled={isSubmittingComment}
+          className="flex-1 h-10 bg-transparent border-none focus-visible:ring-0 text-sm"
         />
         <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
           <Send className="w-4 h-4" />

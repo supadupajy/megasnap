@@ -299,6 +299,9 @@ const Index = () => {
   const tempSelectedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [commentKeyboardMapOffset, setCommentKeyboardMapOffset] = useState(0);
+  const isCommentKeyboardFocusedRef = useRef(false);
+  const commentFocusMapTopRef = useRef<number | null>(null);
 
   // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
 
@@ -1286,6 +1289,56 @@ const Index = () => {
   }, [isPostListOpen]);
 
   useEffect(() => {
+    const updateMapOffset = () => {
+      if (!isCommentKeyboardFocusedRef.current) {
+        setCommentKeyboardMapOffset(0);
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      const mapAreaTop = mapAreaRef.current?.getBoundingClientRect().top;
+      const initialTop = commentFocusMapTopRef.current;
+      const measuredOffset =
+        typeof mapAreaTop === 'number' && typeof initialTop === 'number'
+          ? Math.max(0, Math.round(initialTop - mapAreaTop))
+          : 0;
+      const viewportOffset = Math.max(0, Math.round(viewport?.offsetTop || 0));
+
+      // 실제 지도 영역이 화면 위로 밀린 양을 우선 사용하고,
+      // 일부 WebView에서는 visualViewport.offsetTop으로만 이동량이 잡히므로 둘 중 큰 값을 적용한다.
+      setCommentKeyboardMapOffset(Math.max(measuredOffset, viewportOffset));
+    };
+
+    const handleCommentFocus = () => {
+      if (!isCommentKeyboardFocusedRef.current) {
+        isCommentKeyboardFocusedRef.current = true;
+        commentFocusMapTopRef.current = mapAreaRef.current?.getBoundingClientRect().top ?? null;
+      }
+      updateMapOffset();
+      requestAnimationFrame(updateMapOffset);
+      [50, 120, 240, 420, 700, 1000].forEach((delay) => window.setTimeout(updateMapOffset, delay));
+    };
+
+    const handleCommentBlur = () => {
+      isCommentKeyboardFocusedRef.current = false;
+      commentFocusMapTopRef.current = null;
+      setCommentKeyboardMapOffset(0);
+    };
+
+    window.addEventListener('comment-input-keyboard-focus', handleCommentFocus);
+    window.addEventListener('comment-input-keyboard-blur', handleCommentBlur);
+    window.visualViewport?.addEventListener('resize', updateMapOffset);
+    window.visualViewport?.addEventListener('scroll', updateMapOffset);
+
+    return () => {
+      window.removeEventListener('comment-input-keyboard-focus', handleCommentFocus);
+      window.removeEventListener('comment-input-keyboard-blur', handleCommentBlur);
+      window.visualViewport?.removeEventListener('resize', updateMapOffset);
+      window.visualViewport?.removeEventListener('scroll', updateMapOffset);
+    };
+  }, []);
+
+  useEffect(() => {
     const routeState = location.state as any;
     if (!routeState) return;
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
@@ -1505,7 +1558,7 @@ const Index = () => {
           <ShutterOverlay ref={shutterRef} />
           {/* isolate: 히트맵 캔버스의 zIndex(100)가 부모 내부에 갇히도록 새 stacking context 생성
               → 좌/우 버튼(z-20), 지도 레벨 인디케이터(z-[35]) 등이 히트맵 위로 올라옴 */}
-          <div className="absolute inset-0 isolate">
+          <div className="absolute inset-0 isolate" style={{ transform: commentKeyboardMapOffset ? `translate3d(0, ${commentKeyboardMapOffset}px, 0)` : undefined, transition: commentKeyboardMapOffset ? 'transform 80ms linear' : 'transform 160ms ease-out', willChange: commentKeyboardMapOffset ? 'transform' : undefined }}>
             <MapContainer
               posts={displayedMarkers}
               viewedPostIds={viewedIds}
