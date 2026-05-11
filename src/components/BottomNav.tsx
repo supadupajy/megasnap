@@ -44,55 +44,59 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
-  const [suppressKeyboardReturnAnimation, setSuppressKeyboardReturnAnimation] = useState(false);
+  const [isCommentsDialogVisible, setIsCommentsDialogVisible] = useState(() => !!(window as any).__commentsDialogOpen);
+  const [keepHiddenUntilKeyboardSettled, setKeepHiddenUntilKeyboardSettled] = useState(false);
   const keyboardOffset = useKeyboardOffset();
-  const releaseSuppressTimerRef = useRef<number | null>(null);
+  const releaseHiddenTimerRef = useRef<number | null>(null);
   const lastActiveTabIndexRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
-  const effectiveKeyboardOffset = suppressKeyboardReturnAnimation ? 0 : keyboardOffset;
+  const shouldHideForCommentsKeyboard = isCommentsDialogVisible && keyboardOffset > 0;
+  const shouldHideBottomNav = shouldHideForCommentsKeyboard || keepHiddenUntilKeyboardSettled;
 
   useEffect(() => {
-    const clearReleaseSuppressTimer = () => {
-      if (releaseSuppressTimerRef.current == null) return;
-      window.clearTimeout(releaseSuppressTimerRef.current);
-      releaseSuppressTimerRef.current = null;
+    const clearReleaseHiddenTimer = () => {
+      if (releaseHiddenTimerRef.current == null) return;
+      window.clearTimeout(releaseHiddenTimerRef.current);
+      releaseHiddenTimerRef.current = null;
     };
 
     const handleCommentsDialogVisibility = (event: Event) => {
       const detail = (event as CustomEvent<{ open?: boolean; closing?: boolean }>).detail;
+      const isVisible = !!detail?.open;
 
-      clearReleaseSuppressTimer();
+      clearReleaseHiddenTimer();
+      setIsCommentsDialogVisible(isVisible);
 
-      if (detail?.open && !detail.closing) {
-        setSuppressKeyboardReturnAnimation(false);
+      if (!isVisible || detail?.closing) {
+        setKeepHiddenUntilKeyboardSettled(true);
         return;
       }
 
-      setSuppressKeyboardReturnAnimation(true);
+      setKeepHiddenUntilKeyboardSettled(false);
     };
 
     window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
     return () => {
-      clearReleaseSuppressTimer();
+      clearReleaseHiddenTimer();
       window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
     };
   }, []);
 
   useEffect(() => {
-    if (!suppressKeyboardReturnAnimation || keyboardOffset > 0) return;
+    if (!keepHiddenUntilKeyboardSettled || keyboardOffset > 0) return;
 
-    releaseSuppressTimerRef.current = window.setTimeout(() => {
-      setSuppressKeyboardReturnAnimation(false);
-      releaseSuppressTimerRef.current = null;
-    }, 80);
+    releaseHiddenTimerRef.current = window.setTimeout(() => {
+      setKeepHiddenUntilKeyboardSettled(false);
+      releaseHiddenTimerRef.current = null;
+    }, 120);
 
     return () => {
-      if (releaseSuppressTimerRef.current == null) return;
-      window.clearTimeout(releaseSuppressTimerRef.current);
-      releaseSuppressTimerRef.current = null;
+      if (releaseHiddenTimerRef.current == null) return;
+      window.clearTimeout(releaseHiddenTimerRef.current);
+      releaseHiddenTimerRef.current = null;
     };
-  }, [keyboardOffset, suppressKeyboardReturnAnimation]);
+  }, [keyboardOffset, keepHiddenUntilKeyboardSettled]);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
@@ -221,8 +225,10 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000] will-change-transform"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        transform: effectiveKeyboardOffset > 0 ? `translate3d(0, ${effectiveKeyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
-        transition: effectiveKeyboardOffset > 0 || suppressKeyboardReturnAnimation ? 'none' : 'transform 160ms ease-out',
+        pointerEvents: shouldHideBottomNav ? 'none' : undefined,
+        transform: keyboardOffset > 0 ? `translate3d(0, ${keyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
+        transition: keyboardOffset > 0 || shouldHideBottomNav ? 'none' : 'transform 160ms ease-out',
+        visibility: shouldHideBottomNav ? 'hidden' : 'visible',
       }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
