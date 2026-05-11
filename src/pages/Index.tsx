@@ -415,19 +415,8 @@ const Index = () => {
         return;
       }
 
-      const snapshot = frozenMapViewRef.current;
       isMapFrozenByCommentsRef.current = false;
       frozenMapViewRef.current = null;
-
-      if (snapshot?.center) {
-        mapCache.lastCenter = snapshot.center;
-        setMapCenter(snapshot.center);
-      }
-      if (snapshot?.level) {
-        mapCache.lastZoom = snapshot.level;
-        currentZoomRef.current = snapshot.level;
-        setCurrentZoom(snapshot.level);
-      }
     };
 
     window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
