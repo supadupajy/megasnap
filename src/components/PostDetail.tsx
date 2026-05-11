@@ -1013,10 +1013,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                               {renderDropdownMenu()}
                               <button
                                 onClick={onClose}
-                                className="w-9 h-9 bg-gray-900/90 hover:bg-gray-900 rounded-xl flex items-center justify-center text-white shadow-sm active:scale-90 transition-all"
+                                className="w-9 h-9 bg-gray-600 hover:bg-gray-700 rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
                                 aria-label="닫기"
                               >
-                                <X className="w-5 h-5" strokeWidth={2.5} />
+                                <X className="w-5 h-5" strokeWidth={2.25} />
                               </button>
                             </div>
                           </div>
