@@ -52,44 +52,24 @@ const PostCommentsDialog = ({
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
-  const rawKeyboardOffset = useKeyboardOffset(isOpen);
-  // 일부 안드로이드 환경에서는 globalViewportBaseHeight 누적 때문에 keyboardOffset이
-  // 현재 window.innerHeight보다 더 커지는 경우가 있어, 시트가 화면 위로 튕겨나간다.
-  // 실제로 시트를 올릴 수 있는 최대값은 "현재 viewport 안에서의 키보드 높이"이므로
-  // window.innerHeight - vvH(키보드 위 가용 영역) 이상으로는 절대 올리지 않는다.
-  const safeKeyboardOffset = (() => {
-    if (typeof window === 'undefined') return rawKeyboardOffset;
-    const vvH = window.visualViewport?.height ?? window.innerHeight;
-    const vvTop = window.visualViewport?.offsetTop ?? 0;
-    const maxOffset = Math.max(0, window.innerHeight - vvH - vvTop);
-    // window.innerHeight 기반 측정값과 hook 측정값 중 더 작은(=현실적인) 값 사용
-    return Math.min(rawKeyboardOffset, maxOffset);
-  })();
-  const keyboardOffset = safeKeyboardOffset;
+  // 이 환경(안드로이드 삼성 인터넷)에서는 키보드가 뜨면 window.innerHeight 자체가 줄어든다.
+  // 즉 fixed bottom:0은 자동으로 키보드 위에 붙는다.
+  // 따라서 keyboardOffset을 sheet 위치 계산에 쓰지 않는다.
+  // (useKeyboardOffset은 다른 컴포넌트와의 호환을 위해 유지, BottomNav 등이 사용)
+  const keyboardOffset = useKeyboardOffset(isOpen);
   const frozenSheetBottomRef = useRef<string | null>(null);
   const frozenSheetTopRef = useRef<number | null>(null);
-  // 시트는 화면 맨 아래(bottom: 0)까지 닿게 한다.
-  // → BottomNav 영역까지 시트가 덮으므로 BottomNav가 키보드 위에 떠 보이는 문제가 시야에서 사라짐.
-  // 키보드가 뜨면 keyboardOffset만큼 시트를 위로 올린다.
-  const liveSheetBottom = keyboardOffset > 0 ? `${keyboardOffset}px` : '0px';
-  // 닫힘 애니메이션 중에는 키보드가 내려가더라도 입력창 위치가 점프하지 않도록
-  // 닫기 시작 시점의 bottom 값을 그대로 유지한다.
+  // 시트는 항상 화면 맨 아래(bottom: 0)에 붙는다.
+  // 키보드가 뜨면 layout viewport(window.innerHeight)가 자동으로 줄어들기 때문에
+  // bottom:0만으로 시트가 키보드 바로 위에 자연스럽게 붙는다.
+  const liveSheetBottom = '0px';
   const sheetBottom = isClosing && frozenSheetBottomRef.current != null
     ? frozenSheetBottomRef.current
     : liveSheetBottom;
 
-  // 키보드가 뜨면 시트 bottom이 키보드 높이만큼 올라가므로,
-  // 시트 영역(top↔bottom)이 너무 좁아지지 않도록 최소 높이(MIN_SHEET_HEIGHT)를 보장한다.
-  // 그 외에는 sheetTopPx를 그대로 사용한다 (시트가 화면 위로 튀어오르지 않음).
-  const MIN_SHEET_HEIGHT = 320;
-  const liveSheetTopPx = (() => {
-    if (sheetTopPx == null) return null;
-    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-    const sheetHeight = viewportHeight - sheetTopPx - keyboardOffset;
-    if (sheetHeight >= MIN_SHEET_HEIGHT) return sheetTopPx;
-    // 시트가 너무 좁아질 때만 top을 끌어올린다.
-    return Math.max(20, viewportHeight - keyboardOffset - MIN_SHEET_HEIGHT);
-  })();
+  // top도 sheetTopPx 그대로 사용. 키보드 등장 시 innerHeight가 줄면 setSheetTopPx 자체가
+  // 작은 viewport에 맞게 재계산되는 게 이상적이지만, 일단 처음 값 유지.
+  const liveSheetTopPx = sheetTopPx;
   const effectiveSheetTopPx = isClosing && frozenSheetTopRef.current != null
     ? frozenSheetTopRef.current
     : liveSheetTopPx;
