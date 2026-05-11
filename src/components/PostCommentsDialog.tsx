@@ -54,29 +54,22 @@ const PostCommentsDialog = ({
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
   const frozenSheetBottomRef = useRef<string | null>(null);
-  const liveSheetBottom = keyboardOffset > 0 ? '0px' : 'var(--bottom-nav-height)';
+  // 시트는 화면 맨 아래(bottom: 0)까지 닿게 한다.
+  // → BottomNav 영역까지 시트가 덮으므로 BottomNav가 키보드 위에 떠 보이는 문제가 시야에서 사라짐.
+  // 키보드가 뜨면 keyboardOffset만큼 시트를 위로 올린다.
+  const liveSheetBottom = keyboardOffset > 0 ? `${keyboardOffset}px` : '0px';
   // 닫힘 애니메이션 중에는 키보드가 내려가더라도 입력창 위치가 점프하지 않도록
   // 닫기 시작 시점의 bottom 값을 그대로 유지한다.
   const sheetBottom = isClosing && frozenSheetBottomRef.current != null
     ? frozenSheetBottomRef.current
     : liveSheetBottom;
 
-  const getBottomNavHeight = () => {
-    const probe = document.createElement('div');
-    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;height:var(--bottom-nav-height);width:1px;';
-    document.body.appendChild(probe);
-    const height = probe.getBoundingClientRect().height || 72;
-    document.body.removeChild(probe);
-    return height;
-  };
-
   useEffect(() => {
     if (!isOpen) return;
 
     const viewportHeight = window.innerHeight;
-    const bottomNavHeight = getBottomNavHeight();
-    const desiredHeight = Math.min(viewportHeight * 0.76, 700, viewportHeight - bottomNavHeight - 40);
-    setSheetTopPx(Math.max(20, viewportHeight - bottomNavHeight - desiredHeight));
+    const desiredHeight = Math.min(viewportHeight * 0.76, 700, viewportHeight - 40);
+    setSheetTopPx(Math.max(20, viewportHeight - desiredHeight));
   }, [isOpen]);
 
   useEffect(() => {

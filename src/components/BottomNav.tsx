@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { mapCache } from '@/utils/map-cache';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
@@ -38,11 +39,11 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  // 댓글 다이얼로그가 열려 있는 동안에는 BottomNav를 아예 렌더에서 제외한다.
-  // 키보드 상태를 추적하지 않으므로 슬라이딩/깜빡임이 발생하지 않는다.
-  const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(
-    () => typeof window !== 'undefined' && !!(window as any).__commentsDialogOpen
-  );
+  // 키보드가 떠 있는 동안에는 BottomNav를 화면 밖으로 밀어낸다.
+  // (안드로이드에서는 position: fixed가 layout viewport 기준이라 키보드 위에 떠 보이기 때문)
+  // 댓글 시트가 화면 맨 아래까지 덮고 있으므로 이 슬라이딩은 시트 뒤에서 일어나 사용자에게 보이지 않는다.
+  const keyboardOffset = useKeyboardOffset(true);
+  const isKeyboardOpen = keyboardOffset > 0;
   const navRef = useRef<HTMLDivElement>(null);
   const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pillLeft, setPillLeft] = useState(0);
@@ -63,15 +64,6 @@ const BottomNav = () => {
       markFriendPostsSeen();
     }
   }, [isFriendsPage, markFriendPostsSeen]);
-
-  useEffect(() => {
-    const handleVisibility = (event: Event) => {
-      const detail = (event as CustomEvent<{ open: boolean }>).detail;
-      setIsCommentsDialogOpen(!!detail?.open);
-    };
-    window.addEventListener('comments-dialog-visibility', handleVisibility);
-    return () => window.removeEventListener('comments-dialog-visibility', handleVisibility);
-  }, []);
 
   useEffect(() => {
     if (!authUser?.id) {
@@ -188,9 +180,10 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000]"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        // 댓글 다이얼로그가 열린 동안에는 layout에서 완전히 제외한다.
-        // → 키보드 올라옴/내려감 애니메이션과 무관하므로 슬라이딩도 깜빡임도 없음.
-        display: isCommentsDialogOpen ? 'none' : undefined,
+        // 키보드가 올라오면 화면 밖으로 밀어내 키보드 위 노출을 방지.
+        // (댓글 시트가 이 영역을 덮고 있으면 사용자에겐 슬라이딩이 보이지 않음)
+        transform: isKeyboardOpen ? 'translateY(120%)' : 'translateY(0)',
+        transition: 'transform 200ms ease-out',
       }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
