@@ -84,6 +84,10 @@ const PostCommentsDialog = ({
     onCommentsChange(nextComments);
   };
 
+  const stopSheetEvent = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
+
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authUser) {
@@ -263,16 +267,19 @@ const PostCommentsDialog = ({
     <div className="fixed inset-0 z-[30000] pointer-events-none" role="dialog" aria-modal="true" aria-label="댓글">
       <button
         type="button"
-        className="absolute left-0 right-0 top-0 cursor-default bg-slate-950/60 comment-backdrop-enter pointer-events-auto"
+        className="absolute left-0 right-0 top-0 z-0 cursor-default bg-slate-950/60 comment-backdrop-enter pointer-events-auto"
         style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
         onClick={() => onOpenChange(false)}
         aria-label="댓글 닫기 배경"
       />
 
       <section
-        className="fixed left-1/2 flex h-[min(66dvh,600px)] max-h-[calc(100dvh-156px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        className="fixed left-1/2 z-[1] flex h-[min(66dvh,600px)] max-h-[calc(100dvh-156px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
         style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={stopSheetEvent}
+        onMouseDown={stopSheetEvent}
+        onTouchStart={stopSheetEvent}
+        onClick={stopSheetEvent}
       >
         <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
 
