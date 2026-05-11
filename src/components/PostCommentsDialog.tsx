@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Check, MessageCircle, Send, Trash2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Comment } from '@/types';
@@ -263,7 +262,7 @@ const PostCommentsDialog = ({
 
   if (!isOpen) return null;
 
-  return createPortal(
+  return (
     <div className="fixed inset-0 z-[30000] pointer-events-none" role="dialog" aria-modal="true" aria-label="댓글">
       <button
         type="button"
@@ -340,8 +339,7 @@ const PostCommentsDialog = ({
           </div>
         </form>
       </section>
-    </div>,
-    document.body
+    </div>
   );
 };
 
