@@ -47,7 +47,9 @@ import { showSuccess, showError } from '@/utils/toast';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment, COMMENT_MAX_LENGTH } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import ExpandableCommentText from './ExpandableCommentText';
+import PostCommentsDialog from './PostCommentsDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
+
 import { handleShare } from '@/utils/share';
 
 interface PostItemProps {
@@ -84,7 +86,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
   const [localContent, setLocalContent] = useState(post.content || '');
@@ -102,7 +106,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
-  const commentInputRef = useRef<HTMLInputElement>(null);
   
   // 마우스 드래그를 위한 상태
 
@@ -252,13 +255,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     setIsLiked(post.isLiked);
     setLikesCount(post.likes || 0);
   }, [post.id, post.isLiked, post.likes]);
-
-  const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
-
-    if (document.activeElement === commentInputRef.current) return;
-    e.preventDefault();
-    commentInputRef.current?.focus({ preventScroll: true });
-  };
 
   const lat = post.latitude ?? post.lat;
 
@@ -456,15 +452,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const handleCommentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    commentInputRef.current?.focus({ preventScroll: true });
-  };
-
-  const handleCommentInputFocus = () => {
-    // 키보드가 열릴 때 지도/페이지가 같이 움직이지 않도록 여기서는 강제 스크롤을 하지 않는다.
-    // 필요한 경우 브라우저의 기본 포커스 처리와 preventScroll에만 맡긴다.
+    setIsCommentsDialogOpen(true);
   };
 
   const confirmDelete = () => {
+
     setIsDeleteDialogOpen(false);
     // 다음 tick에서 실행해 Radix AlertDialog cleanup이 먼저 완료되도록 함
     setTimeout(() => {
@@ -921,39 +913,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                   {renderContentBody()}
                 </div>
               </div>
-              <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onPointerDown={focusCommentInputWithoutNativeScroll} />
-
-                <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
-
-              {localComments.length > 1 && (
+              {localComments.length > 0 && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
-                  className="w-full py-1 flex items-center justify-between cursor-pointer mb-1"
+                  type="button"
+                  onClick={handleCommentClick}
+                  className="mt-3 text-xs font-bold text-slate-400 transition hover:text-indigo-500"
                 >
-                  <span className="text-xs text-gray-400 font-medium">
-                    {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
-                  </span>
-                  {showComments
-                    ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" />
-                    : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />
-                  }
+                  댓글 {localComments.length.toLocaleString()}개 보기
                 </button>
               )}
 
-              <div
-                className="overflow-hidden transition-all duration-300 ease-in-out"
-                style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
-              >
-                <div className="space-y-2 pb-1">
-                  {localComments.slice(0, -1).map((c, i) => renderCommentRow(c, i))}
-                </div>
-              </div>
-
-              {lastComment && renderCommentRow(lastComment, localComments.length - 1, { clamp: !showComments, showRef: true })}
             </div>
           </div>
         </div>
@@ -1002,42 +971,28 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 {renderContentBody()}
               </div>
             </div>
-            <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onPointerDown={focusCommentInputWithoutNativeScroll} />
-
-              <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-                <Send className="w-4 h-4" />
-              </button>
-            </form>
-
-            {localComments.length > 1 && (
+            {localComments.length > 0 && (
               <button
-                onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
-                className="w-full py-1 flex items-center justify-between cursor-pointer mb-1"
+                type="button"
+                onClick={handleCommentClick}
+                className="mt-3 text-xs font-bold text-slate-400 transition hover:text-indigo-500"
               >
-                <span className="text-xs text-gray-400 font-medium">
-                  {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
-                </span>
-                {showComments
-                  ? <ChevronUp className="w-3.5 h-3.5 text-gray-300" />
-                  : <ChevronDown className="w-3.5 h-3.5 text-gray-300" />
-                }
+                댓글 {localComments.length.toLocaleString()}개 보기
               </button>
             )}
 
-            <div
-              className="overflow-hidden transition-all duration-300 ease-in-out"
-              style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
-            >
-              <div className="space-y-2 pb-1">
-                {localComments.slice(0, -1).map((c, i) => renderCommentRow(c, i))}
-              </div>
-            </div>
-
-            {lastComment && renderCommentRow(lastComment, localComments.length - 1, { clamp: !showComments, showRef: true })}
           </div>
         </div>
       )}
+      <PostCommentsDialog
+        isOpen={isCommentsDialogOpen}
+        onOpenChange={setIsCommentsDialogOpen}
+        postId={post.id}
+        initialComments={localComments}
+        authUser={authUser}
+        profile={profile}
+        onCommentsChange={setLocalComments}
+      />
       <DeleteConfirmDialog isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDelete} />
     </div>
   );

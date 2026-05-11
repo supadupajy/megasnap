@@ -12,7 +12,6 @@ include ':capacitor-geolocation'
 project(':capacitor-geolocation').projectDir = new File('../node_modules/.pnpm/@capacitor+geolocation@8.2.0_@capacitor+core@8.3.3/node_modules/@capacitor/geolocation/android')
 
 include ':capacitor-push-notifications'
-
 project(':capacitor-push-notifications').projectDir = new File('../node_modules/.pnpm/@capacitor+push-notifications@8.0.3_@capacitor+core@8.3.3/node_modules/@capacitor/push-notifications/android')
 
 include ':capacitor-status-bar'

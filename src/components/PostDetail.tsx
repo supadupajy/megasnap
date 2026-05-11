@@ -25,7 +25,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment, COMMENT_MAX_LENGTH } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import ExpandableCommentText from './ExpandableCommentText';
+import PostCommentsDialog from './PostCommentsDialog';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
+
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 import { invalidateAdCache } from '@/hooks/use-ad';
@@ -120,7 +122,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const [isSaved, setIsSaved] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
   const keyboardOffset = useKeyboardOffset(isOpen);
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
@@ -136,8 +140,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const contentRef = useRef<HTMLParagraphElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
-  const commentInputRef = useRef<HTMLInputElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
+
   const imageScrollRef = useRef<HTMLDivElement>(null);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지
@@ -159,17 +163,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   useEffect(() => {
     setAvatarError(false);
   }, [currentPostIndex]);
-
-  const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
-
-    if (document.activeElement === commentInputRef.current) return;
-    e.preventDefault();
-    commentInputRef.current?.focus({ preventScroll: true });
-  };
-
-  const handleCommentInputFocus = () => {
-    // 포커스 시 강제 스크롤을 하지 않아 지도와 모달이 서로 스크롤 보정 경쟁을 하지 않게 한다.
-  };
 
   const onMouseDown = (e: React.MouseEvent) => {
 
@@ -480,14 +473,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   const handleCommentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setTimeout(() => {
-      if (commentSectionRef.current && scrollContainerRef.current) {
-        const container = scrollContainerRef.current;
-        const target = commentSectionRef.current;
-        const targetTop = target.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
-        container.scrollTo({ top: targetTop, behavior: 'smooth' });
-      }
-    }, 50);
+    setIsCommentsDialogOpen(true);
   };
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
@@ -750,49 +736,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       </div>
     );
   };
-
-  const renderCommentSection = () => (
-    <div ref={commentSectionRef} className="border-t border-gray-100 pt-4" onClick={(e) => e.stopPropagation()}>
-      <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-        <Input
-          ref={commentInputRef}
-          placeholder="댓글 달기..."
-          value={commentInput}
-          onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
-          maxLength={COMMENT_MAX_LENGTH}
-          onFocus={handleCommentInputFocus}
-          onPointerDown={focusCommentInputWithoutNativeScroll}
-          disabled={isSubmittingComment}
-
-          className="flex-1 h-10 bg-transparent border-none focus-visible:ring-0 text-sm"
-        />
-        <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
-          <Send className="w-4 h-4" />
-        </button>
-      </form>
-      <button
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowComments(!showComments); }}
-        className="w-full py-1 flex items-center justify-between group cursor-pointer mb-2"
-      >
-        <span className="text-xs text-gray-400 font-medium pointer-events-none">
-          {showComments ? '댓글 닫기' : `댓글 ${localComments.length.toLocaleString()}개 모두 보기`}
-        </span>
-        {showComments ? 
-          <ChevronUp className="w-3.5 h-3.5 text-gray-300 pointer-events-none" /> :
-          <ChevronDown className="w-3.5 h-3.5 text-gray-300 pointer-events-none" />
-        }
-      </button>
-      <div 
-        className="overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ maxHeight: showComments ? '1000px' : '0px', opacity: showComments ? 1 : 0 }}
-      >
-        <div className="space-y-2 pb-2">
-          {localComments.slice(0, -1).map((c, i) => renderCommentRow(c, i))}
-        </div>
-      </div>
-      {lastComment && renderCommentRow(lastComment, localComments.length - 1, { clamp: !showComments })}
-    </div>
-  );
 
   const renderContentBody = () => {
     if (isEditingContent) {
@@ -1094,7 +1037,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                                 </div>
                               </div>
                             </div>
-                            {renderCommentSection()}
+                            {localComments.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleCommentClick}
+                                className="mt-1 text-xs font-bold text-slate-400 transition hover:text-indigo-500"
+                              >
+                                댓글 {localComments.length.toLocaleString()}개 보기
+                              </button>
+                            )}
+
                           </div>
                         </div>
                       </div>
@@ -1107,11 +1059,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         </DialogPortal>
       </Dialog>
 
+      <PostCommentsDialog
+        isOpen={isCommentsDialogOpen}
+        onOpenChange={setIsCommentsDialogOpen}
+        postId={currentPost.id}
+        initialComments={localComments}
+        authUser={authUser}
+        profile={authProfile}
+        onCommentsChange={setLocalComments}
+      />
+
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
       />
+
     </>
   );
 };
