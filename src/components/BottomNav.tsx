@@ -45,6 +45,10 @@ const BottomNav = () => {
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
   const [isCommentsDialogClosing, setIsCommentsDialogClosing] = useState(false);
+  // 키보드 내림 애니메이션이 OS 레벨에서 진행 중인지 추적한다.
+  // visualViewport.height가 window.innerHeight와 거의 같아질 때까지는
+  // 키보드가 아직 내려가는 중으로 본다.
+  const [isVisualViewportShrunken, setIsVisualViewportShrunken] = useState(false);
   const keyboardOffset = useKeyboardOffset();
   const lastActiveTabIndexRef = useRef(0);
 
@@ -61,6 +65,28 @@ const BottomNav = () => {
 
     window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
     return () => window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+  }, []);
+
+  useEffect(() => {
+    const VIEWPORT_SETTLED_THRESHOLD = 40;
+
+    const updateViewportShrunken = () => {
+      const viewport = window.visualViewport;
+      if (!viewport) {
+        setIsVisualViewportShrunken(false);
+        return;
+      }
+      const diff = window.innerHeight - viewport.height - viewport.offsetTop;
+      setIsVisualViewportShrunken(diff > VIEWPORT_SETTLED_THRESHOLD);
+    };
+
+    updateViewportShrunken();
+    window.visualViewport?.addEventListener('resize', updateViewportShrunken);
+    window.visualViewport?.addEventListener('scroll', updateViewportShrunken);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateViewportShrunken);
+      window.visualViewport?.removeEventListener('scroll', updateViewportShrunken);
+    };
   }, []);
 
   const markFriendPostsSeen = useCallback(() => {
@@ -190,9 +216,16 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000] will-change-transform"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        // 키보드가 떠 있거나 댓글창이 닫히는 중일 때는 BottomNav를 숨긴다.
-        // - 닫힘 애니메이션 중에는 키보드가 먼저 내려가도 BottomNav가 잠깐 깜빡 보였다 사라지는 현상을 막기 위함.
-        visibility: keyboardOffset > 0 || isCommentsDialogClosing ? 'hidden' : 'visible',
+        // 다음 중 하나라도 해당되면 BottomNav를 숨긴다:
+        // 1) 키보드 offset이 잡혀 있을 때
+        // 2) 댓글창이 닫힘 애니메이션 중일 때
+        // 3) visualViewport가 줄어들어 있는 동안(키보드 내림 OS 애니메이션이 진행 중)
+        //    → 키보드가 OS 레벨에서 천천히 내려갈 때 BottomNav가 키보드 뒤에서
+        //       서서히 드러나며 슬라이딩처럼 보이는 현상을 방지
+        visibility:
+          keyboardOffset > 0 || isCommentsDialogClosing || isVisualViewportShrunken
+            ? 'hidden'
+            : 'visible',
         transform: keyboardOffset > 0 ? `translate3d(0, ${keyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
         // 키보드 offset 자체가 중간값을 흘리지 않고 0 또는 키보드높이로만 바뀌므로
         // 슬라이딩 전환이 보이지 않게 하려면 transition을 항상 꺼두는 것이 안전하다.
