@@ -1697,7 +1697,8 @@ const Index = () => {
                           const insertAt = Math.floor(Math.random() * (finalList.length + 1));
                           finalList.splice(insertAt, 0, ad);
                         });
-                        const returnCenter = mapData?.center || mapCache.lastCenter || mapCenter || { lat: 37.5665, lng: 126.9780 };
+                        const latestMapData = mapDataRef.current || mapData;
+                        const returnCenter = latestMapData?.center || mapCache.lastCenter || mapCenter || { lat: 37.5665, lng: 126.9780 };
                         const returnZoom = currentZoomRef.current || currentZoom;
                         mapCache.lastCenter = returnCenter;
                         mapCache.lastZoom = returnZoom;
@@ -1706,7 +1707,7 @@ const Index = () => {
                         sessionStorage.setItem('nearby-posts-payload', JSON.stringify({
                           initialPosts: finalList,
                           mapCenter: returnCenter,
-                          currentBounds: bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } },
+                          currentBounds: latestMapData?.bounds || bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } },
                           selectedCategories,
                           openedViewedIds: Array.from(new Set([...viewedIds, ...adIds])),
                           zoom: returnZoom,

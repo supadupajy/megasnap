@@ -287,22 +287,22 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     const parentBottom = scrollParent
       ? Math.min(scrollParent.getBoundingClientRect().bottom, visibleBottom)
       : visibleBottom;
-    const parentTop = scrollParent
-      ? Math.max(scrollParent.getBoundingClientRect().top, visibleTop)
-      : visibleTop;
 
     const overflowBottom = targetRect.bottom + gap - parentBottom;
-    const overflowTop = parentTop + gap - targetRect.top;
-    const delta = overflowBottom > 0 ? overflowBottom : overflowTop > 0 ? -overflowTop : 0;
-
-    if (Math.abs(delta) < 1) return;
+    if (overflowBottom <= 1) return;
 
     if (scrollParent) {
-      scrollParent.scrollBy({ top: delta, behavior });
+      scrollParent.scrollBy({ top: overflowBottom, behavior });
     } else {
-      window.scrollBy({ top: delta, behavior });
+      window.scrollBy({ top: overflowBottom, behavior });
     }
   }, []);
+
+  const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
+    if (document.activeElement === commentInputRef.current) return;
+    e.preventDefault();
+    commentInputRef.current?.focus({ preventScroll: true });
+  };
 
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
@@ -969,7 +969,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 </div>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
+                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onPointerDown={focusCommentInputWithoutNativeScroll} />
                 <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                   <Send className="w-4 h-4" />
                 </button>
@@ -1049,7 +1049,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               </div>
             </div>
             <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
+              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onPointerDown={focusCommentInputWithoutNativeScroll} />
               <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                 <Send className="w-4 h-4" />
               </button>

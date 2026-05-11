@@ -173,17 +173,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     const containerRect = scrollContainer.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
     const parentBottom = Math.min(containerRect.bottom, visibleBottom);
-    const parentTop = Math.max(containerRect.top, visibleTop);
     const gap = 18;
 
     const overflowBottom = targetRect.bottom + gap - parentBottom;
-    const overflowTop = parentTop + gap - targetRect.top;
-    const delta = overflowBottom > 0 ? overflowBottom : overflowTop > 0 ? -overflowTop : 0;
-
-    if (Math.abs(delta) > 1) {
-      scrollContainer.scrollBy({ top: delta, behavior });
+    if (overflowBottom > 1) {
+      scrollContainer.scrollBy({ top: overflowBottom, behavior });
     }
   }, []);
+
+  const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
+    if (document.activeElement === commentInputRef.current) return;
+    e.preventDefault();
+    commentInputRef.current?.focus({ preventScroll: true });
+  };
 
   const handleCommentInputFocus = () => {
     keyboardScrollTimersRef.current.forEach(window.clearTimeout);
@@ -784,6 +786,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           maxLength={COMMENT_MAX_LENGTH}
           disabled={isSubmittingComment}
           onFocus={handleCommentInputFocus}
+          onPointerDown={focusCommentInputWithoutNativeScroll}
         />
         <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
           <Send className="w-4 h-4" />
