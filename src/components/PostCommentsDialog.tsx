@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, MessageCircle, Send, X } from 'lucide-react';
+import { Check, Heart, MessageCircle, Send, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Comment } from '@/types';
 import {
@@ -9,6 +9,7 @@ import {
   insertComment,
   isPersistedPostId,
   updateComment,
+  toggleCommentLike,
 } from '@/utils/comments';
 import { formatRelativeTime } from '@/lib/utils';
 import { showError, showSuccess } from '@/utils/toast';
@@ -43,6 +44,7 @@ const PostCommentsDialog = ({
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<Comment | null>(null);
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
+  const [likingCommentIds, setLikingCommentIds] = useState<Set<string>>(() => new Set());
   const [sheetTopPx, setSheetTopPx] = useState<number | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef(false);
@@ -220,6 +222,56 @@ const PostCommentsDialog = ({
     setCommentToDelete(comment);
   };
 
+  const handleToggleCommentLike = async (comment: Comment) => {
+    if (!authUser) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+    if (!comment.id) return;
+    if (likingCommentIds.has(comment.id)) return;
+
+    const commentId = comment.id;
+    const previousIsLiked = !!comment.isLiked;
+    const previousLikesCount = comment.likesCount ?? 0;
+    const nextIsLiked = !previousIsLiked;
+    const nextLikesCount = Math.max(0, previousLikesCount + (nextIsLiked ? 1 : -1));
+
+    // 낙관적 업데이트
+    syncComments(comments.map(item =>
+      item.id === commentId
+        ? { ...item, isLiked: nextIsLiked, likesCount: nextLikesCount }
+        : item
+    ));
+
+    setLikingCommentIds(prev => {
+      const next = new Set(prev);
+      next.add(commentId);
+      return next;
+    });
+
+    try {
+      await toggleCommentLike({
+        commentId,
+        userId: authUser.id,
+        shouldLike: nextIsLiked,
+      });
+    } catch (err) {
+      // 실패 시 롤백
+      syncComments(comments.map(item =>
+        item.id === commentId
+          ? { ...item, isLiked: previousIsLiked, likesCount: previousLikesCount }
+          : item
+      ));
+      showError('좋아요 처리 중 오류가 발생했습니다.');
+    } finally {
+      setLikingCommentIds(prev => {
+        const next = new Set(prev);
+        next.delete(commentId);
+        return next;
+      });
+    }
+  };
+
   const confirmDeleteComment = async () => {
     if (!authUser || !commentToDelete?.id || commentToDelete.userId !== authUser.id) return;
 
@@ -244,6 +296,26 @@ const PostCommentsDialog = ({
     const isEditing = !!comment.id && editingCommentId === comment.id;
     const isDeleting = !!comment.id && deletingCommentId === comment.id;
     const commentKey = comment.id || `${index}-${comment.user}-${comment.text}`;
+    const isLiked = !!comment.isLiked;
+    const likesCount = comment.likesCount ?? 0;
+    const isLikePending = !!comment.id && likingCommentIds.has(comment.id);
+
+    const likeButton = !isEditing && comment.id ? (
+      <button
+        type="button"
+        onClick={() => handleToggleCommentLike(comment)}
+        disabled={isLikePending || isDeleting}
+        className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[11px] font-black transition-all active:scale-95 disabled:opacity-60 ${
+          isLiked
+            ? 'border-red-100 bg-red-50 text-red-500'
+            : 'border-gray-100 bg-white text-gray-600 hover:bg-gray-50'
+        }`}
+        aria-label={`댓글 좋아요 ${likesCount.toLocaleString()}개`}
+      >
+        <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+        <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
+      </button>
+    ) : null;
 
     return (
       <div key={commentKey} className="rounded-3xl bg-slate-50 px-4 py-3.5">
@@ -299,25 +371,34 @@ const PostCommentsDialog = ({
             )}
           </div>
 
-          {!isEditing && isOwnComment && comment.id && (
-            <div className="flex shrink-0 flex-col items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => startCommentEdit(comment)}
-                disabled={isDeleting}
-                className="rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-600 transition active:scale-95 disabled:opacity-50"
-              >
-                수정
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteComment(comment)}
-                disabled={isDeleting}
-                className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-black text-rose-500 transition active:scale-95 disabled:opacity-50"
-              >
-                삭제
-              </button>
+          {!isEditing && isOwnComment && comment.id ? (
+            <div className="flex shrink-0 items-center gap-2">
+              {likeButton}
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => startCommentEdit(comment)}
+                  disabled={isDeleting}
+                  className="rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-600 transition active:scale-95 disabled:opacity-50"
+                >
+                  수정
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteComment(comment)}
+                  disabled={isDeleting}
+                  className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-black text-rose-500 transition active:scale-95 disabled:opacity-50"
+                >
+                  삭제
+                </button>
+              </div>
             </div>
+          ) : (
+            !isEditing && likeButton && (
+              <div className="flex shrink-0 items-center">
+                {likeButton}
+              </div>
+            )
           )}
         </div>
       </div>

@@ -21,12 +21,14 @@ export const mapCommentRowToComment = (row: {
   user_name: string | null;
   content: string;
   created_at?: string | null;
-}): Comment => ({
+}, extras?: { likesCount?: number; isLiked?: boolean }): Comment => ({
   id: row.id || undefined,
   userId: row.user_id || undefined,
   user: row.user_name || '사용자',
   text: row.content,
   createdAt: row.created_at ? new Date(row.created_at) : undefined,
+  likesCount: extras?.likesCount ?? 0,
+  isLiked: extras?.isLiked ?? false,
 });
 
 export const fetchCommentsByPostId = async (postId: string): Promise<Comment[]> => {
@@ -40,7 +42,34 @@ export const fetchCommentsByPostId = async (postId: string): Promise<Comment[]> 
 
   if (error) throw error;
 
-  return (data || []).map(mapCommentRowToComment);
+  const rows = data || [];
+  const commentIds = rows.map(r => r.id).filter((id): id is string => !!id);
+
+  // 댓글별 좋아요 개수와 현재 사용자 좋아요 여부를 조회
+  const likesCountMap = new Map<string, number>();
+  const likedByMeSet = new Set<string>();
+
+  if (commentIds.length > 0) {
+    const { data: likeRows } = await supabase
+      .from('comment_likes')
+      .select('comment_id, user_id')
+      .in('comment_id', commentIds);
+
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+
+    (likeRows || []).forEach((row: { comment_id: string; user_id: string }) => {
+      likesCountMap.set(row.comment_id, (likesCountMap.get(row.comment_id) || 0) + 1);
+      if (currentUserId && row.user_id === currentUserId) {
+        likedByMeSet.add(row.comment_id);
+      }
+    });
+  }
+
+  return rows.map(row => mapCommentRowToComment(row, {
+    likesCount: row.id ? likesCountMap.get(row.id) || 0 : 0,
+    isLiked: row.id ? likedByMeSet.has(row.id) : false,
+  }));
 };
 
 export const insertComment = async ({
@@ -123,4 +152,29 @@ export const deleteComment = async ({
     .eq('user_id', userId);
 
   if (error) throw error;
+};
+
+export const toggleCommentLike = async ({
+  commentId,
+  userId,
+  shouldLike,
+}: {
+  commentId: string;
+  userId: string;
+  shouldLike: boolean;
+}): Promise<void> => {
+  if (shouldLike) {
+    const { error } = await supabase
+      .from('comment_likes')
+      .insert({ comment_id: commentId, user_id: userId });
+    // 23505 = unique_violation (이미 좋아요한 경우는 무시)
+    if (error && (error as any).code !== '23505') throw error;
+  } else {
+    const { error } = await supabase
+      .from('comment_likes')
+      .delete()
+      .eq('comment_id', commentId)
+      .eq('user_id', userId);
+    if (error) throw error;
+  }
 };
