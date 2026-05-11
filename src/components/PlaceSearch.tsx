@@ -89,14 +89,9 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
         });
       });
 
-      // 현재 지도 중심 좌표 기반 검색 옵션
+      // 카카오 기본 관련도 순서를 그대로 사용합니다.
+      // 주소 결과를 먼저 보여준 뒤, 관련 장소/건물 결과를 이어서 표시합니다.
       const searchOptions: any = { size: 15 };
-      if (mapCenter) {
-        // location: 검색 기준 좌표 (이 좌표 근처 결과를 우선 반환)
-        searchOptions.location = new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng);
-        // sort: DISTANCE 정렬로 가까운 순서로 반환
-        searchOptions.sort = kakao.maps.services.SortBy.DISTANCE;
-      }
 
       const placesPromise = new Promise<{data: Place[], pagination: any}>((resolve) => {
         searchService.current.keywordSearch(keyword, (data: any, status: any, paginationObj: any) => {
@@ -121,7 +116,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
       const [addrResults, placeData] = await Promise.all([addressPromise, placesPromise]);
       
       // 주소 검색 결과와 장소 검색 결과 합치기
-      // mapCenter가 있으면 거리 기준으로 정렬
       const combined = [...addrResults, ...placeData.data];
       const seen = new Set();
       const unique = combined.filter(item => {
@@ -131,16 +125,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
         return true;
       });
 
-      // mapCenter가 있으면 거리 기준으로 재정렬 (장소 검색은 이미 DISTANCE 정렬이지만
-      // 주소 검색 결과와 합쳐진 후 다시 정렬)
-      if (mapCenter) {
-        unique.sort((a, b) => {
-          const distA = Math.pow(a.lat - mapCenter.lat, 2) + Math.pow(a.lng - mapCenter.lng, 2);
-          const distB = Math.pow(b.lat - mapCenter.lat, 2) + Math.pow(b.lng - mapCenter.lng, 2);
-          return distA - distB;
-        });
-      }
-
       setResults(unique);
       setPagination(placeData.pagination);
     } catch (error) {
@@ -149,7 +133,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
       setIsLoading(false);
       isSearching.current = false;
     }
-  }, [mapCenter]);
+  }, []);
 
   const loadNextPage = useCallback(() => {
     if (!pagination?.hasNextPage || isSearching.current) return;
@@ -159,10 +143,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
 
     const kakao = (window as any).kakao;
     const searchOptions: any = { page: pagination.current + 1, size: 15 };
-    if (mapCenter) {
-      searchOptions.location = new kakao.maps.LatLng(mapCenter.lat, mapCenter.lng);
-      searchOptions.sort = kakao.maps.services.SortBy.DISTANCE;
-    }
 
     searchService.current.keywordSearch(query, (data: any, status: any, paginationObj: any) => {
       if (status === kakao.maps.services.Status.OK) {
@@ -189,7 +169,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
       setIsLoading(false);
       isSearching.current = false;
     }, searchOptions);
-  }, [pagination, query, mapCenter]);
+  }, [pagination, query]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -264,16 +244,6 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
               <span className="text-sm font-normal text-gray-900">닫기</span>
             </button>
           </div>
-
-          {/* 현재 지도 위치 기준 안내 */}
-          {mapCenter && (
-            <div className="px-4 py-2 bg-indigo-50 border-b border-indigo-100 shrink-0">
-              <p className="text-[11px] text-indigo-600 font-bold flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
-                현재 지도 위치 기준으로 가까운 순서로 표시됩니다
-              </p>
-            </div>
-          )}
 
           {/* Results */}
           <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
