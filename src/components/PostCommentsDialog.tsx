@@ -46,8 +46,11 @@ const PostCommentsDialog = ({
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const [likingCommentIds, setLikingCommentIds] = useState<Set<string>>(() => new Set());
   const [sheetTopPx, setSheetTopPx] = useState<number | null>(null);
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef(false);
+  const closeTimeoutRef = useRef<number | null>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
   const sheetBottom = keyboardOffset > 0 ? '0px' : 'var(--bottom-nav-height)';
@@ -62,16 +65,43 @@ const PostCommentsDialog = ({
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      setSheetTopPx(null);
-      return;
-    }
+    if (!isOpen) return;
 
     const viewportHeight = window.innerHeight;
     const bottomNavHeight = getBottomNavHeight();
     const desiredHeight = Math.min(viewportHeight * 0.76, 700, viewportHeight - bottomNavHeight - 40);
     setSheetTopPx(Math.max(20, viewportHeight - bottomNavHeight - desiredHeight));
   }, [isOpen]);
+
+  useEffect(() => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (shouldRender) {
+      setIsClosing(true);
+      closeTimeoutRef.current = window.setTimeout(() => {
+        setShouldRender(false);
+        setIsClosing(false);
+        setSheetTopPx(null);
+        closeTimeoutRef.current = null;
+      }, 220);
+    }
+
+    return () => {
+      if (closeTimeoutRef.current) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+    };
+  }, [isOpen, shouldRender]);
 
   useEffect(() => {
     (window as any).__commentsDialogOpen = isOpen;
@@ -407,13 +437,13 @@ const PostCommentsDialog = ({
     );
   };
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
 
   return (
     <div className="fixed inset-0 z-[30000] pointer-events-none" role="dialog" aria-modal="true" aria-label="댓글">
       <button
         type="button"
-        className="absolute left-0 right-0 top-0 z-0 cursor-default bg-slate-950/60 comment-backdrop-enter pointer-events-auto"
+        className={`absolute left-0 right-0 top-0 z-0 cursor-default bg-slate-950/60 pointer-events-auto ${isClosing ? 'comment-backdrop-exit' : 'comment-backdrop-enter'}`}
         style={{ bottom: sheetBottom }}
         onPointerDown={closeCommentsDialog}
         onClick={closeCommentsDialog}
@@ -421,7 +451,7 @@ const PostCommentsDialog = ({
       />
 
       <section
-        className="fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        className={`fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] pointer-events-auto sm:rounded-[32px] ${isClosing ? 'comment-sheet-exit' : 'comment-sheet-enter'}`}
         style={{
           top: sheetTopPx == null ? undefined : `${sheetTopPx}px`,
           bottom: sheetBottom,
