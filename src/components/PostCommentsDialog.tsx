@@ -43,13 +43,32 @@ const PostCommentsDialog = ({
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [commentToDelete, setCommentToDelete] = useState<Comment | null>(null);
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
+  const [sheetTopPx, setSheetTopPx] = useState<number | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
   const sheetBottom = keyboardOffset > 0 ? '0px' : 'var(--bottom-nav-height)';
-  const sheetMaxHeight = keyboardOffset > 0
-    ? 'calc(100dvh - 20px)'
-    : 'calc(100dvh - var(--bottom-nav-height) - 40px)';
+
+  const getBottomNavHeight = () => {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;visibility:hidden;pointer-events:none;height:var(--bottom-nav-height);width:1px;';
+    document.body.appendChild(probe);
+    const height = probe.getBoundingClientRect().height || 72;
+    document.body.removeChild(probe);
+    return height;
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSheetTopPx(null);
+      return;
+    }
+
+    const viewportHeight = window.innerHeight;
+    const bottomNavHeight = getBottomNavHeight();
+    const desiredHeight = Math.min(viewportHeight * 0.76, 700, viewportHeight - bottomNavHeight - 40);
+    setSheetTopPx(Math.max(20, viewportHeight - bottomNavHeight - desiredHeight));
+  }, [isOpen]);
 
   useEffect(() => {
     (window as any).__commentsDialogOpen = isOpen;
@@ -109,6 +128,13 @@ const PostCommentsDialog = ({
   const focusCommentInput = (e: React.SyntheticEvent) => {
     e.stopPropagation();
     commentInputRef.current?.focus();
+  };
+
+  const closeCommentsDialog = (e?: React.SyntheticEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    commentInputRef.current?.blur();
+    onOpenChange(false);
   };
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -296,15 +322,16 @@ const PostCommentsDialog = ({
         type="button"
         className="absolute left-0 right-0 top-0 z-0 cursor-default bg-slate-950/60 comment-backdrop-enter pointer-events-auto"
         style={{ bottom: sheetBottom }}
-        onClick={() => onOpenChange(false)}
+        onPointerDown={closeCommentsDialog}
+        onClick={closeCommentsDialog}
         aria-label="댓글 닫기 배경"
       />
 
       <section
-        className="fixed left-1/2 z-[1] flex h-[min(76dvh,700px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        className="fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
         style={{
+          top: sheetTopPx == null ? undefined : `${sheetTopPx}px`,
           bottom: sheetBottom,
-          maxHeight: sheetMaxHeight,
         }}
         onClick={stopSheetEvent}
       >
@@ -322,7 +349,8 @@ const PostCommentsDialog = ({
           </div>
           <button
             type="button"
-            onClick={() => onOpenChange(false)}
+            onPointerDown={closeCommentsDialog}
+            onClick={closeCommentsDialog}
             className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
             aria-label="댓글 닫기"
           >
