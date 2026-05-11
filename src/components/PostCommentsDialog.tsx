@@ -279,7 +279,7 @@ const PostCommentsDialog = ({
       />
 
       <section
-        className="fixed left-1/2 z-[1] flex h-[min(74dvh,680px)] max-h-[calc(100dvh-128px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        className="fixed left-1/2 z-[1] flex h-[min(82dvh,760px)] max-h-[calc(100dvh-104px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
         style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
         onClick={stopSheetEvent}
       >
