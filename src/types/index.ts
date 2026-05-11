@@ -51,6 +51,7 @@ export interface Post {
   hot_since?: string | null; // 최근 1시간 좋아요 기준 HOT 마일스톤 시각
   likes_per_hour?: number; // 최근 1시간 내 좋아요 증가량 (HOT/트렌딩 판별용)
   user_followers?: number; // 작성자 follower 수 (tier 판별용)
+  hashtags?: string[]; // 본문에서 추출된 검색용 해시태그
 
   link_url?: string; // 광고 랜딩 URL
   isAdPending?: boolean; // 광고 시작 시간 전 대기 중 (반투명 마커 표시용)

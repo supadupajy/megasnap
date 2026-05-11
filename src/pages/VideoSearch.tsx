@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search as SearchIcon, ChevronLeft, Video, Play, Heart } from 'lucide-react';
+import { Search as SearchIcon, ChevronLeft, Video, Play, Heart, Hash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
@@ -11,6 +11,7 @@ import { Post } from '@/types';
 import { Loader2 } from 'lucide-react';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { showSuccess, showError } from '@/utils/toast';
+import { getSearchHashtag } from '@/utils/hashtags';
 
 interface SearchPost {
   id: string;
@@ -22,13 +23,17 @@ interface SearchPost {
   created_at: string;
   user_name: string;
   user_avatar: string | null;
+  hashtags?: string[];
   profiles?: { nickname: string | null; avatar_url: string | null };
 }
 
 const CACHE_KEY_QUERY = 'videoSearch_query';
 const CACHE_KEY_RESULTS = 'videoSearch_results';
 
-const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, profiles!posts_user_id_fkey(nickname, avatar_url)';
+const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)';
+
+const sanitizePostgrestSearchTerm = (term: string) =>
+  term.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
 
 // ── 인라인 PostDetail 오버레이 ──────────────────────────────────────
 const PostDetailOverlay = ({
@@ -87,6 +92,7 @@ const PostDetailOverlay = ({
       isSaved: savedSet.has(p.id),
       createdAt: new Date(p.created_at),
       category: p.category || 'none',
+      hashtags: p.hashtags || [],
     };
   };
 
@@ -250,15 +256,38 @@ const VideoSearch = () => {
     setHasSearched(true);
 
     try {
-      const { data, error } = await supabase
-        .from('posts')
-        .select('id, content, image_url, images, video_url, likes, created_at, user_name, user_avatar, profiles!posts_user_id_fkey(nickname, avatar_url)')
-        .or(`content.ilike.%${trimmed}%,location_name.ilike.%${trimmed}%`)
-        .order('likes', { ascending: false })
-        .limit(50);
+      const hashtag = getSearchHashtag(trimmed);
+      const textTerm = sanitizePostgrestSearchTerm(trimmed.replace(/^#/, ''));
 
-      if (error) throw error;
-      const fetched = (data as any[]) || [];
+      const textQuery = textTerm
+        ? supabase
+            .from('posts')
+            .select('id, content, image_url, images, video_url, likes, created_at, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)')
+            .or(`content.ilike.%${textTerm}%,location_name.ilike.%${textTerm}%`)
+            .order('likes', { ascending: false })
+            .limit(50)
+        : Promise.resolve({ data: [], error: null });
+
+      const hashtagQuery = hashtag
+        ? supabase
+            .from('posts')
+            .select('id, content, image_url, images, video_url, likes, created_at, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)')
+            .contains('hashtags', [hashtag])
+            .order('likes', { ascending: false })
+            .limit(50)
+        : Promise.resolve({ data: [], error: null });
+
+      const [textResult, hashtagResult] = await Promise.all([textQuery, hashtagQuery]);
+      if (textResult.error) throw textResult.error;
+      if (hashtagResult.error) throw hashtagResult.error;
+
+      const merged = new Map<string, any>();
+      ((hashtagResult.data as any[]) || []).forEach((post) => merged.set(post.id, post));
+      ((textResult.data as any[]) || []).forEach((post) => {
+        if (!merged.has(post.id)) merged.set(post.id, post);
+      });
+
+      const fetched = Array.from(merged.values()).slice(0, 50);
       setResults(fetched);
       try { sessionStorage.setItem(CACHE_KEY_RESULTS, JSON.stringify(fetched)); } catch {}
     } catch (err) {
@@ -308,7 +337,7 @@ const VideoSearch = () => {
           <div className="relative">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
-              placeholder="원하는 포스팅을 검색해 보세요"
+              placeholder="키워드 또는 #해시태그로 검색해 보세요"
               className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-semibold placeholder:text-gray-400 placeholder:font-semibold shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -320,6 +349,17 @@ const VideoSearch = () => {
               </div>
             )}
           </div>
+          {(() => {
+            const activeTag = getSearchHashtag(searchQuery);
+            return activeTag ? (
+              <div className="mt-3 flex items-center gap-2 rounded-2xl bg-indigo-50 px-4 py-3 text-indigo-700">
+                <Hash className="h-4 w-4 shrink-0" />
+                <p className="text-xs font-black">
+                  #{activeTag} 태그와 일치하는 포스팅을 우선 검색 중
+                </p>
+              </div>
+            ) : null;
+          })()}
         </div>
       </div>
 
@@ -377,9 +417,16 @@ const VideoSearch = () => {
                 )}
                 <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
-                  <p className="text-white text-[11px] font-semibold truncate max-w-[70%] drop-shadow">
-                    {(post.profiles?.nickname || post.user_name || '').slice(0, 12)}
-                  </p>
+                  <div className="min-w-0 max-w-[70%]">
+                    <p className="text-white text-[11px] font-semibold truncate drop-shadow">
+                      {(post.profiles?.nickname || post.user_name || '').slice(0, 12)}
+                    </p>
+                    {post.hashtags && post.hashtags.length > 0 && (
+                      <p className="mt-0.5 truncate text-[10px] font-black text-indigo-100 drop-shadow">
+                        #{post.hashtags.slice(0, 2).join(' #')}
+                      </p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-1">
                     <Heart className="w-3 h-3 text-white fill-white" />
                     <span className="text-white text-[10px] font-semibold">

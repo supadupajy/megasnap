@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Check } from 'lucide-react';
+import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Check, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
@@ -14,6 +14,7 @@ import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { getSeoulDistrict } from '@/utils/seoul-district-polygons';
 import { useWriteStore } from '@/utils/write-store';
 import { mapCache } from '@/utils/map-cache';
+import { extractHashtags } from '@/utils/hashtags';
 
 interface MediaFile {
   file: File;
@@ -40,6 +41,7 @@ const Write = () => {
   const { user: authUser, profile } = useAuth();
 
   const { content, setContent, category, setCategory, clear, mediaFiles, setMediaFiles } = useWriteStore();
+  const hashtags = useMemo(() => extractHashtags(content), [content]);
   
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
@@ -600,13 +602,14 @@ const Write = () => {
         location_name: address || '위치 미지정',
         latitude: postLat,
         longitude: postLng,
-        image_url: previewUrls[0], 
+        image_url: previewUrls[0],
         images: previewUrls,
         user_id: authUser.id,
         user_name: profile?.nickname || '탐험가',
         user_avatar: profile?.avatar_url,
         category,
         video_url: isFirstMediaVideo ? firstUploadedMedia.url : null,
+        hashtags,
       };
 
       const { data: createdPost, error: insertError } = await supabase
@@ -645,6 +648,7 @@ const Write = () => {
         videoUrl: createdPost.video_url,
         createdAt: new Date(createdPost.created_at),
         category: createdPost.category,
+        hashtags: createdPost.hashtags || hashtags,
         borderType: 'none',
       };
 
@@ -941,7 +945,7 @@ const Write = () => {
                   </div>
                   <Textarea
                     ref={textareaRef}
-                    placeholder="이 장소에서의 추억을 기록해보세요."
+                    placeholder="이 장소에서의 추억을 기록해보세요. 예) 오늘 노을 최고 #한강 #산책"
                     className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-normal placeholder:font-normal focus-visible:ring-2 focus-visible:ring-indigo-600"
                     value={content}
                     onFocus={handleTextareaInteraction}
@@ -949,6 +953,26 @@ const Write = () => {
                     onTouchStart={handleTextareaInteraction}
                     onChange={(e) => setContent(e.target.value)}
                   />
+                  <div className="rounded-[28px] border border-indigo-100 bg-indigo-50/60 p-4">
+                    <div className="flex items-center gap-2 text-indigo-700">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white shadow-sm">
+                        <Hash className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black">해시태그 자동 인식</p>
+                        <p className="text-[10px] font-bold text-indigo-400">본문에 #태그를 쓰면 검색에 정확히 반영돼요.</p>
+                      </div>
+                    </div>
+                    {hashtags.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {hashtags.map((tag) => (
+                          <span key={tag} className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-indigo-600 shadow-sm">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
