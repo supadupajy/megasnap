@@ -217,7 +217,7 @@ const Popular = () => {
           subtitle="Trending Now"
           ActionIcon={Search}
           actionLabel="포스팅 검색"
-          onActionClick={() => navigate('/video-search')}
+          onActionClick={() => navigate('/post-search')}
         />
       </div>
 

@@ -27,8 +27,8 @@ interface SearchPost {
   profiles?: { nickname: string | null; avatar_url: string | null };
 }
 
-const CACHE_KEY_QUERY = 'videoSearch_query';
-const CACHE_KEY_RESULTS = 'videoSearch_results';
+const CACHE_KEY_QUERY = 'postSearch_query';
+const CACHE_KEY_RESULTS = 'postSearch_results';
 
 const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)';
 
@@ -218,8 +218,8 @@ const PostDetailOverlay = ({
   );
 };
 
-// ── 메인 VideoSearch ────────────────────────────────────────────────
-const VideoSearch = () => {
+// ── 메인 PostSearch ────────────────────────────────────────────────
+const PostSearch = () => {
   const navigate = useNavigate();
 
   const [searchQuery, setSearchQuery] = useState<string>(() => {
@@ -248,7 +248,7 @@ const VideoSearch = () => {
 
   useEffect(() => {
     const handlePopState = () => {
-      if (overlayPostIdRef.current && !window.history.state?.videoSearchPostOverlay) {
+      if (overlayPostIdRef.current && !window.history.state?.postSearchPostOverlay) {
         setOverlayPostId(null);
       }
     };
@@ -258,9 +258,9 @@ const VideoSearch = () => {
   }, []);
 
   const openPostOverlay = useCallback((postId: string) => {
-    if (!window.history.state?.videoSearchPostOverlay) {
+    if (!window.history.state?.postSearchPostOverlay) {
       window.history.pushState(
-        { ...window.history.state, videoSearchPostOverlay: true },
+        { ...window.history.state, postSearchPostOverlay: true },
         '',
         window.location.href
       );
@@ -269,7 +269,7 @@ const VideoSearch = () => {
   }, []);
 
   const closePostOverlay = useCallback(() => {
-    if (window.history.state?.videoSearchPostOverlay) {
+    if (window.history.state?.postSearchPostOverlay) {
       window.history.back();
       return;
     }
@@ -326,7 +326,7 @@ const VideoSearch = () => {
       setResults(fetched);
       try { sessionStorage.setItem(CACHE_KEY_RESULTS, JSON.stringify(fetched)); } catch {}
     } catch (err) {
-      console.error('[VideoSearch] search error:', err);
+      console.error('[PostSearch] search error:', err);
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -487,4 +487,4 @@ const VideoSearch = () => {
   );
 };
 
-export default VideoSearch;
+export default PostSearch;

@@ -51,7 +51,7 @@ import StorageSettings from "./pages/StorageSettings";
 import DBImageCompression from "./pages/DBImageCompression";
 import DeleteAccount from "./pages/DeleteAccount";
 import AuthCallback from "./pages/AuthCallback";
-import VideoSearch from "./pages/VideoSearch";
+import PostSearch from "./pages/PostSearch";
 import NearbyPosts from "./pages/NearbyPosts";
 
 const queryClient = new QueryClient();
@@ -198,7 +198,8 @@ const AnimatedRoutes = () => {
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
               <Route path="/nearby-posts" element={<ProtectedRoute><NearbyPosts /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-              <Route path="/video-search" element={<ProtectedRoute><VideoSearch /></ProtectedRoute>} />
+              <Route path="/post-search" element={<ProtectedRoute><PostSearch /></ProtectedRoute>} />
+              <Route path="/video-search" element={<Navigate to="/post-search" replace />} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />

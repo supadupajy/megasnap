@@ -23,8 +23,8 @@ const navItems = [
 const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[] = [
   // 친구 탭: /friends 하위 경로 + /search (친구 검색)
   { match: (p) => p === '/search' || p.startsWith('/friends'), tabPath: '/friends' },
-  // 인기 탭: /popular 하위 경로 + /video-search (포스팅 검색)
-  { match: (p) => p === '/video-search' || p.startsWith('/popular'), tabPath: '/popular' },
+  // 인기 탭: /popular 하위 경로 + /post-search (포스팅 검색)
+  { match: (p) => p === '/post-search' || p === '/video-search' || p.startsWith('/popular'), tabPath: '/popular' },
   // 내정보 탭: /profile, /settings 하위 경로
   { match: (p) => p.startsWith('/profile') || p.startsWith('/settings'), tabPath: '/profile' },
   // 업로드 탭
