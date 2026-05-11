@@ -44,10 +44,20 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
+  const [isCommentsDialogVisible, setIsCommentsDialogVisible] = useState(() => !!(window as any).__commentsDialogOpen);
   const keyboardOffset = useKeyboardOffset();
   const lastActiveTabIndexRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
+
+  useEffect(() => {
+    const handleCommentsDialogVisibility = (event: Event) => {
+      setIsCommentsDialogVisible(!!(event as CustomEvent<{ open?: boolean }>).detail?.open);
+    };
+
+    window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+    return () => window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+  }, []);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
@@ -176,6 +186,9 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000] will-change-transform"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+        // 댓글창이 표시되는 동안(닫힘 애니메이션 포함)에는 키보드가 내려가도
+        // BottomNav가 잠깐 다시 보였다 사라지는 깜빡임이 생기지 않도록 숨겨둔다.
+        visibility: isCommentsDialogVisible || keyboardOffset > 0 ? 'hidden' : 'visible',
         transform: keyboardOffset > 0 ? `translate3d(0, ${keyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
         // 키보드 offset 자체가 중간값을 흘리지 않고 0 또는 키보드높이로만 바뀌므로
         // 슬라이딩 전환이 보이지 않게 하려면 transition을 항상 꺼두는 것이 안전하다.

@@ -53,7 +53,13 @@ const PostCommentsDialog = ({
   const closeTimeoutRef = useRef<number | null>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
-  const sheetBottom = keyboardOffset > 0 ? '0px' : 'var(--bottom-nav-height)';
+  const frozenSheetBottomRef = useRef<string | null>(null);
+  const liveSheetBottom = keyboardOffset > 0 ? '0px' : 'var(--bottom-nav-height)';
+  // 닫힘 애니메이션 중에는 키보드가 내려가더라도 입력창 위치가 점프하지 않도록
+  // 닫기 시작 시점의 bottom 값을 그대로 유지한다.
+  const sheetBottom = isClosing && frozenSheetBottomRef.current != null
+    ? frozenSheetBottomRef.current
+    : liveSheetBottom;
 
   const getBottomNavHeight = () => {
     const probe = document.createElement('div');
@@ -82,15 +88,18 @@ const PostCommentsDialog = ({
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
+      frozenSheetBottomRef.current = null;
       return;
     }
 
     if (shouldRender) {
+      frozenSheetBottomRef.current = liveSheetBottom;
       setIsClosing(true);
       closeTimeoutRef.current = window.setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
         setSheetTopPx(null);
+        frozenSheetBottomRef.current = null;
         closeTimeoutRef.current = null;
       }, 220);
     }
