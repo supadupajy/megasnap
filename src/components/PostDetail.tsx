@@ -27,6 +27,7 @@ import DeleteConfirmDialog from './DeleteConfirmDialog';
 import ExpandableCommentText from './ExpandableCommentText';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useLocationDisplay } from '@/hooks/use-location-display';
+import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 import { invalidateAdCache } from '@/hooks/use-ad';
 import { handleShare } from '@/utils/share';
 import { formatRelativeTime } from '@/lib/utils';
@@ -120,8 +121,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [vpOffsetTop, setVpOffsetTop] = useState(0);
+  const keyboardOffset = useKeyboardOffset(isOpen);
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
@@ -134,6 +134,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const contentRef = useRef<HTMLParagraphElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const commentSectionRef = useRef<HTMLDivElement>(null);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
+  const keyboardScrollTimersRef = useRef<number[]>([]);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지
   const checkClamped = useCallback(() => {
@@ -154,11 +160,39 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     setAvatarError(false);
   }, [currentPostIndex]);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
-  const commentInputRef = useRef<HTMLInputElement>(null);
-  const commentSectionRef = useRef<HTMLDivElement>(null);
-  const imageScrollRef = useRef<HTMLDivElement>(null);
+  const scrollCommentInputAboveKeyboard = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const input = commentInputRef.current;
+    const scrollContainer = scrollContainerRef.current;
+    if (!input || !scrollContainer) return;
+
+    const form = input.closest('form') as HTMLElement | null;
+    const target = form || input;
+    const viewport = window.visualViewport;
+    const visibleTop = viewport?.offsetTop ?? 0;
+    const visibleBottom = visibleTop + (viewport?.height ?? window.innerHeight);
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const parentBottom = Math.min(containerRect.bottom, visibleBottom);
+    const parentTop = Math.max(containerRect.top, visibleTop);
+    const gap = 18;
+
+    const overflowBottom = targetRect.bottom + gap - parentBottom;
+    const overflowTop = parentTop + gap - targetRect.top;
+    const delta = overflowBottom > 0 ? overflowBottom : overflowTop > 0 ? -overflowTop : 0;
+
+    if (Math.abs(delta) > 1) {
+      scrollContainer.scrollBy({ top: delta, behavior });
+    }
+  }, []);
+
+  const handleCommentInputFocus = () => {
+    keyboardScrollTimersRef.current.forEach(window.clearTimeout);
+    keyboardScrollTimersRef.current = [60, 180, 360, 620].map((delay, index) =>
+      window.setTimeout(() => {
+        scrollCommentInputAboveKeyboard(index === 0 ? 'auto' : 'smooth');
+      }, delay)
+    );
+  };
 
   const onMouseDown = (e: React.MouseEvent) => {
     if (!imageScrollRef.current) return;
@@ -180,26 +214,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     const walk = (x - startX) * 1.5;
     imageScrollRef.current.scrollLeft = scrollLeft - walk;
   };
-
-  useEffect(() => {
-    const vp = window.visualViewport;
-    if (!vp) return;
-    const handleViewport = () => {
-      const offsetTop = vp.offsetTop ?? 0;
-      // interactive-widget=resizes-content 환경에서는 window.innerHeight가 줄어들므로
-      // offsetTop으로 키보드 감지
-      setVpOffsetTop(offsetTop);
-      // 일반 환경 대비 fallback: innerHeight - vp.height 차이로도 감지
-      const heightDiff = window.innerHeight - vp.height - offsetTop;
-      setKeyboardHeight(heightDiff > 50 ? heightDiff : 0);
-    };
-    vp.addEventListener('resize', handleViewport);
-    vp.addEventListener('scroll', handleViewport);
-    return () => {
-      vp.removeEventListener('resize', handleViewport);
-      vp.removeEventListener('scroll', handleViewport);
-    };
-  }, []);
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
@@ -769,6 +783,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
           maxLength={COMMENT_MAX_LENGTH}
           disabled={isSubmittingComment}
+          onFocus={handleCommentInputFocus}
         />
         <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
           <Send className="w-4 h-4" />
@@ -1034,12 +1049,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
               left: 0,
               right: 0,
-              bottom: vpOffsetTop > 10
+              bottom: keyboardOffset > 0
                 ? '0px'
-                : keyboardHeight > 0
-                  ? `${keyboardHeight}px`
-                  : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
-              transition: 'bottom 0.15s ease-out',
+                : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
+              transition: 'bottom 160ms ease-out',
             }}
           >
             <VisuallyHidden.Root>

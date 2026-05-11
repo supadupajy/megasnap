@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { mapCache } from '@/utils/map-cache';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
@@ -43,47 +44,10 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboardOffset = useKeyboardOffset();
   const lastActiveTabIndexRef = useRef(0);
-  const viewportBaseHeightRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
-
-  useEffect(() => {
-    const getViewportHeight = () => window.visualViewport?.height ?? window.innerHeight;
-    viewportBaseHeightRef.current = Math.max(window.innerHeight, getViewportHeight());
-
-    const updateKeyboardOffset = () => {
-      const viewport = window.visualViewport;
-      const viewportHeight = viewport?.height ?? window.innerHeight;
-      const viewportTop = viewport?.offsetTop ?? 0;
-      viewportBaseHeightRef.current = Math.max(viewportBaseHeightRef.current, window.innerHeight, viewportHeight);
-
-      const offset = Math.max(0, viewportBaseHeightRef.current - viewportHeight - viewportTop);
-      setKeyboardOffset(offset > 120 ? offset : 0);
-    };
-
-    const handleFocusOut = () => {
-      window.setTimeout(updateKeyboardOffset, 120);
-    };
-
-    updateKeyboardOffset();
-    window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
-    window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
-    window.addEventListener('resize', updateKeyboardOffset);
-    window.addEventListener('orientationchange', updateKeyboardOffset);
-    window.addEventListener('focusin', updateKeyboardOffset);
-    window.addEventListener('focusout', handleFocusOut);
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', updateKeyboardOffset);
-      window.visualViewport?.removeEventListener('scroll', updateKeyboardOffset);
-      window.removeEventListener('resize', updateKeyboardOffset);
-      window.removeEventListener('orientationchange', updateKeyboardOffset);
-      window.removeEventListener('focusin', updateKeyboardOffset);
-      window.removeEventListener('focusout', handleFocusOut);
-    };
-  }, []);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;

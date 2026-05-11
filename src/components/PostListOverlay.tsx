@@ -17,6 +17,7 @@ import { showError } from '@/utils/toast';
 import AdMobBanner from './AdMobBanner';
 import CollapsingHeader from './CollapsingHeader';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
+import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 import { fetchLikedPostIds, toggleLikeInDb } from '@/utils/like-utils';
 
 const AD_INSERT_INTERVAL = 3;
@@ -198,8 +199,7 @@ const PostListOverlay = ({
   const [playingPostId, setPlayingPostId] = useState<string | null>(null);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const viewportBaseHeightRef = useRef(0);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboardOffset = useKeyboardOffset(isOpen);
 
   // Popular 페이지와 동일한 collapsing header 훅 사용
   // 오버레이는 닫힌 상태에서 null을 렌더하므로, 열릴 때 리스너를 다시 붙이도록 isOpen을 관찰합니다.
@@ -352,45 +352,6 @@ const PostListOverlay = ({
         new CustomEvent(isOpen ? 'open-post-list-overlay' : 'close-post-list-overlay')
       );
     }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const getViewportHeight = () => window.visualViewport?.height ?? window.innerHeight;
-    viewportBaseHeightRef.current = Math.max(window.innerHeight, getViewportHeight());
-
-    const updateKeyboardOffset = () => {
-      const viewport = window.visualViewport;
-      const viewportHeight = viewport?.height ?? window.innerHeight;
-      const viewportTop = viewport?.offsetTop ?? 0;
-      viewportBaseHeightRef.current = Math.max(viewportBaseHeightRef.current, window.innerHeight, viewportHeight);
-
-      const offset = Math.max(0, viewportBaseHeightRef.current - viewportHeight - viewportTop);
-      setKeyboardOffset(offset > 120 ? offset : 0);
-    };
-
-    const handleFocusOut = () => {
-      window.setTimeout(updateKeyboardOffset, 120);
-    };
-
-    updateKeyboardOffset();
-    window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
-    window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
-    window.addEventListener('resize', updateKeyboardOffset);
-    window.addEventListener('orientationchange', updateKeyboardOffset);
-    window.addEventListener('focusin', updateKeyboardOffset);
-    window.addEventListener('focusout', handleFocusOut);
-
-    return () => {
-      window.visualViewport?.removeEventListener('resize', updateKeyboardOffset);
-      window.visualViewport?.removeEventListener('scroll', updateKeyboardOffset);
-      window.removeEventListener('resize', updateKeyboardOffset);
-      window.removeEventListener('orientationchange', updateKeyboardOffset);
-      window.removeEventListener('focusin', updateKeyboardOffset);
-      window.removeEventListener('focusout', handleFocusOut);
-      setKeyboardOffset(0);
-    };
   }, [isOpen]);
 
   const handlePlayingChange = (id: string, isIntersecting: boolean) => {
