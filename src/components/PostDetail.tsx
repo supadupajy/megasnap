@@ -1055,7 +1055,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                               {!isAd && renderCategoryBadge()}
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}

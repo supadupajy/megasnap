@@ -927,7 +927,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2.5 shrink-0">
                 {!isAd && renderCategoryBadge()}
                 {formattedDate && (
                   <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
