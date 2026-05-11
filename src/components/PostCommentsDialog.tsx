@@ -116,13 +116,18 @@ const PostCommentsDialog = ({
     if (!shouldRender) return;
 
     (window as any).__commentsDialogOpen = true;
-    window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: true } }));
+    window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: true, closing: false } }));
 
     return () => {
       (window as any).__commentsDialogOpen = false;
-      window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: false } }));
+      window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: false, closing: false } }));
     };
   }, [shouldRender]);
+
+  useEffect(() => {
+    if (!shouldRender) return;
+    window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: true, closing: isClosing } }));
+  }, [shouldRender, isClosing]);
 
   useEffect(() => {
     if (!isOpen) return;
