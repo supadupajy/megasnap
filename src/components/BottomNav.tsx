@@ -44,10 +44,50 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
+  const [suppressKeyboardReturnAnimation, setSuppressKeyboardReturnAnimation] = useState(false);
   const keyboardOffset = useKeyboardOffset();
+  const returnAnimationTimerRef = useRef<number | null>(null);
   const lastActiveTabIndexRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
+  const effectiveKeyboardOffset = suppressKeyboardReturnAnimation ? 0 : keyboardOffset;
+
+  useEffect(() => {
+    const clearReturnAnimationTimer = () => {
+      if (returnAnimationTimerRef.current == null) return;
+      window.clearTimeout(returnAnimationTimerRef.current);
+      returnAnimationTimerRef.current = null;
+    };
+
+    const handleCommentsDialogVisibility = (event: Event) => {
+      const detail = (event as CustomEvent<{ open?: boolean; closing?: boolean }>).detail;
+
+      if (detail?.open && detail.closing) {
+        clearReturnAnimationTimer();
+        setSuppressKeyboardReturnAnimation(true);
+        return;
+      }
+
+      if (detail?.open) {
+        clearReturnAnimationTimer();
+        setSuppressKeyboardReturnAnimation(false);
+        return;
+      }
+
+      setSuppressKeyboardReturnAnimation(true);
+      clearReturnAnimationTimer();
+      returnAnimationTimerRef.current = window.setTimeout(() => {
+        setSuppressKeyboardReturnAnimation(false);
+        returnAnimationTimerRef.current = null;
+      }, 450);
+    };
+
+    window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+    return () => {
+      clearReturnAnimationTimer();
+      window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+    };
+  }, []);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
@@ -176,8 +216,8 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000] will-change-transform"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        transform: keyboardOffset > 0 ? `translate3d(0, ${keyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
-        transition: keyboardOffset > 0 ? 'none' : 'transform 160ms ease-out',
+        transform: effectiveKeyboardOffset > 0 ? `translate3d(0, ${effectiveKeyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
+        transition: effectiveKeyboardOffset > 0 || suppressKeyboardReturnAnimation ? 'none' : 'transform 160ms ease-out',
       }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
