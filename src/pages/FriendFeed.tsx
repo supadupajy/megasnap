@@ -15,6 +15,7 @@ import PostItem from '@/components/PostItem';
 import AdMobBanner from '@/components/AdMobBanner';
 import CollapsingHeader from '@/components/CollapsingHeader';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
+import { useViewedPosts } from '@/hooks/use-viewed-posts';
 
 const getTierFromFollowers = (followers: number) => {
   if (followers >= 10000000) return 'diamond';
@@ -68,11 +69,61 @@ const PostSkeleton = () => (
 
 const AD_INSERT_INTERVAL = 3;
 
+const ViewedAwareFriendPostItem = React.memo(({
+  post,
+  isViewed,
+  onVisible,
+  onLikeToggle,
+  onLocationClick,
+  onDelete,
+}: {
+  post: Post;
+  isViewed: boolean;
+  onVisible: (id: string) => void;
+  onLikeToggle: () => void;
+  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (post.isAd) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+          onVisible(post.id);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: [0.6], rootMargin: '-10% 0px -10% 0px' }
+    );
+
+    if (itemRef.current) observer.observe(itemRef.current);
+    return () => observer.disconnect();
+  }, [post.id, post.isAd, onVisible]);
+
+  return (
+    <div ref={itemRef} className="border-b border-gray-100 last:border-0 bg-white">
+      <PostItem
+        post={post}
+        isViewed={isViewed}
+        onLikeToggle={onLikeToggle}
+        onLocationClick={onLocationClick}
+        onDelete={onDelete}
+        autoPlayVideo={true}
+        disablePulse={true}
+      />
+    </div>
+  );
+});
+
 const FriendFeed = () => {
 
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, loading: authLoading } = useAuth();
+  const { viewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -88,6 +139,26 @@ const FriendFeed = () => {
     if (!posts) return [];
     return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
+
+  const [dividerViewedIds, setDividerViewedIds] = useState<Set<string>>(new Set());
+  const hasCapturedDividerSnapshotRef = useRef(false);
+
+  useEffect(() => {
+    if (hasCapturedDividerSnapshotRef.current || !hasLoadedViewedHistory) return;
+
+    hasCapturedDividerSnapshotRef.current = true;
+    if (viewedIds.size > 0) {
+      setDividerViewedIds(new Set(viewedIds));
+    }
+  }, [hasLoadedViewedHistory, viewedIds]);
+
+  const displayPosts = useMemo(() => {
+    if (dividerViewedIds.size === 0) return filteredPosts;
+
+    const unseenPosts = filteredPosts.filter(post => !dividerViewedIds.has(post.id));
+    const seenPosts = filteredPosts.filter(post => dividerViewedIds.has(post.id));
+    return [...unseenPosts, ...seenPosts];
+  }, [filteredPosts, dividerViewedIds]);
 
   // 팔로잉 목록 + 포스트를 순서대로 로드 (타이밍 이슈 없이 단일 흐름으로)
   useEffect(() => {
@@ -192,12 +263,15 @@ const FriendFeed = () => {
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number) => {
     const post = posts.find(p => p.lat === lat && p.lng === lng);
+    if (post?.id) markAsViewed(post.id);
     navigate('/', { state: { center: { lat, lng }, post } });
-  }, [navigate, posts]);
+  }, [navigate, posts, markAsViewed]);
 
   const handlePostDelete = useCallback((postId: string) => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
+
+  const firstViewedIndex = displayPosts.findIndex(post => dividerViewedIds.has(post.id));
 
   const noFollowing = followingIds !== null && followingIds.length === 0;
   const noPostsButHasFriends = !isLoading && followingIds !== null && followingIds.length > 0 && filteredPosts.length === 0;
@@ -230,18 +304,29 @@ const FriendFeed = () => {
               const items: React.ReactNode[] = [];
               let postCount = 0;
 
-              filteredPosts.forEach((post) => {
+              displayPosts.forEach((post, index) => {
+                if (firstViewedIndex !== -1 && index === firstViewedIndex) {
+                  items.push(
+                    <div key="viewed-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-white">
+                      <div className="flex-1 h-px bg-indigo-200" />
+                      <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-black text-indigo-600 whitespace-nowrap shrink-0 shadow-sm">
+                        아래부터는 이미 조회한 포스팅입니다.
+                      </span>
+                      <div className="flex-1 h-px bg-indigo-200" />
+                    </div>
+                  );
+                }
+
                 items.push(
-                  <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                    <PostItem
-                      post={post}
-                      onLikeToggle={() => handleLikeToggle(post.id)}
-                      onLocationClick={handleLocationClick}
-                      onDelete={handlePostDelete}
-                      autoPlayVideo={true}
-                      disablePulse={true}
-                    />
-                  </div>
+                  <ViewedAwareFriendPostItem
+                    key={post.id}
+                    post={post}
+                    isViewed={viewedIds.has(post.id)}
+                    onVisible={markAsViewed}
+                    onLikeToggle={() => handleLikeToggle(post.id)}
+                    onLocationClick={handleLocationClick}
+                    onDelete={handlePostDelete}
+                  />
                 );
 
                 postCount++;
