@@ -513,7 +513,17 @@ const PostCommentsDialog = ({
           )}
         </div>
 
-        <form onSubmit={handleAddComment} className="border-t border-slate-100 bg-white px-4 pb-4 pt-3">
+        <form
+          onSubmit={handleAddComment}
+          className="border-t border-slate-100 bg-white px-4 pt-3"
+          style={{
+            // 키보드가 떠 있을 때는 키보드 바로 위에 붙으므로 작은 패딩으로 충분.
+            // 키보드가 없을 때는 안드로이드 제스처 바(safe-area)와 겹치지 않도록 여유 공간 확보.
+            paddingBottom: keyboardOffset > 0
+              ? '12px'
+              : 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+          }}
+        >
           <div
             className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner"
             onClick={focusCommentInput}
