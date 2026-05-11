@@ -49,22 +49,29 @@ export const useKeyboardOffset = (active = true) => {
       };
     };
 
-    // 키보드가 열려 있는지 여부만 boolean으로 추적한다.
-    // 슬라이딩 현상을 막기 위해 중간값(점진적으로 감소하는 offset)은 흘려보내지 않는다.
-    // - 키보드가 열렸다고 판단되면 즉시 "열린 시점의 키보드 높이"를 한 번만 커밋
-    // - 키보드가 닫혔다고 판단되면 즉시 0으로 한 번에 떨어뜨림
+    // 키보드 상태는 두 가지 시점에만 갱신한다.
+    //  1) 키보드 올라옴: editable 요소가 포커스 + visualViewport가 충분히 줄어든 상태
+    //     → 그 시점의 키보드 높이를 한 번만 커밋. 이후 부드럽게 줄어드는 중간값은 무시.
+    //  2) 키보드 내려감: visualViewport.height가 layout viewport에 거의 도달한 시점
+    //     → 0으로 한 번에 떨어뜨림.
+    //
+    // blur만 발생하고 키보드 OS 애니메이션은 진행 중인 상황에서 0으로 즉시 떨어뜨리지 않는다.
+    // 이 시점에 sheet/BottomNav가 점프하면 키보드 내림 애니메이션과 어긋나서 깜빡임이 생긴다.
     const updateKeyboardState = () => {
       const { activeElementIsEditable, rawOffset } = computeRawOffset();
-      const keyboardIsOpen = activeElementIsEditable && rawOffset > KEYBOARD_OFFSET_THRESHOLD;
+      const viewportIsShrunken = rawOffset > KEYBOARD_OFFSET_THRESHOLD;
 
-      if (keyboardIsOpen) {
-        if (keyboardOffsetRef.current === 0) {
+      if (keyboardOffsetRef.current === 0) {
+        // 키보드가 올라오는 시점: editable 포커스 + viewport 축소가 함께 감지될 때만 커밋
+        if (activeElementIsEditable && viewportIsShrunken) {
           commitKeyboardOffset(rawOffset);
         }
         return;
       }
 
-      if (keyboardOffsetRef.current !== 0) {
+      // 이미 키보드가 열려 있다고 판단된 상태:
+      // viewport가 실제로 회복되었을 때만 0으로 떨어뜨린다.
+      if (!viewportIsShrunken) {
         commitKeyboardOffset(0);
       }
     };
