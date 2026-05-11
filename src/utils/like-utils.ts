@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
+import { isPersistedPostId } from "@/utils/comments";
 
 export const fetchLikedPostIds = async (
   postIds: string[],
   userId?: string | null
 ): Promise<Set<string>> => {
-  const ids = Array.from(new Set(postIds.filter(Boolean)));
+  const ids = Array.from(new Set(postIds.filter((id) => id && isPersistedPostId(id))));
   if (!userId || ids.length === 0) return new Set();
 
   const { data, error } = await supabase
@@ -32,6 +33,8 @@ export const toggleLikeInDb = async (
   userId: string,
   currentlyLiked: boolean
 ): Promise<boolean> => {
+  if (!isPersistedPostId(postId)) return false;
+
   try {
     if (currentlyLiked) {
       const { error } = await supabase
