@@ -129,6 +129,9 @@ const MapContainer = ({
   const viewedPostIdsRef = useRef<Set<any>>(viewedPostIds);
   const internalViewedIdsRef = useRef<Set<string>>(new Set());
   const overlapBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewportVisibilityRef = useRef<Map<string, boolean>>(new Map());
+  const viewportAnimationFrameRef = useRef<number | null>(null);
+  const viewportAnimationTimersRef = useRef<Map<string, number>>(new Map());
 
   // 비디오 썸네일 캐시: postId → dataURL
   const videoThumbCacheRef = useRef<Map<string, string>>(new Map());
@@ -176,6 +179,103 @@ const MapContainer = ({
   useEffect(() => {
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
+
+  const isOverlayInsideViewport = useCallback((overlay: any) => {
+    const map = mapInstance.current;
+    if (!map) return true;
+
+    try {
+      const bounds = map.getBounds();
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const position = overlay.getPosition();
+      const lat = position.getLat();
+      const lng = position.getLng();
+
+      return (
+        lat >= Math.min(sw.getLat(), ne.getLat()) &&
+        lat <= Math.max(sw.getLat(), ne.getLat()) &&
+        lng >= Math.min(sw.getLng(), ne.getLng()) &&
+        lng <= Math.max(sw.getLng(), ne.getLng())
+      );
+    } catch {
+      return true;
+    }
+  }, []);
+
+  const clearViewportAnimationTimer = useCallback((id: string) => {
+    const timer = viewportAnimationTimersRef.current.get(id);
+    if (timer) {
+      window.clearTimeout(timer);
+      viewportAnimationTimersRef.current.delete(id);
+    }
+  }, []);
+
+  const applyMarkerViewportState = useCallback((id: string, overlay: any, isVisible: boolean, animate = true) => {
+    const content = overlay.getContent() as HTMLElement | null;
+    if (!content || content.classList.contains('marker-disappear-animation')) return;
+
+    const wasVisible = viewportVisibilityRef.current.get(id);
+    if (wasVisible === isVisible) return;
+
+    viewportVisibilityRef.current.set(id, isVisible);
+    clearViewportAnimationTimer(id);
+    content.classList.remove('marker-viewport-appearing', 'marker-viewport-disappearing');
+
+    if (isVisible) {
+      content.classList.remove('marker-viewport-hidden');
+      if (animate && !markersHiddenRef.current) {
+        void content.offsetWidth;
+        content.classList.add('marker-viewport-appearing');
+        const timer = window.setTimeout(() => {
+          content.classList.remove('marker-viewport-appearing');
+          viewportAnimationTimersRef.current.delete(id);
+        }, 680);
+        viewportAnimationTimersRef.current.set(id, timer);
+      }
+      return;
+    }
+
+    if (animate && !markersHiddenRef.current) {
+      void content.offsetWidth;
+      content.classList.add('marker-viewport-disappearing');
+      const timer = window.setTimeout(() => {
+        content.classList.remove('marker-viewport-disappearing');
+        content.classList.add('marker-viewport-hidden');
+        viewportAnimationTimersRef.current.delete(id);
+      }, content.classList.contains('is-ad') ? 520 : 420);
+      viewportAnimationTimersRef.current.set(id, timer);
+    } else {
+      content.classList.add('marker-viewport-hidden');
+    }
+  }, [clearViewportAnimationTimer]);
+
+  const updateMarkerViewportVisibility = useCallback((animate = true) => {
+    if (!mapInstance.current || currentLevelRef.current >= 7) return;
+
+    overlaysRef.current.forEach((overlay, id) => {
+      applyMarkerViewportState(String(id), overlay, isOverlayInsideViewport(overlay), animate);
+    });
+  }, [applyMarkerViewportState, isOverlayInsideViewport]);
+
+  const scheduleMarkerViewportVisibilityUpdate = useCallback((animate = true) => {
+    if (viewportAnimationFrameRef.current !== null) return;
+    viewportAnimationFrameRef.current = window.requestAnimationFrame(() => {
+      viewportAnimationFrameRef.current = null;
+      updateMarkerViewportVisibility(animate);
+    });
+  }, [updateMarkerViewportVisibility]);
+
+  useEffect(() => {
+    return () => {
+      if (viewportAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(viewportAnimationFrameRef.current);
+        viewportAnimationFrameRef.current = null;
+      }
+      viewportAnimationTimersRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      viewportAnimationTimersRef.current.clear();
+    };
+  }, []);
 
   // ── 마커 DOM 직접 숨김/표시 (클래스 토글로 !important CSS 활용) ──────
   const hideAllMarkersDom = useCallback(() => {
@@ -429,6 +529,8 @@ const MapContainer = ({
               const targetOverlay = overlaysRef.current.get(postId);
               targetOverlay?.setMap(null);
               overlaysRef.current.delete(postId);
+              viewportVisibilityRef.current.delete(String(postId));
+              clearViewportAnimationTimer(String(postId));
             }
           }, 520);
         }
@@ -438,7 +540,7 @@ const MapContainer = ({
     };
     window.addEventListener('animate-marker-delete', handleAnimateDelete);
     return () => window.removeEventListener('animate-marker-delete', handleAnimateDelete);
-  }, []);
+  }, [clearViewportAnimationTimer]);
 
   useEffect(() => {
     const originalGetRangeAt = Selection.prototype.getRangeAt;
@@ -702,12 +804,16 @@ const MapContainer = ({
             if (!propPostIds.has(id) && overlaysRef.current.has(id)) {
               overlay.setMap(null);
               overlaysRef.current.delete(id);
+              viewportVisibilityRef.current.delete(String(id));
+              clearViewportAnimationTimer(String(id));
             }
           }, 520);
           removalTimeoutsRef.current.set(id, removalTimer);
         } else if (!content) {
           overlay.setMap(null);
           overlaysRef.current.delete(id);
+          viewportVisibilityRef.current.delete(String(id));
+          clearViewportAnimationTimer(String(id));
         }
       }
     });
@@ -728,9 +834,26 @@ const MapContainer = ({
       if (!existingOverlay) {
         const content = document.createElement('div');
         const isAdPost = post.isAd || (post.content && post.content.includes('[AD]'));
-        const shouldAnimateMarkerAppear = !cachedMarkerIdsOnMountRef.current.has(String(post.id));
+        const isInsideViewport = (() => {
+          try {
+            const bounds = mapInstance.current.getBounds();
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+            return (
+              post.lat >= Math.min(sw.getLat(), ne.getLat()) &&
+              post.lat <= Math.max(sw.getLat(), ne.getLat()) &&
+              post.lng >= Math.min(sw.getLng(), ne.getLng()) &&
+              post.lng <= Math.max(sw.getLng(), ne.getLng())
+            );
+          } catch {
+            return true;
+          }
+        })();
+        const shouldAnimateMarkerAppear = isInsideViewport && !cachedMarkerIdsOnMountRef.current.has(String(post.id));
         content.className = `marker-container kakao-overlay${shouldAnimateMarkerAppear ? ' marker-appear-animation' : ''}`;
         if (isAdPost) content.classList.add('is-ad');
+        if (!isInsideViewport) content.classList.add('marker-viewport-hidden');
+        viewportVisibilityRef.current.set(String(post.id), isInsideViewport);
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
         content.onclick = (e) => {
@@ -782,7 +905,9 @@ const MapContainer = ({
         }
       }
     });
-  }, [posts, isMapReady, authUser]);
+
+    scheduleMarkerViewportVisibilityUpdate(false);
+  }, [posts, isMapReady, authUser, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer]);
 
   useEffect(() => {
     if (!isMapReady) return;
@@ -918,9 +1043,12 @@ const MapContainer = ({
           overlay.setMap(null);
         });
         overlaysRef.current.clear();
+        viewportVisibilityRef.current.clear();
         // 진행 중인 removalTimeout도 모두 취소
         removalTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
         removalTimeoutsRef.current.clear();
+        viewportAnimationTimersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+        viewportAnimationTimersRef.current.clear();
       }
 
       if (level === MIN_LEVEL) {
@@ -949,6 +1077,31 @@ const MapContainer = ({
       kakao.maps.event.removeListener(map, 'idle', handleIdle);
     };
   }, [isMapReady]);
+
+  useEffect(() => {
+    if (!mapInstance.current || !isMapReady) return;
+    const map = mapInstance.current;
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+
+    const handleMarkerViewportChange = () => {
+      scheduleMarkerViewportVisibilityUpdate(true);
+    };
+
+    kakao.maps.event.addListener(map, 'center_changed', handleMarkerViewportChange);
+    kakao.maps.event.addListener(map, 'dragend', handleMarkerViewportChange);
+    kakao.maps.event.addListener(map, 'idle', handleMarkerViewportChange);
+    kakao.maps.event.addListener(map, 'zoom_changed', handleMarkerViewportChange);
+
+    scheduleMarkerViewportVisibilityUpdate(false);
+
+    return () => {
+      kakao.maps.event.removeListener(map, 'center_changed', handleMarkerViewportChange);
+      kakao.maps.event.removeListener(map, 'dragend', handleMarkerViewportChange);
+      kakao.maps.event.removeListener(map, 'idle', handleMarkerViewportChange);
+      kakao.maps.event.removeListener(map, 'zoom_changed', handleMarkerViewportChange);
+    };
+  }, [isMapReady, scheduleMarkerViewportVisibilityUpdate]);
 
   // level prop이 바뀌면 pendingLevelRef에 저장해두고,
   // smoothMoveTo가 진행 중이 아닐 때만 실제로 setLevel 적용
