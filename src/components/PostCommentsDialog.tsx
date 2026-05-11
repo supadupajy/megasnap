@@ -45,6 +45,7 @@ const PostCommentsDialog = ({
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const [sheetTopPx, setSheetTopPx] = useState<number | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const isSubmittingRef = useRef(false);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
   const sheetBottom = keyboardOffset > 0 ? '0px' : 'var(--bottom-nav-height)';
@@ -139,6 +140,12 @@ const PostCommentsDialog = ({
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
+    await submitComment();
+  };
+
+  const submitComment = async () => {
+    if (isSubmittingRef.current) return;
+
     if (!authUser) {
       showError('로그인이 필요합니다.');
       return;
@@ -151,6 +158,7 @@ const PostCommentsDialog = ({
     const text = commentInput.trim();
     if (!text) return;
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
@@ -163,10 +171,12 @@ const PostCommentsDialog = ({
       });
       syncComments([...comments, saved]);
       setCommentInput('');
+      requestAnimationFrame(() => commentInputRef.current?.focus());
       showSuccess('댓글이 등록되었습니다.');
     } catch (err) {
       showError('댓글 등록에 실패했습니다.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -391,6 +401,15 @@ const PostCommentsDialog = ({
             <button
               type="submit"
               disabled={!authUser || !commentInput.trim() || isSubmitting}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                void submitComment();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-200 transition active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
               aria-label="댓글 등록"
             >
