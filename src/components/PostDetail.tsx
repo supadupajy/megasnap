@@ -381,24 +381,40 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                 </button>
               </div>
               <div className="relative w-full h-full flex items-center justify-center px-4" style={{ paddingTop: '16px', paddingBottom: '60px' }}>
-                <div className="w-full max-w-[420px] bg-white rounded-[28px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] p-8 flex flex-col items-center gap-5">
-                  <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-black text-gray-900 mb-1">광고 준비 중</p>
-                    <p className="text-sm text-gray-500 font-medium leading-relaxed">
-                      광고 시작 시간이 되면<br />자동으로 활성화됩니다.
-                    </p>
-                    {currentPost.user?.name && currentPost.user.name !== '광고' && (
-                      <p className="text-xs text-slate-400 font-bold mt-3 bg-slate-50 px-3 py-1.5 rounded-full inline-block">
-                        {currentPost.user.name}
-                      </p>
+                <div className="w-full max-w-[420px] bg-white rounded-[28px] overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] flex flex-col">
+                  <div className="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden">
+                    {currentPost.image_url || currentPost.image ? (
+                      <img
+                        src={getOptimizedDetailImage(currentPost.image_url || currentPost.image, currentPost.id)}
+                        alt={currentPost.content || '예약 광고 이미지'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = FALLBACK_IMAGE; }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      </div>
                     )}
+                    <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md text-slate-700 text-xs font-black shadow-sm">
+                      예약 광고
+                    </div>
                   </div>
-                  <button onClick={onClose} className="w-full h-12 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm active:scale-95 transition-all">
-                    닫기
-                  </button>
+                  <div className="p-7 flex flex-col items-center gap-5">
+                    <div className="text-center">
+                      <p className="text-lg font-black text-gray-900 mb-1">광고 준비 중</p>
+                      <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                        광고 시작 시간이 되면<br />자동으로 활성화됩니다.
+                      </p>
+                      {currentPost.user?.name && currentPost.user.name !== '광고' && (
+                        <p className="text-xs text-slate-400 font-bold mt-3 bg-slate-50 px-3 py-1.5 rounded-full inline-block">
+                          {currentPost.user.name}
+                        </p>
+                      )}
+                    </div>
+                    <button onClick={onClose} className="w-full h-12 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm active:scale-95 transition-all">
+                      닫기
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

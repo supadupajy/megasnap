@@ -798,7 +798,7 @@ const Index = () => {
       const locationName = await getLocation(lat, lng);
 
       const displayImage = slot.isPending
-        ? (mapMarkerAd.brand_logo_url || mapMarkerAd.image_url || '')
+        ? (mapMarkerAd.image_url || mapMarkerAd.brand_logo_url || '')
         : slot.image_url;
 
       // 광고 시작일(start_date)이 있으면 그 날짜, 없으면 new Date(0)(1970년 = 맨 뒤)
