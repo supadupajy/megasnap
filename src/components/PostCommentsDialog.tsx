@@ -52,7 +52,20 @@ const PostCommentsDialog = ({
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
-  const keyboardOffset = useKeyboardOffset(isOpen);
+  const rawKeyboardOffset = useKeyboardOffset(isOpen);
+  // 일부 안드로이드 환경에서는 globalViewportBaseHeight 누적 때문에 keyboardOffset이
+  // 현재 window.innerHeight보다 더 커지는 경우가 있어, 시트가 화면 위로 튕겨나간다.
+  // 실제로 시트를 올릴 수 있는 최대값은 "현재 viewport 안에서의 키보드 높이"이므로
+  // window.innerHeight - vvH(키보드 위 가용 영역) 이상으로는 절대 올리지 않는다.
+  const safeKeyboardOffset = (() => {
+    if (typeof window === 'undefined') return rawKeyboardOffset;
+    const vvH = window.visualViewport?.height ?? window.innerHeight;
+    const vvTop = window.visualViewport?.offsetTop ?? 0;
+    const maxOffset = Math.max(0, window.innerHeight - vvH - vvTop);
+    // window.innerHeight 기반 측정값과 hook 측정값 중 더 작은(=현실적인) 값 사용
+    return Math.min(rawKeyboardOffset, maxOffset);
+  })();
+  const keyboardOffset = safeKeyboardOffset;
   const frozenSheetBottomRef = useRef<string | null>(null);
   const frozenSheetTopRef = useRef<number | null>(null);
   // 시트는 화면 맨 아래(bottom: 0)까지 닿게 한다.
