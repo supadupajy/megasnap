@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, MessageCircle, Send, Trash2, X } from 'lucide-react';
+import { Check, MessageCircle, Send, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Comment } from '@/types';
 import {
@@ -40,6 +40,7 @@ const PostCommentsDialog = ({
   const [editCommentText, setEditCommentText] = useState('');
   const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<Comment | null>(null);
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const commentInputRef = useRef<HTMLInputElement>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
@@ -163,15 +164,20 @@ const PostCommentsDialog = ({
 
   const handleDeleteComment = async (comment: Comment) => {
     if (!authUser || !comment.id || comment.userId !== authUser.id) return;
-    if (!window.confirm('댓글을 삭제할까요?')) return;
+    setCommentToDelete(comment);
+  };
 
-    setDeletingCommentId(comment.id);
+  const confirmDeleteComment = async () => {
+    if (!authUser || !commentToDelete?.id || commentToDelete.userId !== authUser.id) return;
+
+    setDeletingCommentId(commentToDelete.id);
     try {
-      await deleteComment({ commentId: comment.id, userId: authUser.id });
-      syncComments(comments.filter(item => item.id !== comment.id));
-      if (editingCommentId === comment.id) {
+      await deleteComment({ commentId: commentToDelete.id, userId: authUser.id });
+      syncComments(comments.filter(item => item.id !== commentToDelete.id));
+      if (editingCommentId === commentToDelete.id) {
         cancelCommentEdit();
       }
+      setCommentToDelete(null);
       showSuccess('댓글이 삭제되었습니다.');
     } catch (err) {
       showError('댓글 삭제 중 오류가 발생했습니다.');
@@ -254,10 +260,9 @@ const PostCommentsDialog = ({
                 type="button"
                 onClick={() => handleDeleteComment(comment)}
                 disabled={isDeleting}
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-50 text-rose-500 transition active:scale-95 disabled:opacity-50"
-                aria-label="댓글 삭제"
+                className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-black text-rose-500 transition active:scale-95 disabled:opacity-50"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                삭제
               </button>
             </div>
           )}
@@ -273,14 +278,17 @@ const PostCommentsDialog = ({
       <button
         type="button"
         className="absolute left-0 right-0 top-0 z-0 cursor-default bg-slate-950/60 comment-backdrop-enter pointer-events-auto"
-        style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
+        style={{ bottom: 'var(--bottom-nav-height)' }}
         onClick={() => onOpenChange(false)}
         aria-label="댓글 닫기 배경"
       />
 
       <section
-        className="fixed left-1/2 z-[1] flex h-[min(82dvh,760px)] max-h-[calc(100dvh-104px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
-        style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
+        className="fixed left-1/2 z-[1] flex h-[min(84dvh,780px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        style={{
+          bottom: 'var(--bottom-nav-height)',
+          maxHeight: 'calc(100dvh - var(--bottom-nav-height) - 24px)',
+        }}
         onClick={stopSheetEvent}
       >
         <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
@@ -347,6 +355,46 @@ const PostCommentsDialog = ({
           </div>
         </form>
       </section>
+
+      {commentToDelete && (
+        <div
+          className="fixed inset-0 z-[2] flex items-center justify-center bg-slate-950/45 px-6 pointer-events-auto comment-backdrop-enter"
+          onClick={() => {
+            if (!deletingCommentId) setCommentToDelete(null);
+          }}
+        >
+          <div
+            className="w-full max-w-xs rounded-[28px] bg-white p-5 text-center shadow-[0_24px_70px_rgba(15,23,42,0.28)]"
+            onClick={stopSheetEvent}
+          >
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
+              <X className="h-7 w-7" />
+            </div>
+            <h3 className="text-lg font-black text-slate-950">댓글을 삭제할까요?</h3>
+            <p className="mt-2 text-sm font-medium leading-relaxed text-slate-500">
+              삭제한 댓글은 다시 복구할 수 없어요.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setCommentToDelete(null)}
+                disabled={!!deletingCommentId}
+                className="h-11 rounded-2xl bg-slate-100 text-sm font-black text-slate-600 transition active:scale-95 disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteComment}
+                disabled={!!deletingCommentId}
+                className="h-11 rounded-2xl bg-rose-500 text-sm font-black text-white shadow-lg shadow-rose-100 transition active:scale-95 disabled:bg-rose-300"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
