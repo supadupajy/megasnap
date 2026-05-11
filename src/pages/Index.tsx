@@ -367,8 +367,9 @@ const Index = () => {
   const [viewportHeight, setViewportHeight] = useState(() => window.visualViewport?.height ?? window.innerHeight);
   useEffect(() => {
     const update = () => {
+      if ((window as any).__commentsDialogOpen) return;
+
       setViewportHeight(window.visualViewport?.height ?? window.innerHeight);
-      const val = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0', 10);
       // CSS 변수가 없으면 env() 직접 계산
       const el = document.createElement('div');
       el.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';

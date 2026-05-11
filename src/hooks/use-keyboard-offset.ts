@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 let globalViewportBaseHeight = 0;
+
+const KEYBOARD_OFFSET_THRESHOLD = 120;
+const KEYBOARD_CLOSE_SETTLE_MS = 180;
 
 const isEditableElement = (element: Element | null) => {
   if (!element) return false;
@@ -13,10 +16,25 @@ const isEditableElement = (element: Element | null) => {
 
 export const useKeyboardOffset = (active = true) => {
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboardOffsetRef = useRef(0);
+  const resetTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    const clearResetTimer = () => {
+      if (resetTimerRef.current == null) return;
+      window.clearTimeout(resetTimerRef.current);
+      resetTimerRef.current = null;
+    };
+
+    const commitKeyboardOffset = (nextOffset: number) => {
+      if (Math.abs(keyboardOffsetRef.current - nextOffset) < 2) return;
+      keyboardOffsetRef.current = nextOffset;
+      setKeyboardOffset(nextOffset);
+    };
+
     if (!active) {
-      setKeyboardOffset(0);
+      clearResetTimer();
+      commitKeyboardOffset(0);
       return;
     }
 
@@ -33,8 +51,20 @@ export const useKeyboardOffset = (active = true) => {
       const layoutViewportDiff = Math.max(0, window.innerHeight - viewportHeight - viewportTop);
       const baseViewportDiff = Math.max(0, globalViewportBaseHeight - viewportHeight - viewportTop);
       const offset = Math.max(layoutViewportDiff, baseViewportDiff);
+      const nextOffset = activeElementIsEditable && offset > KEYBOARD_OFFSET_THRESHOLD ? offset : 0;
 
-      setKeyboardOffset(activeElementIsEditable && offset > 120 ? offset : 0);
+      if (nextOffset > 0) {
+        clearResetTimer();
+        commitKeyboardOffset(nextOffset);
+        return;
+      }
+
+      if (keyboardOffsetRef.current === 0 || resetTimerRef.current != null) return;
+
+      resetTimerRef.current = window.setTimeout(() => {
+        resetTimerRef.current = null;
+        commitKeyboardOffset(0);
+      }, KEYBOARD_CLOSE_SETTLE_MS);
     };
 
     const scheduleUpdates = () => {
@@ -53,6 +83,7 @@ export const useKeyboardOffset = (active = true) => {
     window.addEventListener('focusout', scheduleUpdates);
 
     return () => {
+      clearResetTimer();
       window.visualViewport?.removeEventListener('resize', updateKeyboardOffset);
       window.visualViewport?.removeEventListener('scroll', updateKeyboardOffset);
       window.removeEventListener('resize', updateKeyboardOffset);
