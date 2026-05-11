@@ -305,21 +305,23 @@ const PostCommentsDialog = ({
         type="button"
         onClick={() => handleToggleCommentLike(comment)}
         disabled={isLikePending || isDeleting}
-        className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-full border px-2.5 text-[11px] font-black transition-all active:scale-95 disabled:opacity-60 ${
+        className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-all active:scale-95 disabled:opacity-60 ${
           isLiked
-            ? 'border-red-100 bg-red-50 text-red-500'
-            : 'border-gray-100 bg-white text-gray-600 hover:bg-gray-50'
+            ? 'border-red-100 bg-red-50 text-red-500 shadow-sm shadow-red-100/50'
+            : 'border-gray-100 bg-white text-gray-700 hover:bg-gray-50'
         }`}
         aria-label={`댓글 좋아요 ${likesCount.toLocaleString()}개`}
       >
-        <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-500'}`} />
+        <Heart className={`h-[18px] w-[18px] transition-colors ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
         <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
       </button>
     ) : null;
 
+    const showLikeOnly = !isEditing && !isOwnComment && !!likeButton;
+
     return (
       <div key={commentKey} className="rounded-3xl bg-slate-50 px-4 py-3.5">
-        <div className="flex items-start justify-between gap-3">
+        <div className={`flex justify-between gap-3 ${showLikeOnly ? 'items-center' : 'items-start'}`}>
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
               <span className="truncate text-sm font-black text-slate-900">{comment.user}</span>
