@@ -12,6 +12,7 @@ import {
 } from '@/utils/comments';
 import { formatRelativeTime } from '@/lib/utils';
 import { showError, showSuccess } from '@/utils/toast';
+import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 import ExpandableCommentText from './ExpandableCommentText';
 
 interface PostCommentsDialogProps {
@@ -44,6 +45,11 @@ const PostCommentsDialog = ({
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const commentInputRef = useRef<HTMLInputElement>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
+  const keyboardOffset = useKeyboardOffset(isOpen);
+  const sheetBottom = keyboardOffset > 0 ? '0px' : 'var(--bottom-nav-height)';
+  const sheetMaxHeight = keyboardOffset > 0
+    ? 'calc(100dvh - 20px)'
+    : 'calc(100dvh - var(--bottom-nav-height) - 40px)';
 
   useEffect(() => {
     if (!isOpen) return;
@@ -278,16 +284,16 @@ const PostCommentsDialog = ({
       <button
         type="button"
         className="absolute left-0 right-0 top-0 z-0 cursor-default bg-slate-950/60 comment-backdrop-enter pointer-events-auto"
-        style={{ bottom: 'var(--bottom-nav-height)' }}
+        style={{ bottom: sheetBottom }}
         onClick={() => onOpenChange(false)}
         aria-label="댓글 닫기 배경"
       />
 
       <section
-        className="fixed left-1/2 z-[1] flex h-[min(78dvh,720px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        className="fixed left-1/2 z-[1] flex h-[min(76dvh,700px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
         style={{
-          bottom: 'var(--bottom-nav-height)',
-          maxHeight: 'calc(100dvh - var(--bottom-nav-height) - 40px)',
+          bottom: sheetBottom,
+          maxHeight: sheetMaxHeight,
         }}
         onClick={stopSheetEvent}
       >

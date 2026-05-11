@@ -125,7 +125,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  const keyboardOffset = useKeyboardOffset(isOpen);
+  const keyboardOffset = useKeyboardOffset(isOpen && !isCommentsDialogOpen);
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
