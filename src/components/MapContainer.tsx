@@ -132,6 +132,8 @@ const MapContainer = ({
   const viewportVisibilityRef = useRef<Map<string, boolean>>(new Map());
   const viewportAnimationFrameRef = useRef<number | null>(null);
   const viewportAnimationTimersRef = useRef<Map<string, number>>(new Map());
+  // 드래그 중에는 viewport 애니메이션 트리거를 보류했다가 dragend에서 한 번에 평가
+  const isDraggingViewportRef = useRef(false);
 
   // 비디오 썸네일 캐시: postId → dataURL
   const videoThumbCacheRef = useRef<Map<string, string>>(new Map());
@@ -252,6 +254,8 @@ const MapContainer = ({
 
   const updateMarkerViewportVisibility = useCallback((animate = true) => {
     if (!mapInstance.current || currentLevelRef.current >= 7) return;
+    // 드래그 중에는 평가/애니메이션을 보류 (dragend에서 한 번에 처리)
+    if (isDraggingViewportRef.current) return;
 
     overlaysRef.current.forEach((overlay, id) => {
       applyMarkerViewportState(String(id), overlay, isOverlayInsideViewport(overlay), animate);
@@ -259,6 +263,7 @@ const MapContainer = ({
   }, [applyMarkerViewportState, isOverlayInsideViewport]);
 
   const scheduleMarkerViewportVisibilityUpdate = useCallback((animate = true) => {
+    if (isDraggingViewportRef.current) return;
     if (viewportAnimationFrameRef.current !== null) return;
     viewportAnimationFrameRef.current = window.requestAnimationFrame(() => {
       viewportAnimationFrameRef.current = null;
@@ -1088,16 +1093,28 @@ const MapContainer = ({
       scheduleMarkerViewportVisibilityUpdate(true);
     };
 
+    const handleViewportDragStart = () => {
+      isDraggingViewportRef.current = true;
+    };
+
+    const handleViewportDragEnd = () => {
+      isDraggingViewportRef.current = false;
+      // 드래그가 끝난 시점에 한 번에 화면 진입/이탈을 평가하여 애니메이션 트리거
+      scheduleMarkerViewportVisibilityUpdate(true);
+    };
+
+    kakao.maps.event.addListener(map, 'dragstart', handleViewportDragStart);
+    kakao.maps.event.addListener(map, 'dragend', handleViewportDragEnd);
     kakao.maps.event.addListener(map, 'center_changed', handleMarkerViewportChange);
-    kakao.maps.event.addListener(map, 'dragend', handleMarkerViewportChange);
     kakao.maps.event.addListener(map, 'idle', handleMarkerViewportChange);
     kakao.maps.event.addListener(map, 'zoom_changed', handleMarkerViewportChange);
 
     scheduleMarkerViewportVisibilityUpdate(false);
 
     return () => {
+      kakao.maps.event.removeListener(map, 'dragstart', handleViewportDragStart);
+      kakao.maps.event.removeListener(map, 'dragend', handleViewportDragEnd);
       kakao.maps.event.removeListener(map, 'center_changed', handleMarkerViewportChange);
-      kakao.maps.event.removeListener(map, 'dragend', handleMarkerViewportChange);
       kakao.maps.event.removeListener(map, 'idle', handleMarkerViewportChange);
       kakao.maps.event.removeListener(map, 'zoom_changed', handleMarkerViewportChange);
     };
