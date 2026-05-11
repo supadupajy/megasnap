@@ -22,7 +22,9 @@ import PostActions from './PostActions';
 import PostUserAvatar from './PostUserAvatar';
 import PostCategoryBadge from './PostCategoryBadge';
 import PostMenuDropdown from './PostMenuDropdown';
+import ImageSliderDots from './ImageSliderDots';
 import { useLocationDisplay } from '@/hooks/use-location-display';
+import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
 interface PostItemProps {
   post: Post;
@@ -66,14 +68,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const imageScrollRef = useRef<HTMLDivElement>(null);
-
-  // 마우스 드래그를 위한 상태
-
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+  const {
+    scrollRef: imageScrollRef,
+    currentImageIndex,
+    isDragging,
+    onScroll: handleImageScroll,
+    onMouseDown,
+    onMouseUp,
+    onMouseMove,
+  } = useImageSliderDrag<HTMLDivElement>();
 
   const { user, isAd } = post;
   const content = localContent;
@@ -242,20 +245,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           ))}
         </div>
 
-        {/* 페이지 인디케이터 (구분자) */}
-        {displayImages.length > 1 && (
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-1.5 z-20 pointer-events-none">
-            {displayImages.map((_, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "h-1.5 rounded-full transition-all duration-300",
-                  currentImageIndex === i ? "w-4 bg-white shadow-sm" : "w-1.5 bg-white/50"
-                )}
-              />
-            ))}
-          </div>
-        )}
+        <ImageSliderDots
+          count={displayImages.length}
+          currentIndex={currentImageIndex}
+          activeWidthClass="w-4"
+          inactiveColorClass="bg-white/50"
+          bottomClass="bottom-4"
+          zIndexClass="z-20"
+        />
       </div>
     );
   };
@@ -267,39 +264,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
     return baseImages.map((img) => getOptimizedFeedImage(img, post.id));
   }, [post.images, post.image, post.image_url, isAd, post.id]);
-
-  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (isDragging) return; // 드래그 중에는 스크롤 이벤트에 의한 인덱스 업데이트 방지 (선택 사항)
-    const container = e.currentTarget;
-    const index = Math.round(container.scrollLeft / container.clientWidth);
-    if (index !== currentImageIndex) setCurrentImageIndex(index);
-  };
-
-  // 마우스 드래그 핸들러
-  const onMouseDown = (e: React.MouseEvent) => {
-    if (!imageScrollRef.current) return;
-    setIsDragging(true);
-    setStartX(e.pageX - imageScrollRef.current.offsetLeft);
-    setScrollLeft(imageScrollRef.current.scrollLeft);
-  };
-
-  const onMouseUp = () => {
-    setIsDragging(false);
-    // 드래그 종료 시 가장 가까운 슬라이드로 스냅 (CSS snap-type이 이미 적용되어 있음)
-    if (imageScrollRef.current) {
-      const container = imageScrollRef.current;
-      const index = Math.round(container.scrollLeft / container.clientWidth);
-      setCurrentImageIndex(index);
-    }
-  };
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !imageScrollRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - imageScrollRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5; // 스크롤 속도 조절
-    imageScrollRef.current.scrollLeft = scrollLeft - walk;
-  };
 
   const handleImageError = async () => {
     if (imgError) return;

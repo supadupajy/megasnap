@@ -21,7 +21,9 @@ import PostActions from './PostActions';
 import PostUserAvatar from './PostUserAvatar';
 import PostCategoryBadge from './PostCategoryBadge';
 import PostMenuDropdown from './PostMenuDropdown';
+import ImageSliderDots from './ImageSliderDots';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
+import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
@@ -106,10 +108,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   }, [isOpen]);
 
   const [hasInitialized, setHasInitialized] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
+  const {
+    scrollRef: imageScrollRef,
+    currentImageIndex,
+    setCurrentImageIndex,
+    isDragging,
+    onScroll: handleImageScroll,
+    onMouseDown,
+    onMouseUp,
+    onMouseMove,
+    resetScroll: resetImageSlider,
+  } = useImageSliderDrag<HTMLDivElement>();
   const [localComments, setLocalComments] = useState<Comment[]>([]);
   const [isSaved, setIsSaved] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -125,7 +134,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const contentRef = useRef<HTMLParagraphElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
-  const imageScrollRef = useRef<HTMLDivElement>(null);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지
 
@@ -142,28 +150,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       document.body.removeAttribute('data-scroll-locked');
     }
   }, [isOpen, isDeleteDialogOpen]);
-
-  const onMouseDown = (e: React.MouseEvent) => {
-
-    if (!imageScrollRef.current) return;
-    setIsDragging(true);
-    setStartX(e.pageX - imageScrollRef.current.offsetLeft);
-    setScrollLeft(imageScrollRef.current.scrollLeft);
-  };
-  const onMouseUp = () => {
-    setIsDragging(false);
-    if (imageScrollRef.current) {
-      const index = Math.round(imageScrollRef.current.scrollLeft / imageScrollRef.current.clientWidth);
-      setCurrentImageIndex(index);
-    }
-  };
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !imageScrollRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - imageScrollRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    imageScrollRef.current.scrollLeft = scrollLeft - walk;
-  };
 
   useLayoutEffect(() => {
     if (isOpen && scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
@@ -422,13 +408,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     );
   }
 
-  const handleImageScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (isDragging) return;
-    const container = e.currentTarget;
-    const index = Math.round(container.scrollLeft / container.clientWidth);
-    if (index !== currentImageIndex) setCurrentImageIndex(index);
-  };
-
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isMine) {
@@ -581,9 +560,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     return (
     <div className="absolute inset-0 w-full h-full z-10">
       <div
-        ref={(el) => {
-          imageScrollRef.current = el;
-        }}
+        ref={imageScrollRef}
         className={cn(
           "flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
           isDragging && "cursor-grabbing snap-none"
@@ -614,16 +591,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           </div>
         ))}
       </div>
-      {displayImages.length > 1 && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 z-30 pointer-events-none">
-          {displayImages.map((_, i) => (
-            <div
-              key={i}
-              className={`h-1.5 rounded-full transition-all duration-300 ${currentImageIndex === i ? "w-6 bg-white shadow-sm" : "w-1.5 bg-white/40"}`}
-            />
-          ))}
-        </div>
-      )}
+      <ImageSliderDots
+        count={displayImages.length}
+        currentIndex={currentImageIndex}
+        activeWidthClass="w-6"
+        inactiveColorClass="bg-white/40"
+        bottomClass="bottom-6"
+        zIndexClass="z-30"
+      />
     </div>
     );
   };
