@@ -54,6 +54,10 @@ const formatMapAddress = (result: any, lat: number, lng: number) => {
 const getMapAddressCacheKey = (lat: number, lng: number) => `${lat.toFixed(4)},${lng.toFixed(4)}`;
 const MAP_ADDRESS_CACHE_STORAGE_KEY = 'map-center-address-cache';
 const MAP_ADDRESS_CACHE_LIMIT = 160;
+const getBoundsFetchKey = (
+  bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
+  zoom: number
+) => `${bounds.sw.lat.toFixed(4)}|${bounds.sw.lng.toFixed(4)}|${bounds.ne.lat.toFixed(4)}|${bounds.ne.lng.toFixed(4)}|${zoom}`;
 
 function clusterByAngleClient(
   points: { lat: number; lng: number }[],
@@ -185,11 +189,12 @@ const Index = () => {
 
   // ── 핵심 상태 ──────────────────────────────────────────────
   // allPosts: 지금까지 fetch된 모든 포스트 (누적, 최대 5000개)
-  // 캐시된 데이터는 사용하지 않고 항상 새로 fetch (좌표 오류 방지)
-  const [allPosts, setAllPosts] = useState<Post[]>([]);
+  // 지도 페이지를 벗어났다가 돌아오면 메모리 캐시로 즉시 복원해 재로딩처럼 보이지 않게 함
+  const restoredFromMapCacheRef = useRef(mapCache.posts.length > 0);
+  const [allPosts, setAllPosts] = useState<Post[]>(() => mapCache.posts);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   // displayedMarkers: MapContainer에 실제로 전달되는 마커 목록
-  const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>([]);
+  const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>(() => mapCache.posts);
 
   const [mapData, setMapData] = useState<any>(null);
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
@@ -207,7 +212,7 @@ const Index = () => {
     posts: Post[];
     bounds: any;
     dbCounts: DirectionCounts | null;
-  }>({ posts: [], bounds: null, dbCounts: null });
+  }>(() => ({ posts: mapCache.posts, bounds: mapCache.bounds, dbCounts: mapCache.dbCounts }));
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
   const isMapFrozenByCommentsRef = useRef(false);
   const frozenMapViewRef = useRef<{ center?: { lat: number; lng: number }; level: number } | null>(null);
@@ -355,7 +360,7 @@ const Index = () => {
 
   // 트렌딩/bounds fetch 캐싱 및 중복 호출 방지용 ref
   const trendingFetchedAtRef = useRef<number>(0);
-  const lastBoundsKeyRef = useRef<string>('');
+  const lastBoundsKeyRef = useRef<string>(mapCache.bounds ? getBoundsFetchKey(mapCache.bounds, mapCache.lastZoom || 6) : '');
 
   // safe-area-inset-bottom을 JS로 읽기
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
@@ -517,7 +522,7 @@ const Index = () => {
     const { sw, ne } = mapData.bounds;
     const center = mapData.center;
 
-    const boundsKey = `${sw.lat.toFixed(4)}|${sw.lng.toFixed(4)}|${ne.lat.toFixed(4)}|${ne.lng.toFixed(4)}|${currentZoom}`;
+    const boundsKey = getBoundsFetchKey(mapData.bounds, currentZoom);
     if (boundsKey === lastBoundsKeyRef.current) return;
     lastBoundsKeyRef.current = boundsKey;
 
@@ -575,6 +580,8 @@ const Index = () => {
 
           const combined = Array.from(existingMap.values()).slice(0, 5000);
           mapCache.posts = combined;
+          mapCache.bounds = mapData.bounds;
+          mapCache.dbCounts = dbCounts;
           // bounds + dbCounts + posts 동시 업데이트
           setStableSnapshot({
             posts: combined,
@@ -613,7 +620,9 @@ const Index = () => {
   useEffect(() => { authUserIdRef.current = authUser?.id || null; }, [authUser?.id]);
 
   useEffect(() => {
-    lastBoundsKeyRef.current = '';
+    if (!restoredFromMapCacheRef.current) {
+      lastBoundsKeyRef.current = '';
+    }
 
     const syncLikedState = async () => {
       const userId = authUser?.id;
@@ -718,7 +727,12 @@ const Index = () => {
         userId: authUser?.id || null,
       });
       if (!cancelled) {
-        setStableSnapshot(s => (s.bounds === b ? { ...s, dbCounts: counts } : s));
+        setStableSnapshot(s => {
+          if (s.bounds !== b) return s;
+          mapCache.bounds = b;
+          mapCache.dbCounts = counts;
+          return { ...s, dbCounts: counts };
+        });
       }
     };
     fetchCounts();
@@ -1573,6 +1587,7 @@ const Index = () => {
                 topOffset={indicatorTopOffset}
                 bottomOffset={indicatorBottomOffset}
                 dbCounts={useClientSideCounts ? clientOffScreenCounts : stableSnapshot.dbCounts}
+                disableInitialAnimation={restoredFromMapCacheRef.current}
               />
             </div>
             <MapLevelIndicator

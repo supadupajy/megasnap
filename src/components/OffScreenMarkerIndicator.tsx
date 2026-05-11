@@ -14,6 +14,7 @@ interface OffScreenMarkerIndicatorProps {
   topOffset?: string | number;
   bottomOffset: number;
   dbCounts?: DirectionCounts | null;
+  disableInitialAnimation?: boolean;
 }
 
 interface IndicatorState {
@@ -140,14 +141,19 @@ const DropIndicator: React.FC<{
   onClickDirection: (dir: Direction, pts: { lat: number; lng: number }[]) => void;
   onDisplayAngleChange: (dir: Direction, angle: number) => void;
   onDisplayCountChange: (dir: Direction, count: number) => void;
-}> = ({ state, onClickDirection, onDisplayAngleChange, onDisplayCountChange }) => {
+  disableInitialAnimation?: boolean;
+}> = ({ state, onClickDirection, onDisplayAngleChange, onDisplayCountChange, disableInitialAnimation = false }) => {
   const { dir, angleDeg, count, pts, left, top, originX, originY } = state;
 
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(disableInitialAnimation);
   useEffect(() => {
+    if (disableInitialAnimation) {
+      setMounted(true);
+      return;
+    }
     const t = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(t);
-  }, []);
+  }, [disableInitialAnimation]);
 
   const accAngleRef = useRef<number>(angleDeg);
   const [displayAngle, setDisplayAngle] = useState(angleDeg);
@@ -359,7 +365,7 @@ const FadingIndicator: React.FC<{ state: FadingState }> = ({ state }) => {
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────
 const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
-  bounds, onClickDirection, topOffset, bottomOffset, dbCounts,
+  bounds, onClickDirection, topOffset, bottomOffset, dbCounts, disableInitialAnimation = false,
 }) => {
   const { w: screenW, h: screenH } = useWindowSize();
 
@@ -441,6 +447,7 @@ const OffScreenMarkerIndicator: React.FC<OffScreenMarkerIndicatorProps> = ({
           onClickDirection={onClickDirection}
           onDisplayAngleChange={handleDisplayAngleChange}
           onDisplayCountChange={handleDisplayCountChange}
+          disableInitialAnimation={disableInitialAnimation}
         />
       ))}
     </>

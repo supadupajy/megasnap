@@ -96,7 +96,7 @@ const MapContainer = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !(mapCache.posts.length > 0 && !!(window as any).kakao?.maps?.Map));
   const [mapLoadError, setMapLoadError] = useState<string | null>(null);
   const [currentLevel, setCurrentLevel] = useState<number>(6);
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
@@ -115,6 +115,7 @@ const MapContainer = ({
   const pressStartTimeRef = useRef<number>(0);
 
   const overlaysRef = useRef<Map<string, any>>(new Map());
+  const cachedMarkerIdsOnMountRef = useRef<Set<string>>(new Set(mapCache.posts.map(post => String(post.id))));
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   const searchOverlayRef = useRef<any>(null);
   const highlightingIdsRef = useRef<Set<string>>(new Set());
@@ -658,7 +659,7 @@ const MapContainer = ({
       setMapLoadError('카카오지도를 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.');
     };
 
-    setIsLoading(true);
+    setIsLoading(!(mapCache.posts.length > 0 && !!(window as any).kakao?.maps?.Map));
     setMapLoadError(null);
 
     loadKakaoMapsSdk()
@@ -727,7 +728,8 @@ const MapContainer = ({
       if (!existingOverlay) {
         const content = document.createElement('div');
         const isAdPost = post.isAd || (post.content && post.content.includes('[AD]'));
-        content.className = 'marker-container kakao-overlay marker-appear-animation';
+        const shouldAnimateMarkerAppear = !cachedMarkerIdsOnMountRef.current.has(String(post.id));
+        content.className = `marker-container kakao-overlay${shouldAnimateMarkerAppear ? ' marker-appear-animation' : ''}`;
         if (isAdPost) content.classList.add('is-ad');
         content.setAttribute('data-content-state', contentStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
