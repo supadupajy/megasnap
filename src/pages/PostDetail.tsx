@@ -236,7 +236,7 @@ const PostDetail = () => {
         <div className="sticky top-0 z-40 bg-white flex items-center px-4 h-14 border-b border-gray-50 relative">
           <button
             onClick={() => navigate(-1)}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-100 active:scale-90 transition-all"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
