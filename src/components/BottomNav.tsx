@@ -46,48 +46,53 @@ const BottomNav = () => {
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
   const [suppressKeyboardReturnAnimation, setSuppressKeyboardReturnAnimation] = useState(false);
   const keyboardOffset = useKeyboardOffset();
-  const returnAnimationTimerRef = useRef<number | null>(null);
+  const releaseSuppressTimerRef = useRef<number | null>(null);
   const lastActiveTabIndexRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
   const effectiveKeyboardOffset = suppressKeyboardReturnAnimation ? 0 : keyboardOffset;
 
   useEffect(() => {
-    const clearReturnAnimationTimer = () => {
-      if (returnAnimationTimerRef.current == null) return;
-      window.clearTimeout(returnAnimationTimerRef.current);
-      returnAnimationTimerRef.current = null;
+    const clearReleaseSuppressTimer = () => {
+      if (releaseSuppressTimerRef.current == null) return;
+      window.clearTimeout(releaseSuppressTimerRef.current);
+      releaseSuppressTimerRef.current = null;
     };
 
     const handleCommentsDialogVisibility = (event: Event) => {
       const detail = (event as CustomEvent<{ open?: boolean; closing?: boolean }>).detail;
 
-      if (detail?.open && detail.closing) {
-        clearReturnAnimationTimer();
-        setSuppressKeyboardReturnAnimation(true);
-        return;
-      }
+      clearReleaseSuppressTimer();
 
-      if (detail?.open) {
-        clearReturnAnimationTimer();
+      if (detail?.open && !detail.closing) {
         setSuppressKeyboardReturnAnimation(false);
         return;
       }
 
       setSuppressKeyboardReturnAnimation(true);
-      clearReturnAnimationTimer();
-      returnAnimationTimerRef.current = window.setTimeout(() => {
-        setSuppressKeyboardReturnAnimation(false);
-        returnAnimationTimerRef.current = null;
-      }, 450);
     };
 
     window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
     return () => {
-      clearReturnAnimationTimer();
+      clearReleaseSuppressTimer();
       window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
     };
   }, []);
+
+  useEffect(() => {
+    if (!suppressKeyboardReturnAnimation || keyboardOffset > 0) return;
+
+    releaseSuppressTimerRef.current = window.setTimeout(() => {
+      setSuppressKeyboardReturnAnimation(false);
+      releaseSuppressTimerRef.current = null;
+    }, 80);
+
+    return () => {
+      if (releaseSuppressTimerRef.current == null) return;
+      window.clearTimeout(releaseSuppressTimerRef.current);
+      releaseSuppressTimerRef.current = null;
+    };
+  }, [keyboardOffset, suppressKeyboardReturnAnimation]);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
