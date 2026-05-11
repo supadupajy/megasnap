@@ -339,15 +339,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
     if (document.activeElement === commentInputRef.current) return;
     e.preventDefault();
-    window.dispatchEvent(new CustomEvent('comment-input-keyboard-focus'));
     commentInputRef.current?.focus({ preventScroll: true });
   };
 
-  const releaseCommentKeyboardMapLock = () => {
-    window.dispatchEvent(new CustomEvent('comment-input-keyboard-blur'));
-  };
-
   const lat = post.latitude ?? post.lat;
+
   const lng = post.longitude ?? post.lng;
 
   const displayLocation = useLocationDisplay(post.location || '', lat, lng);
@@ -542,13 +538,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const handleCommentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.dispatchEvent(new CustomEvent('comment-input-keyboard-focus'));
     commentInputRef.current?.focus({ preventScroll: true });
   };
 
   const handleCommentInputFocus = () => {
-    window.dispatchEvent(new CustomEvent('comment-input-keyboard-focus'));
     lockNearestScrollParentDuringFocus();
+
     keyboardScrollTimersRef.current.forEach(window.clearTimeout);
     keyboardScrollTimersRef.current = [60, 180, 360, 620].map((delay, index) =>
       window.setTimeout(() => {
@@ -1015,7 +1010,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 </div>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onBlur={releaseCommentKeyboardMapLock} onPointerDown={focusCommentInputWithoutNativeScroll} />
+                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onPointerDown={focusCommentInputWithoutNativeScroll} />
+
                 <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                   <Send className="w-4 h-4" />
                 </button>
@@ -1095,7 +1091,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               </div>
             </div>
             <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onBlur={releaseCommentKeyboardMapLock} onPointerDown={focusCommentInputWithoutNativeScroll} />
+              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} onPointerDown={focusCommentInputWithoutNativeScroll} />
+
               <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                 <Send className="w-4 h-4" />
               </button>
