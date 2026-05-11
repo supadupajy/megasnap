@@ -61,7 +61,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   
   if (loading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
@@ -165,15 +165,17 @@ const AnimatedRoutes = () => {
 
   if (loading && location.pathname !== '/login') {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className={`bg-white ${isChatPage ? "h-[100dvh] overflow-hidden" : "min-h-[100dvh]"}`}>
+    <div className={`bg-white ${isChatPage ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+
       {/* Header: hideAppChrome이 아닐 때 또는 write 페이지일 때 표시 */}
+
       {(!hideAppChrome || isWritePage) && session && (
         <Header />
       )}
@@ -265,8 +267,9 @@ const App = () => {
           <AuthProvider>
             <PushNotificationBootstrap />
             <NotificationProvider>
-            <div className="min-h-[100dvh] w-full bg-white overflow-x-hidden">
+            <div className="min-h-screen w-full bg-white overflow-x-hidden">
               <AnimatePresence mode="wait">
+
                 {showSplash ? (
                   <SplashScreen key="splash" />
                 ) : (

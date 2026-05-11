@@ -28,7 +28,6 @@
 		"AppPlugin",
 		"CAPCameraPlugin",
 		"GeolocationPlugin",
-		"KeyboardPlugin",
 		"PushNotificationsPlugin",
 		"StatusBarPlugin"
 	]

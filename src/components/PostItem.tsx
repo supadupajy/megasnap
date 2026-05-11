@@ -103,9 +103,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
-  const keyboardScrollTimersRef = useRef<number[]>([]);
   
   // 마우스 드래그를 위한 상태
+
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -253,90 +253,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     setLikesCount(post.likes || 0);
   }, [post.id, post.isLiked, post.likes]);
 
-  useEffect(() => {
-    return () => {
-      keyboardScrollTimersRef.current.forEach(window.clearTimeout);
-      keyboardScrollTimersRef.current = [];
-    };
-  }, []);
-
-  const scrollCommentInputAboveKeyboard = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const input = commentInputRef.current;
-    if (!input) return;
-
-    const form = input.closest('form') as HTMLElement | null;
-    const target = form || input;
-    const viewport = window.visualViewport;
-    const visibleTop = viewport?.offsetTop ?? 0;
-    const visibleBottom = visibleTop + (viewport?.height ?? window.innerHeight);
-    const gap = 18;
-
-    const findScrollParent = (element: HTMLElement | null): HTMLElement | null => {
-      let parent = element?.parentElement || null;
-      while (parent && parent !== document.body) {
-        const style = window.getComputedStyle(parent);
-        const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
-        if (canScroll && parent.scrollHeight > parent.clientHeight) return parent;
-        parent = parent.parentElement;
-      }
-      return null;
-    };
-
-    const scrollParent = findScrollParent(target);
-    const targetRect = target.getBoundingClientRect();
-    const parentBottom = scrollParent
-      ? Math.min(scrollParent.getBoundingClientRect().bottom, visibleBottom)
-      : visibleBottom;
-
-    const overflowBottom = targetRect.bottom + gap - parentBottom;
-    if (overflowBottom <= 1) return;
-
-    if (scrollParent) {
-      scrollParent.scrollBy({ top: overflowBottom, behavior });
-    } else {
-      window.scrollBy({ top: overflowBottom, behavior });
-    }
-  }, []);
-
-  // WebView가 포커스된 input을 자동으로 보이게 하려고 부모 스크롤 컨테이너를
-  // 위로 끌어올리면서, 결과적으로 그 너머의 지도까지 같이 위로 튀는 현상이 있다.
-  // 포커스 직후 짧은 구간 동안 가까운 스크롤 부모의 scrollTop을 원래 값으로 되돌려
-  // "WebView 자동 보정 스크롤"만 무력화한다. (페이지 전체 레이아웃은 건드리지 않음)
-  const lockNearestScrollParentDuringFocus = useCallback(() => {
-    const input = commentInputRef.current;
-    if (!input) return;
-
-    const findScrollParent = (element: HTMLElement | null): HTMLElement | null => {
-      let parent = element?.parentElement || null;
-      while (parent && parent !== document.body) {
-        const style = window.getComputedStyle(parent);
-        const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
-        if (canScroll && parent.scrollHeight > parent.clientHeight) return parent;
-        parent = parent.parentElement;
-      }
-      return null;
-    };
-
-    const scrollParent = findScrollParent(input);
-    const initialDocScrollY = window.scrollY;
-    const initialParentScrollTop = scrollParent ? scrollParent.scrollTop : null;
-
-    const restore = () => {
-      if (scrollParent && initialParentScrollTop != null && scrollParent.scrollTop !== initialParentScrollTop) {
-        scrollParent.scrollTop = initialParentScrollTop;
-      }
-      if (window.scrollY !== initialDocScrollY) {
-        window.scrollTo(window.scrollX, initialDocScrollY);
-      }
-    };
-
-    // 0~500ms 동안 여러 시점에 강제로 원위치 (WebView 보정 스크롤이 들어오는 타이밍)
-    [0, 16, 50, 120, 220, 360, 500].forEach((delay) => {
-      window.setTimeout(restore, delay);
-    });
-  }, []);
-
   const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
+
     if (document.activeElement === commentInputRef.current) return;
     e.preventDefault();
     commentInputRef.current?.focus({ preventScroll: true });
@@ -542,14 +460,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   };
 
   const handleCommentInputFocus = () => {
-    lockNearestScrollParentDuringFocus();
-
-    keyboardScrollTimersRef.current.forEach(window.clearTimeout);
-    keyboardScrollTimersRef.current = [60, 180, 360, 620].map((delay, index) =>
-      window.setTimeout(() => {
-        scrollCommentInputAboveKeyboard(index === 0 ? 'auto' : 'smooth');
-      }, delay)
-    );
+    // 키보드가 열릴 때 지도/페이지가 같이 움직이지 않도록 여기서는 강제 스크롤을 하지 않는다.
+    // 필요한 경우 브라우저의 기본 포커스 처리와 preventScroll에만 맡긴다.
   };
 
   const confirmDelete = () => {

@@ -299,6 +299,23 @@ const Index = () => {
   const tempSelectedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [stableViewportHeight, setStableViewportHeight] = useState(() => window.innerHeight);
+
+  useEffect(() => {
+    const updateStableViewportHeight = () => {
+      const activeElement = document.activeElement as HTMLElement | null;
+      const isTextInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
+      if (isTextInputFocused) return;
+      setStableViewportHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', updateStableViewportHeight);
+    window.addEventListener('orientationchange', updateStableViewportHeight);
+    return () => {
+      window.removeEventListener('resize', updateStableViewportHeight);
+      window.removeEventListener('orientationchange', updateStableViewportHeight);
+    };
+  }, []);
 
   // [Optimized] profile state는 사용되지 않아 제거 (AuthProvider가 이미 관리)
 
@@ -1458,12 +1475,16 @@ const Index = () => {
       <motion.div
         initial={{ opacity: 1 }}
         animate={{ opacity: 1 }}
-        className="relative w-full h-[100dvh] overflow-hidden bg-gray-50 flex flex-col"
+        className="relative w-full overflow-hidden bg-gray-50 flex flex-col"
         style={{
+          height: `${stableViewportHeight}px`,
+          minHeight: `${stableViewportHeight}px`,
+          maxHeight: `${stableViewportHeight}px`,
           paddingTop: isSelectingLocation ? '0px' : 'env(safe-area-inset-top)',
           paddingBottom: isSelectingLocation ? '0px' : 'env(safe-area-inset-bottom)'
         }}
       >
+
         {/* 화면 밖 마커 방향 표시 - overflow-hidden 밖에 fixed로 배치 */}
         {/* bounds와 dbCounts는 항상 stableSnapshot에서 함께 가져와 일관성 보장 (깜빡임 방지) */}
         {!isSelectingLocation && !isSelectingAdLocation && (

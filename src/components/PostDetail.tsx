@@ -139,9 +139,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const commentInputRef = useRef<HTMLInputElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-  const keyboardScrollTimersRef = useRef<number[]>([]);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지
+
   const checkClamped = useCallback(() => {
     const el = contentRef.current;
     if (!el) return;
@@ -160,67 +160,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     setAvatarError(false);
   }, [currentPostIndex]);
 
-  const scrollCommentInputAboveKeyboard = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const input = commentInputRef.current;
-    const scrollContainer = scrollContainerRef.current;
-    if (!input || !scrollContainer) return;
-
-    const form = input.closest('form') as HTMLElement | null;
-    const target = form || input;
-    const viewport = window.visualViewport;
-    const visibleTop = viewport?.offsetTop ?? 0;
-    const visibleBottom = visibleTop + (viewport?.height ?? window.innerHeight);
-    const containerRect = scrollContainer.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-    const parentBottom = Math.min(containerRect.bottom, visibleBottom);
-    const gap = 18;
-
-    const overflowBottom = targetRect.bottom + gap - parentBottom;
-    if (overflowBottom > 1) {
-      scrollContainer.scrollBy({ top: overflowBottom, behavior });
-    }
-  }, []);
-
-  // WebView가 포커스된 input을 보이게 하려고 부모 스크롤 컨테이너를 위로 끌어올리면서
-  // 그 너머의 지도까지 같이 튀어 보이는 현상이 있다. 포커스 직후 짧은 구간 동안
-  // 가까운 스크롤 부모(또는 문서)의 scrollTop을 원래 값으로 되돌려 막는다.
-  const lockNearestScrollParentDuringFocus = useCallback(() => {
-    const scrollContainer = scrollContainerRef.current;
-    const initialDocScrollY = window.scrollY;
-    const initialContainerScrollTop = scrollContainer ? scrollContainer.scrollTop : null;
-
-    const restore = () => {
-      if (scrollContainer && initialContainerScrollTop != null && scrollContainer.scrollTop !== initialContainerScrollTop) {
-        scrollContainer.scrollTop = initialContainerScrollTop;
-      }
-      if (window.scrollY !== initialDocScrollY) {
-        window.scrollTo(window.scrollX, initialDocScrollY);
-      }
-    };
-
-    [0, 16, 50, 120, 220, 360, 500].forEach((delay) => {
-      window.setTimeout(restore, delay);
-    });
-  }, []);
-
   const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
+
     if (document.activeElement === commentInputRef.current) return;
     e.preventDefault();
     commentInputRef.current?.focus({ preventScroll: true });
   };
 
   const handleCommentInputFocus = () => {
-    lockNearestScrollParentDuringFocus();
-
-    keyboardScrollTimersRef.current.forEach(window.clearTimeout);
-    keyboardScrollTimersRef.current = [60, 180, 360, 620].map((delay, index) =>
-      window.setTimeout(() => {
-        scrollCommentInputAboveKeyboard(index === 0 ? 'auto' : 'smooth');
-      }, delay)
-    );
+    // 포커스 시 강제 스크롤을 하지 않아 지도와 모달이 서로 스크롤 보정 경쟁을 하지 않게 한다.
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
+
     if (!imageScrollRef.current) return;
     setIsDragging(true);
     setStartX(e.pageX - imageScrollRef.current.offsetLeft);
@@ -463,7 +415,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           <DialogOverlay className="z-[12999] bg-black/40" />
           <DialogPrimitive.Content
             onOpenAutoFocus={(e) => e.preventDefault()}
-            className="fixed inset-0 z-[13000] max-w-[100vw] w-full h-[100dvh] p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            className="fixed inset-0 z-[13000] max-w-[100vw] w-full h-screen min-h-screen max-h-screen p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+
           >
             <VisuallyHidden.Root>
               <DialogTitle>광고 준비 중</DialogTitle>
