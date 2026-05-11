@@ -211,6 +211,8 @@ const Index = () => {
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
   const isMapFrozenByCommentsRef = useRef(false);
   const frozenMapViewRef = useRef<{ center?: { lat: number; lng: number }; level: number } | null>(null);
+  const isPostDetailOpenRef = useRef(false);
+  const suppressMapChangesUntilRef = useRef(0);
 
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -897,6 +899,18 @@ const Index = () => {
     currentZoomRef.current = currentZoom;
   }, [currentZoom]);
 
+  useEffect(() => {
+    if (selectedPostId) {
+      isPostDetailOpenRef.current = true;
+      return;
+    }
+
+    if (isPostDetailOpenRef.current) {
+      suppressMapChangesUntilRef.current = Date.now() + 700;
+    }
+    isPostDetailOpenRef.current = false;
+  }, [selectedPostId]);
+
   // 트렌딩 포스트 div의 실제 bottom 위치 측정
   // 펼침 애니메이션 중 ResizeObserver → setState → 전체 리렌더가 반복되지 않도록
   // 접힌 상태에서만 측정값을 상태에 반영한다.
@@ -945,7 +959,11 @@ const Index = () => {
   const mapChangeCalledRef = useRef(false);
 
   const handleMapChange = useCallback((data: any) => {
-    if (isMapFrozenByCommentsRef.current && !isSelectingLocationRef.current && !isSelectingAdLocationRef.current) {
+    if (
+      !isSelectingLocationRef.current &&
+      !isSelectingAdLocationRef.current &&
+      (isMapFrozenByCommentsRef.current || isPostDetailOpenRef.current || Date.now() < suppressMapChangesUntilRef.current)
+    ) {
       return;
     }
 
@@ -1287,6 +1305,8 @@ const Index = () => {
   // PostDetail 내부 useEffect가 cleanup→re-run 되면서 history.back()이 호출되어
   // popstate 이벤트로 인해 모달이 즉시 닫히는 버그를 방지함
   const handleClosePostDetail = useCallback(() => {
+    suppressMapChangesUntilRef.current = Date.now() + 700;
+
     // X버튼으로 닫을 때 PostDetail이 pushState한 더미 히스토리 항목을 제거
     // history.back()으로 더미 항목을 pop하되, PostDetail 내부의 isClosingByButtonRef로
     // popstate 핸들러에서 중복 onClose 호출을 방지함
