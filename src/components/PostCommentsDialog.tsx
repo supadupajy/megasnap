@@ -232,7 +232,7 @@ const PostCommentsDialog = ({
           </div>
 
           {!isEditing && isOwnComment && comment.id && (
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 flex-col items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => startCommentEdit(comment)}
