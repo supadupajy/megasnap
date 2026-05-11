@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
+import { formatAdministrativeAddress } from '@/utils/location-format';
 
 const reverseGeocode = (lat: number, lng: number): Promise<string> => {
   return new Promise(resolve => {
@@ -46,7 +47,11 @@ const reverseGeocode = (lat: number, lng: number): Promise<string> => {
     geocoder.coord2Address(lng, lat, (result: any, status: any) => {
       if (status === kakao.maps.services.Status.OK) {
         const addr = result[0].address;
-        resolve([addr.region_1depth_name, addr.region_2depth_name, addr.region_3depth_name].filter(Boolean).join(' '));
+        resolve(formatAdministrativeAddress(
+          addr.region_1depth_name,
+          addr.region_2depth_name,
+          addr.region_3depth_name
+        ));
       } else {
         resolve(resolveOfflineLocationName(lat, lng));
       }

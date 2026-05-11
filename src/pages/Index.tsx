@@ -29,6 +29,7 @@ import { postDraftStore } from '@/utils/post-draft-store';
 import { fetchLikedPostIds, toggleLikeInDb } from '@/utils/like-utils';
 import { useMapMarkerAds, resolveActiveSlot } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
+import { formatAdministrativeAddress } from '@/utils/location-format';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
@@ -39,28 +40,15 @@ const fireConfetti = (options: any) => {
   } catch (e) {}
 };
 
-const normalizeCityName = (city: string) => {
-  const metroMap: Record<string, string> = {
-    서울: '서울시',
-    부산: '부산시',
-    인천: '인천시',
-    대구: '대구시',
-    대전: '대전시',
-    광주: '광주시',
-    울산: '울산시',
-    세종특별자치시: '세종시',
-  };
-  return metroMap[city] || city;
-};
-
 const formatMapAddress = (result: any, lat: number, lng: number) => {
   const addr = result?.[0]?.address;
   if (!addr) return resolveOfflineLocationName(lat, lng);
 
-  const city = normalizeCityName(addr.region_1depth_name || '');
-  const district = addr.region_2depth_name || '';
-  const dong = addr.region_3depth_name || addr.region_3depth_h_name || '';
-  return [city, district, dong].filter(Boolean).join(' ') || resolveOfflineLocationName(lat, lng);
+  return formatAdministrativeAddress(
+    addr.region_1depth_name,
+    addr.region_2depth_name,
+    addr.region_3depth_name || addr.region_3depth_h_name
+  ) || resolveOfflineLocationName(lat, lng);
 };
 
 const getMapAddressCacheKey = (lat: number, lng: number) => `${lat.toFixed(4)},${lng.toFixed(4)}`;
@@ -708,10 +696,11 @@ const Index = () => {
         geocoder.coord2Address(lng, lat, (result: any, status: any) => {
           if (status === kakao.maps.services.Status.OK) {
             const addr = result[0].address;
-            const city = addr.region_1depth_name || '';
-            const gu = addr.region_2depth_name || '';
-            const dong = addr.region_3depth_name || '';
-            resolve([city, gu, dong].filter(Boolean).join(' '));
+            resolve(formatAdministrativeAddress(
+              addr.region_1depth_name,
+              addr.region_2depth_name,
+              addr.region_3depth_name
+            ));
           } else {
             resolve(resolveOfflineLocationName(lat, lng));
           }

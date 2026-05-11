@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyboard } from '@/hooks/use-keyboard';
+import { normalizeLocationName } from '@/utils/location-format';
 
 interface Place {
   id: string;
@@ -76,8 +77,8 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
           if (status === kakao.maps.services.Status.OK) {
             resolve(data.map((item: any, idx: number) => ({
               id: `addr-${idx}-${item.x}-${item.y}`,
-              name: item.address_name,
-              address: item.road_address?.address_name || item.address?.address_name || item.address_name,
+              name: normalizeLocationName(item.address_name),
+              address: normalizeLocationName(item.road_address?.address_name || item.address?.address_name || item.address_name),
               lat: parseFloat(item.y),
               lng: parseFloat(item.x),
               isAddress: true
@@ -104,7 +105,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
               data: data.map((item: any) => ({
                 id: item.id,
                 name: item.place_name,
-                address: item.road_address_name || item.address_name,
+                address: normalizeLocationName(item.road_address_name || item.address_name),
                 lat: parseFloat(item.y),
                 lng: parseFloat(item.x),
                 isAddress: false
@@ -168,7 +169,7 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
         const newPlaces = data.map((item: any) => ({
           id: item.id,
           name: item.place_name,
-          address: item.road_address_name || item.address_name,
+          address: normalizeLocationName(item.road_address_name || item.address_name),
           lat: parseFloat(item.y),
           lng: parseFloat(item.x),
           isAddress: false

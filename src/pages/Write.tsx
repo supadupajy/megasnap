@@ -15,6 +15,7 @@ import { getSeoulDistrict } from '@/utils/seoul-district-polygons';
 import { useWriteStore } from '@/utils/write-store';
 import { mapCache } from '@/utils/map-cache';
 import { extractHashtags } from '@/utils/hashtags';
+import { formatAdministrativeAddress } from '@/utils/location-format';
 
 interface MediaFile {
   file: File;
@@ -87,10 +88,11 @@ const Write = () => {
       geocoder.coord2Address(lng, lat, (result: any, status: any) => {
         if (status === kakao.maps.services.Status.OK && result[0]) {
           const addr = result[0].address;
-          const city = addr.region_1depth_name || '';
-          const gu = addr.region_2depth_name || '';
-          const dong = addr.region_3depth_name || '';
-          setAddress([city, gu, dong].filter(Boolean).join(' '));
+          setAddress(formatAdministrativeAddress(
+            addr.region_1depth_name,
+            addr.region_2depth_name,
+            addr.region_3depth_name
+          ));
         } else {
           // API 실패 시 폴리곤 → 오프라인 순으로 fallback
           const district = getSeoulDistrict(lat, lng);

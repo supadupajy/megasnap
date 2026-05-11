@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { resolveOfflineLocationName } from "@/utils/offline-location";
+import { normalizeLocationName } from "@/utils/location-format";
 
 /**
  * location_name이 "동"만 있는 경우(공백 없음) 좌표 기반 오프라인 매핑으로
@@ -20,12 +21,12 @@ export function useLocationDisplay(
   lng: number | undefined
 ): string {
   return useMemo(() => {
-    if (!needsEnrichment(locationName)) return locationName;
-    if (!lat || !lng) return locationName;
+    if (!needsEnrichment(locationName)) return normalizeLocationName(locationName);
+    if (!lat || !lng) return normalizeLocationName(locationName);
 
     // 좌표로 "시 구" 정보를 오프라인 매핑에서 가져옴
     const cityGu = resolveOfflineLocationName(lat, lng); // e.g. "서울시 강남구"
     // cityGu 뒤에 원래 동 이름을 붙임 → "서울시 강남구 대치2동"
-    return `${cityGu} ${locationName}`;
+    return normalizeLocationName(`${cityGu} ${locationName}`);
   }, [locationName, lat, lng]);
 }
