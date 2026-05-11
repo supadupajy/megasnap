@@ -241,7 +241,7 @@ const PostDetail = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <h2 className="text-lg font-black text-gray-100 tracking-tight">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">
               {allPosts.length > 0 && allPosts[0].user.id === authUser?.id
                 ? '내 포스팅'
                 : allPosts.length > 0
