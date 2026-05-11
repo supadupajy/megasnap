@@ -44,8 +44,9 @@ import { useAuth } from './AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { showSuccess, showError } from '@/utils/toast';
-import { fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment } from '@/utils/comments';
+import { fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment, COMMENT_MAX_LENGTH } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import ExpandableCommentText from './ExpandableCommentText';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { handleShare } from '@/utils/share';
 
@@ -93,6 +94,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const contentRef = useRef<HTMLParagraphElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -243,6 +245,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     setLocalContent(post.content || '');
     setEditContent(post.content || '');
     setIsEditingContent(false);
+    setExpandedCommentIds(new Set());
   }, [post.id, post.content]);
 
   useEffect(() => {
@@ -678,7 +681,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     e.stopPropagation();
     if (!comment.id || comment.userId !== authUser?.id) return;
     setEditingCommentId(comment.id);
-    setEditCommentText(comment.text);
+    setEditCommentText(comment.text.slice(0, COMMENT_MAX_LENGTH));
   };
 
   const cancelCommentEdit = (e: React.MouseEvent) => {
@@ -694,6 +697,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     const nextText = editCommentText.trim();
     if (!nextText) {
       showError('댓글 내용을 입력해주세요.');
+      return;
+    }
+    if (nextText.length > COMMENT_MAX_LENGTH) {
+      showError(`댓글은 최대 ${COMMENT_MAX_LENGTH}자까지 입력할 수 있습니다.`);
       return;
     }
 
@@ -714,16 +721,18 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const renderCommentRow = (comment: Comment, index: number, options?: { clamp?: boolean; showRef?: boolean }) => {
     const isOwnComment = !!authUser?.id && comment.userId === authUser.id;
     const isEditing = !!comment.id && editingCommentId === comment.id;
+    const commentKey = comment.id || `${index}-${comment.user}-${comment.text}`;
 
     return (
-      <div key={comment.id || index} ref={options?.showRef ? commentSectionRef : undefined} className="flex items-start justify-between gap-2 mt-1">
+      <div key={commentKey} ref={options?.showRef ? commentSectionRef : undefined} className="flex items-start justify-between gap-2 mt-1">
         <div className="flex gap-2 items-start flex-1 min-w-0">
           <span className="font-bold text-sm text-gray-900 shrink-0">{comment.user}</span>
           {isEditing ? (
             <div className="flex-1 min-w-0 space-y-2" onClick={(e) => e.stopPropagation()}>
               <Input
                 value={editCommentText}
-                onChange={(e) => setEditCommentText(e.target.value)}
+                onChange={(e) => setEditCommentText(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
+                maxLength={COMMENT_MAX_LENGTH}
                 disabled={savingCommentId === comment.id}
                 autoFocus
                 className="h-9 rounded-xl border-indigo-100 bg-indigo-50/40 text-sm focus-visible:ring-2 focus-visible:ring-indigo-400"
@@ -750,7 +759,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               </div>
             </div>
           ) : (
-            <span className={`text-sm text-gray-500 ${options?.clamp ? 'line-clamp-1' : ''}`}>{comment.text}</span>
+            <ExpandableCommentText
+              text={comment.text}
+              expanded={expandedCommentIds.has(commentKey)}
+              onExpand={() => setExpandedCommentIds((prev) => new Set(prev).add(commentKey))}
+              className="text-sm text-gray-500"
+            />
           )}
         </div>
         {!isEditing && (
@@ -955,7 +969,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 </div>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
+                <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
                 <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                   <Send className="w-4 h-4" />
                 </button>
@@ -1035,7 +1049,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               </div>
             </div>
             <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
-              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
+              <Input ref={commentInputRef} placeholder="댓글 달기..." className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8" value={commentInput} onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))} maxLength={COMMENT_MAX_LENGTH} disabled={isSubmittingComment} onFocus={handleCommentInputFocus} />
               <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">
                 <Send className="w-4 h-4" />
               </button>

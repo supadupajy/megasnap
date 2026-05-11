@@ -22,8 +22,9 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment } from '@/utils/comments';
+import { fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment, COMMENT_MAX_LENGTH } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import ExpandableCommentText from './ExpandableCommentText';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { invalidateAdCache } from '@/hooks/use-ad';
@@ -131,6 +132,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const contentRef = useRef<HTMLParagraphElement>(null);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지
@@ -225,6 +227,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
       setShowComments(false);
+      setExpandedCommentIds(new Set());
       setContentExpanded(false);
       setIsContentClamped(false);
       setIsEditingContent(false);
@@ -647,7 +650,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     e.stopPropagation();
     if (!comment.id || comment.userId !== authUser?.id) return;
     setEditingCommentId(comment.id);
-    setEditCommentText(comment.text);
+    setEditCommentText(comment.text.slice(0, COMMENT_MAX_LENGTH));
   };
 
   const cancelCommentEdit = (e: React.MouseEvent) => {
@@ -663,6 +666,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     const nextText = editCommentText.trim();
     if (!nextText) {
       showError('댓글 내용을 입력해주세요.');
+      return;
+    }
+    if (nextText.length > COMMENT_MAX_LENGTH) {
+      showError(`댓글은 최대 ${COMMENT_MAX_LENGTH}자까지 입력할 수 있습니다.`);
       return;
     }
 
@@ -683,16 +690,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const renderCommentRow = (comment: Comment, index: number, options?: { clamp?: boolean }) => {
     const isOwnComment = !!authUser?.id && comment.userId === authUser.id;
     const isEditing = !!comment.id && editingCommentId === comment.id;
+    const commentKey = comment.id || `${index}-${comment.user}-${comment.text}`;
 
     return (
-      <div key={comment.id || index} className="flex items-start justify-between gap-2">
+      <div key={commentKey} className="flex items-start justify-between gap-2">
         <div className="flex gap-2 items-start flex-1 min-w-0">
           <span className="font-bold text-sm text-gray-900 shrink-0">{comment.user}</span>
           {isEditing ? (
             <div className="flex-1 min-w-0 space-y-2" onClick={(e) => e.stopPropagation()}>
               <Input
                 value={editCommentText}
-                onChange={(e) => setEditCommentText(e.target.value)}
+                onChange={(e) => setEditCommentText(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
+                maxLength={COMMENT_MAX_LENGTH}
                 disabled={savingCommentId === comment.id}
                 autoFocus
                 className="h-9 rounded-xl border-indigo-100 bg-indigo-50/40 text-sm focus-visible:ring-2 focus-visible:ring-indigo-400"
@@ -719,7 +728,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               </div>
             </div>
           ) : (
-            <span className={`text-sm text-gray-500 ${options?.clamp ? 'line-clamp-1' : ''}`}>{comment.text}</span>
+            <ExpandableCommentText
+              text={comment.text}
+              expanded={expandedCommentIds.has(commentKey)}
+              onExpand={() => setExpandedCommentIds((prev) => new Set(prev).add(commentKey))}
+              className="text-sm text-gray-500"
+            />
           )}
         </div>
         {!isEditing && (
@@ -752,7 +766,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           placeholder="댓글 달기..."
           className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
           value={commentInput}
-          onChange={(e) => setCommentInput(e.target.value)}
+          onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
+          maxLength={COMMENT_MAX_LENGTH}
           disabled={isSubmittingComment}
         />
         <button type="submit" disabled={!commentInput.trim() || isSubmittingComment} className="text-indigo-600 disabled:text-gray-300 transition-colors">

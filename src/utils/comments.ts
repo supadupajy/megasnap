@@ -1,6 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Comment } from '@/types';
 
+export const COMMENT_MAX_LENGTH = 100;
+
 export type CommentInsertInput = {
   postId: string;
   userId: string;
@@ -56,6 +58,9 @@ export const insertComment = async ({
   if (!trimmedContent) {
     throw new Error('댓글 내용을 입력해주세요.');
   }
+  if (trimmedContent.length > COMMENT_MAX_LENGTH) {
+    throw new Error(`댓글은 최대 ${COMMENT_MAX_LENGTH}자까지 입력할 수 있습니다.`);
+  }
 
   const { data, error } = await supabase
     .from('comments')
@@ -86,6 +91,9 @@ export const updateComment = async ({
   const trimmedContent = content.trim();
   if (!trimmedContent) {
     throw new Error('댓글 내용을 입력해주세요.');
+  }
+  if (trimmedContent.length > COMMENT_MAX_LENGTH) {
+    throw new Error(`댓글은 최대 ${COMMENT_MAX_LENGTH}자까지 입력할 수 있습니다.`);
   }
 
   const { data, error } = await supabase
