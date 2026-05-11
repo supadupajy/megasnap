@@ -52,6 +52,17 @@ const PostCommentsDialog = ({
     : 'calc(100dvh - var(--bottom-nav-height) - 40px)';
 
   useEffect(() => {
+    (window as any).__commentsDialogOpen = isOpen;
+    window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: isOpen } }));
+    return () => {
+      if (isOpen) {
+        (window as any).__commentsDialogOpen = false;
+        window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: false } }));
+      }
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     if (!isOpen) return;
     setComments(initialComments || []);
   }, [isOpen, initialComments]);

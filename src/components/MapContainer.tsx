@@ -529,6 +529,9 @@ const MapContainer = ({
       };
 
       const updateMapData = (forceInitial = false) => {
+        // 댓글 입력/키보드로 visualViewport가 바뀌는 동안 카카오맵이 idle/zoom_changed를 내보내도
+        // 지도 상태를 앱에 보고하지 않음. 실제 사용자 지도 조작이 아니므로 위치 튐을 방지한다.
+        if (!forceInitial && (window as any).__commentsDialogOpen) return;
         // smoothMoveTo 진행 중에는 idle/zoom_changed 이벤트 무시
         // (이동 중 onMapChange 호출 → React 리렌더 → center useEffect 재실행 → smoothMoveTo 재시작 → 순간이동)
         // 단, 초기 강제 호출(forceInitial=true)은 animationFrame 체크를 건너뜀

@@ -195,6 +195,7 @@ const Index = () => {
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
   // routeState로 위치가 지정된 경우 focusPostOnMap에서 setMapCenter를 호출 → 부드러운 smoothMoveTo
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+  const mapCenterRef = useRef<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   const [centerAddress, setCenterAddress] = useState(() => (
     mapCache.lastCenter
       ? resolveOfflineLocationName(mapCache.lastCenter.lat, mapCache.lastCenter.lng)
@@ -208,6 +209,8 @@ const Index = () => {
     dbCounts: DirectionCounts | null;
   }>({ posts: [], bounds: null, dbCounts: null });
   const [currentZoom, setCurrentZoom] = useState<number>(mapCache.lastZoom || 6);
+  const isMapFrozenByCommentsRef = useRef(false);
+  const frozenMapViewRef = useRef<{ center?: { lat: number; lng: number }; level: number } | null>(null);
 
   const { viewedIds, markAsViewed } = useViewedPosts();
   const { blockedIds } = useBlockedUsers();
@@ -392,6 +395,44 @@ const Index = () => {
     indicatorTopOffset + 8,
     Math.round((indicatorTopOffset + rightMarkerIndicatorTop - 184) / 2),
   );
+
+  useEffect(() => {
+    mapCenterRef.current = mapCenter;
+  }, [mapCenter]);
+
+  useEffect(() => {
+    const handleCommentsDialogVisibility = (event: Event) => {
+      const isOpen = !!(event as CustomEvent<{ open?: boolean }>).detail?.open;
+
+      if (isOpen) {
+        if (!isMapFrozenByCommentsRef.current) {
+          frozenMapViewRef.current = {
+            center: mapDataRef.current?.center || mapCenterRef.current || mapCache.lastCenter,
+            level: currentZoomRef.current,
+          };
+        }
+        isMapFrozenByCommentsRef.current = true;
+        return;
+      }
+
+      const snapshot = frozenMapViewRef.current;
+      isMapFrozenByCommentsRef.current = false;
+      frozenMapViewRef.current = null;
+
+      if (snapshot?.center) {
+        mapCache.lastCenter = snapshot.center;
+        setMapCenter(snapshot.center);
+      }
+      if (snapshot?.level) {
+        mapCache.lastZoom = snapshot.level;
+        currentZoomRef.current = snapshot.level;
+        setCurrentZoom(snapshot.level);
+      }
+    };
+
+    window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+    return () => window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+  }, []);
 
   // ── 포스트 매핑 헬퍼 ────────────────────────────────────────
   const mapRawToPost = (p: any, prev?: Post | null): Post => {
@@ -915,6 +956,10 @@ const Index = () => {
   const mapChangeCalledRef = useRef(false);
 
   const handleMapChange = useCallback((data: any) => {
+    if (isMapFrozenByCommentsRef.current && !isSelectingLocationRef.current && !isSelectingAdLocationRef.current) {
+      return;
+    }
+
     // mapDataRef는 즉시 업데이트 (throttle 전에도 최신값 유지)
     mapDataRef.current = data;
     if (data.level !== undefined) {
