@@ -101,6 +101,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const imageScrollRef = useRef<HTMLDivElement>(null);
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const keyboardScrollTimersRef = useRef<number[]>([]);
   
   // 마우스 드래그를 위한 상태
   const [isDragging, setIsDragging] = useState(false);
@@ -248,6 +249,57 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     setIsLiked(post.isLiked);
     setLikesCount(post.likes || 0);
   }, [post.id, post.isLiked, post.likes]);
+
+  useEffect(() => {
+    return () => {
+      keyboardScrollTimersRef.current.forEach(window.clearTimeout);
+      keyboardScrollTimersRef.current = [];
+    };
+  }, []);
+
+  const scrollCommentInputAboveKeyboard = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const input = commentInputRef.current;
+    if (!input) return;
+
+    const form = input.closest('form') as HTMLElement | null;
+    const target = form || input;
+    const viewport = window.visualViewport;
+    const visibleTop = viewport?.offsetTop ?? 0;
+    const visibleBottom = visibleTop + (viewport?.height ?? window.innerHeight);
+    const gap = 18;
+
+    const findScrollParent = (element: HTMLElement | null): HTMLElement | null => {
+      let parent = element?.parentElement || null;
+      while (parent && parent !== document.body) {
+        const style = window.getComputedStyle(parent);
+        const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
+        if (canScroll && parent.scrollHeight > parent.clientHeight) return parent;
+        parent = parent.parentElement;
+      }
+      return null;
+    };
+
+    const scrollParent = findScrollParent(target);
+    const targetRect = target.getBoundingClientRect();
+    const parentBottom = scrollParent
+      ? Math.min(scrollParent.getBoundingClientRect().bottom, visibleBottom)
+      : visibleBottom;
+    const parentTop = scrollParent
+      ? Math.max(scrollParent.getBoundingClientRect().top, visibleTop)
+      : visibleTop;
+
+    const overflowBottom = targetRect.bottom + gap - parentBottom;
+    const overflowTop = parentTop + gap - targetRect.top;
+    const delta = overflowBottom > 0 ? overflowBottom : overflowTop > 0 ? -overflowTop : 0;
+
+    if (Math.abs(delta) < 1) return;
+
+    if (scrollParent) {
+      scrollParent.scrollBy({ top: delta, behavior });
+    } else {
+      window.scrollBy({ top: delta, behavior });
+    }
+  }, []);
 
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
@@ -448,11 +500,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   };
 
   const handleCommentInputFocus = () => {
-    // 키보드가 올라올 때 브라우저 기본 scrollIntoView를 'nearest'로 제한
-    // (기본값 'center'로 포스팅 전체가 위로 크게 밀리는 현상 방지)
-    setTimeout(() => {
-      commentInputRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-    }, 100);
+    keyboardScrollTimersRef.current.forEach(window.clearTimeout);
+    keyboardScrollTimersRef.current = [60, 180, 360, 620].map((delay, index) =>
+      window.setTimeout(() => {
+        scrollCommentInputAboveKeyboard(index === 0 ? 'auto' : 'smooth');
+      }, delay)
+    );
   };
 
   const confirmDelete = () => {
