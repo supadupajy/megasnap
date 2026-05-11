@@ -181,6 +181,28 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     }
   }, []);
 
+  // WebView가 포커스된 input을 보이게 하려고 부모 스크롤 컨테이너를 위로 끌어올리면서
+  // 그 너머의 지도까지 같이 튀어 보이는 현상이 있다. 포커스 직후 짧은 구간 동안
+  // 가까운 스크롤 부모(또는 문서)의 scrollTop을 원래 값으로 되돌려 막는다.
+  const lockNearestScrollParentDuringFocus = useCallback(() => {
+    const scrollContainer = scrollContainerRef.current;
+    const initialDocScrollY = window.scrollY;
+    const initialContainerScrollTop = scrollContainer ? scrollContainer.scrollTop : null;
+
+    const restore = () => {
+      if (scrollContainer && initialContainerScrollTop != null && scrollContainer.scrollTop !== initialContainerScrollTop) {
+        scrollContainer.scrollTop = initialContainerScrollTop;
+      }
+      if (window.scrollY !== initialDocScrollY) {
+        window.scrollTo(window.scrollX, initialDocScrollY);
+      }
+    };
+
+    [0, 16, 50, 120, 220, 360, 500].forEach((delay) => {
+      window.setTimeout(restore, delay);
+    });
+  }, []);
+
   const focusCommentInputWithoutNativeScroll = (e: React.PointerEvent<HTMLInputElement>) => {
     if (document.activeElement === commentInputRef.current) return;
     e.preventDefault();
@@ -188,6 +210,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   };
 
   const handleCommentInputFocus = () => {
+    lockNearestScrollParentDuringFocus();
     keyboardScrollTimersRef.current.forEach(window.clearTimeout);
     keyboardScrollTimersRef.current = [60, 180, 360, 620].map((delay, index) =>
       window.setTimeout(() => {
