@@ -409,7 +409,7 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="flex flex-col -mx-6 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
+            <div className="flex flex-col -mx-6 pb-6">
               {/* 저장됨 탭 */}
               <div className={viewMode === 'saved' ? undefined : 'hidden'}>
                 {savedPosts.map((post) => (
