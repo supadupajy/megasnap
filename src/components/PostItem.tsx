@@ -4,15 +4,12 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Post } from '@/types';
 import {
 
-  Heart, 
-  MessageCircle, 
-  Share2, 
-  Bookmark, 
-  MoreHorizontal, 
-  Navigation, 
-  Send, 
-  ChevronDown, 
-  ChevronUp,
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
+  Navigation,
   Trash2,
   AlertCircle,
   Ban,
@@ -29,24 +26,20 @@ import {
 import { cn, getFallbackImage, formatRelativeTime, getOptimizedFeedImage } from '@/lib/utils';
 
 import { useNavigate } from 'react-router-dom';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { motion, AnimatePresence } from 'framer-motion';
-import { Comment } from '@/types';
 import { useAuth } from './AuthProvider';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { showSuccess, showError } from '@/utils/toast';
-import { fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment, COMMENT_MAX_LENGTH } from '@/utils/comments';
+import { fetchCommentsByPostId, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
-import ExpandableCommentText from './ExpandableCommentText';
 import PostCommentsDialog from './PostCommentsDialog';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 
@@ -71,8 +64,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const { blockUser } = useBlockedUsers();
   const [profile, setProfile] = useState<any>(null);
   
-  const [commentInput, setCommentInput] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [localComments, setLocalComments] = useState(post.comments || []);
   const commentsFetchedRef = useRef(false);
   const [isLiked, setIsLiked] = useState(post.isLiked);
@@ -85,7 +76,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
-  const [showComments, setShowComments] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
 
@@ -95,18 +85,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editContent, setEditContent] = useState(post.content || '');
   const [isSavingContent, setIsSavingContent] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editCommentText, setEditCommentText] = useState('');
-  const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
-  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const contentRef = useRef<HTMLParagraphElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const imageScrollRef = useRef<HTMLDivElement>(null);
-  const commentSectionRef = useRef<HTMLDivElement>(null);
-  
+
   // 마우스 드래그를 위한 상태
 
   const [isDragging, setIsDragging] = useState(false);
@@ -248,7 +233,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     setLocalContent(post.content || '');
     setEditContent(post.content || '');
     setIsEditingContent(false);
-    setExpandedCommentIds(new Set());
   }, [post.id, post.content]);
 
   useEffect(() => {
@@ -595,146 +579,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       </DropdownMenuContent>
     </DropdownMenu>
   );
-
-  const handleAddComment = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!commentInput.trim() || !authUser) return;
-    setIsSubmittingComment(true);
-
-    const newCommentText = commentInput.trim();
-    const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-    
-    try {
-      const saved = await insertComment({
-        postId: post.id,
-        userId: authUser.id,
-        userName: displayName,
-        userAvatar: profile?.avatar_url,
-        content: newCommentText,
-      });
-      setLocalComments(prev => [...prev, saved]);
-      setCommentInput('');
-      showSuccess('댓글이 등록되었습니다.');
-    } catch (err) {
-      showError('댓글 등록에 실패했습니다.');
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  };
-
-  const startCommentEdit = (comment: Comment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!comment.id || comment.userId !== authUser?.id) return;
-    setEditingCommentId(comment.id);
-    setEditCommentText(comment.text.slice(0, COMMENT_MAX_LENGTH));
-  };
-
-  const cancelCommentEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingCommentId(null);
-    setEditCommentText('');
-  };
-
-  const saveCommentEdit = async (comment: Comment, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!authUser || !comment.id) return;
-
-    const nextText = editCommentText.trim();
-    if (!nextText) {
-      showError('댓글 내용을 입력해주세요.');
-      return;
-    }
-    if (nextText.length > COMMENT_MAX_LENGTH) {
-      showError(`댓글은 최대 ${COMMENT_MAX_LENGTH}자까지 입력할 수 있습니다.`);
-      return;
-    }
-
-    setSavingCommentId(comment.id);
-    try {
-      const saved = await updateComment({ commentId: comment.id, userId: authUser.id, content: nextText });
-      setLocalComments(prev => prev.map(item => item.id === saved.id ? saved : item));
-      setEditingCommentId(null);
-      setEditCommentText('');
-      showSuccess('댓글이 수정되었습니다.');
-    } catch (err) {
-      showError('댓글 수정 중 오류가 발생했습니다.');
-    } finally {
-      setSavingCommentId(null);
-    }
-  };
-
-  const renderCommentRow = (comment: Comment, index: number, options?: { clamp?: boolean; showRef?: boolean }) => {
-    const isOwnComment = !!authUser?.id && comment.userId === authUser.id;
-    const isEditing = !!comment.id && editingCommentId === comment.id;
-    const commentKey = comment.id || `${index}-${comment.user}-${comment.text}`;
-
-    return (
-      <div key={commentKey} ref={options?.showRef ? commentSectionRef : undefined} className="flex items-start justify-between gap-2 mt-1">
-        <div className="flex gap-2 items-start flex-1 min-w-0">
-          <span className="font-bold text-sm text-gray-900 shrink-0">{comment.user}</span>
-          {isEditing ? (
-            <div className="flex-1 min-w-0 space-y-2" onClick={(e) => e.stopPropagation()}>
-              <Input
-                value={editCommentText}
-                onChange={(e) => setEditCommentText(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
-                maxLength={COMMENT_MAX_LENGTH}
-                disabled={savingCommentId === comment.id}
-                autoFocus
-                className="h-9 rounded-xl border-indigo-100 bg-indigo-50/40 text-sm focus-visible:ring-2 focus-visible:ring-indigo-400"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => saveCommentEdit(comment, e)}
-                  disabled={savingCommentId === comment.id || !editCommentText.trim()}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
-                  aria-label="댓글 수정 저장"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelCommentEdit}
-                  disabled={savingCommentId === comment.id}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
-                  aria-label="댓글 수정 취소"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <ExpandableCommentText
-              text={comment.text}
-              expanded={expandedCommentIds.has(commentKey)}
-              onExpand={() => setExpandedCommentIds((prev) => new Set(prev).add(commentKey))}
-              className="text-sm text-gray-500"
-            />
-          )}
-        </div>
-        {!isEditing && (
-          <div className="flex items-center gap-2 shrink-0 mt-0.5">
-            {isOwnComment && comment.id && (
-              <button
-                type="button"
-                onClick={(e) => startCommentEdit(comment, e)}
-                className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700"
-              >
-                수정
-              </button>
-            )}
-            {comment.createdAt && (
-              <span className="text-[10px] text-gray-400">
-                {formatRelativeTime(new Date(comment.createdAt))}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const lastComment = localComments.length > 0 ? localComments[localComments.length - 1] : null;
 
   // 광고 포스트는 createdAt이 항상 현재 시각으로 설정되므로 시간 표시 숨김
   const formattedDate = (!isAd && post.createdAt)
