@@ -416,13 +416,12 @@ const PostListOverlay = ({
 
   if (!isOpen) return null;
 
-  // 구분선 위치 계산:
-  // 광고(isAd)는 openedViewedIds에 항상 포함되어 있으므로 seen으로 취급됨
-  // → unseen 일반 포스팅이 없으면 광고가 seen 영역 맨 앞에 오고, 구분선은 광고 앞에 표시됨
-  const firstViewedIndex = posts.findIndex(p => openedViewedIds.has(p.id));
+  // 구분선 위치 계산: 광고는 조회 포스팅 경계 판단에서 제외합니다.
+  const firstViewedIndex = posts.findIndex(p => !p.isAd && openedViewedIds.has(p.id));
 
   return (
     <div
+
       ref={scrollContainerRef}
       style={{
         bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
@@ -455,12 +454,12 @@ const PostListOverlay = ({
                 // 이미 본 포스팅 구분선
                 if (firstViewedIndex !== -1 && index === firstViewedIndex) {
                   items.push(
-                    <div key="divider" className="flex items-center gap-3 px-4 py-3 bg-white">
-                      <div className="flex-1 h-px bg-gray-400" />
-                      <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap shrink-0">
-                        여기서부터는 이미 조회한 포스팅입니다
+                    <div key="viewed-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-white">
+                      <div className="flex-1 h-px bg-indigo-200" />
+                      <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-black text-indigo-600 whitespace-nowrap shrink-0 shadow-sm">
+                        아래부터는 이미 조회한 포스팅입니다.
                       </span>
-                      <div className="flex-1 h-px bg-gray-400" />
+                      <div className="flex-1 h-px bg-indigo-200" />
                     </div>
                   );
                 }
@@ -469,6 +468,7 @@ const PostListOverlay = ({
                   <ObservedPostItem
                     key={post.id}
                     post={post}
+
                     isViewed={viewedIds.has(post.id)}
                     onVisible={markAsViewed}
                     onLikeToggle={handleLikeToggle}

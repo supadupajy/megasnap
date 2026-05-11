@@ -7,11 +7,17 @@ import { useAuth } from '@/components/AuthProvider';
 export function useViewedPosts() {
   const { user } = useAuth();
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
+  const [hasLoadedViewedHistory, setHasLoadedViewedHistory] = useState(false);
   const fetchControllerRef = useRef<AbortController | null>(null);
 
   // 서버에서 조회 기록 가져오기
   const fetchViewedHistory = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setHasLoadedViewedHistory(true);
+      return;
+    }
+
+    setHasLoadedViewedHistory(false);
 
     // 이전 요청이 진행 중이면 취소
     if (fetchControllerRef.current) {
@@ -34,9 +40,11 @@ export function useViewedPosts() {
         const ids = new Set(data.map(item => item.post_id));
         setViewedIds(ids);
       }
+      setHasLoadedViewedHistory(true);
     } catch (err: any) {
       if (err?.name === 'AbortError' || err?.message?.includes('AbortError')) return;
       console.error('[useViewedPosts] Failed to fetch viewed history:', err);
+      setHasLoadedViewedHistory(true);
     }
   }, [user]);
 
@@ -45,6 +53,7 @@ export function useViewedPosts() {
       fetchViewedHistory();
     } else {
       setViewedIds(new Set());
+      setHasLoadedViewedHistory(true);
     }
     return () => {
       fetchControllerRef.current?.abort();
@@ -77,6 +86,7 @@ export function useViewedPosts() {
   return {
     viewedIds,
     markAsViewed,
-    refreshViewed: fetchViewedHistory
+    refreshViewed: fetchViewedHistory,
+    hasLoadedViewedHistory,
   };
 }

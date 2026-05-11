@@ -71,11 +71,60 @@ const mapDbToPost = (p: any): Post => {
   };
 };
 
+const ViewedAwarePostItem = React.memo(({
+  post,
+  isViewed,
+  onVisible,
+  onLikeToggle,
+  onLocationClick,
+  onDelete,
+}: {
+  post: Post;
+  isViewed: boolean;
+  onVisible: (id: string) => void;
+  onLikeToggle: () => void;
+  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onDelete: (id: string) => void;
+}) => {
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (post.isAd) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+          onVisible(post.id);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: [0.6], rootMargin: '-10% 0px -10% 0px' }
+    );
+
+    if (itemRef.current) observer.observe(itemRef.current);
+    return () => observer.disconnect();
+  }, [post.id, post.isAd, onVisible]);
+
+  return (
+    <div ref={itemRef} className="border-b border-gray-100 last:border-0 bg-white">
+      <PostItem
+        post={post}
+        isViewed={isViewed}
+        onLikeToggle={onLikeToggle}
+        onLocationClick={onLocationClick}
+        onDelete={onDelete}
+        autoPlayVideo={true}
+        disablePulse={true}
+      />
+    </div>
+  );
+});
+
 const NearbyPosts = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const { blockedIds } = useBlockedUsers();
-  const { viewedIds, markAsViewed } = useViewedPosts();
+  const { viewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
   const { scrollRef, progress } = useCollapsingHeader(80);
 
   const payload = useMemo<NearbyPostsPayload | null>(() => {
@@ -102,11 +151,29 @@ const NearbyPosts = () => {
     if (!payload) navigate('/', { replace: true });
   }, [payload, navigate]);
 
-  const openedViewedIds = useMemo(() => new Set(payload?.openedViewedIds || []), [payload]);
+  const [dividerViewedIds, setDividerViewedIds] = useState<Set<string>>(() => new Set(payload?.openedViewedIds || []));
+  const hasCapturedDividerSnapshotRef = useRef((payload?.openedViewedIds?.length || 0) > 0);
+
+  useEffect(() => {
+    if (hasCapturedDividerSnapshotRef.current || !hasLoadedViewedHistory) return;
+
+    hasCapturedDividerSnapshotRef.current = true;
+    if (viewedIds.size > 0) {
+      setDividerViewedIds(new Set(viewedIds));
+    }
+  }, [hasLoadedViewedHistory, viewedIds]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(post => post?.user && !blockedIds.has(post.user.id));
   }, [posts, blockedIds]);
+
+  const displayPosts = useMemo(() => {
+    if (dividerViewedIds.size === 0) return filteredPosts;
+
+    const unseenPosts = filteredPosts.filter(post => post.isAd || !dividerViewedIds.has(post.id));
+    const seenPosts = filteredPosts.filter(post => !post.isAd && dividerViewedIds.has(post.id));
+    return [...unseenPosts, ...seenPosts];
+  }, [filteredPosts, dividerViewedIds]);
 
   const loadMorePosts = useCallback(async () => {
     if (!payload || isLoadingMore || !hasMore) return;
@@ -211,7 +278,7 @@ const NearbyPosts = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  const firstViewedIndex = filteredPosts.findIndex(post => openedViewedIds.has(post.id) || viewedIds.has(post.id));
+  const firstViewedIndex = displayPosts.findIndex(post => !post.isAd && dividerViewedIds.has(post.id));
 
   if (!payload) return null;
 
@@ -249,35 +316,33 @@ const NearbyPosts = () => {
           const items: React.ReactNode[] = [];
           let postCount = 0;
 
-          filteredPosts.forEach((post, index) => {
+          displayPosts.forEach((post, index) => {
 
             if (firstViewedIndex !== -1 && index === firstViewedIndex) {
               items.push(
-                <div key="divider" className="flex items-center gap-3 px-4 py-3 bg-white">
-                  <div className="flex-1 h-px bg-gray-400" />
-                  <span className="text-[11px] font-bold text-gray-400 whitespace-nowrap shrink-0">
-                    여기서부터는 이미 조회한 포스팅입니다
+                <div key="viewed-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-white">
+                  <div className="flex-1 h-px bg-indigo-200" />
+                  <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-black text-indigo-600 whitespace-nowrap shrink-0 shadow-sm">
+                    아래부터는 이미 조회한 포스팅입니다.
                   </span>
-                  <div className="flex-1 h-px bg-gray-400" />
+                  <div className="flex-1 h-px bg-indigo-200" />
                 </div>
               );
             }
 
             items.push(
-              <div key={post.id} className="border-b border-gray-100 last:border-0 bg-white">
-                <PostItem
-                  post={post}
-                  isViewed={viewedIds.has(post.id)}
-                  onLikeToggle={() => handleLikeToggle(post.id)}
-                  onLocationClick={(e, lat, lng) => {
-                    markAsViewed(post.id);
-                    handleLocationClick(e, lat, lng, post);
-                  }}
-                  onDelete={handlePostDelete}
-                  autoPlayVideo={true}
-                  disablePulse={true}
-                />
-              </div>
+              <ViewedAwarePostItem
+                key={post.id}
+                post={post}
+                isViewed={viewedIds.has(post.id)}
+                onVisible={markAsViewed}
+                onLikeToggle={() => handleLikeToggle(post.id)}
+                onLocationClick={(e, lat, lng) => {
+                  markAsViewed(post.id);
+                  handleLocationClick(e, lat, lng, post);
+                }}
+                onDelete={handlePostDelete}
+              />
             );
 
             if (!post.isAd) postCount++;
