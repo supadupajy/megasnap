@@ -15,6 +15,7 @@ interface PostActionsProps {
   lng?: number;
   adIcon?: 'shopping-bag' | 'external-link';
   className?: string;
+  adFooterContent?: React.ReactNode;
   onLikeClick: (e: React.MouseEvent) => void;
   onCommentClick: (e: React.MouseEvent) => void;
   onSaveClick: (e: React.MouseEvent) => void;
@@ -33,6 +34,7 @@ const PostActions = ({
   lng,
   adIcon = 'shopping-bag',
   className,
+  adFooterContent,
   onLikeClick,
   onCommentClick,
   onSaveClick,
@@ -81,7 +83,7 @@ const PostActions = ({
 
   return (
     <div className={cn('flex flex-col gap-3', className)}>
-      <div className={cn('flex gap-3', isAd && canShowLocation ? 'items-start justify-between' : 'items-center justify-between')}>
+      <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             type="button"
@@ -116,21 +118,33 @@ const PostActions = ({
           </button>
         </div>
 
-        <div className={cn('flex shrink-0 gap-2', isAd && canShowLocation ? 'items-start' : 'items-center')}>
+        <div className="flex shrink-0 items-center gap-2">
           {saveButton}
-          {isAd && canShowLocation ? (
-            <div className="flex flex-col items-end gap-2">
-              {locationButton}
-              {adButton}
-            </div>
-          ) : (
-            <>
-              {adButton}
-              {locationButton}
-            </>
+          {isAd && canShowLocation && adFooterContent ? locationButton : null}
+          {isAd && canShowLocation && adFooterContent ? null : (
+            isAd && canShowLocation ? (
+              <div className="flex flex-col items-end gap-2">
+                {locationButton}
+                {adButton}
+              </div>
+            ) : (
+              <>
+                {adButton}
+                {locationButton}
+              </>
+            )
           )}
         </div>
       </div>
+
+      {isAd && canShowLocation && adFooterContent && (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 pt-1">
+            {adFooterContent}
+          </div>
+          {adButton}
+        </div>
+      )}
     </div>
   );
 };

@@ -508,8 +508,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     ? formatRelativeTime(new Date(post.createdAt))
     : null;
 
-
-  const renderInteractionButtons = () => {
+  const renderInteractionButtons = (adFooterContent?: React.ReactNode) => {
     const commentsDisplayCount = Math.max(localComments.length, post.commentsCount || 0);
 
     return (
@@ -525,6 +524,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         lat={lat}
         lng={lng}
         adIcon="shopping-bag"
+        adFooterContent={adFooterContent}
         onLikeClick={handleLikeToggleLocal}
         onCommentClick={handleCommentClick}
         onSaveClick={handleSaveToggle}
@@ -532,6 +532,17 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       />
     );
   };
+
+  const renderAdFooterContent = () => (
+    <div className="flex gap-2 items-start">
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        {renderContentBody()}
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -576,20 +587,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               {renderMedia()}
             </div>
 
-            {/* Content Section - AD */}
-            <div className="px-4 pt-3 pb-1 space-y-1">
-              <div className="flex gap-2 items-start">
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  {renderContentBody()}
-                </div>
-              </div>
-
-            </div>
-
-            {renderInteractionButtons()}
+            {renderInteractionButtons(renderAdFooterContent())}
           </div>
         </div>
       ) : (
