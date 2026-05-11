@@ -3,38 +3,25 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Post } from '@/types';
 import {
-  MoreHorizontal,
-  Trash2,
-  AlertCircle,
-  Ban,
   MapPin,
-  Utensils,
-  Car,
-  TreePine,
-  PawPrint,
   Check,
   X,
-  Pencil
 } from 'lucide-react';
 import { cn, getFallbackImage, formatRelativeTime, getOptimizedFeedImage } from '@/lib/utils';
 
 import { useNavigate } from 'react-router-dom';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from './AuthProvider';
 
 import { supabase } from '@/integrations/supabase/client';
-import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { showSuccess, showError } from '@/utils/toast';
 import { fetchCommentsByPostId, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import PostCommentsDialog from './PostCommentsDialog';
 import PostActions from './PostActions';
+import PostUserAvatar from './PostUserAvatar';
+import PostCategoryBadge from './PostCategoryBadge';
+import PostMenuDropdown from './PostMenuDropdown';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 
 interface PostItemProps {
@@ -53,7 +40,6 @@ interface PostItemProps {
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
-  const { blockUser } = useBlockedUsers();
   const [profile, setProfile] = useState<any>(null);
   
   const [localComments, setLocalComments] = useState(post.comments || []);
@@ -69,7 +55,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
 
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
@@ -102,52 +87,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     const ownerId = post.owner_id || post.user_id;
     return ownerId === authUser.id || ownerId === 'me';
   }, [authUser?.id, post.owner_id, post.user_id]);
-
-  // 프로필 이미지: 광고는 로고(object-contain), 일반은 프로필 사진
-  const renderAvatar = (size: 'sm' | 'md' = 'md') => {
-    const sizeClass = size === 'md' ? 'w-10 h-10' : 'w-9 h-9';
-    const initial = (user.name || '?')[0].toUpperCase();
-
-    if (isAd) {
-      // 광고: 흰 배경 원형에 로고 이미지 (object-contain)
-      if (avatarError || !user.avatar) {
-        return (
-          <div className={`${sizeClass} rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm`}>
-            <span className="text-gray-700 font-black text-[9px] text-center leading-tight px-0.5">{user.name}</span>
-          </div>
-        );
-      }
-      return (
-        <div className={`${sizeClass} rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm overflow-hidden`}>
-          <img
-            src={user.avatar}
-            alt={user.name}
-            className="w-full h-full object-contain p-1"
-            onError={() => setAvatarError(true)}
-          />
-        </div>
-      );
-    }
-
-    // 일반 포스트: 그라디언트 링 + 프로필 사진
-    if (avatarError || !user.avatar) {
-      return (
-        <div className={`${sizeClass} rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white`}>
-          <span className="text-white font-bold text-sm">{initial}</span>
-        </div>
-      );
-    }
-    return (
-      <div className={`${sizeClass} rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative`}>
-        <img
-          src={user.avatar}
-          alt={user.name}
-          className="w-full h-full rounded-full object-cover border-2 border-white"
-          onError={() => setAvatarError(true)}
-        />
-      </div>
-    );
-  };
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -542,34 +481,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   };
 
   const renderDropdownMenu = () => (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none" onClick={(e) => e.stopPropagation()}>
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[200] data-[side=bottom]:slide-in-from-top-0 data-[side=top]:slide-in-from-bottom-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0">
-        {(isMine || isAdmin) ? (
-          <>
-            {!isAd && isMine && (
-              <DropdownMenuItem onClick={startContentEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none">
-                <Pencil className="w-4 h-4 text-indigo-600" />
-                <span className="text-sm font-bold text-indigo-600">수정하기</span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-              <Trash2 className="w-4 h-4 text-red-600" />
-              <span className="text-sm font-bold text-red-600">삭제하기</span>
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <PostMenuDropdown
+      isMine={isMine}
+      isAdmin={isAdmin}
+      isAd={isAd}
+      postOwnerId={user.id}
+      zIndexClass="z-[200]"
+      onEdit={startContentEdit}
+      onDelete={() => setIsDeleteDialogOpen(true)}
+    />
   );
 
   // 광고 포스트는 createdAt이 항상 현재 시각으로 설정되므로 시간 표시 숨김
@@ -577,49 +497,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     ? formatRelativeTime(new Date(post.createdAt))
     : null;
 
-  const renderCategoryBadge = () => {
-    const category = post.category || 'none';
-    if (category === 'none') return null;
-    
-    let Icon = null;
-    let bgColor = "";
-    let label = "";
-
-    switch (category) {
-      case 'food':
-        Icon = Utensils;
-        bgColor = "bg-orange-500";
-        label = "맛집";
-        break;
-      case 'accident':
-        Icon = Car;
-        bgColor = "bg-red-600";
-        label = "사고";
-        break;
-      case 'place':
-        Icon = TreePine;
-        bgColor = "bg-green-600";
-        label = "명소";
-        break;
-      case 'animal':
-        Icon = PawPrint;
-        bgColor = "bg-purple-600";
-        label = "동물";
-        break;
-    }
-
-    if (!Icon) return null;
-
-    return (
-      <div className={cn(
-        "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10 shrink-0 whitespace-nowrap leading-none h-auto",
-        bgColor
-      )}>
-        <Icon className="w-3.5 h-3.5" />
-        <span className="text-[10px] font-black">{label}</span>
-      </div>
-    );
-  };
 
   const renderInteractionButtons = () => {
     const commentsDisplayCount = Math.max(localComments.length, post.commentsCount || 0);
@@ -659,7 +536,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             {/* Header Section */}
             <div className="flex items-center justify-between p-4 pb-3">
               <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                {renderAvatar('md')}
+                <PostUserAvatar name={user.name} avatar={user.avatar} postId={post.id} userId={user.id} isAd={isAd} size="md" />
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
@@ -674,7 +551,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 </div>
               </div>
               <div className="flex items-center gap-2.5 shrink-0">
-                {!isAd && renderCategoryBadge()}
+                {!isAd && <PostCategoryBadge category={post.category} />}
                 {formattedDate && (
                   <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
                 )}
@@ -709,7 +586,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           {/* Header Section */}
           <div className="flex items-center justify-between p-4 pb-3">
             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-              {renderAvatar('md')}
+              <PostUserAvatar name={user.name} avatar={user.avatar} postId={post.id} userId={user.id} isAd={isAd} size="md" />
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
@@ -723,7 +600,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               </div>
             </div>
             <div className="flex items-center gap-1">
-              {!isAd && renderCategoryBadge()}
+              {!isAd && <PostCategoryBadge category={post.category} />}
               {formattedDate && (
                 <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
               )}

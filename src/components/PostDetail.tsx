@@ -1,30 +1,26 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
-import { MapPin, X, Utensils, Car, TreePine, PawPrint, MoreHorizontal, AlertCircle, Ban, Trash2, Check, Pencil } from 'lucide-react';
+import { MapPin, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { cn, getFallbackImage, getOptimizedDetailImage, getOptimizedMarkerImage } from '@/lib/utils';
+import { cn, getFallbackImage, getOptimizedDetailImage } from '@/lib/utils';
 
 import { useNavigate } from 'react-router-dom';
 import { Comment } from '@/types';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Dialog, DialogPortal, DialogOverlay, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { showSuccess, showError } from '@/utils/toast';
-import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { useAuth } from '@/components/AuthProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchCommentsByPostId, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import PostCommentsDialog from './PostCommentsDialog';
 import PostActions from './PostActions';
+import PostUserAvatar from './PostUserAvatar';
+import PostCategoryBadge from './PostCategoryBadge';
+import PostMenuDropdown from './PostMenuDropdown';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 
 import { useLocationDisplay } from '@/hooks/use-location-display';
@@ -49,7 +45,6 @@ const FALLBACK_IMAGE = "/placeholder.svg";
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
-  const { blockUser } = useBlockedUsers();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
@@ -121,7 +116,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
 
   const keyboardOffset = useKeyboardOffset(isOpen && !isCommentsDialogOpen);
-  const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
@@ -148,10 +142,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       document.body.removeAttribute('data-scroll-locked');
     }
   }, [isOpen, isDeleteDialogOpen]);
-
-  useEffect(() => {
-    setAvatarError(false);
-  }, [currentPostIndex]);
 
   const onMouseDown = (e: React.MouseEvent) => {
 
@@ -536,55 +526,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     }
   };
 
-  const renderCategoryBadge = () => {
-    const category = currentPost.category || 'none';
-    if (category === 'none') return null;
-    let Icon = null; let bgColor = ""; let label = "";
-    switch (category) {
-      case 'food': Icon = Utensils; bgColor = "bg-orange-500"; label = "맛집"; break;
-      case 'accident': Icon = Car; bgColor = "bg-red-600"; label = "사고"; break;
-      case 'place': Icon = TreePine; bgColor = "bg-green-600"; label = "명소"; break;
-      case 'animal': Icon = PawPrint; bgColor = "bg-purple-600"; label = "동물"; break;
-    }
-    if (!Icon) return null;
-    return (
-      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10 shrink-0 whitespace-nowrap leading-none h-auto", bgColor)}>
-        <Icon className="w-3.5 h-3.5" />
-        <span className="text-[10px] font-black">{label}</span>
-      </div>
-    );
-  };
-
-  // 광고: 흰 배경 + object-contain 로고, 일반: 그라디언트 링 + object-cover
-  const renderAvatarForAd = () => {
-    if (avatarError || !currentPost.user.avatar) {
-      return (
-        <div className="w-9 h-9 rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm transition-transform group-active:scale-90">
-          <span className="text-gray-700 font-black text-[9px] text-center leading-tight px-0.5">{postDisplayName}</span>
-        </div>
-      );
-    }
-    return (
-      <div className="w-9 h-9 rounded-full bg-white shrink-0 flex items-center justify-center border-2 border-gray-100 shadow-sm overflow-hidden transition-transform group-active:scale-90">
-        <img src={getOptimizedMarkerImage(currentPost.user.avatar, currentPost.user.id || currentPost.id)} alt={postDisplayName} loading="lazy" decoding="async" className="w-full h-full object-contain p-1" onError={() => setAvatarError(true)} />
-      </div>
-    );
-  };
-
-  const renderAvatarForNormal = () => {
-    if (avatarError || !currentPost.user.avatar) {
-      return (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white transition-transform group-active:scale-90">
-          <span className="text-white font-bold text-sm">{(postDisplayName || '?')[0].toUpperCase()}</span>
-        </div>
-      );
-    }
-    return (
-      <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 transition-transform group-active:scale-90">
-        <img src={getOptimizedMarkerImage(currentPost.user.avatar, currentPost.user.id || currentPost.id)} alt={postDisplayName} loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover border-2 border-white" onError={() => setAvatarError(true)} />
-      </div>
-    );
-  };
 
   const renderContentBody = () => {
     if (isEditingContent) {
@@ -724,40 +665,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   };
 
   const renderDropdownMenu = () => (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-36 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[13010]">
-        {(isMine || isAdmin) ? (
-          <>
-            {!isAd && isMine && (
-              <DropdownMenuItem onClick={startContentEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none">
-                <Pencil className="w-4 h-4 text-indigo-600" />
-                <span className="text-sm font-bold text-indigo-600">수정하기</span>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.setTimeout(() => setIsDeleteDialogOpen(true), 0); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-              <Trash2 className="w-4 h-4 text-red-600" />
-              <span className="text-sm font-bold text-red-600">삭제하기</span>
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
-              <AlertCircle className="w-4 h-4 text-gray-600" />
-              <span className="text-sm font-bold text-gray-700">신고</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(currentPost.user.id); showError('차단되었습니다.'); onClose(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-              <Ban className="w-4 h-4 text-red-600" />
-              <span className="text-sm font-bold text-red-600">차단</span>
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <PostMenuDropdown
+      isMine={isMine}
+      isAdmin={isAdmin}
+      isAd={isAd}
+      postOwnerId={currentPost.user.id}
+      zIndexClass="z-[13010]"
+      onEdit={startContentEdit}
+      onDelete={() => window.setTimeout(() => setIsDeleteDialogOpen(true), 0)}
+      onAfterBlock={onClose}
+      reportMessage="신고되었습니다."
+    />
   );
 
   return (
@@ -797,7 +715,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                           <div className="flex items-center justify-between px-4 py-4 bg-white border-b border-gray-50" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                              {isAd ? renderAvatarForAd() : renderAvatarForNormal()}
+                              <PostUserAvatar
+                                name={postDisplayName}
+                                avatar={currentPost.user.avatar}
+                                postId={currentPost.id}
+                                userId={currentPost.user.id}
+                                isAd={isAd}
+                                size="sm"
+                                optimize
+                                activePress
+                              />
                               <div>
                                 <div className="flex items-center gap-1.5">
                                   <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
@@ -810,7 +737,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                               </div>
                             </div>
                             <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              {!isAd && renderCategoryBadge()}
+                              {!isAd && <PostCategoryBadge category={currentPost.category} />}
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}
                               <button
