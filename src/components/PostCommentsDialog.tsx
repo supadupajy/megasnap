@@ -54,6 +54,7 @@ const PostCommentsDialog = ({
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
   const frozenSheetBottomRef = useRef<string | null>(null);
+  const frozenSheetTopRef = useRef<number | null>(null);
   // 시트는 화면 맨 아래(bottom: 0)까지 닿게 한다.
   // → BottomNav 영역까지 시트가 덮으므로 BottomNav가 키보드 위에 떠 보이는 문제가 시야에서 사라짐.
   // 키보드가 뜨면 keyboardOffset만큼 시트를 위로 올린다.
@@ -63,6 +64,15 @@ const PostCommentsDialog = ({
   const sheetBottom = isClosing && frozenSheetBottomRef.current != null
     ? frozenSheetBottomRef.current
     : liveSheetBottom;
+
+  // 키보드가 뜨면 시트의 top도 함께 올려서 시트가 짜부라지거나 화면 밖으로 사라지지 않게 한다.
+  // sheetTopPx는 키보드가 없을 때의 기준 top. 키보드가 뜨면 그 만큼 위로 끌어올린다.
+  const liveSheetTopPx = sheetTopPx == null
+    ? null
+    : Math.max(20, sheetTopPx - keyboardOffset);
+  const effectiveSheetTopPx = isClosing && frozenSheetTopRef.current != null
+    ? frozenSheetTopRef.current
+    : liveSheetTopPx;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -82,17 +92,20 @@ const PostCommentsDialog = ({
       setShouldRender(true);
       setIsClosing(false);
       frozenSheetBottomRef.current = null;
+      frozenSheetTopRef.current = null;
       return;
     }
 
     if (shouldRender) {
       frozenSheetBottomRef.current = liveSheetBottom;
+      frozenSheetTopRef.current = liveSheetTopPx;
       setIsClosing(true);
       closeTimeoutRef.current = window.setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
         setSheetTopPx(null);
         frozenSheetBottomRef.current = null;
+        frozenSheetTopRef.current = null;
         closeTimeoutRef.current = null;
       }, 220);
     }
@@ -456,7 +469,7 @@ const PostCommentsDialog = ({
       <section
         className={`fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] pointer-events-auto sm:rounded-[32px] ${isClosing ? 'comment-sheet-exit' : 'comment-sheet-enter'}`}
         style={{
-          top: sheetTopPx == null ? undefined : `${sheetTopPx}px`,
+          top: effectiveSheetTopPx == null ? undefined : `${effectiveSheetTopPx}px`,
           bottom: sheetBottom,
         }}
         onClick={stopSheetEvent}
