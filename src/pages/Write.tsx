@@ -185,7 +185,7 @@ const Write = () => {
       const overflow = targetRect.bottom - visibleBottom;
 
       if (overflow > 0) {
-        animateScrollAreaTo(scrollArea.scrollTop + overflow + 8);
+        animateScrollAreaTo(scrollArea.scrollTop + overflow + 20);
       }
     }, 120);
   };
