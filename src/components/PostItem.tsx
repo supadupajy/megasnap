@@ -3,18 +3,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Post } from '@/types';
 import {
-
-  Heart,
-  MessageCircle,
-  Share2,
-  Bookmark,
   MoreHorizontal,
-  Navigation,
   Trash2,
   AlertCircle,
   Ban,
   MapPin,
-  ShoppingBag,
   Utensils,
   Car,
   TreePine,
@@ -41,9 +34,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { fetchCommentsByPostId, isPersistedPostId } from '@/utils/comments';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import PostCommentsDialog from './PostCommentsDialog';
+import PostActions from './PostActions';
 import { useLocationDisplay } from '@/hooks/use-location-display';
-
-import { handleShare } from '@/utils/share';
 
 interface PostItemProps {
   post: Post;
@@ -633,72 +625,23 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     const commentsDisplayCount = Math.max(localComments.length, post.commentsCount || 0);
 
     return (
-      <div className="px-4 pt-3 pb-2 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <button
-              className={cn(
-                "group inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-all active:scale-95",
-                isLiked
-                  ? "border-red-100 bg-red-50 text-red-500 shadow-sm shadow-red-100/50"
-                  : "border-gray-100 bg-gray-50 text-gray-700 hover:bg-gray-100"
-              )}
-              onClick={handleLikeToggleLocal}
-              aria-label={`좋아요 ${likesCount.toLocaleString()}개`}
-            >
-              <Heart className={cn("h-[18px] w-[18px] transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600')} />
-              <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
-            </button>
-            <button
-              onClick={handleCommentClick}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 px-3 text-sm font-black text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
-              aria-label={`댓글 ${commentsDisplayCount.toLocaleString()}개`}
-            >
-              <MessageCircle className="h-[18px] w-[18px] text-gray-600" />
-              <span className="tabular-nums leading-none">{commentsDisplayCount.toLocaleString()}</span>
-            </button>
-            <button
-              onClick={(e) => handleShare(e, post.id)}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
-              aria-label="공유하기"
-            >
-              <Share2 className="h-[18px] w-[18px] text-gray-600" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 transition-all hover:bg-gray-100 active:scale-95"
-              onClick={handleSaveToggle}
-              aria-label="저장하기"
-            >
-              <Bookmark className={cn("h-[18px] w-[18px] transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-600')} />
-            </button>
-            {isAd && (
-              <a
-                href={post.link_url ? (post.link_url.startsWith('http') ? post.link_url : `https://${post.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex h-9 items-center justify-center gap-1.5 px-3 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 shrink-0 whitespace-nowrap"
-              >
-                <ShoppingBag className="w-3.5 h-3.5 fill-white" />
-                <span className="text-[10px] font-black leading-none">보러가기</span>
-              </a>
-            )}
-            {lat !== undefined && lng !== undefined && (
-              <button
-                onClick={(e) => onLocationClick(e, lat, lng)}
-                className="inline-flex h-9 items-center justify-center gap-1.5 px-3 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
-                style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
-              >
-                <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
-                <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5', lineHeight: 1 }}>위치보기</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <PostActions
+        className="px-4 pt-3 pb-2"
+        postId={post.id}
+        isLiked={isLiked}
+        isSaved={isSaved}
+        likesCount={likesCount}
+        commentsCount={commentsDisplayCount}
+        isAd={isAd}
+        linkUrl={post.link_url}
+        lat={lat}
+        lng={lng}
+        adIcon="shopping-bag"
+        onLikeClick={handleLikeToggleLocal}
+        onCommentClick={handleCommentClick}
+        onSaveClick={handleSaveToggle}
+        onLocationClick={onLocationClick}
+      />
     );
   };
 
