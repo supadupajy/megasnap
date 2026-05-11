@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 export function useViewedPosts() {
   const { user } = useAuth();
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
+  const [initialViewedIds, setInitialViewedIds] = useState<Set<string>>(new Set());
   const [hasLoadedViewedHistory, setHasLoadedViewedHistory] = useState(false);
   const fetchControllerRef = useRef<AbortController | null>(null);
 
@@ -39,6 +40,7 @@ export function useViewedPosts() {
       if (data) {
         const ids = new Set(data.map(item => item.post_id));
         setViewedIds(ids);
+        setInitialViewedIds(ids);
       }
       setHasLoadedViewedHistory(true);
     } catch (err: any) {
@@ -53,6 +55,7 @@ export function useViewedPosts() {
       fetchViewedHistory();
     } else {
       setViewedIds(new Set());
+      setInitialViewedIds(new Set());
       setHasLoadedViewedHistory(true);
     }
     return () => {
@@ -85,6 +88,7 @@ export function useViewedPosts() {
 
   return {
     viewedIds,
+    initialViewedIds,
     markAsViewed,
     refreshViewed: fetchViewedHistory,
     hasLoadedViewedHistory,

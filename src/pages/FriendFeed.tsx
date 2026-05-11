@@ -123,7 +123,7 @@ const FriendFeed = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, loading: authLoading } = useAuth();
-  const { viewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
+  const { viewedIds, initialViewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -147,10 +147,10 @@ const FriendFeed = () => {
     if (hasCapturedDividerSnapshotRef.current || !hasLoadedViewedHistory) return;
 
     hasCapturedDividerSnapshotRef.current = true;
-    if (viewedIds.size > 0) {
-      setDividerViewedIds(new Set(viewedIds));
+    if (initialViewedIds.size > 0) {
+      setDividerViewedIds(new Set(initialViewedIds));
     }
-  }, [hasLoadedViewedHistory, viewedIds]);
+  }, [hasLoadedViewedHistory, initialViewedIds]);
 
   const displayPosts = useMemo(() => {
     if (dividerViewedIds.size === 0) return filteredPosts;

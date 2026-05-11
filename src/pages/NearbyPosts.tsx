@@ -124,7 +124,7 @@ const NearbyPosts = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const { blockedIds } = useBlockedUsers();
-  const { viewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
+  const { viewedIds, initialViewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
   const { scrollRef, progress } = useCollapsingHeader(80);
 
   const payload = useMemo<NearbyPostsPayload | null>(() => {
@@ -158,10 +158,10 @@ const NearbyPosts = () => {
     if (hasCapturedDividerSnapshotRef.current || !hasLoadedViewedHistory) return;
 
     hasCapturedDividerSnapshotRef.current = true;
-    if (viewedIds.size > 0) {
-      setDividerViewedIds(new Set(viewedIds));
+    if (initialViewedIds.size > 0) {
+      setDividerViewedIds(new Set(initialViewedIds));
     }
-  }, [hasLoadedViewedHistory, viewedIds]);
+  }, [hasLoadedViewedHistory, initialViewedIds]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter(post => post?.user && !blockedIds.has(post.user.id));
