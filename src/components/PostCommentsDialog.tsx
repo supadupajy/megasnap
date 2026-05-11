@@ -1,10 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, MessageCircle, Send, X } from 'lucide-react';
-import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { createPortal } from 'react-dom';
+import { Check, MessageCircle, Send, Trash2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Comment } from '@/types';
-import { COMMENT_MAX_LENGTH, fetchCommentsByPostId, insertComment, isPersistedPostId, updateComment } from '@/utils/comments';
+import {
+  COMMENT_MAX_LENGTH,
+  deleteComment,
+  fetchCommentsByPostId,
+  insertComment,
+  isPersistedPostId,
+  updateComment,
+} from '@/utils/comments';
 import { formatRelativeTime } from '@/lib/utils';
 import { showError, showSuccess } from '@/utils/toast';
 import ExpandableCommentText from './ExpandableCommentText';
@@ -34,6 +40,7 @@ const PostCommentsDialog = ({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
 
@@ -58,6 +65,19 @@ const PostCommentsDialog = ({
       cancelled = true;
     };
   }, [isOpen, canPersist, postId, onCommentsChange]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onOpenChange(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onOpenChange]);
 
   const syncComments = (nextComments: Comment[]) => {
     setComments(nextComments);
@@ -132,13 +152,33 @@ const PostCommentsDialog = ({
     }
   };
 
+  const handleDeleteComment = async (comment: Comment) => {
+    if (!authUser || !comment.id || comment.userId !== authUser.id) return;
+    if (!window.confirm('댓글을 삭제할까요?')) return;
+
+    setDeletingCommentId(comment.id);
+    try {
+      await deleteComment({ commentId: comment.id, userId: authUser.id });
+      syncComments(comments.filter(item => item.id !== comment.id));
+      if (editingCommentId === comment.id) {
+        cancelCommentEdit();
+      }
+      showSuccess('댓글이 삭제되었습니다.');
+    } catch (err) {
+      showError('댓글 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingCommentId(null);
+    }
+  };
+
   const renderCommentRow = (comment: Comment, index: number) => {
     const isOwnComment = !!authUser?.id && comment.userId === authUser.id;
     const isEditing = !!comment.id && editingCommentId === comment.id;
+    const isDeleting = !!comment.id && deletingCommentId === comment.id;
     const commentKey = comment.id || `${index}-${comment.user}-${comment.text}`;
 
     return (
-      <div key={commentKey} className="rounded-2xl bg-slate-50 px-3.5 py-3">
+      <div key={commentKey} className="rounded-3xl bg-slate-50 px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
@@ -156,7 +196,7 @@ const PostCommentsDialog = ({
                   value={editCommentText}
                   onChange={(e) => setEditCommentText(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
                   maxLength={COMMENT_MAX_LENGTH}
-                  disabled={savingCommentId === comment.id}
+                  disabled={savingCommentId === comment.id || isDeleting}
                   autoFocus
                   className="h-10 rounded-2xl border-indigo-100 bg-white text-sm focus-visible:ring-2 focus-visible:ring-indigo-400"
                 />
@@ -164,7 +204,7 @@ const PostCommentsDialog = ({
                   <button
                     type="button"
                     onClick={() => saveCommentEdit(comment)}
-                    disabled={savingCommentId === comment.id || !editCommentText.trim()}
+                    disabled={savingCommentId === comment.id || !editCommentText.trim() || isDeleting}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
                     aria-label="댓글 수정 저장"
                   >
@@ -173,7 +213,7 @@ const PostCommentsDialog = ({
                   <button
                     type="button"
                     onClick={cancelCommentEdit}
-                    disabled={savingCommentId === comment.id}
+                    disabled={savingCommentId === comment.id || isDeleting}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
                     aria-label="댓글 수정 취소"
                   >
@@ -192,61 +232,77 @@ const PostCommentsDialog = ({
           </div>
 
           {!isEditing && isOwnComment && comment.id && (
-            <button
-              type="button"
-              onClick={() => startCommentEdit(comment)}
-              className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-600 active:scale-95"
-            >
-              수정
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => startCommentEdit(comment)}
+                disabled={isDeleting}
+                className="rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-black text-indigo-600 transition active:scale-95 disabled:opacity-50"
+              >
+                수정
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteComment(comment)}
+                disabled={isDeleting}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-50 text-rose-500 transition active:scale-95 disabled:opacity-50"
+                aria-label="댓글 삭제"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
           )}
         </div>
       </div>
     );
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="fixed bottom-0 left-0 right-0 top-auto z-[14000] mx-auto flex h-[min(78vh,680px)] w-full max-w-md translate-x-0 translate-y-0 flex-col gap-0 rounded-t-[32px] border-0 bg-white p-0 shadow-[0_-18px_60px_rgba(79,70,229,0.22)] data-[state=open]:slide-in-from-bottom-full data-[state=closed]:slide-out-to-bottom-full sm:bottom-6 sm:left-1/2 sm:right-auto sm:top-auto sm:translate-x-[-50%] sm:rounded-[32px] [&>button:last-child]:hidden"
+  if (!isOpen) return null;
 
-        onOpenAutoFocus={(e) => e.preventDefault()}
+  return createPortal(
+    <div className="fixed inset-0 z-[30000]" role="dialog" aria-modal="true" aria-label="댓글">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default bg-slate-950/70 animate-in fade-in-0 duration-150"
+        onClick={() => onOpenChange(false)}
+        aria-label="댓글 닫기 배경"
+      />
+
+      <section
+        className="fixed left-1/2 flex h-[min(68dvh,620px)] max-h-[calc(100dvh-180px)] w-full max-w-md -translate-x-1/2 flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.24)] animate-in slide-in-from-bottom-8 fade-in-0 duration-200 sm:rounded-[32px]"
+        style={{ bottom: 'calc(82px + env(safe-area-inset-bottom, 0px))' }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <VisuallyHidden.Root>
-          <DialogHeader>
-            <DialogTitle>댓글</DialogTitle>
-            <DialogDescription>댓글을 확인하고 작성합니다.</DialogDescription>
-          </DialogHeader>
-        </VisuallyHidden.Root>
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
 
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-              <MessageCircle className="h-5 w-5" />
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+              <MessageCircle className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-base font-black tracking-tight text-slate-950">댓글</p>
-              <p className="text-xs font-bold text-slate-400">{comments.length.toLocaleString()}개의 이야기</p>
+              <p className="text-lg font-black tracking-tight text-slate-950">댓글</p>
+              <p className="text-sm font-bold text-slate-400">{comments.length.toLocaleString()}개의 이야기</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 active:scale-95"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
             aria-label="댓글 닫기"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 overscroll-contain">
           {comments.length === 0 ? (
             <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
-              <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-50 text-slate-300">
-                <MessageCircle className="h-7 w-7" />
+              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+                <MessageCircle className="h-8 w-8" />
               </div>
-              <p className="text-sm font-black text-slate-700">아직 댓글이 없어요</p>
-              <p className="mt-1 text-xs font-medium text-slate-400">첫 댓글을 남겨보세요.</p>
+              <p className="text-base font-black text-slate-700">아직 댓글이 없어요</p>
+              <p className="mt-1 text-sm font-medium text-slate-400">첫 댓글을 남겨보세요.</p>
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -255,10 +311,7 @@ const PostCommentsDialog = ({
           )}
         </div>
 
-        <form
-          onSubmit={handleAddComment}
-          className="border-t border-slate-100 bg-white px-4 pb-[calc(env(safe-area-inset-bottom,0px)+14px)] pt-3"
-        >
+        <form onSubmit={handleAddComment} className="border-t border-slate-100 bg-white px-4 pb-4 pt-3">
           <div className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner">
             <Input
               placeholder={authUser ? '댓글을 입력하세요...' : '로그인이 필요합니다'}
@@ -278,8 +331,9 @@ const PostCommentsDialog = ({
             </button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </section>
+    </div>,
+    document.body
   );
 };
 

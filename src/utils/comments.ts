@@ -108,3 +108,19 @@ export const updateComment = async ({
 
   return mapCommentRowToComment(data);
 };
+
+export const deleteComment = async ({
+  commentId,
+  userId,
+}: {
+  commentId: string;
+  userId: string;
+}): Promise<void> => {
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', commentId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+};
