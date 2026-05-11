@@ -871,7 +871,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             >
               <Bookmark className={cn("h-[18px] w-[18px] transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-600')} />
             </button>
-            {!isAd && renderCategoryBadge()}
             {isAd && (
               <a
                 href={post.link_url ? (post.link_url.startsWith('http') ? post.link_url : `https://${post.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
@@ -929,6 +928,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {!isAd && renderCategoryBadge()}
                 {formattedDate && (
                   <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
                 )}
@@ -1008,6 +1008,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               </div>
             </div>
             <div className="flex items-center gap-1">
+              {!isAd && renderCategoryBadge()}
               {formattedDate && (
                 <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
               )}

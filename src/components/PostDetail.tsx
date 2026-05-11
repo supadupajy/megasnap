@@ -605,7 +605,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     }
     if (!Icon) return null;
     return (
-      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10", bgColor)}>
+      <div className={cn("flex items-center gap-1 px-2.5 py-1.5 rounded-full text-white shadow-sm border border-white/10 shrink-0 whitespace-nowrap leading-none h-auto", bgColor)}>
         <Icon className="w-3.5 h-3.5" />
         <span className="text-[10px] font-black">{label}</span>
       </div>
@@ -941,7 +941,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             >
               <Bookmark className={cn("h-[18px] w-[18px] transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-600')} />
             </button>
-            {!isAd && renderCategoryBadge()}
             {isAd && (
               <a
                 href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
@@ -1057,6 +1056,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                               </div>
                             </div>
                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              {!isAd && renderCategoryBadge()}
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
                               {renderDropdownMenu()}
                               <button
