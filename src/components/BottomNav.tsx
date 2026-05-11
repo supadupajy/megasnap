@@ -44,10 +44,20 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
-  const keyboardOffset = useKeyboardOffset();
+  const [isCommentsDialogVisible, setIsCommentsDialogVisible] = useState(() => !!(window as any).__commentsDialogOpen);
+  const keyboardOffset = useKeyboardOffset(!isCommentsDialogVisible);
   const lastActiveTabIndexRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
+
+  useEffect(() => {
+    const handleCommentsDialogVisibility = (event: Event) => {
+      setIsCommentsDialogVisible(!!(event as CustomEvent<{ open?: boolean }>).detail?.open);
+    };
+
+    window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+    return () => window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
+  }, []);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;

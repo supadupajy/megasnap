@@ -104,15 +104,16 @@ const PostCommentsDialog = ({
   }, [isOpen, shouldRender]);
 
   useEffect(() => {
-    (window as any).__commentsDialogOpen = isOpen;
-    window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: isOpen } }));
+    if (!shouldRender) return;
+
+    (window as any).__commentsDialogOpen = true;
+    window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: true } }));
+
     return () => {
-      if (isOpen) {
-        (window as any).__commentsDialogOpen = false;
-        window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: false } }));
-      }
+      (window as any).__commentsDialogOpen = false;
+      window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: false } }));
     };
-  }, [isOpen]);
+  }, [shouldRender]);
 
   useEffect(() => {
     if (!isOpen) return;
