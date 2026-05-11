@@ -81,6 +81,21 @@ const PostCommentsDialog = ({
     ? frozenSheetTopRef.current
     : liveSheetTopPx;
 
+  // DEBUG: 댓글 입력창 누를 때 실제 값 확인
+  useEffect(() => {
+    if (!isOpen) return;
+    console.log('[CommentsDialog] state', {
+      keyboardOffset,
+      sheetTopPx,
+      liveSheetTopPx,
+      effectiveSheetTopPx,
+      sheetBottom,
+      windowInnerHeight: window.innerHeight,
+      visualViewportHeight: window.visualViewport?.height,
+      visualViewportOffsetTop: window.visualViewport?.offsetTop,
+    });
+  }, [isOpen, keyboardOffset, sheetTopPx, liveSheetTopPx, effectiveSheetTopPx, sheetBottom]);
+
   useEffect(() => {
     if (!isOpen) return;
 
