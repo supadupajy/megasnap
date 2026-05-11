@@ -198,6 +198,8 @@ const PostListOverlay = ({
   const [playingPostId, setPlayingPostId] = useState<string | null>(null);
   
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const viewportBaseHeightRef = useRef(0);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   // Popular 페이지와 동일한 collapsing header 훅 사용
   // 오버레이는 닫힌 상태에서 null을 렌더하므로, 열릴 때 리스너를 다시 붙이도록 isOpen을 관찰합니다.
@@ -352,6 +354,45 @@ const PostListOverlay = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const getViewportHeight = () => window.visualViewport?.height ?? window.innerHeight;
+    viewportBaseHeightRef.current = Math.max(window.innerHeight, getViewportHeight());
+
+    const updateKeyboardOffset = () => {
+      const viewport = window.visualViewport;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      viewportBaseHeightRef.current = Math.max(viewportBaseHeightRef.current, window.innerHeight, viewportHeight);
+
+      const offset = Math.max(0, viewportBaseHeightRef.current - viewportHeight - viewportTop);
+      setKeyboardOffset(offset > 120 ? offset : 0);
+    };
+
+    const handleFocusOut = () => {
+      window.setTimeout(updateKeyboardOffset, 120);
+    };
+
+    updateKeyboardOffset();
+    window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
+    window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
+    window.addEventListener('resize', updateKeyboardOffset);
+    window.addEventListener('orientationchange', updateKeyboardOffset);
+    window.addEventListener('focusin', updateKeyboardOffset);
+    window.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      window.visualViewport?.removeEventListener('resize', updateKeyboardOffset);
+      window.visualViewport?.removeEventListener('scroll', updateKeyboardOffset);
+      window.removeEventListener('resize', updateKeyboardOffset);
+      window.removeEventListener('orientationchange', updateKeyboardOffset);
+      window.removeEventListener('focusin', updateKeyboardOffset);
+      window.removeEventListener('focusout', handleFocusOut);
+      setKeyboardOffset(0);
+    };
+  }, [isOpen]);
+
   const handlePlayingChange = (id: string, isIntersecting: boolean) => {
     if (isIntersecting) {
       setPlayingPostId(id);
@@ -426,11 +467,11 @@ const PostListOverlay = ({
 
   return (
     <div
-
       ref={scrollContainerRef}
       style={{
-        bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
-        paddingBottom: '24px'
+        bottom: keyboardOffset > 0 ? '0px' : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
+        paddingBottom: keyboardOffset > 0 ? '12px' : '24px',
+        transition: 'bottom 160ms ease-out, padding-bottom 160ms ease-out',
       }}
       className="post-list-overlay-enter fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] overflow-y-auto overflow-x-hidden bg-white no-scrollbar shadow-none overscroll-x-none"
     >
