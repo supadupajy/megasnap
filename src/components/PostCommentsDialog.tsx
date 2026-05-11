@@ -65,11 +65,18 @@ const PostCommentsDialog = ({
     ? frozenSheetBottomRef.current
     : liveSheetBottom;
 
-  // 키보드가 뜨면 시트의 top도 함께 올려서 시트가 짜부라지거나 화면 밖으로 사라지지 않게 한다.
-  // sheetTopPx는 키보드가 없을 때의 기준 top. 키보드가 뜨면 그 만큼 위로 끌어올린다.
-  const liveSheetTopPx = sheetTopPx == null
-    ? null
-    : Math.max(20, sheetTopPx - keyboardOffset);
+  // 키보드가 뜨면 시트 bottom이 키보드 높이만큼 올라가므로,
+  // 시트 영역(top↔bottom)이 너무 좁아지지 않도록 최소 높이(MIN_SHEET_HEIGHT)를 보장한다.
+  // 그 외에는 sheetTopPx를 그대로 사용한다 (시트가 화면 위로 튀어오르지 않음).
+  const MIN_SHEET_HEIGHT = 320;
+  const liveSheetTopPx = (() => {
+    if (sheetTopPx == null) return null;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+    const sheetHeight = viewportHeight - sheetTopPx - keyboardOffset;
+    if (sheetHeight >= MIN_SHEET_HEIGHT) return sheetTopPx;
+    // 시트가 너무 좁아질 때만 top을 끌어올린다.
+    return Math.max(20, viewportHeight - keyboardOffset - MIN_SHEET_HEIGHT);
+  })();
   const effectiveSheetTopPx = isClosing && frozenSheetTopRef.current != null
     ? frozenSheetTopRef.current
     : liveSheetTopPx;
