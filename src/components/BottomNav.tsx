@@ -44,59 +44,10 @@ const BottomNav = () => {
   const [pillLeft, setPillLeft] = useState(0);
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
-  const [isCommentsDialogVisible, setIsCommentsDialogVisible] = useState(() => !!(window as any).__commentsDialogOpen);
-  const [keepHiddenUntilKeyboardSettled, setKeepHiddenUntilKeyboardSettled] = useState(false);
   const keyboardOffset = useKeyboardOffset();
-  const releaseHiddenTimerRef = useRef<number | null>(null);
   const lastActiveTabIndexRef = useRef(0);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
-  const shouldHideForCommentsKeyboard = isCommentsDialogVisible && keyboardOffset > 0;
-  const shouldHideBottomNav = shouldHideForCommentsKeyboard || keepHiddenUntilKeyboardSettled;
-
-  useEffect(() => {
-    const clearReleaseHiddenTimer = () => {
-      if (releaseHiddenTimerRef.current == null) return;
-      window.clearTimeout(releaseHiddenTimerRef.current);
-      releaseHiddenTimerRef.current = null;
-    };
-
-    const handleCommentsDialogVisibility = (event: Event) => {
-      const detail = (event as CustomEvent<{ open?: boolean; closing?: boolean }>).detail;
-      const isVisible = !!detail?.open;
-
-      clearReleaseHiddenTimer();
-      setIsCommentsDialogVisible(isVisible);
-
-      if (!isVisible || detail?.closing) {
-        setKeepHiddenUntilKeyboardSettled(true);
-        return;
-      }
-
-      setKeepHiddenUntilKeyboardSettled(false);
-    };
-
-    window.addEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
-    return () => {
-      clearReleaseHiddenTimer();
-      window.removeEventListener('comments-dialog-visibility', handleCommentsDialogVisibility);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!keepHiddenUntilKeyboardSettled || keyboardOffset > 0) return;
-
-    releaseHiddenTimerRef.current = window.setTimeout(() => {
-      setKeepHiddenUntilKeyboardSettled(false);
-      releaseHiddenTimerRef.current = null;
-    }, 120);
-
-    return () => {
-      if (releaseHiddenTimerRef.current == null) return;
-      window.clearTimeout(releaseHiddenTimerRef.current);
-      releaseHiddenTimerRef.current = null;
-    };
-  }, [keyboardOffset, keepHiddenUntilKeyboardSettled]);
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
@@ -225,10 +176,10 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000] will-change-transform"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        pointerEvents: shouldHideBottomNav ? 'none' : undefined,
         transform: keyboardOffset > 0 ? `translate3d(0, ${keyboardOffset}px, 0)` : 'translate3d(0, 0, 0)',
-        transition: keyboardOffset > 0 || shouldHideBottomNav ? 'none' : 'transform 160ms ease-out',
-        visibility: shouldHideBottomNav ? 'hidden' : 'visible',
+        // 키보드 offset 자체가 중간값을 흘리지 않고 0 또는 키보드높이로만 바뀌므로
+        // 슬라이딩 전환이 보이지 않게 하려면 transition을 항상 꺼두는 것이 안전하다.
+        transition: 'none',
       }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react';
 let globalViewportBaseHeight = 0;
 
 const KEYBOARD_OFFSET_THRESHOLD = 120;
-const KEYBOARD_CLOSE_SETTLE_MS = 180;
 
 const isEditableElement = (element: Element | null) => {
   if (!element) return false;
@@ -17,28 +16,20 @@ const isEditableElement = (element: Element | null) => {
 export const useKeyboardOffset = (active = true) => {
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const keyboardOffsetRef = useRef(0);
-  const resetTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const clearResetTimer = () => {
-      if (resetTimerRef.current == null) return;
-      window.clearTimeout(resetTimerRef.current);
-      resetTimerRef.current = null;
-    };
-
     const commitKeyboardOffset = (nextOffset: number) => {
-      if (Math.abs(keyboardOffsetRef.current - nextOffset) < 2) return;
+      if (keyboardOffsetRef.current === nextOffset) return;
       keyboardOffsetRef.current = nextOffset;
       setKeyboardOffset(nextOffset);
     };
 
     if (!active) {
-      clearResetTimer();
       commitKeyboardOffset(0);
       return;
     }
 
-    const updateKeyboardOffset = () => {
+    const computeRawOffset = () => {
       const viewport = window.visualViewport;
       const viewportHeight = viewport?.height ?? window.innerHeight;
       const viewportTop = viewport?.offsetTop ?? 0;
@@ -51,42 +42,52 @@ export const useKeyboardOffset = (active = true) => {
       const layoutViewportDiff = Math.max(0, window.innerHeight - viewportHeight - viewportTop);
       const baseViewportDiff = Math.max(0, globalViewportBaseHeight - viewportHeight - viewportTop);
       const offset = Math.max(layoutViewportDiff, baseViewportDiff);
-      const nextOffset = activeElementIsEditable && offset > KEYBOARD_OFFSET_THRESHOLD ? offset : 0;
 
-      if (nextOffset > 0) {
-        clearResetTimer();
-        commitKeyboardOffset(nextOffset);
+      return {
+        activeElementIsEditable,
+        rawOffset: offset,
+      };
+    };
+
+    // 키보드가 열려 있는지 여부만 boolean으로 추적한다.
+    // 슬라이딩 현상을 막기 위해 중간값(점진적으로 감소하는 offset)은 흘려보내지 않는다.
+    // - 키보드가 열렸다고 판단되면 즉시 "열린 시점의 키보드 높이"를 한 번만 커밋
+    // - 키보드가 닫혔다고 판단되면 즉시 0으로 한 번에 떨어뜨림
+    const updateKeyboardState = () => {
+      const { activeElementIsEditable, rawOffset } = computeRawOffset();
+      const keyboardIsOpen = activeElementIsEditable && rawOffset > KEYBOARD_OFFSET_THRESHOLD;
+
+      if (keyboardIsOpen) {
+        if (keyboardOffsetRef.current === 0) {
+          commitKeyboardOffset(rawOffset);
+        }
         return;
       }
 
-      if (keyboardOffsetRef.current === 0 || resetTimerRef.current != null) return;
-
-      resetTimerRef.current = window.setTimeout(() => {
-        resetTimerRef.current = null;
+      if (keyboardOffsetRef.current !== 0) {
         commitKeyboardOffset(0);
-      }, KEYBOARD_CLOSE_SETTLE_MS);
+      }
     };
 
     const scheduleUpdates = () => {
-      updateKeyboardOffset();
-      window.setTimeout(updateKeyboardOffset, 80);
-      window.setTimeout(updateKeyboardOffset, 220);
-      window.setTimeout(updateKeyboardOffset, 420);
+      updateKeyboardState();
+      window.setTimeout(updateKeyboardState, 80);
+      window.setTimeout(updateKeyboardState, 220);
+      window.setTimeout(updateKeyboardState, 420);
     };
 
     scheduleUpdates();
-    window.visualViewport?.addEventListener('resize', updateKeyboardOffset);
-    window.visualViewport?.addEventListener('scroll', updateKeyboardOffset);
-    window.addEventListener('resize', updateKeyboardOffset);
+    window.visualViewport?.addEventListener('resize', updateKeyboardState);
+    window.visualViewport?.addEventListener('scroll', updateKeyboardState);
+    window.addEventListener('resize', updateKeyboardState);
     window.addEventListener('orientationchange', scheduleUpdates);
     window.addEventListener('focusin', scheduleUpdates);
     window.addEventListener('focusout', scheduleUpdates);
 
     return () => {
-      clearResetTimer();
-      window.visualViewport?.removeEventListener('resize', updateKeyboardOffset);
-      window.visualViewport?.removeEventListener('scroll', updateKeyboardOffset);
-      window.removeEventListener('resize', updateKeyboardOffset);
+      window.visualViewport?.removeEventListener('resize', updateKeyboardState);
+      window.visualViewport?.removeEventListener('scroll', updateKeyboardState);
+      window.removeEventListener('resize', updateKeyboardState);
       window.removeEventListener('orientationchange', scheduleUpdates);
       window.removeEventListener('focusin', scheduleUpdates);
       window.removeEventListener('focusout', scheduleUpdates);
