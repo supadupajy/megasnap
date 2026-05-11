@@ -27,6 +27,7 @@ const ObservedPostItem = React.memo(({
   onLikeToggle, 
   onLocationClick,
   onDelete,
+  onUpdate,
   isPlaying,
   onPlayingChange
 }: { 
@@ -36,6 +37,7 @@ const ObservedPostItem = React.memo(({
   onLikeToggle: (id: string) => void, 
   onLocationClick: (e: React.MouseEvent, lat: number, lng: number, fullPost: Post) => void,
   onDelete: (id: string) => void,
+  onUpdate: (id: string, content: string) => void,
   isPlaying: boolean,
   onPlayingChange: (id: string, isIntersecting: boolean) => void
 }) => {
@@ -43,6 +45,10 @@ const ObservedPostItem = React.memo(({
   const [isCurrentlyVisible, setIsCurrentlyVisible] = useState(false);
   const [isNearVisible, setIsNearVisible] = useState(false); // ✅ 화면 근처 도달 상태 추가
   const [fullPost, setFullPost] = useState<Post>(post);
+
+  useEffect(() => {
+    setFullPost(prev => ({ ...prev, ...post, user: { ...prev.user, ...post.user } }));
+  }, [post]);
 
   // ✅ [FIX] 화면에 보이기 전(근처 도달 시)에 상세 데이터를 미리 불러옴
   useEffect(() => {
@@ -147,6 +153,7 @@ const ObservedPostItem = React.memo(({
         onLikeToggle={onLikeToggle}
         onLocationClick={(e, lat, lng) => onLocationClick(e, lat, lng, fullPost)}
         onDelete={onDelete}
+        onUpdate={onUpdate}
         autoPlayVideo={isCurrentlyVisible}
         isPlaying={isPlaying}
       />
@@ -163,6 +170,7 @@ interface PostListOverlayProps {
   selectedCategories: string[];
   authUserId?: string | null;
   onDeletePost?: (id: string) => void;
+  onUpdatePost?: (id: string, content: string) => void;
   openedViewedIds: Set<string>; // 오버레이가 열릴 때의 viewedIds 스냅샷 (외부에서 주입)
   viewedIds: Set<string>; // 실시간 viewedIds (부모에서 주입)
   markAsViewed: (id: string) => void; // 부모에서 주입
@@ -177,6 +185,7 @@ const PostListOverlay = ({
   selectedCategories,
   authUserId,
   onDeletePost,
+  onUpdatePost,
   openedViewedIds,
   viewedIds,
   markAsViewed,
@@ -385,6 +394,11 @@ const PostListOverlay = ({
     }
   }, [authUserId, posts]);
 
+  const handlePostUpdated = useCallback((id: string, content: string) => {
+    setPosts(prev => prev.map(post => post.id === id ? { ...post, content } : post));
+    onUpdatePost?.(id, content);
+  }, [onUpdatePost]);
+
   const adIndices = useMemo(() => {
     const indices = new Set<number>();
     let postCount = 0;
@@ -462,6 +476,7 @@ const PostListOverlay = ({
                       window.dispatchEvent(new CustomEvent('focus-post', { detail: { post: fullPost, lat, lng } }));
                     }}
                     onDelete={(id) => onDeletePost?.(id)}
+                    onUpdate={handlePostUpdated}
                     isPlaying={playingPostId === post.id}
                     onPlayingChange={handlePlayingChange}
                   />

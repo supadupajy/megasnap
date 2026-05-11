@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react';
-import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MapPin, X, ChevronDown, ChevronUp, Utensils, Car, TreePine, Navigation, PawPrint, Send, Bookmark, MoreHorizontal, ShoppingBag, AlertCircle, Ban, Trash2, ExternalLink, Check, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { cn, getFallbackImage, getOptimizedDetailImage, getOptimizedMarkerImage } from '@/lib/utils';
 
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +36,7 @@ interface PostDetailProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete?: (postId: string) => void;
+  onUpdate?: (postId: string, content: string) => void;
   onViewPost?: (id: string) => void;
   onLikeToggle?: (postId: string) => void;
   onLocationClick?: (lat: number, lng: number) => void;
@@ -42,7 +44,7 @@ interface PostDetailProps {
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
-const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
+const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const { blockUser } = useBlockedUsers();
@@ -122,6 +124,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [localContentById, setLocalContentById] = useState<Record<string, string>>({});
+  const [isSavingContent, setIsSavingContent] = useState(false);
   const contentRef = useRef<HTMLParagraphElement>(null);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지
@@ -218,6 +224,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       setShowComments(false);
       setContentExpanded(false);
       setIsContentClamped(false);
+      setIsEditingContent(false);
+      setEditContent(localContentById[currentPost.id] ?? currentPost.content ?? '');
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
 
       const checkSaveStatus = async () => {
@@ -227,7 +235,58 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
       };
       checkSaveStatus();
     }
-  }, [currentPostIndex, isOpen, onViewPost, posts, authUser]);
+  }, [currentPostIndex, isOpen, onViewPost, posts, authUser, localContentById]);
+
+  const currentContent = currentPost ? (localContentById[currentPost.id] ?? currentPost.content ?? '') : '';
+
+  const startContentEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentPost) return;
+    setEditContent(currentContent);
+    setIsEditingContent(true);
+    setContentExpanded(true);
+  };
+
+  const cancelContentEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditContent(currentContent);
+    setIsEditingContent(false);
+  };
+
+  const saveContentEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!authUser || !currentPost) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
+    const nextContent = editContent.trim();
+    if (!nextContent) {
+      showError('내용을 입력해주세요.');
+      return;
+    }
+
+    setIsSavingContent(true);
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ content: nextContent })
+        .eq('id', currentPost.id)
+        .eq('user_id', authUser.id);
+      if (error) throw error;
+
+      setLocalContentById(prev => ({ ...prev, [currentPost.id]: nextContent }));
+      setEditContent(nextContent);
+      setIsEditingContent(false);
+      setContentExpanded(false);
+      onUpdate?.(currentPost.id, nextContent);
+      showSuccess('포스팅이 수정되었습니다.');
+    } catch (err) {
+      showError('수정 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingContent(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -642,6 +701,56 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
     </div>
   );
 
+  const renderContentBody = () => {
+    if (isEditingContent) {
+      return (
+        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            disabled={isSavingContent}
+            autoFocus
+            className="min-h-[96px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/40 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
+          />
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={saveContentEdit}
+              disabled={isSavingContent || !editContent.trim()}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
+              aria-label="수정 저장"
+            >
+              <Check className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={cancelContentEdit}
+              disabled={isSavingContent}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
+              aria-label="수정 취소"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentContent}</p>
+        {!contentExpanded && isContentClamped && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
+            className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
+          >
+            더 보기
+          </button>
+        )}
+      </>
+    );
+  };
+
   const renderImageSlider = () => {
     return (
     <div className="absolute inset-0 w-full h-full z-10">
@@ -757,12 +866,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
           <MoreHorizontal className="w-5 h-5" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[13010]">
+      <DropdownMenuContent align="end" className="w-36 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[13010]">
         {(isMine || isAdmin) ? (
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.setTimeout(() => setIsDeleteDialogOpen(true), 0); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
-            <Trash2 className="w-4 h-4 text-red-600" />
-            <span className="text-sm font-bold text-red-600">삭제하기</span>
-          </DropdownMenuItem>
+          <>
+            {!isAd && isMine && (
+              <DropdownMenuItem onClick={startContentEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none">
+                <Pencil className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-bold text-indigo-600">수정하기</span>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.setTimeout(() => setIsDeleteDialogOpen(true), 0); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+              <Trash2 className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-bold text-red-600">삭제하기</span>
+            </DropdownMenuItem>
+          </>
         ) : (
           <>
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none">
@@ -856,15 +973,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onViewPost
                               <div className="flex gap-2 items-start">
                                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
                                 <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
-                                  <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentPost.content}</p>
-                                  {!contentExpanded && isContentClamped && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
-                                      className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
-                                    >
-                                      더 보기
-                                    </button>
-                                  )}
+                                  {renderContentBody()}
                                 </div>
                               </div>
                             </div>

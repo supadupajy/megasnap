@@ -21,7 +21,10 @@ import {
   Utensils,
   Car,
   TreePine,
-  PawPrint
+  PawPrint,
+  Check,
+  X,
+  Pencil
 } from 'lucide-react';
 import { cn, getFallbackImage, formatRelativeTime, getOptimizedFeedImage } from '@/lib/utils';
 
@@ -33,6 +36,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Comment } from '@/types';
 import { useAuth } from './AuthProvider';
@@ -50,6 +54,7 @@ interface PostItemProps {
   onLikeToggle: (id: string) => void;
   onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete?: (id: string) => void;
+  onUpdate?: (id: string, content: string) => void;
   onSaveToggle?: (id: string, isSaved: boolean) => void;
   isViewed?: boolean;
   disablePulse?: boolean;
@@ -57,7 +62,7 @@ interface PostItemProps {
   isPlaying?: boolean;
 }
 
-const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
+const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const { blockUser } = useBlockedUsers();
@@ -81,6 +86,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [avatarError, setAvatarError] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
+  const [localContent, setLocalContent] = useState(post.content || '');
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [editContent, setEditContent] = useState(post.content || '');
+  const [isSavingContent, setIsSavingContent] = useState(false);
   const contentRef = useRef<HTMLParagraphElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,7 +104,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
 
-  const { user, content, isAd } = post;
+  const { user, isAd } = post;
+  const content = localContent;
   
   // owner_id(실제 DB user_id) 또는 post.user_id 기준으로만 내 게시물 여부를 판별합니다.
 
@@ -152,7 +162,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       </div>
     );
   };
-
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -225,6 +234,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
       videoRef.current.play().catch(() => {});
     }
   }, [isVisible, isReadyToPlay]);
+
+  useEffect(() => {
+    setLocalContent(post.content || '');
+    setEditContent(post.content || '');
+    setIsEditingContent(false);
+  }, [post.id, post.content]);
 
   const lat = post.latitude ?? post.lat;
   const lng = post.longitude ?? post.lng;
@@ -443,6 +458,135 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
     }, 0);
   };
 
+  const startContentEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditContent(localContent);
+    setIsEditingContent(true);
+    setContentExpanded(true);
+  };
+
+  const cancelContentEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditContent(localContent);
+    setIsEditingContent(false);
+  };
+
+  const saveContentEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!authUser) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
+    const nextContent = editContent.trim();
+    if (!nextContent) {
+      showError('내용을 입력해주세요.');
+      return;
+    }
+
+    setIsSavingContent(true);
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ content: nextContent })
+        .eq('id', post.id)
+        .eq('user_id', authUser.id);
+      if (error) throw error;
+
+      setLocalContent(nextContent);
+      setEditContent(nextContent);
+      setIsEditingContent(false);
+      setContentExpanded(false);
+      onUpdate?.(post.id, nextContent);
+      showSuccess('포스팅이 수정되었습니다.');
+    } catch (err) {
+      showError('수정 중 오류가 발생했습니다.');
+    } finally {
+      setIsSavingContent(false);
+    }
+  };
+
+  const renderContentBody = () => {
+    if (isEditingContent) {
+      return (
+        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            disabled={isSavingContent}
+            autoFocus
+            className="min-h-[88px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/40 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
+          />
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={saveContentEdit}
+              disabled={isSavingContent || !editContent.trim()}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
+              aria-label="수정 저장"
+            >
+              <Check className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={cancelContentEdit}
+              disabled={isSavingContent}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
+              aria-label="수정 취소"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
+        {!contentExpanded && isContentClamped && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
+            className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
+          >
+            더 보기
+          </button>
+        )}
+      </>
+    );
+  };
+
+  const renderDropdownMenu = () => (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none" onClick={(e) => e.stopPropagation()}>
+          <MoreHorizontal className="w-5 h-5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[200] data-[side=bottom]:slide-in-from-top-0 data-[side=top]:slide-in-from-bottom-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0">
+        {(isMine || isAdmin) ? (
+          <>
+            {!isAd && isMine && (
+              <DropdownMenuItem onClick={startContentEdit} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none">
+                <Pencil className="w-4 h-4 text-indigo-600" />
+                <span className="text-sm font-bold text-indigo-600">수정하기</span>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none">
+              <Trash2 className="w-4 h-4 text-red-600" />
+              <span className="text-sm font-bold text-red-600">삭제하기</span>
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem>
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   const handleAddComment = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!commentInput.trim() || !authUser) return;
@@ -602,7 +746,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 {formattedDate && (
                   <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
                 )}
-                <DropdownMenu modal={false}><DropdownMenuTrigger asChild><button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[200] data-[side=bottom]:slide-in-from-top-0 data-[side=top]:slide-in-from-bottom-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0">{(isMine || isAdmin) ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
+                {renderDropdownMenu()}
               </div>
             </div>
 
@@ -622,15 +766,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                   <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
-                  {!contentExpanded && isContentClamped && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
-                      className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
-                    >
-                      더 보기
-                    </button>
-                  )}
+                  {renderContentBody()}
                 </div>
               </div>
               <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
@@ -714,7 +850,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
               {formattedDate && (
                 <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>
               )}
-              <DropdownMenu modal={false}><DropdownMenuTrigger asChild><button className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="w-5 h-5" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-32 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md z-[200] data-[side=bottom]:slide-in-from-top-0 data-[side=top]:slide-in-from-bottom-0 data-[side=left]:slide-in-from-right-0 data-[side=right]:slide-in-from-left-0">{(isMine || isAdmin) ? (<DropdownMenuItem onClick={(e) => { e.stopPropagation(); setIsDeleteDialogOpen(true); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Trash2 className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">삭제하기</span></DropdownMenuItem>) : (<><DropdownMenuItem onClick={(e) => { e.stopPropagation(); showSuccess('신고가 접수되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-gray-50 outline-none"><AlertCircle className="w-4 h-4 text-gray-600" /><span className="text-sm font-bold text-gray-700">신고</span></DropdownMenuItem><DropdownMenuItem onClick={(e) => { e.stopPropagation(); blockUser(user.id); showError('차단되었습니다.'); }} className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-red-50 outline-none"><Ban className="w-4 h-4 text-red-600" /><span className="text-sm font-bold text-red-600">차단</span></DropdownMenuItem></>)}</DropdownMenuContent></DropdownMenu>
+              {renderDropdownMenu()}
             </div>
           </div>
 
@@ -734,15 +870,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onSaveToggle,
                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
-                {!contentExpanded && isContentClamped && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
-                    className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
-                  >
-                    더 보기
-                  </button>
-                )}
+                {renderContentBody()}
               </div>
             </div>
             <form onSubmit={handleAddComment} onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 mt-3 mb-2 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">

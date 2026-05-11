@@ -1206,6 +1206,16 @@ const Index = () => {
     }, 400);
   }, []);
 
+  const handlePostUpdated = useCallback((id: string, content: string) => {
+    const updateContent = (post: Post) => post.id === id ? { ...post, content } : post;
+    setAllPosts(prev => {
+      const updated = prev.map(updateContent);
+      mapCache.posts = updated;
+      return updated;
+    });
+    setGlobalTrendingPosts(prev => prev.map(updateContent));
+  }, []);
+
   // ── PostDetail 핸들러 (useCallback으로 stable reference 보장) ──
   // 인라인 화살표 함수로 넘기면 매 렌더마다 새 reference가 생성되어
   // PostDetail 내부 useEffect가 cleanup→re-run 되면서 history.back()이 호출되어
@@ -1771,6 +1781,7 @@ const Index = () => {
             selectedCategories={selectedCategories}
             authUserId={authUser?.id}
             onDeletePost={handlePostDeleted}
+            onUpdatePost={handlePostUpdated}
             openedViewedIds={postListOpenedViewedIds}
             viewedIds={viewedIds}
             markAsViewed={markAsViewed}
@@ -1787,6 +1798,7 @@ const Index = () => {
             isOpen={true}
             onClose={handleClosePostDetail}
             onDelete={handlePostDeleted}
+            onUpdate={handlePostUpdated}
             onViewPost={markAsViewed}
             onLikeToggle={handleLikeToggle}
             onLocationClick={handlePostLocationClick}
