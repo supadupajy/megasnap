@@ -949,7 +949,7 @@ const Write = () => {
                       )}
                       aria-hidden={!!content.trim()}
                     >
-                      내용을 입력해주세요
+                      내용을 입력해주세요.
                     </span>
                   </div>
                   <Textarea
