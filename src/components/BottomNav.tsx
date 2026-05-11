@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { mapCache } from '@/utils/map-cache';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
+import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
@@ -38,6 +39,10 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
+  // 키보드가 올라오면 BottomNav를 화면 밖으로 밀어내 키보드 위에 떠 보이지 않도록 한다.
+  // (안드로이드에서는 position: fixed가 layout viewport 기준이라 OS 키보드가 자동으로 가려주지 않음)
+  const keyboardOffset = useKeyboardOffset(true);
+  const isKeyboardOpen = keyboardOffset > 0;
   const navRef = useRef<HTMLDivElement>(null);
   const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pillLeft, setPillLeft] = useState(0);
@@ -174,6 +179,11 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000]"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+        // 키보드가 올라오면 BottomNav 전체를 화면 아래로 밀어 키보드 위 노출을 방지한다.
+        // transform만 변경하므로 layout 재계산이나 검은 영역 노출 없이 부드럽게 슬라이드.
+        transform: isKeyboardOpen ? 'translateY(120%)' : 'translateY(0)',
+        transition: 'transform 200ms ease-out',
+        willChange: 'transform',
       }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
