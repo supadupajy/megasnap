@@ -661,7 +661,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     <div
       ref={containerRef}
       data-trending-panel="true"
-      className="bg-white/95 rounded-[32px] overflow-hidden border border-gray-100 shadow-md shadow-gray-200/80 transition-[box-shadow,background-color] duration-200"
+      className="bg-white/95 rounded-[32px] overflow-hidden border border-gray-100 transition-[background-color] duration-200"
       style={{
         height: isExpanded ? (maxHeight || '85vh') : '56px',
         contain: 'layout paint style',
