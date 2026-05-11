@@ -172,7 +172,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   useEffect(() => {
     setIsLiked(post.isLiked);
     setLikesCount(post.likes || 0);
-  }, [post.id, post.isLiked, post.likes]);
+    setIsSaved(post.isSaved || false);
+  }, [post.id, post.isLiked, post.likes, post.isSaved]);
 
   const lat = post.latitude ?? post.lat;
 
@@ -297,9 +298,55 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const nextSaved = !isSaved;
+    if (!authUser) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+    if (!isPersistedPostId(post.id)) {
+      showError('이 포스팅은 저장할 수 없습니다.');
+      return;
+    }
+
+    const prevSaved = isSaved;
+    const nextSaved = !prevSaved;
     setIsSaved(nextSaved);
-    onSaveToggle?.(post.id, !isSaved);
+
+    try {
+      if (nextSaved) {
+        const { data: existingSaved, error: checkError } = await supabase
+          .from('saved_posts')
+          .select('id')
+          .eq('post_id', post.id)
+          .eq('user_id', authUser.id)
+          .maybeSingle();
+
+        if (checkError) throw checkError;
+
+        if (!existingSaved) {
+          const { error } = await supabase
+            .from('saved_posts')
+            .insert({ post_id: post.id, user_id: authUser.id });
+          if (error) throw error;
+        }
+
+        showSuccess('포스팅을 저장했습니다! ✨');
+      } else {
+        const { error } = await supabase
+          .from('saved_posts')
+          .delete()
+          .eq('post_id', post.id)
+          .eq('user_id', authUser.id);
+        if (error) throw error;
+
+        showSuccess('저장이 취소되었습니다.');
+      }
+
+      onSaveToggle?.(post.id, nextSaved);
+    } catch (err) {
+      console.error('[PostItem] Save toggle error:', err);
+      setIsSaved(prevSaved);
+      showError('저장 처리 중 오류가 발생했습니다.');
+    }
   };
 
   const handleUserClick = (e: React.MouseEvent) => {

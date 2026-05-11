@@ -243,14 +243,22 @@ const Profile = () => {
     });
   }, [authUser?.id]);
 
-  const handleSaveToggle = useCallback((postId: string, isSaved: boolean) => {
-    if (isSaved) {
-      setSavedPosts(prev => prev.filter(p => p.id !== postId));
-      setMyPosts(prev => prev.map(p => p.id === postId ? { ...p, isSaved: false } : p));
+  const handleSaveToggle = useCallback((postId: string, nextSaved: boolean) => {
+    setMyPosts(prev => prev.map(p => p.id === postId ? { ...p, isSaved: nextSaved } : p));
+
+    if (nextSaved) {
+      setSavedPosts(prev => {
+        if (prev.some(p => p.id === postId)) {
+          return prev.map(p => p.id === postId ? { ...p, isSaved: true } : p);
+        }
+
+        const postToAdd = myPosts.find(p => p.id === postId);
+        return postToAdd ? [{ ...postToAdd, isSaved: true }, ...prev] : prev;
+      });
     } else {
-      if (authUser?.id) loadProfileData(authUser.id);
+      setSavedPosts(prev => prev.filter(p => p.id !== postId));
     }
-  }, [authUser?.id, loadProfileData]);
+  }, [myPosts]);
 
   const handleGridItemClick = (postId: string) => {
     const container = scrollRef.current;
@@ -418,7 +426,7 @@ const Profile = () => {
                       post={post}
                       disablePulse={true}
                       onLikeToggle={() => handleLikeToggle(post.id)}
-                      onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)}
+                      onSaveToggle={handleSaveToggle}
                       onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
                     />
                   </div>
@@ -445,7 +453,7 @@ const Profile = () => {
                         post={post}
                         disablePulse={true}
                         onLikeToggle={() => handleLikeToggle(post.id)}
-                        onSaveToggle={() => handleSaveToggle(post.id, post.isSaved || false)}
+                        onSaveToggle={handleSaveToggle}
                         onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
                         onDelete={() => handlePostDelete(post.id)}
                       />
