@@ -836,20 +836,20 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 shrink-0 whitespace-nowrap"
+                className="inline-flex h-9 items-center justify-center gap-1.5 px-3 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20 shrink-0 whitespace-nowrap"
               >
                 <ShoppingBag className="w-3.5 h-3.5 fill-white" />
-                <span className="text-[10px] font-black">보러가기</span>
+                <span className="text-[10px] font-black leading-none">보러가기</span>
               </a>
             )}
             {lat !== undefined && lng !== undefined && (
               <button
                 onClick={(e) => onLocationClick(e, lat, lng)}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
+                className="inline-flex h-9 items-center justify-center gap-1.5 px-3 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
                 style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
               >
                 <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
-                <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5' }}>위치보기</span>
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5', lineHeight: 1 }}>위치보기</span>
               </button>
             )}
           </div>
