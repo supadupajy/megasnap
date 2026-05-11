@@ -176,17 +176,16 @@ const Write = () => {
     scrollTimerRef.current = window.setTimeout(() => {
       scrollTimerRef.current = null;
       const textarea = textareaRef.current;
-      const submitArea = submitAreaRef.current;
       const scrollArea = scrollAreaRef.current;
       if (!textarea || !scrollArea) return;
 
       const viewport = window.visualViewport;
       const visibleBottom = (viewport?.height ?? window.innerHeight) + (viewport?.offsetTop ?? 0) - 18;
-      const targetRect = (submitArea ?? textarea).getBoundingClientRect();
+      const targetRect = textarea.getBoundingClientRect();
       const overflow = targetRect.bottom - visibleBottom;
 
       if (overflow > 0) {
-        animateScrollAreaTo(scrollArea.scrollTop + overflow + 22);
+        animateScrollAreaTo(scrollArea.scrollTop + overflow + 8);
       }
     }, 120);
   };
