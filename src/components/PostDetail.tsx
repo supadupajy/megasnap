@@ -897,49 +897,76 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     </div>
   );
 
-  const renderActionButtons = () => (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button className="transition-transform active:scale-125" onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}>
-            <Heart className={cn("w-6 h-6 transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
-          </button>
-          <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
-            <MessageCircle className="w-6 h-6 text-gray-700" />
-          </button>
-          <button className="text-gray-700 active:scale-110 transition-transform" onClick={(e) => handleShare(e, currentPost.id)}>
-            <Share2 className="w-6 h-6" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
-            <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
-          </button>
-          {!isAd && renderCategoryBadge()}
-          {isAd && (
-            <a
-              href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20"
+  const renderActionButtons = () => {
+    const commentsDisplayCount = Math.max(localComments.length, currentPost.commentsCount || 0);
+
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <button
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-all active:scale-95",
+                currentPost.isLiked
+                  ? "border-red-100 bg-red-50 text-red-500 shadow-sm shadow-red-100/50"
+                  : "border-gray-100 bg-gray-50 text-gray-700 hover:bg-gray-100"
+              )}
+              onClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}
+              aria-label={`좋아요 ${currentPost.likes.toLocaleString()}개`}
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-black">보러가기</span>
-            </a>
-          )}
-          {currentPost.lat !== undefined && currentPost.lng !== undefined && (
-            <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all"
-              style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
-            >
-              <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
-              <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5' }}>위치보기</span>
+              <Heart className={cn("h-[18px] w-[18px] transition-colors", currentPost.isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600')} />
+              <span className="tabular-nums leading-none">{currentPost.likes.toLocaleString()}</span>
             </button>
-          )}
+            <button
+              onClick={handleCommentClick}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 px-3 text-sm font-black text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
+              aria-label={`댓글 ${commentsDisplayCount.toLocaleString()}개`}
+            >
+              <MessageCircle className="h-[18px] w-[18px] text-gray-600" />
+              <span className="tabular-nums leading-none">{commentsDisplayCount.toLocaleString()}</span>
+            </button>
+            <button
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
+              onClick={(e) => handleShare(e, currentPost.id)}
+              aria-label="공유하기"
+            >
+              <Share2 className="h-[18px] w-[18px] text-gray-600" />
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 transition-all hover:bg-gray-100 active:scale-95"
+              onClick={handleSaveToggle}
+              aria-label="저장하기"
+            >
+              <Bookmark className={cn("h-[18px] w-[18px] transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-600')} />
+            </button>
+            {!isAd && renderCategoryBadge()}
+            {isAd && (
+              <a
+                href={currentPost.link_url ? (currentPost.link_url.startsWith('http') ? currentPost.link_url : `https://${currentPost.link_url}`) : 'https://s.baemin.com/t3000fBqlbHGL'}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#2AC1BC] text-white rounded-full hover:opacity-90 active:scale-95 transition-all shadow-md border border-[#2AC1BC]/20"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-black">보러가기</span>
+              </a>
+            )}
+            {currentPost.lat !== undefined && currentPost.lng !== undefined && (
+              <button onClick={(e) => { e.stopPropagation(); onLocationClick?.(currentPost.lat, currentPost.lng); }} className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full active:scale-95 transition-all"
+                style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
+              >
+                <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
+                <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5' }}>위치보기</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDropdownMenu = () => (
     <DropdownMenu modal={false}>
@@ -1051,7 +1078,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                           <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()}>
                             {renderActionButtons()}
                             <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
-                              <p className="text-[13px] font-black text-gray-900">좋아요 {currentPost.likes.toLocaleString()}개</p>
                               <div className="flex gap-2 items-start">
                                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
                                 <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>

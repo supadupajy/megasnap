@@ -827,25 +827,49 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   };
 
   const renderInteractionButtons = () => {
+    const commentsDisplayCount = Math.max(localComments.length, post.commentsCount || 0);
+
     return (
       <div className="px-4 pt-3 pb-2 flex flex-col gap-3">
-        {/* 상단: 아이콘 그룹과 기본 뱃지/위치보기 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button className="transition-transform active:scale-125" onClick={handleLikeToggleLocal}>
-              <Heart className={cn("w-6 h-6 transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-700')} />
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <button
+              className={cn(
+                "group inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-all active:scale-95",
+                isLiked
+                  ? "border-red-100 bg-red-50 text-red-500 shadow-sm shadow-red-100/50"
+                  : "border-gray-100 bg-gray-50 text-gray-700 hover:bg-gray-100"
+              )}
+              onClick={handleLikeToggleLocal}
+              aria-label={`좋아요 ${likesCount.toLocaleString()}개`}
+            >
+              <Heart className={cn("h-[18px] w-[18px] transition-colors", isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600')} />
+              <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
             </button>
-            <button onClick={handleCommentClick} className="active:scale-110 transition-transform">
-              <MessageCircle className="w-6 h-6 text-gray-700" />
+            <button
+              onClick={handleCommentClick}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 px-3 text-sm font-black text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
+              aria-label={`댓글 ${commentsDisplayCount.toLocaleString()}개`}
+            >
+              <MessageCircle className="h-[18px] w-[18px] text-gray-600" />
+              <span className="tabular-nums leading-none">{commentsDisplayCount.toLocaleString()}</span>
             </button>
-            <button onClick={(e) => handleShare(e, post.id)} className="active:scale-110 transition-transform">
-              <Share2 className="w-6 h-6 text-gray-700" />
+            <button
+              onClick={(e) => handleShare(e, post.id)}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
+              aria-label="공유하기"
+            >
+              <Share2 className="h-[18px] w-[18px] text-gray-600" />
             </button>
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="transition-transform active:scale-125" onClick={handleSaveToggle}>
-              <Bookmark className={cn("w-6 h-6 transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-700')} />
+            <button
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 transition-all hover:bg-gray-100 active:scale-95"
+              onClick={handleSaveToggle}
+              aria-label="저장하기"
+            >
+              <Bookmark className={cn("h-[18px] w-[18px] transition-colors", isSaved ? 'fill-indigo-600 text-indigo-600' : 'text-gray-600')} />
             </button>
             {!isAd && renderCategoryBadge()}
             {isAd && (
@@ -922,7 +946,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
             {/* Content Section - AD */}
             <div className="px-4 pb-4 space-y-1">
-              <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
               <div className="flex gap-2 items-start">
                 <div className="flex items-center gap-1.5 shrink-0">
                   <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
@@ -1002,7 +1025,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
           {/* Content Section - 일반 */}
           <div className="px-4 pb-4 space-y-1">
-            <p className="text-[13px] font-black text-gray-900">좋아요 {likesCount.toLocaleString()}개</p>
             <div className="flex gap-2 items-start">
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
