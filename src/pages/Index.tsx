@@ -279,7 +279,7 @@ const Index = () => {
   }, [selectedCategories, followingIds]);
 
   // map_marker 광고 데이터 구독 (여러 개 지원, now: 시간 전환 시 리렌더 트리거)
-  const { ads: mapMarkerAds, now: mapMarkerNow } = useMapMarkerAds();
+  const { ads: mapMarkerAds, loading: mapMarkerAdsLoading, now: mapMarkerNow } = useMapMarkerAds();
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
@@ -748,6 +748,8 @@ const Index = () => {
   // 각 광고는 'ad-map-marker-{id}' 형태의 고유 ID로 관리.
   // mapMarkerNow가 바뀌면(시간 전환 타이머) 재실행되어 start/end_date 반영.
   useEffect(() => {
+    if (mapMarkerAdsLoading) return;
+
     const AD_POST_PREFIX = 'ad-map-marker-';
 
     const getLocation = (lat: number, lng: number): Promise<string> => {
@@ -856,18 +858,26 @@ const Index = () => {
 
         if (disappearingIds.length > 0) {
           setTimeout(() => {
-            setAllPosts(current => current.filter(p => !disappearingIds.includes(p.id)));
+            setAllPosts(current => {
+              const next = current.filter(p => !disappearingIds.includes(p.id));
+              mapCache.posts = next;
+              return next;
+            });
           }, 480);
           // 사라지는 마커는 아직 남겨두고, 새 마커만 추가
           const withoutNewAdSlots = prev.filter(p => !p.id.startsWith(AD_POST_PREFIX) || disappearingIds.includes(p.id));
-          return [...newAdPosts, ...withoutNewAdSlots];
+          const next = [...newAdPosts, ...withoutNewAdSlots];
+          mapCache.posts = next;
+          return next;
         }
 
         const withoutOldAds = prev.filter(p => !p.id.startsWith(AD_POST_PREFIX));
-        return [...newAdPosts, ...withoutOldAds];
+        const next = [...newAdPosts, ...withoutOldAds];
+        mapCache.posts = next;
+        return next;
       });
     });
-  }, [mapMarkerAds, mapMarkerNow]);
+  }, [mapMarkerAds, mapMarkerAdsLoading, mapMarkerNow]);
 
   // ── displayedMarkers: allPosts에서 카테고리 필터만 적용 ──────
   // bounds 필터 없음 - 카카오 CustomOverlay가 화면 밖 마커를 자동으로 숨김
