@@ -238,8 +238,43 @@ const VideoSearch = () => {
 
   // 오버레이로 열 postId (null이면 닫힘)
   const [overlayPostId, setOverlayPostId] = useState<string | null>(null);
+  const overlayPostIdRef = useRef<string | null>(null);
 
   const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    overlayPostIdRef.current = overlayPostId;
+  }, [overlayPostId]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (overlayPostIdRef.current && !window.history.state?.videoSearchPostOverlay) {
+        setOverlayPostId(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const openPostOverlay = useCallback((postId: string) => {
+    if (!window.history.state?.videoSearchPostOverlay) {
+      window.history.pushState(
+        { ...window.history.state, videoSearchPostOverlay: true },
+        '',
+        window.location.href
+      );
+    }
+    setOverlayPostId(postId);
+  }, []);
+
+  const closePostOverlay = useCallback(() => {
+    if (window.history.state?.videoSearchPostOverlay) {
+      window.history.back();
+      return;
+    }
+    setOverlayPostId(null);
+  }, []);
 
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
@@ -397,7 +432,7 @@ const VideoSearch = () => {
             {results.map((post) => (
               <div
                 key={post.id}
-                onClick={() => setOverlayPostId(post.id)}
+                onClick={() => openPostOverlay(post.id)}
                 className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 cursor-pointer active:scale-[0.97] transition-transform shadow-sm"
               >
                 <img
@@ -445,7 +480,7 @@ const VideoSearch = () => {
         <PostDetailOverlay
           postId={overlayPostId}
           searchResults={results}
-          onClose={() => setOverlayPostId(null)}
+          onClose={closePostOverlay}
         />
       )}
     </div>
