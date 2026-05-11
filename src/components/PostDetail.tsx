@@ -1045,19 +1045,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                 </div>
               </div>
             </div>
+            <PostCommentsDialog
+              isOpen={isCommentsDialogOpen}
+              onOpenChange={setIsCommentsDialogOpen}
+              postId={currentPost.id}
+              initialComments={localComments}
+              authUser={authUser}
+              profile={authProfile}
+              onCommentsChange={setLocalComments}
+            />
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
-
-      <PostCommentsDialog
-        isOpen={isCommentsDialogOpen}
-        onOpenChange={setIsCommentsDialogOpen}
-        postId={currentPost.id}
-        initialComments={localComments}
-        authUser={authUser}
-        profile={authProfile}
-        onCommentsChange={setLocalComments}
-      />
 
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}

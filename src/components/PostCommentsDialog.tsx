@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, MessageCircle, Send, Trash2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Comment } from '@/types';
@@ -41,6 +41,7 @@ const PostCommentsDialog = ({
   const [savingCommentId, setSavingCommentId] = useState<string | null>(null);
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(() => new Set());
+  const commentInputRef = useRef<HTMLInputElement>(null);
   const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
 
   useEffect(() => {
@@ -85,6 +86,11 @@ const PostCommentsDialog = ({
 
   const stopSheetEvent = (e: React.SyntheticEvent) => {
     e.stopPropagation();
+  };
+
+  const focusCommentInput = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    commentInputRef.current?.focus();
   };
 
   const handleAddComment = async (e: React.FormEvent) => {
@@ -273,11 +279,8 @@ const PostCommentsDialog = ({
       />
 
       <section
-        className="fixed left-1/2 z-[1] flex h-[min(66dvh,600px)] max-h-[calc(100dvh-156px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        className="fixed left-1/2 z-[1] flex h-[min(74dvh,680px)] max-h-[calc(100dvh-128px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
         style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
-        onPointerDown={stopSheetEvent}
-        onMouseDown={stopSheetEvent}
-        onTouchStart={stopSheetEvent}
         onClick={stopSheetEvent}
       >
         <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
@@ -319,14 +322,19 @@ const PostCommentsDialog = ({
         </div>
 
         <form onSubmit={handleAddComment} className="border-t border-slate-100 bg-white px-4 pb-4 pt-3">
-          <div className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner">
+          <div
+            className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner"
+            onPointerDown={focusCommentInput}
+            onClick={focusCommentInput}
+          >
             <Input
+              ref={commentInputRef}
               placeholder={authUser ? '댓글을 입력하세요...' : '로그인이 필요합니다'}
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
               maxLength={COMMENT_MAX_LENGTH}
               disabled={!authUser || isSubmitting}
-              className="h-10 flex-1 border-none bg-transparent text-sm focus-visible:ring-0"
+              className="h-10 flex-1 cursor-text border-none bg-transparent text-sm focus-visible:ring-0"
             />
             <button
               type="submit"
