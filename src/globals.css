@@ -8,7 +8,6 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
-    --keyboard-viewport-pan-y: 0px;
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
@@ -69,11 +68,6 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-body[data-comment-keyboard-focus="true"] #root {
-  transform: translate3d(0, var(--keyboard-viewport-pan-y), 0);
-  transition: none !important;
 }
 
 /* 지도 컨테이너 등 전체 화면 요소가 SafeArea를 무시하지 않도록 보정 */

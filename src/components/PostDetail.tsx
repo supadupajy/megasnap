@@ -779,7 +779,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       <form onSubmit={handleAddComment} className="flex items-center gap-2 mb-4 bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-100">
         <Input
           ref={commentInputRef}
-          data-comment-input="true"
           placeholder="댓글 달기..."
           className="flex-1 bg-transparent border-none focus-visible:ring-0 text-xs h-8"
           value={commentInput}
