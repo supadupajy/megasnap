@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search as SearchIcon, ChevronLeft, Video, Play, Heart, Hash } from 'lucide-react';
+import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
@@ -403,7 +403,7 @@ const VideoSearch = () => {
         {!hasSearched ? (
           <div className="px-4 py-20 flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4">
-              <Video className="w-8 h-8 text-orange-300" />
+              <ImageIcon className="w-8 h-8 text-orange-300" />
             </div>
             <p className="text-sm text-gray-400 font-semibold leading-relaxed">
               검색하면 결과가 여기에 나와요.
