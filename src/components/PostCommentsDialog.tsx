@@ -260,17 +260,18 @@ const PostCommentsDialog = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[30000]" role="dialog" aria-modal="true" aria-label="댓글">
+    <div className="fixed inset-0 z-[30000] pointer-events-none" role="dialog" aria-modal="true" aria-label="댓글">
       <button
         type="button"
-        className="absolute inset-0 cursor-default bg-slate-950/70 animate-in fade-in-0 duration-150"
+        className="absolute left-0 right-0 top-0 cursor-default bg-slate-950/60 comment-backdrop-enter pointer-events-auto"
+        style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
         onClick={() => onOpenChange(false)}
         aria-label="댓글 닫기 배경"
       />
 
       <section
-        className="fixed left-1/2 flex h-[min(68dvh,620px)] max-h-[calc(100dvh-180px)] w-full max-w-md -translate-x-1/2 flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.24)] animate-in slide-in-from-bottom-8 fade-in-0 duration-200 sm:rounded-[32px]"
-        style={{ bottom: 'calc(82px + env(safe-area-inset-bottom, 0px))' }}
+        className="fixed left-1/2 flex h-[min(66dvh,600px)] max-h-[calc(100dvh-156px)] w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] comment-sheet-enter pointer-events-auto sm:rounded-[32px]"
+        style={{ bottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />

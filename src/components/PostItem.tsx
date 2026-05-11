@@ -913,15 +913,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                   {renderContentBody()}
                 </div>
               </div>
-              {localComments.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleCommentClick}
-                  className="mt-3 text-xs font-bold text-slate-400 transition hover:text-indigo-500"
-                >
-                  댓글 {localComments.length.toLocaleString()}개 보기
-                </button>
-              )}
 
             </div>
           </div>
@@ -971,15 +962,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 {renderContentBody()}
               </div>
             </div>
-            {localComments.length > 0 && (
-              <button
-                type="button"
-                onClick={handleCommentClick}
-                className="mt-3 text-xs font-bold text-slate-400 transition hover:text-indigo-500"
-              >
-                댓글 {localComments.length.toLocaleString()}개 보기
-              </button>
-            )}
 
           </div>
         </div>
