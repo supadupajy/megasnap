@@ -426,6 +426,7 @@ const Profile = () => {
                     <PostItem
                       post={post}
                       disablePulse={true}
+                      autoPlayVideo={true}
                       onLikeToggle={() => handleLikeToggle(post.id)}
                       onSaveToggle={handleSaveToggle}
                       onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
@@ -453,6 +454,7 @@ const Profile = () => {
                       <PostItem
                         post={post}
                         disablePulse={true}
+                        autoPlayVideo={true}
                         onLikeToggle={() => handleLikeToggle(post.id)}
                         onSaveToggle={handleSaveToggle}
                         onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}

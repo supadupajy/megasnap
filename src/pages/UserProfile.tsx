@@ -415,6 +415,7 @@ const UserProfile = () => {
                       <PostItem
                         post={post}
                         disablePulse={true}
+                        autoPlayVideo={true}
                         onLikeToggle={() => handleLikeToggle(post.id)}
                         onLocationClick={(e, lat, lng) => navigate('/', { state: { center: { lat, lng }, zoom: 4 } })}
                       />
