@@ -1,7 +1,24 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Map, Flame, Play, UsersRound, User } from 'lucide-react';
+import { Map, Flame, UsersRound, User } from 'lucide-react';
+
+// 둥근 모서리 플레이 아이콘 (lucide의 기본 Play는 모서리가 각져있어 직접 정의)
+const RoundedPlayIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+    aria-hidden="true"
+  >
+    {/* 살짝 안쪽으로 들여 그려 둥근 코너가 자연스럽게 보이도록 함 */}
+    <path d="M8.5 5.6c-.5-.3-1.1.1-1.1.7v11.4c0 .6.6 1 1.1.7l9.4-5.7c.5-.3.5-1.1 0-1.4L8.5 5.6z" />
+  </svg>
+);
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -13,7 +30,7 @@ import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
   { icon: Flame, label: '인기', path: '/popular' },
-  { icon: Play, label: 'Flicks', path: '/flicks' },
+  { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
