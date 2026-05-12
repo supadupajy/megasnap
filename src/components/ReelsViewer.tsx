@@ -1200,11 +1200,42 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     return getFallbackImage(String(post.id));
   }, [mediaList, post.id, post.image_url, post.image]);
 
+  // 외부 오버레이(댓글/태그 검색) 표시 상태: 떠 있는 동안은 영상을 잠시 일시정지
+  const [isOverlayOpen, setIsOverlayOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !!(window as any).__commentsDialogOpen || !!(window as any).__postSearchOverlayOpen;
+  });
+
+  useEffect(() => {
+    let commentsOpen = !!(window as any).__commentsDialogOpen;
+    let searchOpen = !!(window as any).__postSearchOverlayOpen;
+    const apply = () => setIsOverlayOpen(commentsOpen || searchOpen);
+
+    const handleComments = (e: Event) => {
+      commentsOpen = !!(e as CustomEvent).detail?.open;
+      apply();
+    };
+    const handleSearch = (e: Event) => {
+      searchOpen = !!(e as CustomEvent).detail?.open;
+      apply();
+    };
+
+    window.addEventListener('comments-dialog-visibility', handleComments);
+    window.addEventListener('post-search-visibility', handleSearch);
+    apply();
+
+    return () => {
+      window.removeEventListener('comments-dialog-visibility', handleComments);
+      window.removeEventListener('post-search-visibility', handleSearch);
+    };
+  }, []);
+
   // active 슬라이드 + 현재 미디어가 영상일 때만 재생, 음소거 상태 적용
+  // (오버레이가 떠 있는 동안은 일시정지하고, 닫히면 다시 재생)
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (isActive && activeIsVideo) {
+    if (isActive && activeIsVideo && !isOverlayOpen) {
       v.muted = muted;
       const tryPlay = async () => {
         try {
@@ -1221,13 +1252,17 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         }
       };
       tryPlay();
+    } else if (isActive && activeIsVideo && isOverlayOpen) {
+      // 오버레이가 떠 있으면 재생 위치는 유지한 채 일시정지만
+      v.pause();
+      setIsPlaying(false);
     } else {
       v.pause();
       v.currentTime = 0;
       setIsPlaying(false);
       setCurrentTime(0);
     }
-  }, [isActive, muted, activeIsVideo, activeMediaUrl]);
+  }, [isActive, muted, activeIsVideo, activeMediaUrl, isOverlayOpen]);
 
   // 영상 시간/길이 + 첫 프레임 준비 상태 추적
   // 중요: videoRef.current는 MediaCarousel이 \"현재 활성 슬라이드 + 현재 활성 미디어\"일 때만

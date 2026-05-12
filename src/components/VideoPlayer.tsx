@@ -13,6 +13,8 @@ interface VideoPlayerProps {
 const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
+  // 외부 오버레이(댓글/태그 검색)가 떠 있는 동안 재생을 잠시 멈춰두기 위한 ref
+  const wasPlayingBeforeOverlayRef = useRef(false);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -33,6 +35,45 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
       el.removeEventListener('playing', handlePlaying);
     };
   }, [src]);
+
+  // 댓글 다이얼로그 / 포스트 검색 오버레이가 열려있는 동안 영상 일시정지, 닫히면 재개
+  useEffect(() => {
+    let commentsOpen = !!(window as any).__commentsDialogOpen;
+    let searchOpen = !!(window as any).__postSearchOverlayOpen;
+
+    const apply = () => {
+      const v = videoRef.current;
+      if (!v) return;
+      const overlayOpen = commentsOpen || searchOpen;
+      if (overlayOpen) {
+        if (!v.paused) {
+          wasPlayingBeforeOverlayRef.current = true;
+          v.pause();
+        }
+      } else if (wasPlayingBeforeOverlayRef.current) {
+        wasPlayingBeforeOverlayRef.current = false;
+        v.play().catch(() => {});
+      }
+    };
+
+    const handleComments = (e: Event) => {
+      commentsOpen = !!(e as CustomEvent).detail?.open;
+      apply();
+    };
+    const handleSearch = (e: Event) => {
+      searchOpen = !!(e as CustomEvent).detail?.open;
+      apply();
+    };
+
+    window.addEventListener('comments-dialog-visibility', handleComments);
+    window.addEventListener('post-search-visibility', handleSearch);
+    apply();
+
+    return () => {
+      window.removeEventListener('comments-dialog-visibility', handleComments);
+      window.removeEventListener('post-search-visibility', handleSearch);
+    };
+  }, []);
 
   return (
     <video

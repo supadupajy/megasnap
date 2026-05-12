@@ -60,6 +60,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
+  // 외부 오버레이(댓글/태그 검색)가 떠 있는 동안 비디오를 잠시 멈추기 위한 상태
+  const [isOverlayOpen, setIsOverlayOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !!(window as any).__commentsDialogOpen || !!(window as any).__postSearchOverlayOpen;
+  });
+  // 오버레이가 열릴 때 비디오가 재생 중이었는지 기억해두고, 닫힐 때 다시 재생
+  const wasPlayingBeforeOverlayRef = useRef(false);
 
   const [contentExpanded, setContentExpanded] = useState(false);
   const [isContentClamped, setIsContentClamped] = useState(false);
@@ -136,7 +143,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         setIsVisible(entry.isIntersecting);
         
         if (videoRef.current) {
-          if (entry.isIntersecting && isReadyToPlay) {
+          // 외부 오버레이가 떠 있으면 자동 재생을 보류
+          if (entry.isIntersecting && isReadyToPlay && !isOverlayOpen) {
             videoRef.current.play().catch(e => console.error("[PostItem] Video play error:", e));
           } else {
             videoRef.current.pause();
@@ -159,13 +167,64 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         observer.unobserve(containerRef.current);
       }
     };
-  }, [autoPlayVideo, isReadyToPlay]);
+  }, [autoPlayVideo, isReadyToPlay, isOverlayOpen]);
 
   useEffect(() => {
-    if (isVisible && isReadyToPlay && videoRef.current) {
+    if (isVisible && isReadyToPlay && !isOverlayOpen && videoRef.current) {
       videoRef.current.play().catch(() => {});
     }
-  }, [isVisible, isReadyToPlay]);
+  }, [isVisible, isReadyToPlay, isOverlayOpen]);
+
+  // 댓글 다이얼로그 / 포스트 검색 오버레이가 열려있는지 전역 이벤트로 추적
+  useEffect(() => {
+    if (!autoPlayVideo) return;
+
+    let commentsOpen = !!(window as any).__commentsDialogOpen;
+    let searchOpen = !!(window as any).__postSearchOverlayOpen;
+
+    const applyOverlayState = () => {
+      const nextOpen = commentsOpen || searchOpen;
+      setIsOverlayOpen((prev) => {
+        if (prev === nextOpen) return prev;
+
+        const video = videoRef.current;
+        if (video) {
+          if (nextOpen) {
+            // 오버레이가 열리는 순간: 현재 재생 중이었는지 기록 후 일시정지
+            wasPlayingBeforeOverlayRef.current = !video.paused;
+            video.pause();
+          } else if (wasPlayingBeforeOverlayRef.current && isVisible && isReadyToPlay) {
+            // 오버레이가 닫히고 다시 보이는 상태라면 재생 재개
+            video.play().catch(() => {});
+            wasPlayingBeforeOverlayRef.current = false;
+          } else {
+            wasPlayingBeforeOverlayRef.current = false;
+          }
+        }
+        return nextOpen;
+      });
+    };
+
+    const handleComments = (e: Event) => {
+      commentsOpen = !!(e as CustomEvent).detail?.open;
+      applyOverlayState();
+    };
+    const handleSearch = (e: Event) => {
+      searchOpen = !!(e as CustomEvent).detail?.open;
+      applyOverlayState();
+    };
+
+    window.addEventListener('comments-dialog-visibility', handleComments);
+    window.addEventListener('post-search-visibility', handleSearch);
+
+    // 초기 상태 동기화 (마운트 시 이미 오버레이가 떠 있는 경우)
+    applyOverlayState();
+
+    return () => {
+      window.removeEventListener('comments-dialog-visibility', handleComments);
+      window.removeEventListener('post-search-visibility', handleSearch);
+    };
+  }, [autoPlayVideo, isVisible, isReadyToPlay]);
 
   useEffect(() => {
     setLocalContent(post.content || '');

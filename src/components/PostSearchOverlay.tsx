@@ -375,6 +375,24 @@ const PostSearchOverlay = () => {
     };
   }, [isOpen, shouldRender]);
 
+  // 시트가 실제로 렌더링되는 동안 전역 가시성 이벤트 발송
+  // (PostItem 등의 비디오가 일시정지/재개 판단에 사용)
+  useEffect(() => {
+    if (!shouldRender) return;
+
+    (window as any).__postSearchOverlayOpen = true;
+    window.dispatchEvent(
+      new CustomEvent('post-search-visibility', { detail: { open: true } }),
+    );
+
+    return () => {
+      (window as any).__postSearchOverlayOpen = false;
+      window.dispatchEvent(
+        new CustomEvent('post-search-visibility', { detail: { open: false } }),
+      );
+    };
+  }, [shouldRender]);
+
   // 오픈 직후 initialQuery 자동 검색
   useEffect(() => {
     if (isOpen && autoSearchOnOpenRef.current) {
