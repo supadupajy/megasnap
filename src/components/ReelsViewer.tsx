@@ -386,9 +386,19 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         className="fixed inset-0 z-[9999] bg-black"
       >
         {/* 좌측: 순위 뱃지 (ranked 모드) + 음소거 토글 (비디오일 때만) / 우측: 닫기 버튼 */}
+        {/* 헤더 paddingTop을 미디어(3:4) 컨테이너 윗변 위치까지 내려서 이미지 위에 떠 있도록 한다.
+            - 가용 높이 = 100dvh - safe-area-bottom - 56px (하단 정보 영역)
+            - 미디어 세로 = min(100vw * 4/3, 가용 높이)
+            - 미디어 윗변 = safe-area-top + (가용 높이 - 미디어 세로) / 2
+            - 100vw * 4/3가 가용 높이보다 크면 미디어가 화면 전체를 채워 윗변이 0이 됨 → max로 안전 처리
+        */}
         <div
           className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none"
-          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+          style={{
+            paddingTop:
+              "max(calc(env(safe-area-inset-top, 0px) + 12px), " +
+              "calc((100dvh - env(safe-area-inset-bottom, 0px) - 56px - min(100vw * 4 / 3, 100dvh - env(safe-area-inset-bottom, 0px) - 56px)) / 2 + 12px))",
+          }}
         >
           <div className="flex items-center gap-2">
             {isRankedMode && (() => {
