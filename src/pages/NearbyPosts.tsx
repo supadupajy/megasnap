@@ -170,9 +170,20 @@ const NearbyPosts = () => {
   const displayPosts = useMemo(() => {
     if (dividerViewedIds.size === 0) return filteredPosts;
 
-    const unseenPosts = filteredPosts.filter(post => post.isAd || !dividerViewedIds.has(post.id));
-    const seenPosts = filteredPosts.filter(post => !post.isAd && dividerViewedIds.has(post.id));
-    return [...unseenPosts, ...seenPosts];
+    // 광고는 원래 자리(인덱스)를 유지하고, 일반 포스팅만 unseen → seen 순으로 재정렬한다.
+    // 그렇지 않으면 광고가 항상 unseen 그룹에 묶여 상단으로 올라가는 문제가 생긴다.
+    const nonAdQueue = filteredPosts.filter(p => !p.isAd);
+    const unseenNonAds = nonAdQueue.filter(p => !dividerViewedIds.has(p.id));
+    const seenNonAds = nonAdQueue.filter(p => dividerViewedIds.has(p.id));
+    const reorderedNonAds = [...unseenNonAds, ...seenNonAds];
+
+    let cursor = 0;
+    return filteredPosts.map(post => {
+      if (post.isAd) return post; // 광고는 기존 위치 그대로 유지
+      const next = reorderedNonAds[cursor];
+      cursor++;
+      return next;
+    });
   }, [filteredPosts, dividerViewedIds]);
 
   const loadMorePosts = useCallback(async () => {
