@@ -965,9 +965,9 @@ const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, on
                 e.stopPropagation();
                 onToggle();
               }}
-              className="ml-2 inline-flex items-center align-baseline text-xs font-black text-white hover:text-white/90 underline underline-offset-2"
+              className="ml-2 inline-flex items-center align-baseline text-xs font-black text-white hover:text-white/90"
             >
-              닫기
+              {'<닫기>'}
             </button>
           )}
         </div>
