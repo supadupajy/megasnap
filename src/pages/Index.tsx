@@ -1676,6 +1676,7 @@ const Index = () => {
               userLocation={userLocation}
               draggable={!isTrendingExpanded}
               hideUserLocation={!!selectedPostId || isPostListOpen}
+              toastTopOffset={indicatorTopOffset}
             />
           </div>
 

@@ -11,24 +11,30 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" href="https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/subsets/LINESeedKR-dynamic-subset.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
-    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/subsets/LINESeedKR-dynamic-subset.css" /></noscript>
+    <!--
+      [FIX] dynamic-subset 방식은 weight별 subset이 비동기로 따로 로드되어
+      모바일에서 일부 글자만 볼드/일반으로 보이는 "볼드 혼재" 문제를 일으킴.
+      → 모든 weight를 한 번에 로드하는 정적 CSS로 변경하고 font-display: swap 적용.
+    -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/LINESeedKR.css" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/LINESeedKR.css" /></noscript>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800;900&display=swap" rel="stylesheet" />
     <style>
-      @font-face {
-        font-family: 'LINE Seed KR';
-        font-display: block;
-      }
-
       html, body, #root {
         width: 100%;
         margin: 0;
         padding: 0;
         background-color: white;
-        font-family: 'LINE Seed KR', sans-serif;
+        font-family: 'LINE Seed KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+        /* [FIX] 모바일 WebKit/Blink가 폰트 두께를 임의로 굵게 합성(synthetic bold)하는 것 방지 */
+        font-synthesis: none;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeLegibility;
       }
 
-      body {
+      /* [FIX] 폰트 로드 중 깜빡임/혼재 방지: 폰트가 로드될 때까지 텍스트 숨김 */
+      html:not(.fonts-loaded) body {
         visibility: hidden;
       }
 
@@ -40,23 +46,32 @@
     </style>
     <script>
       (function() {
-        if (document.fonts && document.fonts.ready) {
-          document.fonts.ready.then(function() {
-            document.documentElement.classList.add('fonts-loaded');
-          });
-          // 최대 1초 후에는 강제로 표시 (폰트 로드 실패 대비)
-          setTimeout(function() {
-            document.documentElement.classList.add('fonts-loaded');
-          }, 1000);
-        } else {
+        var done = false;
+        function markLoaded() {
+          if (done) return;
+          done = true;
           document.documentElement.classList.add('fonts-loaded');
+        }
+
+        if (document.fonts && document.fonts.load) {
+          // [FIX] 사용하는 모든 weight를 명시적으로 load해서 일부 weight subset이
+          // 늦게 로드되어 글자별로 볼드가 섞이는 현상 방지
+          Promise.all([
+            document.fonts.load('400 16px "LINE Seed KR"'),
+            document.fonts.load('700 16px "LINE Seed KR"')
+          ]).then(markLoaded).catch(markLoaded);
+
+          // 최대 2초 후에는 강제로 표시 (네트워크 느린 환경 대비)
+          setTimeout(markLoaded, 2000);
+        } else {
+          markLoaded();
         }
       })();
     </script>
     <!-- Kakao Maps API: iOS Capacitor WebView에서는 protocol-relative URL(//)이 깨질 수 있어 HTTPS를 명시합니다. -->
     <script id="kakao-maps-sdk" type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=79d8615ee18c3979de0b737fd62b2f90&libraries=services,clusterer"></script>
-    <script type="module" crossorigin src="./assets/index-F31QCLZ9.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BqVjRYHa.css">
+    <script type="module" crossorigin src="./assets/index-qhOr8vRp.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DSTFl5oZ.css">
   </head>
   <body>
     <div id="root"></div>

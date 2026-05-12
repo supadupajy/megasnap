@@ -19,6 +19,12 @@ interface MapContainerProps {
   userLocation?: { lat: number; lng: number } | null;
   draggable?: boolean;
   hideUserLocation?: boolean;
+  /**
+   * 롱프레스 토스트("지도 보기" / "손을 떼면 마커가 다시 나타납니다")가 표시될 상단 오프셋(px).
+   * 보통 상단 트렌딩/마커 인디케이터의 아랫변 좌표를 전달한다.
+   * 미지정 시 안전영역 + 헤더 높이만큼 기본값으로 표시.
+   */
+  toastTopOffset?: number;
 }
 
 const FALLBACK_IMAGE = "/placeholder.svg";
@@ -92,6 +98,7 @@ const MapContainer = ({
   userLocation,
   draggable = true,
   hideUserLocation = false,
+  toastTopOffset,
 }: MapContainerProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
@@ -1801,13 +1808,15 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 롱프레스 진행 표시 */}
+      {/* 롱프레스 진행 표시 — 상단 마커개수 인디케이터(트렌딩 패널) 바로 아래에 위치 */}
       {uiState === 'pressing' && (
         <div
           className="longpress-toast"
           style={{
             position: 'fixed',
-            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)',
+            top: toastTopOffset !== undefined
+              ? `${toastTopOffset + 12}px`
+              : 'calc(env(safe-area-inset-top, 0px) + 140px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
@@ -1844,12 +1853,14 @@ const MapContainer = ({
 
       {/* 히트맵 범례는 Index.tsx의 TrendingPosts 패널 아래로 이동됨 */}
 
-      {/* 마커 숨김 상태 안내 */}
+      {/* 마커 숨김 상태 안내 — 상단 마커개수 인디케이터(트렌딩 패널) 바로 아래에 위치 */}
       {uiState === 'hidden' && (
         <div
           style={{
             position: 'fixed',
-            bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 16px)',
+            top: toastTopOffset !== undefined
+              ? `${toastTopOffset + 12}px`
+              : 'calc(env(safe-area-inset-top, 0px) + 140px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
