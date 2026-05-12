@@ -12,7 +12,7 @@ import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
 import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
 import MapLevelIndicator from '@/components/MapLevelIndicator';
-import { Navigation, Search, Check, X, MapPin, Camera } from 'lucide-react';
+import { Navigation, Search, Check, X, MapPin, Plus } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getFallbackImage } from '@/lib/utils';
 
@@ -1812,7 +1812,7 @@ const Index = () => {
                   aria-label="사진/영상 업로드"
                   className="w-16 h-16 bg-white/30 backdrop-blur-xl text-gray-700 rounded-[24px] flex flex-col items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50 gap-0.5"
                 >
-                  <Camera className="w-6 h-6" strokeWidth={2.2} />
+                  <Plus className="w-6 h-6" strokeWidth={2.6} />
                   <span className="text-[10px] font-black tracking-tight leading-none">업로드</span>
                 </button>
                 <div className="relative">
