@@ -35,6 +35,10 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   onImageError,
 }) => {
   const [isPaused, setIsPaused] = useState(false);
+  // 비디오가 한 번이라도 실제로 재생(playing) 됐는지 추적.
+  // 로딩 직후 잠깐 paused 상태로 큰 재생 버튼이 깜빡이는 것을 막기 위해,
+  // 첫 'playing' 이벤트가 발생한 이후에만 일시정지 오버레이를 노출한다.
+  const [hasPlayed, setHasPlayed] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -67,12 +71,17 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       setDuration(Number.isFinite(v.duration) ? v.duration : 0);
     };
     const onPlay = () => setIsPaused(false);
+    const onPlaying = () => {
+      setIsPaused(false);
+      setHasPlayed(true);
+    };
     const onPause = () => setIsPaused(true);
 
     v.addEventListener('timeupdate', onTimeUpdate);
     v.addEventListener('loadedmetadata', onLoadedMeta);
     v.addEventListener('durationchange', onDurationChange);
     v.addEventListener('play', onPlay);
+    v.addEventListener('playing', onPlaying);
     v.addEventListener('pause', onPause);
 
     if (Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
@@ -83,9 +92,15 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       v.removeEventListener('loadedmetadata', onLoadedMeta);
       v.removeEventListener('durationchange', onDurationChange);
       v.removeEventListener('play', onPlay);
+      v.removeEventListener('playing', onPlaying);
       v.removeEventListener('pause', onPause);
     };
   }, [videoRef, src]);
+
+  // src가 바뀌면 첫 재생 상태도 초기화
+  useEffect(() => {
+    setHasPlayed(false);
+  }, [src]);
 
   const handleVideoTap = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -198,8 +213,10 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         )}
       </button>
 
-      {/* 일시정지 시 중앙 플레이 아이콘 오버레이 */}
-      {isPaused && !showPoster && (
+      {/* 일시정지 시 중앙 플레이 아이콘 오버레이
+          - 첫 재생(playing 이벤트)이 발생한 이후에만 노출해서
+            로딩 직후 잠깐 paused 상태일 때 큰 재생 버튼이 깜빡이는 것을 방지 */}
+      {isPaused && !showPoster && hasPlayed && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
           aria-hidden="true"
