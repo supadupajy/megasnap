@@ -189,7 +189,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         // 회색 배경 위에 OS 네이티브 재생 아이콘을 그리는데, poster가 지정되어 있으면
         // 그 자리에 poster 이미지를 대신 그려서 네이티브 컨트롤이 보이지 않게 한다.
         poster={posterImage}
-        className="relative z-[1] w-full h-full object-cover bg-gray-200 post-item-video"
+        className="absolute inset-0 z-[1] w-full h-full object-cover bg-gray-200 post-item-video"
         loop
         playsInline
         disablePictureInPicture
@@ -199,26 +199,25 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         disableRemotePlayback={true}
         onClick={handleVideoTap}
         onLoadedData={onLoadedData}
-        // 첫 프레임이 그려지기 전에는 video를 시각적으로 숨겨서
-        // 안드로이드 WebView가 그리는 회색 placeholder/재생 아이콘이 잠깐
-        // 깜빡이는 플리커링을 방지한다.
-        style={{
-          opacity: firstFrameReady ? 1 : 0,
-          transition: 'opacity 150ms ease-out',
-        }}
       />
 
-      {/* 비디오 첫 프레임이 그려지기 전까지는 항상 poster(썸네일)를 보여준다.
-          showPoster prop이 false여도 firstFrameReady가 아니면 계속 표시해서
-          video element의 빈 회색 영역이 노출되지 않도록 한다. */}
-      {(showPoster || !firstFrameReady) && (
-        <img
-          src={posterImage}
-          alt=""
-          className="absolute inset-0 z-10 w-full h-full object-cover bg-gray-200 pointer-events-none"
-          onError={onImageError}
-        />
-      )}
+      {/* poster(썸네일) 이미지를 video 위에 항상 덮어둔다.
+          - 첫 프레임이 그려지기 전까지는 완전 불투명(opacity:1)으로 video를 가린다.
+          - 첫 프레임이 그려지면(firstFrameReady) opacity:0으로 부드럽게 사라진다.
+          - 이렇게 하면 fade 도중에도 poster가 video를 덮은 상태이므로
+            안드로이드 WebView의 회색 placeholder/네이티브 컨트롤이 노출되지 않는다.
+          - showPoster prop이 명시적으로 true일 때(외부에서 강제로 poster 유지)도 표시. */}
+      <img
+        src={posterImage}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 z-10 w-full h-full object-cover bg-gray-200 pointer-events-none"
+        onError={onImageError}
+        style={{
+          opacity: showPoster || !firstFrameReady ? 1 : 0,
+          transition: 'opacity 200ms ease-out',
+        }}
+      />
 
       {/* 좌측 상단 음소거 토글 버튼 */}
       <button
