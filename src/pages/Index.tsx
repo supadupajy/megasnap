@@ -1905,7 +1905,7 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      {!isPostListOpen && !isSearchOpen && (
+      {!isPostListOpen && !isSearchOpen && !trendingReelsInitialPost && (
         <div
           ref={trendingDivRef}
           className={cn(
