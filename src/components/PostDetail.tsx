@@ -733,8 +733,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                   <div className="w-full h-full">
                     <div className="w-full h-full flex flex-col bg-white overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] relative" onClick={onClose}>
                       <div className="flex-1 min-h-0 flex flex-col relative bg-white">
-                        {/* 닉네임 헤더 + 콘텐츠 - 스크롤 */}
-                        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        {/*
+                          닉네임 헤더 + 콘텐츠 영역.
+                          기본 상태에서는 본문이 line-clamp-2로 잘려 있어 화면에 딱 맞으므로 스크롤을 잠근다(overflow-hidden).
+                          본문이 잘려 "더 보기"가 보이는 상태에서 사용자가 확장한 경우(contentExpanded=true)에만
+                          내용이 화면을 넘칠 수 있어 스크롤을 허용한다(overflow-y-auto).
+                        */}
+                        <div
+                          ref={scrollContainerRef}
+                          className={cn(
+                            "flex-1 min-h-0 no-scrollbar overscroll-contain",
+                            contentExpanded ? "overflow-y-auto" : "overflow-hidden"
+                          )}
+                          style={{ WebkitOverflowScrolling: 'touch' }}
+                        >
                           {/* PostItem(여기보기 페이지)과 동일한 레이아웃: 구분선 없이 헤더 → 미디어가 자연스럽게 이어짐 */}
                           <div className="flex items-center justify-between p-4 pb-3 bg-white" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
