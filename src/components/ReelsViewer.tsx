@@ -835,19 +835,34 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const wasPlayingBeforeScrubRef = useRef(false);
 
   // ── 다중 미디어 (이미지/영상 여러개) ────────────────────
-  // post.images 우선, 없으면 image_url/image 단일로 fallback
-  // post.videoUrl이 있으면 미디어 배열 첫번째에 영상을 추가 (이미지가 thumbnail이고 별도 영상이 있는 경우)
+  // post.videoUrl이 있으면 영상이 우선 미디어가 되고, post.image_url/post.image는
+  // "영상 썸네일"이므로 슬라이드에 중복 추가하지 않는다.
+  // 단, post.images에 영상 외 추가 이미지가 들어 있다면 그것은 보여준다(영상+추가사진 케이스).
   const mediaList = useMemo<string[]>(() => {
     const candidates: string[] = [];
-    if (post.videoUrl) candidates.push(post.videoUrl);
-    if (Array.isArray(post.images) && post.images.length > 0) {
+    const thumbnailUrl = post.image_url || post.image;
+
+    if (post.videoUrl) {
+      candidates.push(post.videoUrl);
+      // 영상이 있을 땐 대표 썸네일은 슬라이드에서 제외하고,
+      // images 배열에서 썸네일/영상과 다른 추가 이미지만 합친다.
+      if (Array.isArray(post.images) && post.images.length > 0) {
+        post.images.forEach((u) => {
+          if (!u) return;
+          if (u === post.videoUrl) return;
+          if (u === thumbnailUrl) return;
+          if (candidates.includes(u)) return;
+          candidates.push(u);
+        });
+      }
+    } else if (Array.isArray(post.images) && post.images.length > 0) {
       post.images.forEach((u) => {
         if (u && !candidates.includes(u)) candidates.push(u);
       });
-    } else {
-      const single = post.image_url || post.image;
-      if (single) candidates.push(single);
+    } else if (thumbnailUrl) {
+      candidates.push(thumbnailUrl);
     }
+
     return candidates.filter(Boolean) as string[];
   }, [post.videoUrl, post.images, post.image_url, post.image]);
 
