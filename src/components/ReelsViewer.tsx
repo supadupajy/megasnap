@@ -1343,6 +1343,72 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   );
 };
 
+// ─── Reels 영상 요소 ──────────────────────────────────────
+// 안드로이드 Chrome/WebView에서 <video>가 첫 프레임을 그리기 전
+// 잠깐 회색 placeholder가 깜빡이는 문제를 방지하기 위해
+// `playing` 이벤트가 발생할 때까지 video를 opacity 0으로 숨겨둔다.
+interface ReelsVideoProps {
+  src: string;
+  videoRef?: React.RefObject<HTMLVideoElement>;
+  muted: boolean;
+  preload: "none" | "metadata" | "auto";
+  poster?: string;
+  isCurrent: boolean;
+}
+
+const ReelsVideo: React.FC<ReelsVideoProps> = ({
+  src,
+  videoRef,
+  muted,
+  preload,
+  poster,
+  isCurrent,
+}) => {
+  const localRef = useRef<HTMLVideoElement>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  const setRefs = useCallback(
+    (el: HTMLVideoElement | null) => {
+      localRef.current = el;
+      if (videoRef) {
+        (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+      }
+    },
+    [videoRef]
+  );
+
+  useEffect(() => {
+    setIsReady(false);
+  }, [src]);
+
+  useEffect(() => {
+    const el = localRef.current;
+    if (!el) return;
+    const handlePlaying = () => setIsReady(true);
+    el.addEventListener("playing", handlePlaying);
+    return () => {
+      el.removeEventListener("playing", handlePlaying);
+    };
+  }, [src]);
+
+  return (
+    <video
+      ref={setRefs}
+      src={src}
+      className="absolute inset-0 w-full h-full object-cover"
+      playsInline
+      loop
+      muted={muted}
+      preload={preload}
+      poster={poster}
+      style={{
+        opacity: isCurrent && !isReady ? 0 : 1,
+        transition: "opacity 150ms ease-out",
+      }}
+    />
+  );
+};
+
 // ─── 다중 미디어 가로 슬라이더 (이미지/영상 혼합 지원) ───
 interface MediaCarouselProps {
   mediaList: string[];
@@ -1592,15 +1658,13 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
               style={{ width: `${100 / mediaList.length}%` }}
             >
               {isVid ? (
-                <video
-                  ref={isCurrent ? videoRef : undefined}
+                <ReelsVideo
+                  videoRef={isCurrent ? videoRef : undefined}
                   src={url}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  playsInline
-                  loop
                   muted={isCurrent ? muted : true}
                   preload={isCurrent ? "metadata" : "none"}
                   poster={poster}
+                  isCurrent={isCurrent}
                 />
               ) : (
                 <img
@@ -1712,9 +1776,7 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
   return (
     <div
       className={cn(
-        "absolute bottom-0 z-30 select-none",
-        // compact 모드: 우측 절반에만 타임라인 표시
-        compact ? "left-1/2 right-0" : "left-0 right-0"
+        "absolute bottom-0 left-0 right-0 z-30 select-none"
       )}
       // 부모(미디어 영역)의 탭/스와이프 핸들러가 타임라인 조작을 가로채지 않도록 차단
       onClick={(e) => e.stopPropagation()}
