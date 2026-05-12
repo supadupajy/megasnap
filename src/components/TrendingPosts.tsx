@@ -168,13 +168,13 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
     <div
       className={cn(
         "bg-black/55 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30",
-        size === 'sm' ? "w-3.5 h-3.5" : "w-7 h-7"
+        size === 'sm' ? "w-2.5 h-2.5" : "w-3.5 h-3.5"
       )}
     >
       <svg
         className={cn(
-          "text-white fill-white",
-          size === 'sm' ? "w-2 h-2 ml-[1px]" : "w-3.5 h-3.5 ml-0.5"
+          "text-white fill-white ml-[1px]",
+          size === 'sm' ? "w-1.5 h-1.5" : "w-2 h-2"
         )}
         viewBox="0 0 24 24"
       >
