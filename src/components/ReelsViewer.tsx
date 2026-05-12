@@ -925,62 +925,72 @@ interface ReelContentTextProps {
 
 const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, onToggle }) => {
   const measureRef = useRef<HTMLSpanElement>(null);
-  const [isClamped, setIsClamped] = useState(false);
+  const [isOverflowing, setIsOverflowing] = useState(false);
 
+  // 본문이 한 줄에 들어가는지 측정.
+  // 항상 동일한 레이아웃(truncate, 우측 패딩 없음)에서 한 번 측정하여
+  // 측정값 변화로 인한 레이아웃 토글/플리커링을 방지.
   useEffect(() => {
-    if (expanded) return;
     const el = measureRef.current;
     if (!el) return;
     const check = () => {
-      // 1줄을 초과하면 잘림으로 판단
-      setIsClamped(el.scrollHeight > el.clientHeight + 1);
+      const overflow = el.scrollWidth > el.clientWidth + 1;
+      setIsOverflowing((prev) => (prev === overflow ? prev : overflow));
     };
     check();
     const ro = new ResizeObserver(check);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [content, expanded]);
+  }, [content]);
 
   return (
     <div className="text-sm leading-snug font-medium drop-shadow-md pr-2">
       {expanded ? (
-        <p
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          className="cursor-pointer"
-        >
+        <p>
           <HashtagText
             text={content}
             tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
           />
+          {isOverflowing && (
+            <>
+              {' '}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggle();
+                }}
+                className="text-xs font-bold text-white/80 hover:text-white transition-colors align-baseline"
+              >
+                닫기
+              </button>
+            </>
+          )}
         </p>
       ) : (
         <div className="relative">
+          {/* 측정용/표시용 — 항상 truncate로 한 줄 처리.
+              우측 패딩은 두지 않고, "더 보기" 버튼은 우측에 절대 위치로 오버레이. */}
           <span
             ref={measureRef}
-            className={cn(
-              'block leading-snug',
-              isClamped ? 'truncate pr-[68px]' : 'line-clamp-1'
-            )}
+            className="block truncate leading-snug"
           >
             <HashtagText
               text={content}
               tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
             />
           </span>
-          {isClamped && (
+          {isOverflowing && (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggle();
               }}
-              className="absolute bottom-0 right-0 pl-2 text-xs font-bold text-white/80 hover:text-white transition-colors"
+              className="absolute bottom-0 right-0 pl-3 text-xs font-bold text-white/80 hover:text-white transition-colors"
               style={{
                 background:
-                  'linear-gradient(to right, transparent, rgba(0,0,0,0.55) 30%, rgba(0,0,0,0.65) 100%)',
+                  'linear-gradient(to right, transparent, rgba(0,0,0,0.65) 25%, rgba(0,0,0,0.75) 100%)',
               }}
             >
               ... 더 보기
