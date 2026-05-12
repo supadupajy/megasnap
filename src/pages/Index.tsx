@@ -404,20 +404,41 @@ const Index = () => {
   // 지도 레벨 인디케이터 위치:
   // "여기보기" 버튼의 윗변(top edge)과 오른쪽 마커 인디케이터의 아랫변(bottom edge) 사이의
   // 빈 공간 중앙에 지도 레벨 인디케이터를 배치한다.
-  // - 부모 motion.div는 paddingBottom: env(safe-area-inset-bottom)으로 mapArea 하단이 위로 밀려있음
-  // - "여기보기" 버튼은 mapArea 기준 absolute, bottom = bottomNavHeight(64) + max(safeAreaBottom, 8) + 8
-  //   → viewport 절대 좌표상 버튼 상단 Y = (viewportHeight - safeAreaBottom) - btnBottom - 64
-  // - 오른쪽 마커 인디케이터(position:fixed, 크기 52x52)의 아랫변 Y = rightMarkerIndicatorTop + 52
+  //
+  // 좌표계 혼선을 피하기 위해 "여기보기" 버튼의 실제 DOM 위치(getBoundingClientRect)를 측정해서
+  // viewport 절대 좌표상의 버튼 윗변 Y를 직접 얻는다. (안드로이드/iOS/웹 환경 차이 무관)
   const MAP_LEVEL_INDICATOR_HEIGHT = 156;
   const RIGHT_MARKER_INDICATOR_SIZE = 52;
-  const viewAllBtnBottomFromMapArea = bottomNavHeight + Math.max(safeAreaBottom, 8) + 8;
-  const viewAllBtnTopY =
-    viewportHeight - safeAreaBottom - viewAllBtnBottomFromMapArea - 64; // 버튼 높이 64
+  const [viewAllBtnTopY, setViewAllBtnTopY] = useState<number | null>(null);
+  useEffect(() => {
+    const measure = () => {
+      const el = viewAllBtnRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.top > 0) {
+        setViewAllBtnTopY(prev => (prev !== null && Math.abs(prev - rect.top) < 0.5 ? prev : rect.top));
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (viewAllBtnRef.current) ro.observe(viewAllBtnRef.current);
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+    };
+  }, [viewportHeight, safeAreaBottom, isSelectingLocation, isSelectingAdLocation]);
+
   const rightMarkerIndicatorBottomY = rightMarkerIndicatorTop + RIGHT_MARKER_INDICATOR_SIZE;
-  const gapCenterY = (viewAllBtnTopY + rightMarkerIndicatorBottomY) / 2;
+  // 버튼 측정값이 있으면 그것을 사용, 없으면 계산값으로 fallback (초기 렌더 시 한 프레임)
+  const fallbackBtnTopY =
+    viewportHeight - safeAreaBottom - (bottomNavHeight + Math.max(safeAreaBottom, 8) + 8) - 64;
+  const effectiveBtnTopY = viewAllBtnTopY ?? fallbackBtnTopY;
+  const gapCenterY = (effectiveBtnTopY + rightMarkerIndicatorBottomY) / 2;
   const minTop = indicatorTopOffset + 8;
-  const maxTop =
-    viewportHeight - safeAreaBottom - viewAllBtnBottomFromMapArea - 64 - 8 - MAP_LEVEL_INDICATOR_HEIGHT;
+  const maxTop = effectiveBtnTopY - 8 - MAP_LEVEL_INDICATOR_HEIGHT;
   const mapLevelIndicatorTop = Math.round(
     Math.min(Math.max(gapCenterY - MAP_LEVEL_INDICATOR_HEIGHT / 2, minTop), Math.max(maxTop, minTop)),
   );
