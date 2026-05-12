@@ -494,7 +494,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (clamped === currentActive) {
         setIsTransitioning(true);
         setDragOffset(0);
-        window.setTimeout(() => setIsTransitioning(false), 320);
+        window.setTimeout(() => setIsTransitioning(false), 220);
         return;
       }
 
@@ -504,10 +504,11 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       activeIndexRef.current = clamped; // 즉시 ref 업데이트 (state는 비동기)
       onActiveIndexChange(clamped);
 
+      // 전환 애니메이션 중에만 락 (연속 스와이프 빠른 반응을 위해 짧게)
       window.setTimeout(() => {
         setIsTransitioning(false);
         lockTransitionRef.current = false;
-      }, 360);
+      }, 220);
     },
     [onActiveIndexChange]
   );
@@ -593,37 +594,61 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       goTo(nextIndex);
     };
 
-    // 휠/트랙패드 (PC): 한 번에 1개만
-    // 트랙패드는 관성 스크롤로 wheel 이벤트를 수십 개 연속 발생시킴
-    // → 첫 이벤트로 한 칸 이동 후, "휠 이벤트가 멈춘 시점(idle)"까지 모든 wheel 무시
-    let wheelLocked = false;
-    let wheelIdleTimer: number | null = null;
+    // 휠/트랙패드 (PC): 한 번에 1개만 + 빠른 연속 스와이프도 즉시 반응
+    // 전략:
+    //  - 첫 이벤트로 1칸 이동 + 짧은 쿨다운(120ms)
+    //  - 쿨다운 중에도 (a) 방향이 반대거나 (b) 충분히 큰 새 입력(>50)이면 새 제스처로 인정
+    //  - 작은 deltaY가 연속 감소 패턴이면 관성 꼬리로 보고 무시
+    let lastWheelAt = 0;
+    let lastDirection = 0; // 1: down, -1: up, 0: none
+    let lastAbsDelta = 0;
+    let inertiaCooldownUntil = 0;
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
 
-      // 락 상태면 이후 모든 휠 이벤트 무시 + idle 타이머 갱신
-      if (wheelLocked || lockTransitionRef.current) {
-        if (wheelIdleTimer) window.clearTimeout(wheelIdleTimer);
-        wheelIdleTimer = window.setTimeout(() => {
-          wheelLocked = false;
-          wheelIdleTimer = null;
-        }, 150);
+      const now = Date.now();
+      const delta = e.deltaY;
+      const absDelta = Math.abs(delta);
+      const direction = delta > 0 ? 1 : -1;
+
+      // 너무 작은 입력 노이즈 무시
+      if (absDelta < 1) return;
+
+      // 전환 애니메이션 중에는 항상 무시
+      if (lockTransitionRef.current) {
+        lastWheelAt = now;
+        lastAbsDelta = absDelta;
         return;
       }
 
-      // 너무 작은 입력 무시 (트랙패드 끝물 노이즈)
-      if (Math.abs(e.deltaY) < 1) return;
+      // 쿨다운 기간 중인지 판별
+      const inCooldown = now < inertiaCooldownUntil;
 
-      // 첫 이벤트: 즉시 한 칸 이동 + 락
-      wheelLocked = true;
-      goTo(activeIndexRef.current + (e.deltaY > 0 ? 1 : -1));
+      if (inCooldown) {
+        // 쿨다운 중이라도 "새 의도"로 판단되면 통과시킴:
+        // (a) 방향이 바뀌었거나
+        // (b) 직전 이벤트보다 deltaY가 커졌고(관성이 아니라 가속), 절댓값이 충분히 큼
+        const directionChanged = direction !== lastDirection;
+        const isFreshGesture = directionChanged || (absDelta > lastAbsDelta + 5 && absDelta > 30);
 
-      // idle 감지: 마지막 wheel 이벤트로부터 150ms 동안 추가 입력이 없으면 락 해제
-      if (wheelIdleTimer) window.clearTimeout(wheelIdleTimer);
-      wheelIdleTimer = window.setTimeout(() => {
-        wheelLocked = false;
-        wheelIdleTimer = null;
-      }, 150);
+        if (!isFreshGesture) {
+          lastWheelAt = now;
+          lastAbsDelta = absDelta;
+          // 관성 꼬리가 계속 들어오면 쿨다운 살짝 연장 (최대 80ms까지만)
+          if (now + 80 > inertiaCooldownUntil) {
+            inertiaCooldownUntil = Math.min(now + 80, inertiaCooldownUntil + 20);
+          }
+          return;
+        }
+      }
+
+      // 슬라이드 이동
+      goTo(activeIndexRef.current + direction);
+      lastWheelAt = now;
+      lastDirection = direction;
+      lastAbsDelta = absDelta;
+      // 짧은 쿨다운만: 다음 진짜 스와이프에 즉시 반응 가능
+      inertiaCooldownUntil = now + 120;
     };
 
     const handleKey = (e: KeyboardEvent) => {
@@ -651,7 +676,6 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       root.removeEventListener("touchcancel", handleTouchEnd);
       root.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKey);
-      if (wheelIdleTimer) window.clearTimeout(wheelIdleTimer);
     };
   }, [goTo, containerRef]);
 
@@ -666,7 +690,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
         className="absolute inset-0 will-change-transform"
         style={{
           transform: `translate3d(0, calc(${-activeIndex * 100}dvh + ${dragOffset}px), 0)`,
-          transition: isTransitioning ? "transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none",
+          transition: isTransitioning ? "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none",
         }}
       >
         {children}
