@@ -753,3 +753,37 @@
 .comment-backdrop-exit {
   animation: comments-backdrop-out 160ms ease-out both;
 }
+
+/* =============================================
+   안드로이드 WebView / iOS WebKit 비디오 네이티브 컨트롤 강제 숨김
+   - 안드로이드 Chromium WebView가 첫 프레임 디코드 전에
+     비디오 위에 큰 네이티브 재생 아이콘을 잠깐 그리는 문제를 방지.
+   - PostItemVideo의 <video class="post-item-video">에만 적용해서
+     다른 곳(Reels 등)에는 영향이 가지 않도록 한다.
+   ============================================= */
+video.post-item-video::-webkit-media-controls,
+video.post-item-video::-webkit-media-controls-panel,
+video.post-item-video::-webkit-media-controls-play-button,
+video.post-item-video::-webkit-media-controls-start-playback-button,
+video.post-item-video::-webkit-media-controls-overlay-play-button,
+video.post-item-video::-webkit-media-controls-enclosure,
+video.post-item-video::-webkit-media-controls-panel-container {
+  display: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* 일부 안드로이드 WebView에서 비디오 시작 시 자체적으로 그리는 큰 재생 버튼 */
+video.post-item-video::-internal-media-controls-overlay-cast-button,
+video.post-item-video::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+}
+
+/* 비디오 element 내부의 모든 가짜 컨트롤을 한 번 더 차단 */
+video.post-item-video::cue,
+video.post-item-video::-webkit-media-text-track-container {
+  display: none !important;
+}

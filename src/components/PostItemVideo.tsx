@@ -184,15 +184,24 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       <video
         ref={videoRef}
         src={src}
-        className="relative z-[1] w-full h-full object-cover bg-gray-200"
+        // poster 속성을 명시적으로 지정하는 것이 핵심.
+        // 안드로이드 WebView는 video element가 첫 프레임을 디코드하기 전에
+        // 회색 배경 위에 OS 네이티브 재생 아이콘을 그리는데, poster가 지정되어 있으면
+        // 그 자리에 poster 이미지를 대신 그려서 네이티브 컨트롤이 보이지 않게 한다.
+        poster={posterImage}
+        className="relative z-[1] w-full h-full object-cover bg-gray-200 post-item-video"
         loop
         playsInline
         disablePictureInPicture
+        controls={false}
+        // 안드로이드/iOS WebView가 추가 컨트롤(다운로드, 캐스트 등)을 그리는 것을 차단
+        controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
+        disableRemotePlayback={true}
         onClick={handleVideoTap}
         onLoadedData={onLoadedData}
         // 첫 프레임이 그려지기 전에는 video를 시각적으로 숨겨서
-        // 안드로이드 Chrome/WebView 등에서 회색 placeholder나 기본 재생 아이콘이
-        // 잠깐 깜빡이는 플리커링을 방지한다.
+        // 안드로이드 WebView가 그리는 회색 placeholder/재생 아이콘이 잠깐
+        // 깜빡이는 플리커링을 방지한다.
         style={{
           opacity: firstFrameReady ? 1 : 0,
           transition: 'opacity 150ms ease-out',
