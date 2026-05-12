@@ -86,6 +86,39 @@ const loadKakaoMapsSdk = () => {
 const LONG_PRESS_DURATION = 1000; // 1초
 const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그 감지를 빠르게)
 
+// ── 마커 24시간 만료 관련 상수 ────────────────────────────────────────
+const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000; // 24시간
+const MARKER_EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // 1분마다 만료/타이머 갱신
+// 카운트다운 링 SVG 파라미터 (60×60 마커 박스 기준)
+// 사진 영역 안쪽으로 살짝 들어와서 표시되도록 반지름 설정 (Q2=B 선택)
+const COUNTDOWN_RING_RADIUS = 25;
+const COUNTDOWN_RING_CIRCUMFERENCE = 2 * Math.PI * COUNTDOWN_RING_RADIUS;
+
+/** 포스트의 createdAt(Date | string | undefined)에서 ms timestamp 추출. 없으면 null. */
+const getPostCreatedAtMs = (post: any): number | null => {
+  const raw = post?.createdAt ?? post?.created_at;
+  if (!raw) return null;
+  if (raw instanceof Date) return raw.getTime();
+  const t = new Date(raw).getTime();
+  return Number.isFinite(t) ? t : null;
+};
+
+/** 포스트가 24시간 만료 룰의 적용 대상인지 (광고는 제외) */
+const isMarkerExpirable = (post: any): boolean => {
+  if (!post) return false;
+  if (post.isAd) return false;
+  if (post.isAdPending) return false;
+  return true;
+};
+
+/** 포스트가 24시간 지나 만료되었는지 */
+const isMarkerExpired = (post: any, now: number = Date.now()): boolean => {
+  if (!isMarkerExpirable(post)) return false;
+  const createdMs = getPostCreatedAtMs(post);
+  if (createdMs === null) return false;
+  return now - createdMs >= MARKER_LIFESPAN_MS;
+};
+
 const MapContainer = ({
   posts,
   viewedPostIds,
@@ -830,8 +863,11 @@ const MapContainer = ({
       }
     });
 
+    const nowForExpiry = Date.now();
     posts.forEach(post => {
       if (!post || post.lat === null || post.lng === null) return;
+      // 24시간 지난 일반 포스트(광고 제외)는 마커를 만들지 않음
+      if (isMarkerExpired(post, nowForExpiry)) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
 
       const isViewed = combinedViewedIds.has(post.id);
@@ -1706,6 +1742,26 @@ const MapContainer = ({
 
     const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:#e5e7eb;box-sizing:border-box;overflow:hidden;`;
 
+    // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
+    // 광고/광고대기 마커에는 표시하지 않음. createdAt이 없는 포스트도 skip.
+    // 12시 방향에서 시작(rotate -90deg) → dashoffset이 증가하면서 stroke가 줄어듦.
+    // dashoffset 부호를 음수로 설정하면 stroke 시작점에서 시계방향으로 깎여나가,
+    // 결과적으로 "남은 끝점"이 시계 반대방향으로 회전하며 줄어든다.
+    const createdAtMs = getPostCreatedAtMs(post);
+    const showCountdownRing = isMarkerExpirable(post) && createdAtMs !== null;
+    const countdownRingHtml = showCountdownRing
+      ? (() => {
+          const elapsed = Math.min(Math.max(Date.now() - (createdAtMs as number), 0), MARKER_LIFESPAN_MS);
+          const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
+          // 남은 비율 * 둘레 = 보여줄 stroke 길이
+          // dashoffset을 음수로 두면 시계 반대방향으로 끝점이 회전하면서 줄어든다.
+          const dashOffset = -(COUNTDOWN_RING_CIRCUMFERENCE * (1 - remainingRatio));
+          return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 60 60" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;transform:rotate(-90deg);overflow:visible;">
+            <circle cx="30" cy="30" r="${COUNTDOWN_RING_RADIUS}" fill="none" stroke="rgba(57,255,20,0.5)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${COUNTDOWN_RING_CIRCUMFERENCE.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 2px rgba(57,255,20,0.6));" />
+          </svg>`;
+        })()
+      : '';
+
     // AD 마커: 라벨+이미지 박스를 하나의 wrapper로 감싸서 함께 회전
     const adFlipWrapperStart = isAd
       ? `<div style="display:flex;flex-direction:column;align-items:center;width:60px;animation:_ad_flip 4s ease-in-out infinite;transform-style:preserve-3d;">`
@@ -1732,6 +1788,7 @@ const MapContainer = ({
               ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
             </div>
             ${videoIconHtml}
+            ${countdownRingHtml}
           </div>
         </div>
         ${isAd ? adFlipWrapperEnd : ''}
@@ -1740,6 +1797,66 @@ const MapContainer = ({
   };
 
   getMarkerInnerHtmlRef.current = getMarkerInnerHtml;
+
+  // ── 24시간 만료 마커 제거 + 카운트다운 링 dashoffset 갱신 ──────────
+  // 1분마다 실행:
+  //   1) 모든 마커 SVG의 dashoffset을 현재 경과 시간에 맞춰 갱신
+  //   2) 24h 지난 마커는 disappear 애니메이션 후 setMap(null)
+  useEffect(() => {
+    if (!isMapReady) return;
+
+    const tick = () => {
+      const now = Date.now();
+
+      overlaysRef.current.forEach((overlay, id) => {
+        const content = overlay.getContent() as HTMLElement | null;
+        if (!content) return;
+        // 이미 사라지는 애니메이션 진행 중이면 skip
+        if (content.classList.contains('marker-disappear-animation')) return;
+
+        const ring = content.querySelector('.marker-countdown-ring') as SVGElement | null;
+        if (!ring) return;
+        const createdAtAttr = ring.getAttribute('data-created-at');
+        if (!createdAtAttr) return;
+        const createdMs = Number(createdAtAttr);
+        if (!Number.isFinite(createdMs)) return;
+
+        const elapsed = now - createdMs;
+
+        if (elapsed >= MARKER_LIFESPAN_MS) {
+          // 24시간 만료 → disappear 애니메이션 후 제거
+          content.classList.remove('marker-appear-animation');
+          content.classList.add('marker-disappear-animation');
+          content.style.pointerEvents = 'none';
+          const removalTimer = window.setTimeout(() => {
+            removalTimeoutsRef.current.delete(id);
+            const currentOverlay = overlaysRef.current.get(id);
+            if (currentOverlay) {
+              currentOverlay.setMap(null);
+              overlaysRef.current.delete(id);
+              viewportVisibilityRef.current.delete(String(id));
+              clearViewportAnimationTimer(String(id));
+            }
+          }, 520);
+          removalTimeoutsRef.current.set(id, removalTimer);
+          return;
+        }
+
+        // 아직 만료 전 → dashoffset만 갱신 (innerHTML 교체 없음)
+        const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
+        const dashOffset = -(COUNTDOWN_RING_CIRCUMFERENCE * (1 - remainingRatio));
+        const circle = ring.querySelector('circle');
+        if (circle) {
+          circle.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
+        }
+      });
+    };
+
+    // 마운트 직후 한 번 즉시 실행 (마커가 이미 그려져 있는 상태에서 첫 정확한 값 반영)
+    tick();
+    const intervalId = window.setInterval(tick, MARKER_EXPIRY_CHECK_INTERVAL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [isMapReady, clearViewportAnimationTimer]);
 
   // CSS 애니메이션 duration을 변수로 전달
   const circleCircumference = 2 * Math.PI * 13; // r=13
