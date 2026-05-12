@@ -199,34 +199,104 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     });
   }, [pool]);
 
-  // 활성 인덱스 추적: IntersectionObserver로 화면 중앙에 있는 슬라이드를 active로
+  // 활성 인덱스 추적 + 강제 스냅 (쫀득한 짝짝 붙는 느낌)
   useEffect(() => {
     if (!isOpen) return;
     const root = containerRef.current;
     if (!root) return;
 
-    const slides = root.querySelectorAll<HTMLDivElement>("[data-reel-index]");
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // 가장 많이 보이는 슬라이드 찾기
-        let best: { index: number; ratio: number } | null = null;
-        entries.forEach((entry) => {
-          const idx = Number((entry.target as HTMLElement).dataset.reelIndex);
-          if (!Number.isFinite(idx)) return;
-          if (entry.intersectionRatio > (best?.ratio ?? 0)) {
-            best = { index: idx, ratio: entry.intersectionRatio };
-          }
-        });
-        if (best && best.ratio > 0.6) {
-          setActiveIndex(best.index);
-          setShowHint(false);
-        }
-      },
-      { root, threshold: [0, 0.3, 0.6, 0.9, 1] }
-    );
+    let scrollEndTimer: number | null = null;
+    let isSnapping = false;
+    let touchStartY: number | null = null;
+    let lastWheelAt = 0;
 
-    slides.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
+    // scrollTop 기반으로 현재 가장 가까운 슬라이드 인덱스 계산
+    const computeNearestIndex = () => {
+      const slideHeight = root.clientHeight;
+      if (slideHeight === 0) return 0;
+      return Math.round(root.scrollTop / slideHeight);
+    };
+
+    const snapTo = (targetIndex: number) => {
+      const slideHeight = root.clientHeight;
+      const maxIndex = Math.max(0, items.length - 1);
+      const clamped = Math.max(0, Math.min(maxIndex, targetIndex));
+      const targetTop = clamped * slideHeight;
+      isSnapping = true;
+      root.scrollTo({ top: targetTop, behavior: "smooth" });
+      setActiveIndex(clamped);
+      window.setTimeout(() => {
+        isSnapping = false;
+      }, 300);
+    };
+
+    const handleScroll = () => {
+      if (isSnapping) return;
+      const idx = computeNearestIndex();
+      setActiveIndex((prev) => (prev !== idx ? idx : prev));
+      setShowHint(false);
+
+      // 스크롤 종료 후 강제 스냅
+      if (scrollEndTimer) window.clearTimeout(scrollEndTimer);
+      scrollEndTimer = window.setTimeout(() => {
+        if (isSnapping) return;
+        const slideHeight = root.clientHeight;
+        const nearest = computeNearestIndex();
+        const targetTop = nearest * slideHeight;
+        if (Math.abs(root.scrollTop - targetTop) > 1) {
+          snapTo(nearest);
+        }
+      }, 80);
+    };
+
+    // 터치 시작 위치 기록 (스와이프 방향/세기 판별)
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0]?.clientY ?? null;
+    };
+
+    // 터치 종료 시 즉시 다음/이전 슬라이드로 스냅 (인스타 릴스 느낌)
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartY == null) return;
+      const endY = e.changedTouches[0]?.clientY ?? touchStartY;
+      const dy = touchStartY - endY;
+      touchStartY = null;
+
+      // 임계값 이상 스와이프 → 다음/이전 슬라이드로 강제 스냅
+      const threshold = 40;
+      if (Math.abs(dy) > threshold) {
+        const current = computeNearestIndex();
+        const next = dy > 0 ? current + 1 : current - 1;
+        // 약간의 지연으로 브라우저 기본 스냅과 충돌 방지
+        window.setTimeout(() => snapTo(next), 0);
+      }
+    };
+
+    // 휠 한 번에 한 슬라이드만 이동
+    const handleWheel = (e: WheelEvent) => {
+      const now = Date.now();
+      if (now - lastWheelAt < 350) {
+        e.preventDefault();
+        return;
+      }
+      if (Math.abs(e.deltaY) < 10) return;
+      e.preventDefault();
+      lastWheelAt = now;
+      const current = computeNearestIndex();
+      snapTo(e.deltaY > 0 ? current + 1 : current - 1);
+    };
+
+    root.addEventListener("scroll", handleScroll, { passive: true });
+    root.addEventListener("touchstart", handleTouchStart, { passive: true });
+    root.addEventListener("touchend", handleTouchEnd, { passive: true });
+    root.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      root.removeEventListener("scroll", handleScroll);
+      root.removeEventListener("touchstart", handleTouchStart);
+      root.removeEventListener("touchend", handleTouchEnd);
+      root.removeEventListener("wheel", handleWheel);
+      if (scrollEndTimer) window.clearTimeout(scrollEndTimer);
+    };
   }, [isOpen, items.length]);
 
   // 끝에 가까워지면 추가 로드
@@ -517,13 +587,29 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     return getOptimizedFeedImage(imageUrl, post.id);
   }, [imageUrl, post.id]);
 
-  // active 슬라이드만 재생
+  // active 슬라이드만 재생 + 음소거 상태 적용
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     if (isActive) {
       v.muted = muted;
-      v.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      // 자동재생 시도: 사운드 ON일 때 실패하면 일단 muted로 강제 재생
+      const tryPlay = async () => {
+        try {
+          await v.play();
+          setIsPlaying(true);
+        } catch {
+          // 자동재생 차단 → muted로 강제 재생 (소리는 사용자가 토글하면 들림)
+          try {
+            v.muted = true;
+            await v.play();
+            setIsPlaying(true);
+          } catch {
+            setIsPlaying(false);
+          }
+        }
+      };
+      tryPlay();
     } else {
       v.pause();
       v.currentTime = 0;
