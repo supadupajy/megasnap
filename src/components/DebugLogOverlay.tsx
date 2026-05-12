@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 import type { DebugLogEntry } from '@/utils/debug-log';
 
 const MAX_LOGS = 80;
@@ -8,7 +8,31 @@ const MAX_LOGS = 80;
 const DebugLogOverlay = () => {
   const [logs, setLogs] = useState<DebugLogEntry[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [copied, setCopied] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleCopy = async () => {
+    const text = logs.map((l) => `${l.time} ${l.message}`).join('\n');
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // 폴백: textarea로 복사
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // 무시
+    }
+  };
 
   useEffect(() => {
     const handle = (event: Event) => {
@@ -44,6 +68,18 @@ const DebugLogOverlay = () => {
             DEBUG · {logs.length}
           </span>
           <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={logs.length === 0}
+              className={`h-7 px-2 flex items-center gap-1 rounded-lg active:scale-90 transition text-[10px] font-black ${
+                copied ? 'bg-emerald-500 text-white' : 'bg-white/10 text-white disabled:opacity-40'
+              }`}
+              aria-label="로그 복사"
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              <span>{copied ? '복사됨' : '복사'}</span>
+            </button>
             <button
               type="button"
               onClick={() => setLogs([])}

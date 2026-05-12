@@ -676,7 +676,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      {/*
+        modal: 댓글창(PostCommentsDialog)이 열렸을 때만 false로 전환.
+        - 댓글창은 Dialog 트리 밖(형제) + Portal(document.body)에 렌더링되므로,
+          PostDetail의 Radix FocusScope(trapped=true)가 댓글 input의 focus를 가로채서
+          키보드가 올라오지 않는 문제가 발생.
+        - modal=false면 FocusScope이 비-trapped로 동작해 외부 input이 자유롭게 focus 받음.
+      */}
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => !open && onClose()}
+        modal={!isCommentsDialogOpen}
+      >
         <DialogPortal>
           <DialogOverlay
             className="z-[12999] bg-black/40"
