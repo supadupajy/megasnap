@@ -1591,6 +1591,19 @@ const Index = () => {
     setTrendingReelsInitialPost(null);
   }, []);
 
+  // 안드로이드 백버튼 처리 + 전역 플래그
+  // 트렌딩 릴스 뷰어가 열려 있는 동안 백버튼을 누르면 뷰어를 닫는다.
+  useEffect(() => {
+    if (!trendingReelsInitialPost) return;
+    (window as any).__isTrendingReelsOpen = true;
+    const handleBackClose = () => setTrendingReelsInitialPost(null);
+    window.addEventListener('close-trending-reels-by-back', handleBackClose);
+    return () => {
+      (window as any).__isTrendingReelsOpen = false;
+      window.removeEventListener('close-trending-reels-by-back', handleBackClose);
+    };
+  }, [trendingReelsInitialPost]);
+
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
@@ -1982,15 +1995,35 @@ const Index = () => {
         mapCenter={mapData?.center || mapCache.lastCenter}
       />
 
-      {/* 실시간 인기 TOP20 풀스크린 릴스 뷰어 */}
-      <ReelsViewer
-        isOpen={!!trendingReelsInitialPost}
-        initialPost={trendingReelsInitialPost}
-        pool={globalTrendingPosts}
-        mode="ranked"
-        rankedPosts={globalTrendingPosts}
-        onClose={handleCloseTrendingReels}
-      />
+      {/* 실시간 인기 TOP20 릴스 뷰어
+          Flicks 페이지와 동일하게 Header(top)/BottomNav(bottom) 사이의 영역에
+          embedded 모드로 인라인 렌더링한다. 전역 chrome(헤더/바텀네브)은 그대로 유지. */}
+      {!!trendingReelsInitialPost && (
+        <div
+          className="bg-black"
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
+            // Header(z=12600), BottomNav(z=20000)보다 낮고 TrendingPosts(12000)보다 살짝 낮게
+            // → Header/BottomNav가 위에 떠 있는 상태에서 본문 영역만 가린다.
+            zIndex: 11000,
+          }}
+        >
+          <ReelsViewer
+            isOpen={true}
+            initialPost={trendingReelsInitialPost}
+            pool={globalTrendingPosts}
+            mode="ranked"
+            rankedPosts={globalTrendingPosts}
+            onClose={handleCloseTrendingReels}
+            embedded
+            showInlineCloseButton
+          />
+        </div>
+      )}
     </>
   );
 };

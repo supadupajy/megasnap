@@ -81,6 +81,8 @@ interface ReelsViewerProps {
   // - BottomNav 등 페이지 chrome이 그대로 노출됨
   // - 음소거 버튼은 영상 내부 좌상단에 배치됨
   embedded?: boolean;
+  // embedded 모드에서 영상/이미지 우상단에 닫기(X) 버튼을 표시 (트렌딩 릴스 뷰어용)
+  showInlineCloseButton?: boolean;
 }
 
 const ReelsViewer: React.FC<ReelsViewerProps> = ({
@@ -94,6 +96,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   endMessage = "더 이상 표시할 영상이 없습니다",
   endSubMessage = "처음으로 돌아가거나 닫아주세요.",
   embedded = false,
+  showInlineCloseButton = false,
 }) => {
   const isRankedMode = mode === "ranked";
   // 풀이 모두 소진되었는지 (noRepeat 모드 전용)
@@ -596,6 +599,9 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 embedded={embedded}
                 showInlineMuteButton={embedded}
                 onToggleMute={() => setMuted((m) => !m)}
+                showInlineCloseButton={embedded && showInlineCloseButton}
+                onClose={onClose}
+                inlineRank={embedded && isRankedMode ? index + 1 : undefined}
               />
             ) : item.kind === "ad" ? (
               <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
@@ -925,6 +931,11 @@ interface ReelSlideProps {
   // 영상 내부 좌상단에 표시할 음소거 토글 (embedded 모드 전용)
   showInlineMuteButton?: boolean;
   onToggleMute?: () => void;
+  // 미디어 우상단에 표시할 닫기(X) 버튼 (embedded 모드 + ranked 트렌딩 뷰어 전용)
+  showInlineCloseButton?: boolean;
+  onClose?: () => void;
+  // 미디어 좌상단에 표시할 순위 뱃지 (값이 있으면 표시; embedded ranked 모드 전용)
+  inlineRank?: number;
 }
 
 const ReelSlide: React.FC<ReelSlideProps> = ({
@@ -942,6 +953,9 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   embedded = false,
   showInlineMuteButton = false,
   onToggleMute,
+  showInlineCloseButton = false,
+  onClose,
+  inlineRank,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -1136,7 +1150,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           className="relative w-full overflow-hidden bg-black"
           style={{ aspectRatio: "3 / 4", maxHeight: "100%" }}
         >
-          {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용) */}
+          {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용)
+              순위 뱃지가 있을 때는 음소거 버튼을 뱃지 옆으로 옮긴다. */}
           {showInlineMuteButton && hasVideo && (
             <button
               type="button"
@@ -1147,13 +1162,73 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               onPointerDown={(e) => e.stopPropagation()}
               onPointerUp={(e) => e.stopPropagation()}
               aria-label={muted ? "음소거 해제" : "음소거"}
-              className="absolute top-3 left-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform border border-white/10"
+              className={cn(
+                "absolute top-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform border border-white/10",
+                inlineRank ? "left-[68px]" : "left-3"
+              )}
             >
               {muted ? (
                 <VolumeX className="w-4 h-4 text-white" />
               ) : (
                 <Volume2 className="w-4 h-4 text-white" />
               )}
+            </button>
+          )}
+
+          {/* 영상/이미지 좌상단 순위 뱃지 (embedded ranked 모드 전용) */}
+          {inlineRank && (
+            <motion.div
+              key={`inline-rank-${inlineRank}`}
+              initial={{ opacity: 0, scale: 0.85, y: -6 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              className={cn(
+                "absolute top-3 left-3 z-40 pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
+                inlineRank === 1
+                  ? "from-amber-400 to-amber-500 shadow-amber-500/40"
+                  : inlineRank === 2
+                  ? "from-slate-300 to-slate-400 shadow-slate-400/40"
+                  : inlineRank === 3
+                  ? "from-orange-400 to-orange-500 shadow-orange-500/40"
+                  : "from-gray-300 to-gray-300 shadow-gray-400/40"
+              )}
+              aria-label={`${inlineRank}위`}
+            >
+              <span
+                className={cn(
+                  "text-[14px] font-black tabular-nums leading-none tracking-tight",
+                  inlineRank <= 3 ? "text-white" : "text-gray-900"
+                )}
+              >
+                {inlineRank}
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] font-black leading-none tracking-tight",
+                  inlineRank <= 3 ? "text-white" : "text-gray-900"
+                )}
+              >
+                위
+              </span>
+            </motion.div>
+          )}
+
+          {/* 영상/이미지 우상단 닫기(X) 버튼 (embedded 트렌딩 뷰어 전용) */}
+          {showInlineCloseButton && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose?.();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              aria-label="닫기"
+              className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform border border-white/10"
+            >
+              <X className="w-4 h-4 text-white" />
             </button>
           )}
 

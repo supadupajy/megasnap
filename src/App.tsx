@@ -149,6 +149,13 @@ const AnimatedRoutes = () => {
         return;
       }
 
+      // 0.1순위: 트렌딩 릴스(인덱스 페이지의 임베디드 ReelsViewer)가 열려 있으면 닫기
+      if ((window as any).__isTrendingReelsOpen === true) {
+        console.log('[App] Intercepting back button to close TrendingReels');
+        window.dispatchEvent(new CustomEvent('close-trending-reels-by-back'));
+        return;
+      }
+
       // 0.3순위: PostSearch 오버레이가 열려 있으면 닫기 (전역 검색 오버레이)
       if ((window as any).__isPostSearchOpen === true) {
         console.log('[App] Intercepting back button to close PostSearchOverlay');
