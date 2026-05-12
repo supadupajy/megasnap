@@ -197,13 +197,17 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             muted
             loop
             playsInline
+            controls
+            controlsList="nodownload noremoteplayback"
+            disablePictureInPicture
+            onClick={(e) => e.stopPropagation()}
             onLoadedData={() => setVideoLoaded(true)}
           />
           {/* 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출 */}
           {(!videoLoaded || !isVisible || !isReadyToPlay) && (
-            <img 
-              src={currentImage} 
-              alt="" 
+            <img
+              src={currentImage}
+              alt=""
               className="absolute inset-0 z-10 w-full h-full object-cover bg-gray-200 pointer-events-none"
               onError={handleImageError}
             />
