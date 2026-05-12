@@ -593,17 +593,37 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       goTo(nextIndex);
     };
 
-    // 휠 (PC): 한 번에 1개만
-    let wheelLock = false;
+    // 휠/트랙패드 (PC): 한 번에 1개만
+    // 트랙패드는 관성 스크롤로 wheel 이벤트를 수십 개 연속 발생시킴
+    // → 첫 이벤트로 한 칸 이동 후, "휠 이벤트가 멈춘 시점(idle)"까지 모든 wheel 무시
+    let wheelLocked = false;
+    let wheelIdleTimer: number | null = null;
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      if (wheelLock || lockTransitionRef.current) return;
-      if (Math.abs(e.deltaY) < 5) return;
-      wheelLock = true;
+
+      // 락 상태면 이후 모든 휠 이벤트 무시 + idle 타이머 갱신
+      if (wheelLocked || lockTransitionRef.current) {
+        if (wheelIdleTimer) window.clearTimeout(wheelIdleTimer);
+        wheelIdleTimer = window.setTimeout(() => {
+          wheelLocked = false;
+          wheelIdleTimer = null;
+        }, 150);
+        return;
+      }
+
+      // 너무 작은 입력 무시 (트랙패드 끝물 노이즈)
+      if (Math.abs(e.deltaY) < 1) return;
+
+      // 첫 이벤트: 즉시 한 칸 이동 + 락
+      wheelLocked = true;
       goTo(activeIndexRef.current + (e.deltaY > 0 ? 1 : -1));
-      window.setTimeout(() => {
-        wheelLock = false;
-      }, 400);
+
+      // idle 감지: 마지막 wheel 이벤트로부터 150ms 동안 추가 입력이 없으면 락 해제
+      if (wheelIdleTimer) window.clearTimeout(wheelIdleTimer);
+      wheelIdleTimer = window.setTimeout(() => {
+        wheelLocked = false;
+        wheelIdleTimer = null;
+      }, 150);
     };
 
     const handleKey = (e: KeyboardEvent) => {
@@ -631,6 +651,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       root.removeEventListener("touchcancel", handleTouchEnd);
       root.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKey);
+      if (wheelIdleTimer) window.clearTimeout(wheelIdleTimer);
     };
   }, [goTo, containerRef]);
 
@@ -765,18 +786,20 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — 3:4 비율, 상단 가까이 배치하여 하단 정보 영역과 겹치지 않게 */}
+      {/* 메인 미디어 — 3:4 비율, X 버튼과 닉네임 사이 정중앙에 배치 */}
+      {/* 상단 헤더 영역(X 버튼 아래 ~64px) ~ 하단 정보 영역(액션 알약 위 ~210px) 사이를 가용 공간으로 두고 가운데 정렬 */}
       <div
-        className="absolute left-0 right-0 flex justify-center px-2"
+        className="absolute left-0 right-0 flex items-center justify-center px-2"
         style={{
           top: "calc(env(safe-area-inset-top, 0px) + 64px)",
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 210px)",
         }}
       >
         <div
           className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl"
           style={{
             aspectRatio: "3 / 4",
-            maxHeight: "calc(100dvh - 290px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+            maxHeight: "100%",
           }}
         >
           {hasVideo && effectiveVideoUrl ? (
