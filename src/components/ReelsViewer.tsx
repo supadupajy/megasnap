@@ -913,6 +913,85 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   );
 };
 
+// ─── 본문 텍스트 (1줄 클램프 + 우측 "더 보기") ──────────────
+// 본문이 1줄을 초과해 잘리면 우측 끝에 "... 더 보기" 버튼을 표시.
+// 펼치기 전: 한 줄(line-clamp-1)로만 노출.
+// 펼치면: 모든 내용 표시 + 버튼 사라짐.
+interface ReelContentTextProps {
+  content: string;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, onToggle }) => {
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [isClamped, setIsClamped] = useState(false);
+
+  useEffect(() => {
+    if (expanded) return;
+    const el = measureRef.current;
+    if (!el) return;
+    const check = () => {
+      // 1줄을 초과하면 잘림으로 판단
+      setIsClamped(el.scrollHeight > el.clientHeight + 1);
+    };
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [content, expanded]);
+
+  return (
+    <div className="text-sm leading-snug font-medium drop-shadow-md pr-2">
+      {expanded ? (
+        <p
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+          className="cursor-pointer"
+        >
+          <HashtagText
+            text={content}
+            tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
+          />
+        </p>
+      ) : (
+        <div className="relative">
+          <span
+            ref={measureRef}
+            className={cn(
+              'block leading-snug',
+              isClamped ? 'truncate pr-[68px]' : 'line-clamp-1'
+            )}
+          >
+            <HashtagText
+              text={content}
+              tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
+            />
+          </span>
+          {isClamped && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+              className="absolute bottom-0 right-0 pl-2 text-xs font-bold text-white/80 hover:text-white transition-colors"
+              style={{
+                background:
+                  'linear-gradient(to right, transparent, rgba(0,0,0,0.55) 30%, rgba(0,0,0,0.65) 100%)',
+              }}
+            >
+              ... 더 보기
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── 개별 슬라이드 (포스트) ────────────────────────────────
 interface ReelSlideProps {
   post: Post;
@@ -1333,20 +1412,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             )}
 
             {post.content && (
-              <div
-                onClick={() => setContentExpanded((v) => !v)}
-                className="text-sm leading-snug font-medium drop-shadow-md cursor-pointer pr-2"
-              >
-                <p className={cn(contentExpanded ? "" : "line-clamp-2")}>
-                  <HashtagText
-                    text={post.content}
-                    tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
-                  />
-                </p>
-                {!contentExpanded && post.content.length > 60 && (
-                  <span className="text-xs text-white/60 font-bold mt-1 inline-block">더 보기</span>
-                )}
-              </div>
+              <ReelContentText
+                content={post.content}
+                expanded={contentExpanded}
+                onToggle={() => setContentExpanded((v) => !v)}
+              />
             )}
           </div>
 
