@@ -712,8 +712,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             }}
             className="fixed z-[13000] max-w-[100vw] w-full p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
             style={{
-              // 상단 여백을 줄여 하단 BottomNav 위 여백과 시각적 밸런스를 맞춤
-              top: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+              top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
               left: 0,
               right: 0,
               bottom: keyboardOffset > 0
@@ -748,8 +747,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                           )}
                           style={{ WebkitOverflowScrolling: 'touch' }}
                         >
-                          {/* PostItem(여기보기 페이지)과 동일한 레이아웃: 구분선 없이 헤더 → 미디어가 자연스럽게 이어짐 */}
-                          <div className="flex items-center justify-between p-4 pb-3 bg-white" onClick={(e) => e.stopPropagation()}>
+                          {/*
+                            PostItem(여기보기 페이지)과 동일한 레이아웃: 구분선 없이 헤더 → 미디어가 자연스럽게 이어짐.
+                            상단/하단 여백 밸런스를 위해 헤더 상단 패딩을 살짝 줄여 콘텐츠 전체를 위로 당김.
+                          */}
+                          <div className="flex items-center justify-between pt-2 px-4 pb-3 bg-white" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                               <PostUserAvatar
                                 name={postDisplayName}
