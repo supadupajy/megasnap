@@ -1808,15 +1808,15 @@ const MapContainer = ({
         </div>
       )}
 
-      {/* 롱프레스 진행 표시 — 상단 마커개수 인디케이터(트렌딩 패널) 바로 아래에 위치 */}
+      {/* 롱프레스 진행 표시 — 상단 OffScreenMarkerIndicator(52px) 아래에 위치 */}
       {uiState === 'pressing' && (
         <div
           className="longpress-toast"
           style={{
             position: 'fixed',
             top: toastTopOffset !== undefined
-              ? `${toastTopOffset + 12}px`
-              : 'calc(env(safe-area-inset-top, 0px) + 140px)',
+              ? `${toastTopOffset + 64}px`
+              : 'calc(env(safe-area-inset-top, 0px) + 192px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
@@ -1853,14 +1853,14 @@ const MapContainer = ({
 
       {/* 히트맵 범례는 Index.tsx의 TrendingPosts 패널 아래로 이동됨 */}
 
-      {/* 마커 숨김 상태 안내 — 상단 마커개수 인디케이터(트렌딩 패널) 바로 아래에 위치 */}
+      {/* 마커 숨김 상태 안내 — 상단 OffScreenMarkerIndicator(52px) 아래에 위치 */}
       {uiState === 'hidden' && (
         <div
           style={{
             position: 'fixed',
             top: toastTopOffset !== undefined
-              ? `${toastTopOffset + 12}px`
-              : 'calc(env(safe-area-inset-top, 0px) + 140px)',
+              ? `${toastTopOffset + 64}px`
+              : 'calc(env(safe-area-inset-top, 0px) + 192px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 9999,
