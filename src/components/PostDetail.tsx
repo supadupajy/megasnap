@@ -712,7 +712,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             }}
             className="fixed z-[13000] max-w-[100vw] w-full p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
             style={{
-              top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+              // 상단 여백을 줄여 하단 BottomNav 위 여백과 시각적 밸런스를 맞춤
+              top: 'calc(env(safe-area-inset-top, 0px) + 24px)',
               left: 0,
               right: 0,
               bottom: keyboardOffset > 0
