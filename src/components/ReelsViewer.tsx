@@ -1,0 +1,781 @@
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X,
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  MapPin,
+  Volume2,
+  VolumeX,
+  Play,
+  ChevronUp,
+  ExternalLink,
+  Mail,
+  ShoppingBag,
+} from "lucide-react";
+import { Post } from "@/types";
+import { useAuth } from "@/components/AuthProvider";
+import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
+import { supabase } from "@/integrations/supabase/client";
+import { toggleLikeInDb } from "@/utils/like-utils";
+import { cn, getOptimizedFeedImage, getFallbackImage } from "@/lib/utils";
+import { handleShare } from "@/utils/share";
+import PostCommentsDialog from "@/components/PostCommentsDialog";
+import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
+
+// 광고 삽입 주기 (포스팅 3개마다 광고 1개)
+const AD_INSERT_INTERVAL = 3;
+
+const isVideoUrl = (url: string | undefined | null): boolean => {
+  if (!url) return false;
+  const lower = url.toLowerCase().split("?")[0];
+  return (
+    lower.endsWith(".mp4") ||
+    lower.endsWith(".mov") ||
+    lower.endsWith(".webm") ||
+    lower.endsWith(".avi") ||
+    lower.endsWith(".m4v")
+  );
+};
+
+// Fisher-Yates 셔플
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+// 슬라이드 아이템 타입 (포스트 또는 광고)
+type ReelItem =
+  | { kind: "post"; post: Post; key: string }
+  | { kind: "ad"; key: string };
+
+interface ReelsViewerProps {
+  isOpen: boolean;
+  initialPost: Post | null;
+  pool: Post[]; // 알고리즘에서 사용할 인기 포스트 풀
+  onClose: () => void;
+}
+
+const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, onClose }) => {
+  const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [items, setItems] = useState<ReelItem[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [muted, setMuted] = useState(true);
+  const [showHint, setShowHint] = useState(true);
+
+  // 댓글 다이얼로그 상태
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+
+  // 포스트별 좋아요/저장 로컬 상태
+  const [likeMap, setLikeMap] = useState<Record<string, { liked: boolean; count: number }>>({});
+  const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
+
+  // 다음 라운드용 풀 (셔플된 후속 포스트)
+  const queueRef = useRef<Post[]>([]);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
+  // 초기화: initialPost를 첫 슬라이드로 두고, 풀에서 셔플한 나머지를 큐에 보관
+  useEffect(() => {
+    if (!isOpen || !initialPost) return;
+
+    seenIdsRef.current = new Set([initialPost.id]);
+    const remaining = pool.filter((p) => p.id !== initialPost.id);
+    const shuffled = shuffle(remaining);
+    queueRef.current = shuffled;
+
+    // 처음에 초기 포스트 + 첫 6개 정도를 미리 펼침
+    const initialBatch = queueRef.current.splice(0, 6);
+    initialBatch.forEach((p) => seenIdsRef.current.add(p.id));
+
+    const initialItems: ReelItem[] = [
+      { kind: "post", post: initialPost, key: `post-${initialPost.id}` },
+      ...initialBatch.map<ReelItem>((p) => ({ kind: "post", post: p, key: `post-${p.id}` })),
+    ];
+
+    // 3개마다 광고 삽입
+    const withAds: ReelItem[] = [];
+    let postCounter = 0;
+    initialItems.forEach((it) => {
+      withAds.push(it);
+      if (it.kind === "post") {
+        postCounter++;
+        if (postCounter % AD_INSERT_INTERVAL === 0) {
+          withAds.push({ kind: "ad", key: `ad-${postCounter}-${Date.now()}` });
+        }
+      }
+    });
+
+    setItems(withAds);
+    setActiveIndex(0);
+
+    // 좋아요/저장 초기 상태 시드
+    const seedLikes: Record<string, { liked: boolean; count: number }> = {};
+    const seedSaved: Record<string, boolean> = {};
+    [initialPost, ...initialBatch].forEach((p) => {
+      seedLikes[p.id] = { liked: !!p.isLiked, count: p.likes || 0 };
+      seedSaved[p.id] = !!p.isSaved;
+    });
+    setLikeMap(seedLikes);
+    setSavedMap(seedSaved);
+
+    // 컨테이너 스크롤을 맨 위로
+    requestAnimationFrame(() => {
+      if (containerRef.current) containerRef.current.scrollTop = 0;
+    });
+  }, [isOpen, initialPost?.id]);
+
+  // 풀에서 더 가져오기 (큐가 부족하면 알고리즘으로 재셔플)
+  const appendMore = useCallback(() => {
+    if (queueRef.current.length < 5) {
+      // 풀 재셔플: 이미 본 것 제외 → 모두 봤다면 풀 전체를 재사용 (반복 노출 허용)
+      const unseen = pool.filter((p) => !seenIdsRef.current.has(p.id));
+      const source = unseen.length > 0 ? unseen : pool;
+      queueRef.current.push(...shuffle(source));
+      // 풀이 모두 소진되면 seen을 리셋해서 무한 스크롤 허용
+      if (unseen.length === 0) seenIdsRef.current = new Set();
+    }
+
+    const nextBatch = queueRef.current.splice(0, 5);
+    if (nextBatch.length === 0) return;
+
+    nextBatch.forEach((p) => seenIdsRef.current.add(p.id));
+
+    setItems((prev) => {
+      // 현재 포스트 개수 카운트
+      const currentPostCount = prev.filter((it) => it.kind === "post").length;
+      const additions: ReelItem[] = [];
+      let postCounter = currentPostCount;
+      nextBatch.forEach((p) => {
+        additions.push({ kind: "post", post: p, key: `post-${p.id}-${Math.random().toString(36).slice(2, 6)}` });
+        postCounter++;
+        if (postCounter % AD_INSERT_INTERVAL === 0) {
+          additions.push({ kind: "ad", key: `ad-${postCounter}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` });
+        }
+      });
+      return [...prev, ...additions];
+    });
+
+    setLikeMap((prev) => {
+      const next = { ...prev };
+      nextBatch.forEach((p) => {
+        if (!next[p.id]) next[p.id] = { liked: !!p.isLiked, count: p.likes || 0 };
+      });
+      return next;
+    });
+    setSavedMap((prev) => {
+      const next = { ...prev };
+      nextBatch.forEach((p) => {
+        if (!(p.id in next)) next[p.id] = !!p.isSaved;
+      });
+      return next;
+    });
+  }, [pool]);
+
+  // 활성 인덱스 추적: IntersectionObserver로 화면 중앙에 있는 슬라이드를 active로
+  useEffect(() => {
+    if (!isOpen) return;
+    const root = containerRef.current;
+    if (!root) return;
+
+    const slides = root.querySelectorAll<HTMLDivElement>("[data-reel-index]");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // 가장 많이 보이는 슬라이드 찾기
+        let best: { index: number; ratio: number } | null = null;
+        entries.forEach((entry) => {
+          const idx = Number((entry.target as HTMLElement).dataset.reelIndex);
+          if (!Number.isFinite(idx)) return;
+          if (entry.intersectionRatio > (best?.ratio ?? 0)) {
+            best = { index: idx, ratio: entry.intersectionRatio };
+          }
+        });
+        if (best && best.ratio > 0.6) {
+          setActiveIndex(best.index);
+          setShowHint(false);
+        }
+      },
+      { root, threshold: [0, 0.3, 0.6, 0.9, 1] }
+    );
+
+    slides.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, [isOpen, items.length]);
+
+  // 끝에 가까워지면 추가 로드
+  useEffect(() => {
+    if (!isOpen) return;
+    if (items.length === 0) return;
+    if (activeIndex >= items.length - 3) {
+      appendMore();
+    }
+  }, [activeIndex, items.length, isOpen, appendMore]);
+
+  // 모달 열림 시 body 스크롤 잠금
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  // ESC 닫기
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
+
+  const handleLikeToggle = useCallback(
+    (postId: string) => {
+      if (!authUser?.id) return;
+      const cur = likeMap[postId];
+      if (!cur) return;
+      const wasLiked = cur.liked;
+      setLikeMap((prev) => ({
+        ...prev,
+        [postId]: {
+          liked: !wasLiked,
+          count: wasLiked ? Math.max(0, cur.count - 1) : cur.count + 1,
+        },
+      }));
+      toggleLikeInDb(postId, authUser.id, wasLiked).then((ok) => {
+        if (!ok) {
+          setLikeMap((prev) => ({ ...prev, [postId]: cur }));
+        }
+      });
+    },
+    [authUser?.id, likeMap]
+  );
+
+  const handleSaveToggle = useCallback(
+    async (postId: string) => {
+      if (!authUser?.id) return;
+      if (!isPersistedPostId(postId)) return;
+      const prev = !!savedMap[postId];
+      const next = !prev;
+      setSavedMap((m) => ({ ...m, [postId]: next }));
+      try {
+        if (next) {
+          const { data: existing } = await supabase
+            .from("saved_posts")
+            .select("id")
+            .eq("post_id", postId)
+            .eq("user_id", authUser.id)
+            .maybeSingle();
+          if (!existing) {
+            await supabase.from("saved_posts").insert({ post_id: postId, user_id: authUser.id });
+          }
+        } else {
+          await supabase
+            .from("saved_posts")
+            .delete()
+            .eq("post_id", postId)
+            .eq("user_id", authUser.id);
+        }
+      } catch {
+        setSavedMap((m) => ({ ...m, [postId]: prev }));
+      }
+    },
+    [authUser?.id, savedMap]
+  );
+
+  const handleLocationClick = useCallback(
+    (post: Post) => {
+      const lat = post.latitude ?? post.lat;
+      const lng = post.longitude ?? post.lng;
+      if (lat == null || lng == null) return;
+      onClose();
+      // 닫힘 애니메이션 직후 이동
+      setTimeout(() => {
+        navigate("/", { state: { center: { lat, lng }, post } });
+      }, 50);
+    },
+    [navigate, onClose]
+  );
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        key="reels-viewer"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[9999] bg-black"
+      >
+        {/* 닫기 버튼 + 음소거 토글 (상단 고정) */}
+        <div
+          className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none"
+          style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
+        >
+          <button
+            onClick={onClose}
+            className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label="닫기"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+          <button
+            onClick={() => setMuted((m) => !m)}
+            className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
+            aria-label={muted ? "음소거 해제" : "음소거"}
+          >
+            {muted ? (
+              <VolumeX className="w-5 h-5 text-white" />
+            ) : (
+              <Volume2 className="w-5 h-5 text-white" />
+            )}
+          </button>
+        </div>
+
+        {/* 스와이프 힌트 (처음에만) */}
+        <AnimatePresence>
+          {showHint && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-1"
+            >
+              <ChevronUp className="w-6 h-6 text-white/80 animate-bounce" />
+              <span className="text-white/80 text-xs font-bold tracking-wide">위로 스와이프</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 세로 스냅 스크롤 컨테이너 */}
+        <div
+          ref={containerRef}
+          className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
+          style={{ scrollSnapType: "y mandatory", overscrollBehavior: "contain" }}
+        >
+          {items.map((item, index) => (
+            <div
+              key={item.key}
+              data-reel-index={index}
+              className="relative h-full w-full snap-start snap-always"
+              style={{ scrollSnapAlign: "start" }}
+            >
+              {item.kind === "post" ? (
+                <ReelSlide
+                  post={item.post}
+                  isActive={index === activeIndex}
+                  muted={muted}
+                  liked={likeMap[item.post.id]?.liked ?? !!item.post.isLiked}
+                  likesCount={likeMap[item.post.id]?.count ?? item.post.likes ?? 0}
+                  saved={savedMap[item.post.id] ?? !!item.post.isSaved}
+                  onLikeToggle={() => handleLikeToggle(item.post.id)}
+                  onSaveToggle={() => handleSaveToggle(item.post.id)}
+                  onCommentClick={() => setCommentsPostId(item.post.id)}
+                  onLocationClick={() => handleLocationClick(item.post)}
+                  onUserClick={() => {
+                    const targetUserId = item.post.owner_id || item.post.user_id || item.post.user.id;
+                    const isValidUUID =
+                      targetUserId &&
+                      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
+                    if (!isValidUUID) return;
+                    onClose();
+                    setTimeout(() => {
+                      if (authUser?.id === targetUserId) navigate("/profile");
+                      else navigate(`/profile/${targetUserId}`);
+                    }, 50);
+                  }}
+                />
+              ) : (
+                <ReelAdSlide isActive={index === activeIndex} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* 댓글 다이얼로그 */}
+        <PostCommentsDialog
+          isOpen={!!commentsPostId}
+          onOpenChange={(open) => {
+            if (!open) setCommentsPostId(null);
+          }}
+          postId={commentsPostId || ""}
+          initialComments={[]}
+          authUser={authUser}
+          profile={null}
+          onCommentsChange={() => {}}
+        />
+      </motion.div>
+    </AnimatePresence>,
+    document.body
+  );
+};
+
+// ─── 개별 슬라이드 (포스트) ────────────────────────────────
+interface ReelSlideProps {
+  post: Post;
+  isActive: boolean;
+  muted: boolean;
+  liked: boolean;
+  likesCount: number;
+  saved: boolean;
+  onLikeToggle: () => void;
+  onSaveToggle: () => void;
+  onCommentClick: () => void;
+  onLocationClick: () => void;
+  onUserClick: () => void;
+}
+
+const ReelSlide: React.FC<ReelSlideProps> = ({
+  post,
+  isActive,
+  muted,
+  liked,
+  likesCount,
+  saved,
+  onLikeToggle,
+  onSaveToggle,
+  onCommentClick,
+  onLocationClick,
+  onUserClick,
+}) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [contentExpanded, setContentExpanded] = useState(false);
+  const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
+
+  const videoUrl = post.videoUrl;
+  const imageUrl = post.image_url || post.image;
+  const hasVideo = !!videoUrl || isVideoUrl(imageUrl);
+  const effectiveVideoUrl = videoUrl || (isVideoUrl(imageUrl) ? imageUrl : null);
+
+  const fallbackImage = useMemo(() => {
+    if (!imageUrl || isVideoUrl(imageUrl)) return getFallbackImage(String(post.id));
+    return getOptimizedFeedImage(imageUrl, post.id);
+  }, [imageUrl, post.id]);
+
+  // active 슬라이드만 재생
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isActive) {
+      v.muted = muted;
+      v.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    } else {
+      v.pause();
+      v.currentTime = 0;
+      setIsPlaying(false);
+    }
+  }, [isActive, muted]);
+
+  // 댓글 수 fetch (활성화 시 1회)
+  useEffect(() => {
+    if (!isActive) return;
+    if (!isPersistedPostId(post.id)) return;
+    let cancelled = false;
+    fetchCommentsByPostId(post.id)
+      .then((cs) => {
+        if (!cancelled) setCommentsCount(cs.length);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isActive, post.id]);
+
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play().then(() => setIsPlaying(true)).catch(() => {});
+    } else {
+      v.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  return (
+    <div className="relative h-full w-full bg-black overflow-hidden">
+      {/* 배경 블러 (영상보다 큰 컨테이너 채우기 위한 backdrop) */}
+      {fallbackImage && (
+        <img
+          src={fallbackImage}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40 pointer-events-none"
+        />
+      )}
+
+      {/* 메인 미디어 */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        {hasVideo && effectiveVideoUrl ? (
+          <video
+            ref={videoRef}
+            src={effectiveVideoUrl}
+            className="max-h-full max-w-full w-full h-full object-contain"
+            playsInline
+            loop
+            muted={muted}
+            preload="metadata"
+            poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
+            onClick={togglePlay}
+          />
+        ) : (
+          <img
+            src={fallbackImage}
+            alt=""
+            className="max-h-full max-w-full w-full h-full object-contain"
+          />
+        )}
+      </div>
+
+      {/* 재생 오버레이 아이콘 (비디오 일시정지 상태에서만) */}
+      {hasVideo && !isPlaying && (
+        <button
+          onClick={togglePlay}
+          className="absolute inset-0 z-10 flex items-center justify-center pointer-events-auto"
+          aria-label="재생"
+        >
+          <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
+            <Play className="w-10 h-10 text-white fill-white ml-1" />
+          </div>
+        </button>
+      )}
+
+      {/* 하단 그라데이션 + 정보 */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
+        <div className="bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pt-20 pb-6">
+          <div className="flex items-end justify-between gap-3 pointer-events-auto">
+            {/* 좌측: 유저 + 본문 */}
+            <div className="flex-1 min-w-0 text-white">
+              <button
+                onClick={onUserClick}
+                className="flex items-center gap-2 mb-2 active:opacity-70 transition-opacity"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-700 ring-2 ring-white/30">
+                  {post.user.avatar ? (
+                    <img src={post.user.avatar} alt={post.user.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                      {post.user.name?.[0] || "?"}
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm font-black drop-shadow-md">{post.user.name}</span>
+              </button>
+
+              {(post.lat != null && post.lng != null) && (
+                <button
+                  onClick={onLocationClick}
+                  className="flex items-center gap-1 mb-2 text-white/90 active:opacity-70 transition-opacity"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-bold drop-shadow-md truncate max-w-[60vw]">
+                    {post.location || "위치 보기"}
+                  </span>
+                </button>
+              )}
+
+              {post.content && (
+                <div
+                  onClick={() => setContentExpanded((v) => !v)}
+                  className="text-sm leading-snug font-medium drop-shadow-md cursor-pointer pr-2"
+                >
+                  <p className={cn(contentExpanded ? "" : "line-clamp-2")}>{post.content}</p>
+                  {!contentExpanded && post.content.length > 60 && (
+                    <span className="text-xs text-white/60 font-bold mt-1 inline-block">더 보기</span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 우측: 액션 버튼 세로 스택 (TikTok/Reels 스타일) */}
+            <div className="flex flex-col items-center gap-4 pb-1">
+              <ActionButton
+                onClick={onLikeToggle}
+                icon={
+                  <Heart
+                    className={cn("w-7 h-7 transition-all", liked ? "fill-rose-500 text-rose-500 scale-110" : "text-white")}
+                  />
+                }
+                label={likesCount.toLocaleString()}
+              />
+              <ActionButton
+                onClick={onCommentClick}
+                icon={<MessageCircle className="w-7 h-7 text-white" />}
+                label={commentsCount.toLocaleString()}
+              />
+              <ActionButton
+                onClick={onSaveToggle}
+                icon={
+                  <Bookmark
+                    className={cn("w-7 h-7 transition-all", saved ? "fill-amber-400 text-amber-400" : "text-white")}
+                  />
+                }
+              />
+              <ActionButton
+                onClick={(e) => handleShare(e, post.id)}
+                icon={<Share2 className="w-7 h-7 text-white" />}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// 액션 버튼 (세로 스택용)
+const ActionButton: React.FC<{
+  onClick: (e: React.MouseEvent) => void;
+  icon: React.ReactNode;
+  label?: string;
+}> = ({ onClick, icon, label }) => {
+  return (
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
+    >
+      <div className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center drop-shadow-lg">
+        {icon}
+      </div>
+      {label && (
+        <span className="text-white text-[11px] font-black drop-shadow-md tabular-nums">{label}</span>
+      )}
+    </button>
+  );
+};
+
+// ─── 광고 슬라이드 (DB 광고 + fallback) ────────────────────────────────
+const ReelAdSlide: React.FC<{ isActive: boolean }> = ({ isActive }) => {
+  const { ad, loading, now } = useAd("trending");
+
+  const slot = useMemo(() => {
+    if (loading) return null;
+    return ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
+  }, [ad, loading, now]);
+
+  if (loading || !slot) {
+    return (
+      <div className="h-full w-full bg-gradient-to-br from-indigo-900 via-purple-900 to-black flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-white/20 border-t-white animate-spin" />
+      </div>
+    );
+  }
+
+  // 구인 슬롯
+  if (slot.isRecruitment) {
+    return (
+      <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex items-center justify-center px-6">
+        <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 -left-10 w-72 h-72 bg-indigo-300/20 rounded-full blur-3xl" />
+
+        <div className="relative z-10 w-full max-w-sm">
+          {/* AD 배지 */}
+          <div className="flex items-center gap-2 mb-6">
+            <span className="bg-white text-indigo-700 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
+              Ad
+            </span>
+            <span className="text-white/70 text-[11px] font-bold uppercase tracking-wider">Sponsored</span>
+          </div>
+
+          <h2 className="text-white text-3xl font-black leading-tight mb-3 tracking-tight">
+            좋은 브랜드를
+            <br />
+            기다리고 있어요.
+          </h2>
+          <p className="text-white/80 text-sm font-medium mb-8 leading-relaxed">
+            광고 문의는 언제든 환영이에요.
+            <br />
+            아래 이메일로 연락주세요.
+          </p>
+
+          <button
+            onClick={() => window.open("mailto:chorasnap@gmail.com", "_blank")}
+            className="w-full bg-white text-indigo-700 rounded-2xl px-5 py-4 flex items-center gap-3 shadow-2xl active:scale-95 transition-transform"
+          >
+            <Mail className="w-5 h-5 shrink-0" />
+            <span className="flex-1 text-left font-black text-sm tracking-tight">chorasnap@gmail.com</span>
+            <ExternalLink className="w-4 h-4 shrink-0 text-indigo-400" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 일반 광고
+  return (
+    <div className="relative h-full w-full overflow-hidden bg-black">
+      {slot.image_url && (
+        <>
+          <img
+            src={slot.image_url}
+            alt={slot.brand_name || "Ad"}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/40" />
+        </>
+      )}
+
+      <div className="relative z-10 h-full w-full flex flex-col justify-between px-6 py-12">
+        {/* 상단 */}
+        <div className="flex items-center gap-2 pt-4">
+          <span className="bg-white text-black text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
+            Ad
+          </span>
+          {slot.brand_logo_url ? (
+            <img src={slot.brand_logo_url} alt={slot.brand_name} className="h-4 invert brightness-200" />
+          ) : (
+            slot.brand_name && (
+              <span className="text-white/80 text-[11px] font-bold uppercase tracking-wider">
+                {slot.brand_name}
+              </span>
+            )
+          )}
+        </div>
+
+        {/* 하단 본문 + CTA */}
+        <div className="space-y-4">
+          <div>
+            {slot.title && (
+              <h2 className="text-white text-3xl font-black leading-tight tracking-tight italic drop-shadow-2xl">
+                {slot.title}
+              </h2>
+            )}
+            {slot.subtitle && (
+              <p className="text-white/90 text-base font-bold mt-2 drop-shadow-lg">{slot.subtitle}</p>
+            )}
+          </div>
+
+          {slot.link_url && (
+            <button
+              onClick={() => window.open(normalizeUrl(slot.link_url), "_blank", "noopener,noreferrer")}
+              className="w-full bg-white text-black rounded-2xl px-5 py-4 flex items-center gap-3 shadow-2xl active:scale-95 transition-transform"
+            >
+              <ShoppingBag className="w-5 h-5 shrink-0" />
+              <span className="flex-1 text-left font-black text-sm tracking-tight">자세히 보기</span>
+              <ExternalLink className="w-4 h-4 shrink-0 text-gray-400" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ReelsViewer;

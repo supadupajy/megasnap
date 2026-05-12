@@ -33,13 +33,14 @@ interface PostItemProps {
   onDelete?: (id: string) => void;
   onUpdate?: (id: string, content: string) => void;
   onSaveToggle?: (id: string, isSaved: boolean) => void;
+  onMediaClick?: (post: Post) => void;
   isViewed?: boolean;
   disablePulse?: boolean;
   autoPlayVideo?: boolean;
   isPlaying?: boolean;
 }
 
-const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
+const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, onMediaClick, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const [profile, setProfile] = useState<any>(null);
@@ -67,6 +68,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const contentRef = useRef<HTMLParagraphElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
 
   const {
     scrollRef: imageScrollRef,
@@ -622,7 +624,29 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           </div>
 
           {/* Media Section */}
-          <div className="relative mx-4 aspect-[3/4] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner">
+          <div
+            className={cn(
+              "relative mx-4 aspect-[3/4] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner",
+              onMediaClick && "cursor-pointer"
+            )}
+            {...(onMediaClick ? {
+              onPointerDown: (e: React.PointerEvent) => {
+                tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+              },
+              onPointerUp: (e: React.PointerEvent) => {
+                const start = tapStartRef.current;
+                tapStartRef.current = null;
+                if (!start) return;
+                const dx = Math.abs(e.clientX - start.x);
+                const dy = Math.abs(e.clientY - start.y);
+                const dt = Date.now() - start.t;
+                // 짧은 시간 + 작은 이동 = 탭으로 간주 → 풀스크린 진입
+                if (dt < 300 && dx < 10 && dy < 10) {
+                  onMediaClick(post);
+                }
+              },
+            } : {})}
+          >
             <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
             {renderMedia()}
           </div>
