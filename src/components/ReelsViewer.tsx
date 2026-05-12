@@ -857,13 +857,16 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — 화면 가로 너비에 딱 맞는 3:4 비율 컨테이너, 화면 정중앙 배치 */}
-      {/* 탭하면 UI 토글 */}
+      {/* 메인 미디어 — 화면 가로 너비에 딱 맞는 3:4 비율 컨테이너 */}
+      {/* 하단을 살짝 띄워 타임라인이 닉네임/액션 영역과 겹치지 않도록 함 */}
       <div
-        className="absolute inset-0 flex items-center justify-center"
+        className="absolute left-0 right-0 top-0 flex items-center justify-center"
+        style={{
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 56px)",
+          cursor: "pointer",
+        }}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
-        style={{ cursor: "pointer" }}
       >
         <div
           className="relative w-full overflow-hidden bg-black"
