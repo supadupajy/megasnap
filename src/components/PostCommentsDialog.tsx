@@ -456,42 +456,8 @@ const PostCommentsDialog = ({
 
   if (!shouldRender) return null;
 
-  const debugInfo = {
-    isOpen,
-    shouldRender,
-    isClosing,
-    keyboardOffset,
-    sheetTopPx,
-    effectiveSheetTopPx,
-    sheetBottom,
-    winH: typeof window !== 'undefined' ? window.innerHeight : 0,
-    vvH: typeof window !== 'undefined' ? window.visualViewport?.height : 0,
-    vvTop: typeof window !== 'undefined' ? window.visualViewport?.offsetTop : 0,
-  };
-
   return (
     <div className="fixed inset-0 z-[30000] pointer-events-none" role="dialog" aria-modal="true" aria-label="댓글">
-      {/* DEBUG OVERLAY - 임시 */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 8,
-          left: 8,
-          right: 8,
-          zIndex: 99999,
-          background: 'rgba(255, 230, 0, 0.95)',
-          color: '#000',
-          fontSize: 11,
-          padding: 6,
-          borderRadius: 6,
-          fontFamily: 'monospace',
-          lineHeight: 1.4,
-          pointerEvents: 'none',
-          whiteSpace: 'pre',
-        }}
-      >
-        {Object.entries(debugInfo).map(([k, v]) => `${k}: ${v}`).join('\n')}
-      </div>
       <button
         type="button"
         className={`absolute left-0 right-0 top-0 z-0 cursor-default bg-slate-950/60 pointer-events-auto ${isClosing ? 'comment-backdrop-exit' : 'comment-backdrop-enter'}`}

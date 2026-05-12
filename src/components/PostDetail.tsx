@@ -62,8 +62,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   // ── window 플래그: App.tsx Capacitor backButton 핸들러에서 참조 ──
   useEffect(() => {
     (window as any).__isPostDetailOpen = isOpen;
+    window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: isOpen } }));
     return () => {
-      if (isOpen) (window as any).__isPostDetailOpen = false;
+      if (isOpen) {
+        (window as any).__isPostDetailOpen = false;
+        window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: false } }));
+      }
     };
   }, [isOpen]);
 
