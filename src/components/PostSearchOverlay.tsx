@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
@@ -101,7 +101,6 @@ const PostDetailOverlay = ({
       if (!authUser?.id || !postId) return;
       setLoading(true);
       try {
-        // 검색 결과 목록에서 상세 데이터 조회 (user 전체 포스팅 X)
         const postIds = searchResults.map((p) => p.id);
 
         const { data: postsData } = await supabase
@@ -167,8 +166,7 @@ const PostDetailOverlay = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-white flex flex-col overflow-hidden">
-      {/* 앱 헤더 높이만큼 safe-area + 64px 확보 */}
+    <div className="fixed inset-0 z-[20002] bg-white flex flex-col overflow-hidden">
       <div className="shrink-0 bg-white border-b border-gray-50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}>
         <div className="flex items-center px-4 h-14 relative">
           <button
@@ -183,7 +181,6 @@ const PostDetailOverlay = ({
         </div>
       </div>
 
-      {/* 콘텐츠 */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -218,69 +215,29 @@ const PostDetailOverlay = ({
   );
 };
 
-// ── 메인 PostSearch ────────────────────────────────────────────────
-const PostSearch = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const initialQueryFromState = (location.state as { initialQuery?: string } | null)?.initialQuery?.trim() || '';
-
-  const [searchQuery, setSearchQuery] = useState<string>(() => {
-    if (initialQueryFromState) return initialQueryFromState;
-    try { return sessionStorage.getItem(CACHE_KEY_QUERY) || ''; } catch { return ''; }
-  });
-  const [results, setResults] = useState<SearchPost[]>(() => {
-    if (initialQueryFromState) return [];
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY_RESULTS);
-      return cached ? JSON.parse(cached) : [];
-    } catch { return []; }
-  });
+// ── 전역 PostSearchOverlay ─────────────────────────────────────────
+// 어디서든 `open-post-search` 이벤트를 dispatch하면 열린다.
+// `close-post-search` 이벤트 또는 백버튼으로 닫힌다.
+// 상위 라우트와 독립적으로 동작하여, 탭 이동 없이 검색을 띄울 수 있다.
+const PostSearchOverlay = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [results, setResults] = useState<SearchPost[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState<boolean>(() => {
-    if (initialQueryFromState) return true;
-    try { return !!sessionStorage.getItem(CACHE_KEY_QUERY); } catch { return false; }
-  });
+  const [hasSearched, setHasSearched] = useState<boolean>(false);
 
-  // 오버레이로 열 postId (null이면 닫힘)
   const [overlayPostId, setOverlayPostId] = useState<string | null>(null);
   const overlayPostIdRef = useRef<string | null>(null);
 
-  const isFirstRender = useRef(true);
+  // 외부에서 dispatch한 initialQuery가 있으면 자동 검색
+  const autoSearchOnOpenRef = useRef<string | null>(null);
+  const initRef = useRef(false);
 
   useEffect(() => {
     overlayPostIdRef.current = overlayPostId;
   }, [overlayPostId]);
 
-  useEffect(() => {
-    const handlePopState = () => {
-      if (overlayPostIdRef.current && !window.history.state?.postSearchPostOverlay) {
-        setOverlayPostId(null);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  const openPostOverlay = useCallback((postId: string) => {
-    if (!window.history.state?.postSearchPostOverlay) {
-      window.history.pushState(
-        { ...window.history.state, postSearchPostOverlay: true },
-        '',
-        window.location.href
-      );
-    }
-    setOverlayPostId(postId);
-  }, []);
-
-  const closePostOverlay = useCallback(() => {
-    if (window.history.state?.postSearchPostOverlay) {
-      window.history.back();
-      return;
-    }
-    setOverlayPostId(null);
-  }, []);
-
+  // 검색 실행
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
     try { sessionStorage.setItem(CACHE_KEY_QUERY, trimmed); } catch {}
@@ -331,33 +288,106 @@ const PostSearch = () => {
       setResults(fetched);
       try { sessionStorage.setItem(CACHE_KEY_RESULTS, JSON.stringify(fetched)); } catch {}
     } catch (err) {
-      console.error('[PostSearch] search error:', err);
+      console.error('[PostSearchOverlay] search error:', err);
       setResults([]);
     } finally {
       setIsSearching(false);
     }
   }, []);
 
+  // open/close 이벤트 리스너
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      // 외부에서 태그 클릭 등으로 initialQuery를 가지고 진입한 경우 즉시 검색.
-      if (initialQueryFromState) {
-        handleSearch(initialQueryFromState);
-        // history.state를 비워서 새로고침/뒤로가기 시 재실행되지 않도록 (선택).
+    const handleOpen = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      const initialQuery = typeof detail.initialQuery === 'string' ? detail.initialQuery.trim() : '';
+
+      if (initialQuery) {
+        setSearchQuery(initialQuery);
+        autoSearchOnOpenRef.current = initialQuery;
         try {
-          window.history.replaceState(
-            { ...(window.history.state || {}) },
-            '',
-            window.location.href,
-          );
+          sessionStorage.setItem(CACHE_KEY_QUERY, initialQuery);
+          sessionStorage.removeItem(CACHE_KEY_RESULTS);
         } catch {}
+      } else {
+        // 새로 검색 버튼으로 진입할 때는 캐시된 마지막 쿼리/결과를 복원
+        try {
+          const cachedQuery = sessionStorage.getItem(CACHE_KEY_QUERY) || '';
+          const cachedResultsRaw = sessionStorage.getItem(CACHE_KEY_RESULTS);
+          setSearchQuery(cachedQuery);
+          if (cachedQuery && cachedResultsRaw) {
+            setResults(JSON.parse(cachedResultsRaw));
+            setHasSearched(true);
+          } else {
+            setResults([]);
+            setHasSearched(false);
+          }
+        } catch {
+          setSearchQuery('');
+          setResults([]);
+          setHasSearched(false);
+        }
       }
+
+      (window as any).__isPostSearchOpen = true;
+      setIsOpen(true);
+    };
+
+    const handleClose = () => {
+      (window as any).__isPostSearchOpen = false;
+      setIsOpen(false);
+      setOverlayPostId(null);
+    };
+
+    window.addEventListener('open-post-search', handleOpen);
+    window.addEventListener('close-post-search', handleClose);
+    window.addEventListener('close-post-search-by-back', handleClose);
+
+    return () => {
+      window.removeEventListener('open-post-search', handleOpen);
+      window.removeEventListener('close-post-search', handleClose);
+      window.removeEventListener('close-post-search-by-back', handleClose);
+    };
+  }, []);
+
+  // 오픈 직후 initialQuery 자동 검색
+  useEffect(() => {
+    if (isOpen && autoSearchOnOpenRef.current) {
+      const q = autoSearchOnOpenRef.current;
+      autoSearchOnOpenRef.current = null;
+      handleSearch(q);
+    }
+  }, [isOpen, handleSearch]);
+
+  // 타이핑 디바운스 검색 (오픈 상태일 때만)
+  useEffect(() => {
+    if (!isOpen) return;
+    // 첫 렌더(오픈 직후)는 위의 auto-search가 처리하므로 스킵
+    if (!initRef.current) {
+      initRef.current = true;
       return;
     }
     const timer = setTimeout(() => handleSearch(searchQuery), 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, handleSearch, initialQueryFromState]);
+  }, [searchQuery, handleSearch, isOpen]);
+
+  // 닫힐 때 init flag 리셋
+  useEffect(() => {
+    if (!isOpen) {
+      initRef.current = false;
+    }
+  }, [isOpen]);
+
+  const close = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('close-post-search'));
+  }, []);
+
+  const openPostOverlay = useCallback((postId: string) => {
+    setOverlayPostId(postId);
+  }, []);
+
+  const closePostOverlay = useCallback(() => {
+    setOverlayPostId(null);
+  }, []);
 
   const getThumbnail = (post: SearchPost) => {
     const raw = Array.isArray(post.images) && post.images.length > 0
@@ -366,13 +396,15 @@ const PostSearch = () => {
     return raw ? getOptimizedMarkerImage(raw, post.id) : getFallbackImage(post.id);
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[20001] bg-white flex flex-col overflow-hidden">
       {/* 고정 상단 헤더 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[10] bg-white">
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
-            onClick={() => navigate(-1)}
+            onClick={close}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
           >
             <ChevronLeft className="w-6 h-6" />
@@ -384,7 +416,7 @@ const PostSearch = () => {
       </div>
 
       {/* 검색 입력창 */}
-      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+122px)]">
+      <div className="shrink-0 bg-white z-[5] pt-[calc(env(safe-area-inset-top,0px)+122px)]">
         <div className="px-4 pb-3">
           <div className="relative">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
@@ -492,7 +524,7 @@ const PostSearch = () => {
         )}
       </div>
 
-      {/* 포스팅 상세 오버레이 (navigate 없이 같은 페이지 내에서 렌더) */}
+      {/* 포스팅 상세 오버레이 */}
       {overlayPostId && (
         <PostDetailOverlay
           postId={overlayPostId}
@@ -504,4 +536,4 @@ const PostSearch = () => {
   );
 };
 
-export default PostSearch;
+export default PostSearchOverlay;
