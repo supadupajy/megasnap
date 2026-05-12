@@ -223,24 +223,33 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     }
   }, [activeIndex, items.length, isOpen, appendMore]);
 
-  // 모달 열림 시 body 스크롤 잠금
+  // 모달 열림 시 body 스크롤 잠금 + 전역 플래그/이벤트
   useEffect(() => {
     if (!isOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    (window as any).__isReelsViewerOpen = true;
+    window.dispatchEvent(new CustomEvent("open-reels-viewer"));
     return () => {
       document.body.style.overflow = prev;
+      (window as any).__isReelsViewerOpen = false;
+      window.dispatchEvent(new CustomEvent("close-reels-viewer"));
     };
   }, [isOpen]);
 
-  // ESC 닫기
+  // ESC + 안드로이드 백버튼 닫기
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+    const handleBackClose = () => onClose();
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("close-reels-viewer-by-back", handleBackClose);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("close-reels-viewer-by-back", handleBackClose);
+    };
   }, [isOpen, onClose]);
 
   const handleLikeToggle = useCallback(
@@ -557,107 +566,105 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         </button>
       )}
 
-      {/* 하단 그라데이션 + 정보 */}
+      {/* 하단 그라데이션 + 정보 + 액션 알약 */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
-        <div className="bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pt-20 pb-6">
-          <div className="flex items-end justify-between gap-3 pointer-events-auto">
-            {/* 좌측: 유저 + 본문 */}
-            <div className="flex-1 min-w-0 text-white">
+        <div
+          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-16"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
+        >
+          {/* 유저 + 위치 + 본문 */}
+          <div className="text-white pointer-events-auto mb-3">
+            <button
+              onClick={onUserClick}
+              className="flex items-center gap-2 mb-2 active:opacity-70 transition-opacity"
+            >
+              <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-700 ring-2 ring-white/30">
+                {post.user.avatar ? (
+                  <img src={post.user.avatar} alt={post.user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
+                    {post.user.name?.[0] || "?"}
+                  </div>
+                )}
+              </div>
+              <span className="text-sm font-black drop-shadow-md">{post.user.name}</span>
+            </button>
+
+            {(post.lat != null && post.lng != null) && (
               <button
-                onClick={onUserClick}
-                className="flex items-center gap-2 mb-2 active:opacity-70 transition-opacity"
+                onClick={onLocationClick}
+                className="flex items-center gap-1 mb-2 text-white/90 active:opacity-70 transition-opacity"
               >
-                <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-700 ring-2 ring-white/30">
-                  {post.user.avatar ? (
-                    <img src={post.user.avatar} alt={post.user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                      {post.user.name?.[0] || "?"}
-                    </div>
-                  )}
-                </div>
-                <span className="text-sm font-black drop-shadow-md">{post.user.name}</span>
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold drop-shadow-md truncate max-w-[80vw]">
+                  {post.location || "위치 보기"}
+                </span>
+              </button>
+            )}
+
+            {post.content && (
+              <div
+                onClick={() => setContentExpanded((v) => !v)}
+                className="text-sm leading-snug font-medium drop-shadow-md cursor-pointer pr-2"
+              >
+                <p className={cn(contentExpanded ? "" : "line-clamp-2")}>{post.content}</p>
+                {!contentExpanded && post.content.length > 60 && (
+                  <span className="text-xs text-white/60 font-bold mt-1 inline-block">더 보기</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 알약 액션 버튼 (PostActions와 동일한 스타일, 다크 배경용으로 조정) */}
+          <div className="flex items-center justify-between gap-2 pointer-events-auto">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <button
+                type="button"
+                onClick={onLikeToggle}
+                aria-label={`좋아요 ${likesCount.toLocaleString()}개`}
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-all active:scale-95 backdrop-blur-md",
+                  liked
+                    ? "border-red-300/50 bg-red-500/20 text-white shadow-sm"
+                    : "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                )}
+              >
+                <Heart className={cn("h-[18px] w-[18px] transition-colors", liked ? "fill-red-500 text-red-500" : "text-white")} />
+                <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
               </button>
 
-              {(post.lat != null && post.lng != null) && (
-                <button
-                  onClick={onLocationClick}
-                  className="flex items-center gap-1 mb-2 text-white/90 active:opacity-70 transition-opacity"
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-bold drop-shadow-md truncate max-w-[60vw]">
-                    {post.location || "위치 보기"}
-                  </span>
-                </button>
-              )}
-
-              {post.content && (
-                <div
-                  onClick={() => setContentExpanded((v) => !v)}
-                  className="text-sm leading-snug font-medium drop-shadow-md cursor-pointer pr-2"
-                >
-                  <p className={cn(contentExpanded ? "" : "line-clamp-2")}>{post.content}</p>
-                  {!contentExpanded && post.content.length > 60 && (
-                    <span className="text-xs text-white/60 font-bold mt-1 inline-block">더 보기</span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 우측: 액션 버튼 세로 스택 (TikTok/Reels 스타일) */}
-            <div className="flex flex-col items-center gap-4 pb-1">
-              <ActionButton
-                onClick={onLikeToggle}
-                icon={
-                  <Heart
-                    className={cn("w-7 h-7 transition-all", liked ? "fill-rose-500 text-rose-500 scale-110" : "text-white")}
-                  />
-                }
-                label={likesCount.toLocaleString()}
-              />
-              <ActionButton
+              <button
+                type="button"
                 onClick={onCommentClick}
-                icon={<MessageCircle className="w-7 h-7 text-white" />}
-                label={commentsCount.toLocaleString()}
-              />
-              <ActionButton
-                onClick={onSaveToggle}
-                icon={
-                  <Bookmark
-                    className={cn("w-7 h-7 transition-all", saved ? "fill-amber-400 text-amber-400" : "text-white")}
-                  />
-                }
-              />
-              <ActionButton
+                aria-label={`댓글 ${commentsCount.toLocaleString()}개`}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-sm font-black text-white backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
+              >
+                <MessageCircle className="h-[18px] w-[18px] text-white" />
+                <span className="tabular-nums leading-none">{commentsCount.toLocaleString()}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={(e) => handleShare(e, post.id)}
-                icon={<Share2 className="w-7 h-7 text-white" />}
-              />
+                aria-label="공유하기"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
+              >
+                <Share2 className="h-[18px] w-[18px] text-white" />
+              </button>
             </div>
+
+            <button
+              type="button"
+              onClick={onSaveToggle}
+              aria-label="저장하기"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
+            >
+              <Bookmark className={cn("h-[18px] w-[18px] transition-colors", saved ? "fill-amber-400 text-amber-400" : "text-white")} />
+            </button>
           </div>
         </div>
       </div>
     </div>
-  );
-};
-
-// 액션 버튼 (세로 스택용)
-const ActionButton: React.FC<{
-  onClick: (e: React.MouseEvent) => void;
-  icon: React.ReactNode;
-  label?: string;
-}> = ({ onClick, icon, label }) => {
-  return (
-    <button
-      onClick={onClick}
-      className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-    >
-      <div className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center drop-shadow-lg">
-        {icon}
-      </div>
-      {label && (
-        <span className="text-white text-[11px] font-black drop-shadow-md tabular-nums">{label}</span>
-      )}
-    </button>
   );
 };
 

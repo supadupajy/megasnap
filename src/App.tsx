@@ -102,22 +102,30 @@ const AnimatedRoutes = () => {
   // [Optimized] setInterval(100ms) 폴링 제거 → open/close 이벤트 기반 동기화
   // (PostListOverlay에서 isOpen 변경 시 open-post-list-overlay/close-post-list-overlay 이벤트 발생)
   const [isPostListVisible, setIsPostListVisible] = useState(false);
+  const [isReelsViewerOpen, setIsReelsViewerOpen] = useState(false);
 
   useEffect(() => {
     // 초기값 동기화 (다른 페이지에서 진입 시)
     if (typeof window !== 'undefined') {
       setIsPostListVisible((window as any).__isPostListOpen === true);
+      setIsReelsViewerOpen((window as any).__isReelsViewerOpen === true);
     }
 
     const handleOpen = () => setIsPostListVisible(true);
     const handleClose = () => setIsPostListVisible(false);
+    const handleReelsOpen = () => setIsReelsViewerOpen(true);
+    const handleReelsClose = () => setIsReelsViewerOpen(false);
 
     window.addEventListener('open-post-list-overlay', handleOpen);
     window.addEventListener('close-post-list-overlay', handleClose);
+    window.addEventListener('open-reels-viewer', handleReelsOpen);
+    window.addEventListener('close-reels-viewer', handleReelsClose);
 
     return () => {
       window.removeEventListener('open-post-list-overlay', handleOpen);
       window.removeEventListener('close-post-list-overlay', handleClose);
+      window.removeEventListener('open-reels-viewer', handleReelsOpen);
+      window.removeEventListener('close-reels-viewer', handleReelsClose);
     };
   }, []);
 
@@ -125,7 +133,14 @@ const AnimatedRoutes = () => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       console.log('[App] Back button pressed. Path:', location.pathname);
 
-      // 0순위: PlaceSearch가 열려 있으면 닫기 (지도 위 최상단 오버레이)
+      // 0순위: ReelsViewer가 열려 있으면 닫기 (최상단 풀스크린 오버레이)
+      if ((window as any).__isReelsViewerOpen === true) {
+        console.log('[App] Intercepting back button to close ReelsViewer');
+        window.dispatchEvent(new CustomEvent('close-reels-viewer-by-back'));
+        return;
+      }
+
+      // 0.5순위: PlaceSearch가 열려 있으면 닫기 (지도 위 최상단 오버레이)
       if ((window as any).__isPlaceSearchOpen === true) {
         console.log('[App] Intercepting back button to close PlaceSearch');
         window.dispatchEvent(new CustomEvent('close-place-search-by-back'));
@@ -175,8 +190,9 @@ const AnimatedRoutes = () => {
     <div className={`bg-white ${isChatPage ? "h-screen overflow-hidden" : "min-h-screen"}`}>
 
       {/* Header: hideAppChrome이 아닐 때 또는 write 페이지일 때 표시 */}
+      {/* ReelsViewer 열림 시에는 항상 숨김 */}
 
-      {(!hideAppChrome || isWritePage) && session && (
+      {(!hideAppChrome || isWritePage) && session && !isReelsViewerOpen && (
         <Header />
       )}
 
@@ -238,7 +254,7 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {(!hideBottomNav || isWritePage) && session && <BottomNav />}
+      {(!hideBottomNav || isWritePage) && session && !isReelsViewerOpen && <BottomNav />}
 
       <ExitDialog
         isOpen={showExitDialog}
