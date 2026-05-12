@@ -205,7 +205,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
   useEffect(() => {
     if (!isOpen) return;
     setShowHint(false);
-    setUiVisible(true); // 새 슬라이드로 이동하면 UI 다시 표시
+    // 새 슬라이드로 이동해도 사용자가 마지막에 선택한 UI 표시 상태를 유지함
   }, [activeIndex, isOpen]);
 
   // 끝에 가까워지면 추가 로드
