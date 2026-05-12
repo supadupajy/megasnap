@@ -199,105 +199,13 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     });
   }, [pool]);
 
-  // 활성 인덱스 추적 + 강제 스냅 (쫀득한 짝짝 붙는 느낌)
+  // 활성 인덱스 추적 + 강제 스냅 (한 번에 1개씩만 이동)
+  // CSS 스크롤은 비활성화하고 transform으로만 슬라이드 전환
+  // 활성 인덱스 변경 시 자동으로 transform이 적용되므로 별도 스크롤 핸들러 불필요
   useEffect(() => {
     if (!isOpen) return;
-    const root = containerRef.current;
-    if (!root) return;
-
-    let scrollEndTimer: number | null = null;
-    let isSnapping = false;
-    let touchStartY: number | null = null;
-    let lastWheelAt = 0;
-
-    // scrollTop 기반으로 현재 가장 가까운 슬라이드 인덱스 계산
-    const computeNearestIndex = () => {
-      const slideHeight = root.clientHeight;
-      if (slideHeight === 0) return 0;
-      return Math.round(root.scrollTop / slideHeight);
-    };
-
-    const snapTo = (targetIndex: number) => {
-      const slideHeight = root.clientHeight;
-      const maxIndex = Math.max(0, items.length - 1);
-      const clamped = Math.max(0, Math.min(maxIndex, targetIndex));
-      const targetTop = clamped * slideHeight;
-      isSnapping = true;
-      root.scrollTo({ top: targetTop, behavior: "smooth" });
-      setActiveIndex(clamped);
-      window.setTimeout(() => {
-        isSnapping = false;
-      }, 300);
-    };
-
-    const handleScroll = () => {
-      if (isSnapping) return;
-      const idx = computeNearestIndex();
-      setActiveIndex((prev) => (prev !== idx ? idx : prev));
-      setShowHint(false);
-
-      // 스크롤 종료 후 강제 스냅
-      if (scrollEndTimer) window.clearTimeout(scrollEndTimer);
-      scrollEndTimer = window.setTimeout(() => {
-        if (isSnapping) return;
-        const slideHeight = root.clientHeight;
-        const nearest = computeNearestIndex();
-        const targetTop = nearest * slideHeight;
-        if (Math.abs(root.scrollTop - targetTop) > 1) {
-          snapTo(nearest);
-        }
-      }, 80);
-    };
-
-    // 터치 시작 위치 기록 (스와이프 방향/세기 판별)
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartY = e.touches[0]?.clientY ?? null;
-    };
-
-    // 터치 종료 시 즉시 다음/이전 슬라이드로 스냅 (인스타 릴스 느낌)
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (touchStartY == null) return;
-      const endY = e.changedTouches[0]?.clientY ?? touchStartY;
-      const dy = touchStartY - endY;
-      touchStartY = null;
-
-      // 임계값 이상 스와이프 → 다음/이전 슬라이드로 강제 스냅
-      const threshold = 40;
-      if (Math.abs(dy) > threshold) {
-        const current = computeNearestIndex();
-        const next = dy > 0 ? current + 1 : current - 1;
-        // 약간의 지연으로 브라우저 기본 스냅과 충돌 방지
-        window.setTimeout(() => snapTo(next), 0);
-      }
-    };
-
-    // 휠 한 번에 한 슬라이드만 이동
-    const handleWheel = (e: WheelEvent) => {
-      const now = Date.now();
-      if (now - lastWheelAt < 350) {
-        e.preventDefault();
-        return;
-      }
-      if (Math.abs(e.deltaY) < 10) return;
-      e.preventDefault();
-      lastWheelAt = now;
-      const current = computeNearestIndex();
-      snapTo(e.deltaY > 0 ? current + 1 : current - 1);
-    };
-
-    root.addEventListener("scroll", handleScroll, { passive: true });
-    root.addEventListener("touchstart", handleTouchStart, { passive: true });
-    root.addEventListener("touchend", handleTouchEnd, { passive: true });
-    root.addEventListener("wheel", handleWheel, { passive: false });
-
-    return () => {
-      root.removeEventListener("scroll", handleScroll);
-      root.removeEventListener("touchstart", handleTouchStart);
-      root.removeEventListener("touchend", handleTouchEnd);
-      root.removeEventListener("wheel", handleWheel);
-      if (scrollEndTimer) window.clearTimeout(scrollEndTimer);
-    };
-  }, [isOpen, items.length]);
+    setShowHint(false);
+  }, [activeIndex, isOpen]);
 
   // 끝에 가까워지면 추가 로드
   useEffect(() => {
@@ -470,28 +378,21 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
           )}
         </AnimatePresence>
 
-        {/* 세로 스냅 스크롤 컨테이너 — 쫀득한 짝짝 붙는 스냅 */}
-        <div
-          ref={containerRef}
-          className="h-full w-full overflow-y-scroll no-scrollbar"
-          style={{
-            scrollSnapType: "y mandatory",
-            scrollSnapStop: "always",
-            overscrollBehavior: "contain",
-            WebkitOverflowScrolling: "auto",
-            scrollBehavior: "auto",
-            touchAction: "pan-y",
-          }}
+        {/* Transform 기반 슬라이더 — 한 번에 1개씩만 이동 (스와이프 강도와 무관) */}
+        <ReelsSlideTrack
+          containerRef={containerRef}
+          activeIndex={activeIndex}
+          itemCount={items.length}
+          onActiveIndexChange={setActiveIndex}
         >
           {items.map((item, index) => (
             <div
               key={item.key}
               data-reel-index={index}
-              className="relative w-full"
+              className="absolute left-0 right-0 w-full"
               style={{
                 height: "100dvh",
-                scrollSnapAlign: "start",
-                scrollSnapStop: "always",
+                top: `${index * 100}dvh`,
               }}
             >
               {item.kind === "post" ? (
@@ -524,7 +425,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
               )}
             </div>
           ))}
-        </div>
+        </ReelsSlideTrack>
 
         {/* 댓글 다이얼로그 */}
         <PostCommentsDialog
@@ -541,6 +442,183 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
       </motion.div>
     </AnimatePresence>,
     document.body
+  );
+};
+
+// ─── Transform 기반 슬라이더 트랙 ────────────────────────────
+// 강한 스와이프든 약한 스와이프든 한 번에 1개씩만 이동하도록 강제
+interface ReelsSlideTrackProps {
+  containerRef: React.RefObject<HTMLDivElement>;
+  activeIndex: number;
+  itemCount: number;
+  onActiveIndexChange: (idx: number) => void;
+  children: React.ReactNode;
+}
+
+const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
+  containerRef,
+  activeIndex,
+  itemCount,
+  onActiveIndexChange,
+  children,
+}) => {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [dragOffset, setDragOffset] = useState(0); // 드래그 중 임시 오프셋 (px)
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const isDraggingRef = useRef(false);
+  const startYRef = useRef(0);
+  const lastYRef = useRef(0);
+  const startTimeRef = useRef(0);
+  const lockTransitionRef = useRef(false); // 전환 애니메이션 중 추가 입력 차단
+
+  const goTo = useCallback(
+    (nextIndex: number) => {
+      if (lockTransitionRef.current) return;
+      const clamped = Math.max(0, Math.min(itemCount - 1, nextIndex));
+      if (clamped === activeIndex) {
+        // 동일 위치 → 단순 복귀 애니메이션
+        setIsTransitioning(true);
+        setDragOffset(0);
+        window.setTimeout(() => setIsTransitioning(false), 320);
+        return;
+      }
+      lockTransitionRef.current = true;
+      setIsTransitioning(true);
+      setDragOffset(0);
+      onActiveIndexChange(clamped);
+      // 전환 애니메이션 종료 후 락 해제 (320ms transition + 여유)
+      window.setTimeout(() => {
+        setIsTransitioning(false);
+        lockTransitionRef.current = false;
+      }, 360);
+    },
+    [activeIndex, itemCount, onActiveIndexChange]
+  );
+
+  // 터치 핸들러
+  useEffect(() => {
+    const root = containerRef.current;
+    if (!root) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (lockTransitionRef.current) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      isDraggingRef.current = true;
+      startYRef.current = touch.clientY;
+      lastYRef.current = touch.clientY;
+      startTimeRef.current = Date.now();
+      setIsTransitioning(false);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRef.current) return;
+      const touch = e.touches[0];
+      if (!touch) return;
+      e.preventDefault(); // 페이지 스크롤 차단
+
+      let dy = touch.clientY - startYRef.current;
+      lastYRef.current = touch.clientY;
+
+      // 경계에서 저항감 (rubber band)
+      const atTop = activeIndex === 0 && dy > 0;
+      const atBottom = activeIndex === itemCount - 1 && dy < 0;
+      if (atTop || atBottom) {
+        dy = dy * 0.25;
+      }
+
+      // 최대 드래그 거리를 슬라이드 높이로 제한 — 한 번에 1개만 이동
+      const maxDrag = root.clientHeight;
+      if (dy > maxDrag) dy = maxDrag;
+      if (dy < -maxDrag) dy = -maxDrag;
+
+      setDragOffset(dy);
+    };
+
+    const handleTouchEnd = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+
+      const dy = lastYRef.current - startYRef.current;
+      const dt = Date.now() - startTimeRef.current;
+      const velocity = Math.abs(dy) / Math.max(dt, 1); // px/ms
+      const slideHeight = root.clientHeight;
+
+      // 다음/이전/제자리 결정
+      // 1) 30% 이상 이동했거나 2) 빠른 플릭(velocity > 0.3) → 다음 슬라이드로
+      const distanceThreshold = slideHeight * 0.2;
+      const isFlick = velocity > 0.3 && Math.abs(dy) > 30;
+
+      let nextIndex = activeIndex;
+      if (dy < -distanceThreshold || (isFlick && dy < 0)) {
+        nextIndex = activeIndex + 1;
+      } else if (dy > distanceThreshold || (isFlick && dy > 0)) {
+        nextIndex = activeIndex - 1;
+      }
+
+      goTo(nextIndex);
+    };
+
+    // 휠 (PC): 한 번에 1개만
+    let wheelLock = false;
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (wheelLock || lockTransitionRef.current) return;
+      if (Math.abs(e.deltaY) < 5) return;
+      wheelLock = true;
+      goTo(activeIndex + (e.deltaY > 0 ? 1 : -1));
+      window.setTimeout(() => {
+        wheelLock = false;
+      }, 400);
+    };
+
+    // 키보드 (PC)
+    const handleKey = (e: KeyboardEvent) => {
+      if (lockTransitionRef.current) return;
+      if (e.key === "ArrowDown" || e.key === "PageDown") {
+        e.preventDefault();
+        goTo(activeIndex + 1);
+      } else if (e.key === "ArrowUp" || e.key === "PageUp") {
+        e.preventDefault();
+        goTo(activeIndex - 1);
+      }
+    };
+
+    root.addEventListener("touchstart", handleTouchStart, { passive: true });
+    root.addEventListener("touchmove", handleTouchMove, { passive: false });
+    root.addEventListener("touchend", handleTouchEnd, { passive: true });
+    root.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+    root.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("keydown", handleKey);
+
+    return () => {
+      root.removeEventListener("touchstart", handleTouchStart);
+      root.removeEventListener("touchmove", handleTouchMove);
+      root.removeEventListener("touchend", handleTouchEnd);
+      root.removeEventListener("touchcancel", handleTouchEnd);
+      root.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [activeIndex, itemCount, goTo, containerRef]);
+
+  // transform 위치 계산: -(activeIndex * 100dvh) + dragOffset
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 overflow-hidden"
+      style={{ touchAction: "none" }}
+    >
+      <div
+        ref={trackRef}
+        className="absolute inset-0 will-change-transform"
+        style={{
+          transform: `translate3d(0, calc(${-activeIndex * 100}dvh + ${dragOffset}px), 0)`,
+          transition: isTransitioning ? "transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none",
+        }}
+      >
+        {children}
+      </div>
+    </div>
   );
 };
 
@@ -655,41 +733,46 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        {hasVideo && effectiveVideoUrl ? (
-          <video
-            ref={videoRef}
-            src={effectiveVideoUrl}
-            className="max-h-full max-w-full w-full h-full object-contain"
-            playsInline
-            loop
-            muted={muted}
-            preload="metadata"
-            poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
-            onClick={togglePlay}
-          />
-        ) : (
-          <img
-            src={fallbackImage}
-            alt=""
-            className="max-h-full max-w-full w-full h-full object-contain"
-          />
-        )}
-      </div>
-
-      {/* 재생 오버레이 아이콘 (비디오 일시정지 상태에서만) */}
-      {hasVideo && !isPlaying && (
-        <button
-          onClick={togglePlay}
-          className="absolute inset-0 z-10 flex items-center justify-center pointer-events-auto"
-          aria-label="재생"
+      {/* 메인 미디어 — 3:4 비율로 가운데 정렬 (PostItem과 동일) */}
+      <div className="absolute inset-0 flex items-center justify-center px-2">
+        <div
+          className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl"
+          style={{ aspectRatio: "3 / 4", maxHeight: "calc(100dvh - 200px)" }}
         >
-          <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
-            <Play className="w-10 h-10 text-white fill-white ml-1" />
-          </div>
-        </button>
-      )}
+          {hasVideo && effectiveVideoUrl ? (
+            <video
+              ref={videoRef}
+              src={effectiveVideoUrl}
+              className="absolute inset-0 w-full h-full object-cover"
+              playsInline
+              loop
+              muted={muted}
+              preload="metadata"
+              poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
+              onClick={togglePlay}
+            />
+          ) : (
+            <img
+              src={fallbackImage}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+
+          {/* 재생 오버레이 아이콘 (비디오 일시정지 상태에서만) */}
+          {hasVideo && !isPlaying && (
+            <button
+              onClick={togglePlay}
+              className="absolute inset-0 z-10 flex items-center justify-center pointer-events-auto"
+              aria-label="재생"
+            >
+              <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
+                <Play className="w-10 h-10 text-white fill-white ml-1" />
+              </div>
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* 하단 그라데이션 + 정보 + 액션 알약 */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
