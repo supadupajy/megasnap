@@ -18,8 +18,13 @@ const isVideoUrl = (url: string | undefined | null): boolean => {
 // ── 비디오 썸네일 인메모리 캐시 ──────────────────────────────
 const videoThumbCache = new Map<string, string | 'failed'>();
 
+// 플레이 오버레이/로딩 인디케이터 사이즈
+// - sm: collapsed 헤더의 w-6 h-6(24px) 썸네일용
+// - md: 펼쳐진 리스트의 w-12 h-12(48px) 썸네일용
+type PlayBadgeSize = 'sm' | 'md';
+
 // 동영상 썸네일을 canvas로 추출하는 컴포넌트
-const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ videoUrl, className }) => {
+const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: PlayBadgeSize }> = ({ videoUrl, className, size = 'md' }) => {
   const cached = videoThumbCache.get(videoUrl);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(
     cached && cached !== 'failed' ? cached : null
@@ -127,43 +132,66 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
     return (
       <div className={cn("relative w-full h-full", className)}>
         <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-7 h-7 bg-black/55 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30">
-            <svg className="w-3.5 h-3.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-          </div>
-        </div>
+        <PlayOverlay size={size} />
       </div>
     );
   }
 
   if (failed) {
     return (
-      <div className={cn("w-full h-full bg-gray-800 flex items-center justify-center", className)}>
-        <div className="w-7 h-7 bg-black/55 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30">
-          <svg className="w-3.5 h-3.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </div>
+      <div className={cn("relative w-full h-full bg-gray-800", className)}>
+        <PlayOverlay size={size} />
       </div>
     );
   }
 
   return (
     <div className={cn("w-full h-full bg-gray-200 animate-pulse flex items-center justify-center", className)}>
-      <svg className="w-4 h-4 text-gray-400 fill-gray-400 ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      <svg
+        className={cn(
+          "text-gray-400 fill-gray-400 ml-0.5",
+          size === 'sm' ? "w-2 h-2" : "w-4 h-4"
+        )}
+        viewBox="0 0 24 24"
+      >
+        <path d="M8 5v14l11-7z" />
+      </svg>
     </div>
   );
 };
 
 // 플레이 버튼 오버레이 (영상 표시용)
-const PlayOverlay: React.FC = () => (
+// - sm: 작은 썸네일(24px)에 어울리는 미니 배지
+// - md: 일반 리스트 썸네일(48px)용 기본 배지
+const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-    <div className="w-7 h-7 bg-black/55 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30">
-      <svg className="w-3.5 h-3.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    <div
+      className={cn(
+        "bg-black/55 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30",
+        size === 'sm' ? "w-3.5 h-3.5" : "w-7 h-7"
+      )}
+    >
+      <svg
+        className={cn(
+          "text-white fill-white",
+          size === 'sm' ? "w-2 h-2 ml-[1px]" : "w-3.5 h-3.5 ml-0.5"
+        )}
+        viewBox="0 0 24 24"
+      >
+        <path d="M8 5v14l11-7z" />
+      </svg>
     </div>
   </div>
 );
 
 // 포스트 썸네일 컴포넌트 (이미지/동영상 자동 판별)
-const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: string; onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void }> = ({ post, className, imgClassName, onImgError }) => {
+const PostThumbnail: React.FC<{
+  post: Post;
+  className?: string;
+  imgClassName?: string;
+  onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  size?: PlayBadgeSize;
+}> = ({ post, className, imgClassName, onImgError, size = 'md' }) => {
   const videoUrl = post.videoUrl;
   const imageUrl = post.image_url || post.image;
   const hasStoredThumbnail = !!imageUrl && !isVideoUrl(imageUrl) && imageUrl !== '/placeholder.svg';
@@ -180,7 +208,7 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
           className={cn("w-full h-full object-cover", imgClassName)}
           onError={onImgError}
         />
-        {isVideo && <PlayOverlay />}
+        {isVideo && <PlayOverlay size={size} />}
       </div>
     );
   }
@@ -188,7 +216,7 @@ const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: s
   const effectiveVideoUrl = videoUrl || (isVideoUrl(imageUrl) ? imageUrl : null);
 
   if (effectiveVideoUrl) {
-    return <VideoThumbnail videoUrl={effectiveVideoUrl} className={className} />;
+    return <VideoThumbnail videoUrl={effectiveVideoUrl} className={className} size={size} />;
   }
 
   return (
@@ -741,7 +769,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
                   <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                    <PostThumbnail post={currentPost!} onImgError={handleImageError} />
+                    <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" />
                   </div>
                   <div className="flex-1 overflow-hidden relative h-5">
                     <AnimatePresence mode="wait">
