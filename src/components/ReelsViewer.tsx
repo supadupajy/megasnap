@@ -617,28 +617,14 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
 
       {embedded && showInlineCloseButton && (
         <div className="absolute top-3 right-3 z-40 pointer-events-none">
-          <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
-            <motion.button
-              key={`x-${activeIndex}`}
-              type="button"
-              onClick={onClose}
-              aria-label="닫기"
-              custom={swipeDir}
-              variants={{
-                enter: (dir: 1 | -1) => ({ y: dir === 1 ? 60 : -60, opacity: 0 }),
-                center: { y: 0, opacity: 1 },
-                exit: (dir: 1 | -1) => ({ y: dir === 1 ? -60 : 60, opacity: 0 }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.4, ease: [0.22, 0.61, 0.36, 1] }}
-              whileTap={{ scale: 0.92 }}
-              className="pointer-events-auto w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10"
-            >
-              <X className="w-4 h-4 text-white" />
-            </motion.button>
-          </AnimatePresence>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="pointer-events-auto w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10 active:scale-95 transition-transform"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
         </div>
       )}
 
