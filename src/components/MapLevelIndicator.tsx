@@ -110,7 +110,7 @@ const MapLevelIndicator = ({
       style={style}
       aria-label={`지도 레벨 ${safeLevel}, ${markerVisible ? '마커 표시 중' : '마커 숨김 상태'}`}
     >
-      <div className="flex h-[184px] w-9 flex-col items-center rounded-[17px] border border-white/70 bg-white/45 px-1 py-2 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+      <div className="flex h-[156px] w-9 flex-col items-center rounded-[17px] border border-white/70 bg-white/45 px-1 py-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
         <div className="text-[12px] font-black leading-none text-slate-800">+</div>
 
         <div
@@ -120,7 +120,7 @@ const MapLevelIndicator = ({
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           className={cn(
-            'relative my-1 h-[96px] w-5',
+            'relative my-1 h-[72px] w-5',
             interactive ? 'cursor-grab active:cursor-grabbing touch-none' : '',
           )}
           style={interactive ? { touchAction: 'none' } : undefined}

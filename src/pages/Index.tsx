@@ -407,7 +407,7 @@ const Index = () => {
   // - 따라서 viewport 절대 좌표상 버튼 중심 Y = (viewportHeight - safeAreaBottom) - btnBottom - 32
   // - 오른쪽 마커 인디케이터(position:fixed) 중심 Y = rightMarkerIndicatorTop + 26
   // - 지도 레벨 인디케이터(position:fixed, 높이 184) top = 중간점 - 92
-  const MAP_LEVEL_INDICATOR_HEIGHT = 184;
+  const MAP_LEVEL_INDICATOR_HEIGHT = 156;
   const viewAllBtnBottomFromMapArea = bottomNavHeight + Math.max(safeAreaBottom, 8) + 8;
   const viewAllBtnCenterY =
     viewportHeight - safeAreaBottom - viewAllBtnBottomFromMapArea - 32; // 버튼 높이 64의 절반
