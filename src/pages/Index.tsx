@@ -400,9 +400,20 @@ const Index = () => {
   // 물방울 마커가 하단 위치 배너와 겹치지 않도록 여유를 더 확보
   const indicatorBottomOffset = bottomNavHeight + safeAreaBottom + 56;
   const rightMarkerIndicatorTop = ((indicatorTopOffset + (viewportHeight - (indicatorBottomOffset + 8))) / 2) - 26;
-  const mapLevelIndicatorTop = Math.max(
-    indicatorTopOffset + 8,
-    Math.round((indicatorTopOffset + rightMarkerIndicatorTop - 184) / 2),
+
+  // 지도 레벨 인디케이터 위치: "여기보기" 버튼 중심과 오른쪽 마커 인디케이터 중심의 정확한 중간에 배치
+  // - "여기보기" 버튼: bottom = bottomNavHeight + max(safeAreaBottom, 8) + 8, 크기 64x64
+  // - 오른쪽 마커 인디케이터 중심 Y = rightMarkerIndicatorTop + 26 (높이 약 52 기준)
+  // - 인디케이터 자체 높이 = 184 → 중심 보정 -92
+  const MAP_LEVEL_INDICATOR_HEIGHT = 184;
+  const viewAllBtnBottomDist = bottomNavHeight + Math.max(safeAreaBottom, 8) + 8;
+  const viewAllBtnCenterY = viewportHeight - viewAllBtnBottomDist - 32; // 버튼 height 64의 절반
+  const rightMarkerIndicatorCenterY = rightMarkerIndicatorTop + 26;
+  const desiredCenterY = (viewAllBtnCenterY + rightMarkerIndicatorCenterY) / 2;
+  const minTop = indicatorTopOffset + 8;
+  const maxTop = viewportHeight - MAP_LEVEL_INDICATOR_HEIGHT - viewAllBtnBottomDist - 8;
+  const mapLevelIndicatorTop = Math.round(
+    Math.min(Math.max(desiredCenterY - MAP_LEVEL_INDICATOR_HEIGHT / 2, minTop), Math.max(maxTop, minTop)),
   );
 
   useEffect(() => {
