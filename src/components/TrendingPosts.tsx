@@ -167,18 +167,23 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
     <div
       className={cn(
-        "bg-black/55 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30",
+        "bg-white/90 rounded-full flex items-center justify-center shadow-md",
         size === 'sm' ? "w-2.5 h-2.5" : "w-3.5 h-3.5"
       )}
     >
       <svg
         className={cn(
-          "text-white fill-white ml-[1px]",
+          "ml-[1px]",
           size === 'sm' ? "w-1.5 h-1.5" : "w-2 h-2"
         )}
         viewBox="0 0 24 24"
+        fill="#4f46e5"
+        stroke="#4f46e5"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       >
-        <path d="M8 5v14l11-7z" />
+        <polygon points="5 3 19 12 5 21 5 3" />
       </svg>
     </div>
   </div>
