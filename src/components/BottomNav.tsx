@@ -44,11 +44,6 @@ const BottomNav = () => {
   // 댓글 시트가 화면 맨 아래까지 덮고 있으므로 이 슬라이딩은 시트 뒤에서 일어나 사용자에게 보이지 않는다.
   const keyboardOffset = useKeyboardOffset(true);
   const isKeyboardOpen = keyboardOffset > 0;
-  // PostDetail 풀스크린 오버레이가 열려 있는 동안에는 BottomNav를 완전히 숨긴다.
-  // (PostDetail z-index가 BottomNav보다 낮아서 가려지지 않기 때문)
-  const [isPostDetailOpen, setIsPostDetailOpen] = useState(
-    () => typeof window !== 'undefined' && !!(window as any).__isPostDetailOpen
-  );
   const navRef = useRef<HTMLDivElement>(null);
   const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [pillLeft, setPillLeft] = useState(0);
@@ -69,15 +64,6 @@ const BottomNav = () => {
       markFriendPostsSeen();
     }
   }, [isFriendsPage, markFriendPostsSeen]);
-
-  useEffect(() => {
-    const handlePostDetailVisibility = (event: Event) => {
-      const detail = (event as CustomEvent<{ open: boolean }>).detail;
-      setIsPostDetailOpen(!!detail?.open);
-    };
-    window.addEventListener('post-detail-visibility', handlePostDetailVisibility);
-    return () => window.removeEventListener('post-detail-visibility', handlePostDetailVisibility);
-  }, []);
 
   useEffect(() => {
     if (!authUser?.id) {
@@ -194,9 +180,6 @@ const BottomNav = () => {
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000]"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        // PostDetail 풀스크린이 열려 있으면 BottomNav를 layout에서 제외.
-        // (PostDetail z-index가 BottomNav보다 낮아 가려지지 않는 문제 해결)
-        display: isPostDetailOpen ? 'none' : undefined,
         // 키보드가 올라오면 화면 밖으로 밀어내 키보드 위 노출을 방지.
         // (댓글 시트가 이 영역을 덮고 있으면 사용자에겐 슬라이딩이 보이지 않음)
         transform: isKeyboardOpen ? 'translateY(120%)' : 'translateY(0)',
