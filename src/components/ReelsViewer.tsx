@@ -946,27 +946,26 @@ const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, on
   return (
     <div className="text-sm leading-snug font-medium drop-shadow-md pr-2">
       {expanded ? (
-        <p>
-          <HashtagText
-            text={content}
-            tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
-          />
+        <div>
+          <p className="inline">
+            <HashtagText
+              text={content}
+              tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
+            />
+          </p>
           {isOverflowing && (
-            <>
-              {' '}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggle();
-                }}
-                className="text-xs font-bold text-white/80 hover:text-white transition-colors align-baseline"
-              >
-                닫기
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+              className="ml-2 inline-flex items-center align-baseline text-xs font-black text-white hover:text-white/90 underline underline-offset-2"
+            >
+              닫기
+            </button>
           )}
-        </p>
+        </div>
       ) : (
         <div className="relative">
           {/* 측정용/표시용 — 항상 truncate로 한 줄 처리.
@@ -987,10 +986,10 @@ const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, on
                 e.stopPropagation();
                 onToggle();
               }}
-              className="absolute bottom-0 right-0 pl-3 text-xs font-bold text-white/80 hover:text-white transition-colors"
+              className="absolute bottom-0 right-0 pl-3 text-xs font-bold text-white/90 hover:text-white transition-colors"
               style={{
                 background:
-                  'linear-gradient(to right, transparent, rgba(0,0,0,0.65) 25%, rgba(0,0,0,0.75) 100%)',
+                  'linear-gradient(to right, transparent, rgba(0,0,0,0.7) 25%, rgba(0,0,0,0.8) 100%)',
               }}
             >
               ... 더 보기
