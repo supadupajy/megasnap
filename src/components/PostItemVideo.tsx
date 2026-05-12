@@ -35,10 +35,12 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   onImageError,
 }) => {
   const [isPaused, setIsPaused] = useState(false);
-  // 비디오가 한 번이라도 실제로 재생(playing) 됐는지 추적.
-  // 로딩 직후 잠깐 paused 상태로 큰 재생 버튼이 깜빡이는 것을 막기 위해,
-  // 첫 'playing' 이벤트가 발생한 이후에만 일시정지 오버레이를 노출한다.
-  const [hasPlayed, setHasPlayed] = useState(false);
+  // 화면에 실제로 노출할 "일시정지" 상태.
+  // 영상 로딩/버퍼링/리스트 스크롤 도중 video 요소가 짧은 시간(수십~수백ms) 동안
+  // paused 상태가 되었다가 즉시 다시 play 되는 케이스가 많은데, 그 짧은 순간마다
+  // 큰 재생 아이콘이 깜빡이는 플리커링이 발생한다. 이를 막기 위해
+  // isPaused가 일정 시간(300ms) 이상 유지된 경우에만 오버레이를 표시한다.
+  const [showPauseOverlay, setShowPauseOverlay] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -71,10 +73,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       setDuration(Number.isFinite(v.duration) ? v.duration : 0);
     };
     const onPlay = () => setIsPaused(false);
-    const onPlaying = () => {
-      setIsPaused(false);
-      setHasPlayed(true);
-    };
+    const onPlaying = () => setIsPaused(false);
     const onPause = () => setIsPaused(true);
 
     v.addEventListener('timeupdate', onTimeUpdate);
@@ -97,9 +96,20 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     };
   }, [videoRef, src]);
 
-  // src가 바뀌면 첫 재생 상태도 초기화
+  // isPaused가 일정 시간(300ms) 동안 유지될 때만 오버레이를 표시.
+  // 짧은 buffering / loop 전환 / 자동 재생 토글로 인한 플리커링 방지.
   useEffect(() => {
-    setHasPlayed(false);
+    if (!isPaused) {
+      setShowPauseOverlay(false);
+      return;
+    }
+    const t = window.setTimeout(() => setShowPauseOverlay(true), 300);
+    return () => window.clearTimeout(t);
+  }, [isPaused]);
+
+  // src가 바뀌면 오버레이도 즉시 숨김
+  useEffect(() => {
+    setShowPauseOverlay(false);
   }, [src]);
 
   const handleVideoTap = (e: React.MouseEvent) => {
@@ -214,9 +224,9 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       </button>
 
       {/* 일시정지 시 중앙 플레이 아이콘 오버레이
-          - 첫 재생(playing 이벤트)이 발생한 이후에만 노출해서
-            로딩 직후 잠깐 paused 상태일 때 큰 재생 버튼이 깜빡이는 것을 방지 */}
-      {isPaused && !showPoster && hasPlayed && (
+          - 짧은 buffering/loop 전환에 의한 깜빡임을 막기 위해
+            isPaused가 300ms 이상 유지된 경우에만(showPauseOverlay) 노출 */}
+      {showPauseOverlay && !showPoster && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
           aria-hidden="true"
