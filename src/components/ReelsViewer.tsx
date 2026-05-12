@@ -1230,9 +1230,16 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   }, [isActive, muted, activeIsVideo, activeMediaUrl]);
 
   // 영상 시간/길이 + 첫 프레임 준비 상태 추적
+  // 중요: videoRef.current는 MediaCarousel이 \"현재 활성 슬라이드 + 현재 활성 미디어\"일 때만
+  // 비디오 요소를 attach 한다. 따라서 비활성 상태로 처음 마운트된 슬라이드는
+  // videoRef.current === null 인 상태로 이 effect가 일찍 끝나버려, 나중에 active로 전환돼도
+  // timeupdate 리스너가 다시 붙지 않아 타임라인이 갱신되지 않는 버그가 있었다.
+  // → isActive를 deps에 추가해 슬라이드가 활성화되는 시점에 리스너가 다시 부착되도록 한다.
   useEffect(() => {
     // 새 영상으로 바뀌면 ready 상태 리셋
     setVideoFirstFrameReady(false);
+
+    if (!isActive || !activeIsVideo) return;
 
     const v = videoRef.current;
     if (!v) return;
@@ -1260,7 +1267,9 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     v.addEventListener("playing", handlePlaying);
     v.addEventListener("pause", handlePauseEvt);
     v.addEventListener("loadeddata", handleLoadedData);
+    // 이미 메타데이터/현재시간이 준비돼 있을 수 있으므로 초기 값 동기화
     if (Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
+    setCurrentTime(v.currentTime || 0);
     return () => {
       v.removeEventListener("timeupdate", handleTimeUpdate);
       v.removeEventListener("loadedmetadata", handleLoadedMeta);
@@ -1269,7 +1278,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       v.removeEventListener("pause", handlePauseEvt);
       v.removeEventListener("loadeddata", handleLoadedData);
     };
-  }, [activeMediaUrl, isScrubbing]);
+  }, [activeMediaUrl, isScrubbing, isActive, activeIsVideo]);
 
   // 댓글 수 fetch (활성화 시 1회)
   useEffect(() => {
