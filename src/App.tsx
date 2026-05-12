@@ -32,6 +32,7 @@ import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
 import ExitDialog from "./components/ExitDialog";
+import DebugLogOverlay from "./components/DebugLogOverlay";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { NotificationProvider } from "./components/NotificationProvider";
 import { Loader2 } from "lucide-react";
@@ -239,6 +240,8 @@ const AnimatedRoutes = () => {
       </main>
 
       {(!hideBottomNav || isWritePage) && session && <BottomNav />}
+
+      <DebugLogOverlay />
 
       <ExitDialog
         isOpen={showExitDialog}
