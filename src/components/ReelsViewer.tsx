@@ -401,7 +401,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                   ? { bg: "from-slate-300 to-slate-400", text: "text-white", glow: "shadow-slate-400/40" }
                   : rank === 3
                   ? { bg: "from-orange-400 to-orange-500", text: "text-white", glow: "shadow-orange-500/40" }
-                  : { bg: "from-gray-900 to-gray-900", text: "text-gray-300", glow: "shadow-gray-900/40" };
+                  : { bg: "from-gray-300 to-gray-300", text: "text-gray-900", glow: "shadow-gray-400/40" };
               return (
                 <motion.div
                   key={`rank-${rank}`}
