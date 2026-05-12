@@ -582,6 +582,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                 onClick={(e) => {
                   e.stopPropagation();
                   setContentExpanded(false);
+                  // 펼친 상태에서 스크롤된 후 닫으면 스크롤 위치가 유지되어 헤더가 잘려 보이는 버그가 있다.
+                  // 닫기 시 스크롤 컨테이너를 최상단으로 되돌려 처음 페이지가 열린 상태로 복귀시킨다.
+                  if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTop = 0;
+                  }
                 }}
                 className="ml-2 inline-flex items-center align-baseline text-xs font-black text-gray-500 hover:text-gray-700 transition-colors"
               >
