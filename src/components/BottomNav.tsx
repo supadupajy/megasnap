@@ -12,7 +12,7 @@ import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
-  { icon: Flame, label: '인기', path: '/popular' },
+  { icon: Flame, label: '인기+Flicks', path: '/popular' },
   { icon: PlusCircle, label: '업로드', path: '/write' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
