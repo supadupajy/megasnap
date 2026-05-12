@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { Volume2, VolumeX } from 'lucide-react';
+import { useVideoMuted } from '@/hooks/use-video-muted';
+import { cn } from '@/lib/utils';
 
 interface VideoPlayerProps {
   src: string;
@@ -15,6 +18,9 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
   const [isReady, setIsReady] = useState(false);
   // 외부 오버레이(댓글/태그 검색)가 떠 있는 동안 재생을 잠시 멈춰두기 위한 ref
   const wasPlayingBeforeOverlayRef = useRef(false);
+
+  // 전역 음소거 상태 (Reels/PostItemVideo와 공유됨)
+  const [muted, setMuted] = useVideoMuted();
 
   useEffect(() => {
     const el = videoRef.current;
@@ -35,6 +41,20 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
       el.removeEventListener('playing', handlePlaying);
     };
   }, [src]);
+
+  // 전역 muted 상태를 video 요소에 반영하고, 음소거 해제 시 재생 시도
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = muted;
+    if (!muted) {
+      // 사용자가 버튼으로 토글한 직후이므로 user gesture가 살아있어 재생 허용됨
+      v.play().catch(() => {
+        // 정책상 실패 시 다시 muted로 폴백
+        v.muted = true;
+      });
+    }
+  }, [muted, src]);
 
   // 댓글 다이얼로그 / 포스트 검색 오버레이가 열려있는 동안 영상 일시정지, 닫히면 재개
   useEffect(() => {
@@ -76,20 +96,44 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
   }, []);
 
   return (
-    <video
-      ref={videoRef}
-      src={src}
-      className={className ?? 'w-full h-full object-cover'}
-      autoPlay
-      loop
-      muted
-      playsInline
-      preload="auto"
-      style={{
-        opacity: isReady ? 1 : 0,
-        transition: 'opacity 150ms ease-out',
-      }}
-    />
+    <>
+      <video
+        ref={videoRef}
+        src={src}
+        className={className ?? 'w-full h-full object-cover'}
+        autoPlay
+        loop
+        muted={muted}
+        playsInline
+        preload="auto"
+        style={{
+          opacity: isReady ? 1 : 0,
+          transition: 'opacity 150ms ease-out',
+        }}
+      />
+      {/* 좌상단 음소거 토글 — 영상을 눌러도 닫히므로, 사용자가 소리를 제어할 수 있도록 별도 버튼 제공 */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setMuted((m) => !m);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onPointerUp={(e) => e.stopPropagation()}
+        aria-label={muted ? '음소거 해제' : '음소거'}
+        className={cn(
+          'absolute top-3 left-3 z-30 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md',
+          'flex items-center justify-center border border-white/10',
+          'active:scale-95 transition-transform'
+        )}
+      >
+        {muted ? (
+          <VolumeX className="w-4 h-4 text-white" />
+        ) : (
+          <Volume2 className="w-4 h-4 text-white" />
+        )}
+      </button>
+    </>
   );
 };
 
