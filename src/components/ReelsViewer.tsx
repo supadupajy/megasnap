@@ -928,12 +928,17 @@ const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, on
   const [isOverflowing, setIsOverflowing] = useState(false);
 
   // 본문이 한 줄에 들어가는지 측정.
-  // 항상 동일한 레이아웃(truncate, 우측 패딩 없음)에서 한 번 측정하여
-  // 측정값 변화로 인한 레이아웃 토글/플리커링을 방지.
+  // expanded 상태에서는 측정 노드가 마운트되지 않으므로 측정을 건너뛰고,
+  // 직전 collapsed 상태에서 계산한 isOverflowing 값을 그대로 사용한다.
+  // (측정 노드가 unmount 되며 ResizeObserver가 0×0으로 한 번 더 콜백을
+  //  호출해 isOverflowing이 false로 덮어써지던 문제를 방지)
   useEffect(() => {
+    if (expanded) return;
     const el = measureRef.current;
     if (!el) return;
     const check = () => {
+      // 노드가 DOM에서 분리(또는 디스플레이 없음)되면 측정 결과를 무시
+      if (!el.isConnected || el.clientWidth === 0) return;
       const overflow = el.scrollWidth > el.clientWidth + 1;
       setIsOverflowing((prev) => (prev === overflow ? prev : overflow));
     };
@@ -941,7 +946,7 @@ const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, on
     const ro = new ResizeObserver(check);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [content]);
+  }, [content, expanded]);
 
   return (
     <div className="text-sm leading-snug font-medium drop-shadow-md pr-2">
