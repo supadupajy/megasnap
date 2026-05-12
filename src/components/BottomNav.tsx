@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Map, Flame, Clapperboard, UsersRound, User } from 'lucide-react';
+import { Map, Flame, Play, UsersRound, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -13,7 +13,7 @@ import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
   { icon: Flame, label: '인기', path: '/popular' },
-  { icon: Clapperboard, label: 'Flicks', path: '/flicks' },
+  { icon: Play, label: 'Flicks', path: '/flicks' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
