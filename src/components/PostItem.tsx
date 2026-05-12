@@ -484,19 +484,27 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     }
 
     return (
-      <>
-        <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>
+      <div className="relative">
+        <p
+          ref={contentRef}
+          className={cn(
+            'text-sm text-gray-800 leading-snug break-words',
+            contentExpanded ? '' : 'line-clamp-2',
+            !contentExpanded && isContentClamped ? 'pr-14' : ''
+          )}
+        >
           <HashtagText text={content} />
         </p>
         {!contentExpanded && isContentClamped && (
           <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
-            className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
+            className="absolute bottom-0 right-0 bg-white pl-1 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
           >
             더 보기
           </button>
         )}
-      </>
+      </div>
     );
   };
 
