@@ -30,6 +30,7 @@ import HashtagText from "@/components/HashtagText";
 import ImageSliderDots from "@/components/ImageSliderDots";
 import AdMobInterstitialPlaceholder from "@/components/AdMobInterstitialPlaceholder";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
+import { useVideoMuted } from "@/hooks/use-video-muted";
 
 // 광고 삽입 주기 (포스팅 3개마다 광고 1개)
 const AD_INSERT_INTERVAL = 3;
@@ -107,23 +108,9 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<ReelItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
-  // 한 번 음소거를 해제하면 세션 동안 유지 (localStorage 영구 저장)
-  const [muted, setMuted] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem("reels_muted_v1");
-      return stored === null ? true : stored === "true";
-    } catch {
-      return true;
-    }
-  });
+  // 음소거 상태는 앱 전역에서 공유 (localStorage 영구 저장)
+  const [muted, setMuted] = useVideoMuted();
   const [showHint, setShowHint] = useState(true);
-
-  // muted 변경 시 localStorage에 영구 저장
-  useEffect(() => {
-    try {
-      localStorage.setItem("reels_muted_v1", String(muted));
-    } catch {}
-  }, [muted]);
 
   // 댓글 다이얼로그 상태
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);

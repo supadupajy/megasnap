@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Volume2, VolumeX } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+import { useVideoMuted } from '@/hooks/use-video-muted';
 
 interface PostItemVideoProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -37,10 +39,18 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
   const [scrubTime, setScrubTime] = useState(0);
+  const [muted, setMuted] = useVideoMuted();
   const wasPlayingBeforeScrubRef = useRef(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const latestTimeRef = useRef(0);
+
+  // 전역 muted 상태를 video 요소에 적용
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = muted;
+  }, [videoRef, muted, src]);
 
   // 영상 시간/길이/재생 상태 추적
   useEffect(() => {
@@ -154,7 +164,6 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         ref={videoRef}
         src={src}
         className="relative z-[1] w-full h-full object-cover bg-gray-200"
-        muted
         loop
         playsInline
         disablePictureInPicture
@@ -171,6 +180,23 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
           onError={onImageError}
         />
       )}
+
+      {/* 좌측 상단 음소거 토글 버튼 */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setMuted((m) => !m);
+        }}
+        className="absolute top-3 left-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform border border-white/10"
+        aria-label={muted ? '음소거 해제' : '음소거'}
+      >
+        {muted ? (
+          <VolumeX className="w-4 h-4 text-white" />
+        ) : (
+          <Volume2 className="w-4 h-4 text-white" />
+        )}
+      </button>
 
       {/* 일시정지 시 중앙 플레이 아이콘 오버레이 */}
       {isPaused && !showPoster && (
