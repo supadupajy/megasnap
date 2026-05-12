@@ -4,49 +4,21 @@ import React from 'react';
 import { Mail } from 'lucide-react';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
-import { pushDebugLog } from './DebugBannerOverlay';
+
+// 광고 배너를 자체 GPU 합성 레이어로 분리한다.
+// 안드로이드 WebView에서 Radix Dialog가 body에 인라인 스타일(pointer-events, data-scroll-locked 등)을
+// 추가/제거할 때 전체 페인트 트리가 재계산되면서 헤더의 그라데이션 배경이 한 프레임 누락되어
+// 깜빡거리는 현상이 있어 GPU 합성으로 분리해 영향을 차단한다.
+const GPU_LAYER_STYLE: React.CSSProperties = {
+  willChange: 'transform',
+  transform: 'translateZ(0)',
+  backfaceVisibility: 'hidden',
+};
 
 const HeaderAdBanner = () => {
   const { ad, loading, now } = useAd('header');
 
-  // ─── DEBUG: 렌더 카운터 ──────────────────────────────────
-  const renderCountRef = React.useRef(0);
-  renderCountRef.current += 1;
-  const renderCount = renderCountRef.current;
-
-  // ─── DEBUG: 마운트/언마운트 ──────────────────────────────
-  React.useEffect(() => {
-    pushDebugLog(`🟢 MOUNT HeaderAdBanner`);
-    return () => {
-      pushDebugLog(`🔴 UNMOUNT HeaderAdBanner`);
-    };
-  }, []);
-
-  // ─── DEBUG: ad 변경 추적 ─────────────────────────────────
-  const prevAdRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    const adKey = ad
-      ? `id=${ad.id} active=${ad.is_active} img=${(ad.image_url || '').slice(-12)} start=${ad.start_date || '-'} end=${ad.end_date || '-'}`
-      : 'null';
-    if (prevAdRef.current !== adKey) {
-      pushDebugLog(`📦 ad changed: ${adKey}`);
-      prevAdRef.current = adKey;
-    }
-  }, [ad]);
-
-  // ─── DEBUG: now 변경 추적 ────────────────────────────────
-  const prevNowRef = React.useRef<number>(0);
-  React.useEffect(() => {
-    const t = now.getTime();
-    if (prevNowRef.current !== t) {
-      const diff = prevNowRef.current ? t - prevNowRef.current : 0;
-      pushDebugLog(`⏰ now updated (+${diff}ms)`);
-      prevNowRef.current = t;
-    }
-  }, [now]);
-
   if (loading) {
-    pushDebugLog(`🎨 render #${renderCount}: LOADING skeleton`);
     return (
       <div className="flex-1 max-w-[180px] ml-3 h-10 bg-gray-100 rounded-xl animate-pulse" />
     );
@@ -55,25 +27,12 @@ const HeaderAdBanner = () => {
   // 광고가 없거나 비활성이면 구인 슬롯 사용
   const slot = ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
 
-  pushDebugLog(
-    `🎨 render #${renderCount}: slot=${
-      slot.isRecruitment ? 'RECRUIT' : slot.isPending ? 'PENDING' : slot.isNext ? 'NEXT' : 'CURRENT'
-    } title="${slot.title}"`,
-  );
-
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {
     return (
       <div
-        data-debug-banner="recruit-v3-no-gradient"
-        data-render={renderCount}
-        className="flex-1 max-w-[180px] ml-3 h-10 bg-indigo-50 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-indigo-200/60"
-        style={{
-          // GPU 합성 레이어 강제 → WebView가 Dialog 마운트 시 그라데이션 재계산하다 깜빡거리는 현상 방지
-          willChange: 'transform',
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden',
-        }}
+        className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-indigo-100 via-indigo-50 to-violet-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-indigo-200/60"
+        style={GPU_LAYER_STYLE}
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
         <div className="absolute inset-0 flex items-center justify-center">
@@ -90,6 +49,7 @@ const HeaderAdBanner = () => {
   return (
     <div
       className="flex-1 max-w-[180px] ml-3 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
+      style={GPU_LAYER_STYLE}
       onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank')}
     >
       {/* Background Image */}
@@ -101,7 +61,7 @@ const HeaderAdBanner = () => {
         decoding="async"
         className="absolute inset-0 w-full h-full object-cover object-center opacity-70 group-hover:scale-110 transition-transform duration-700"
       />
-      
+
       {/* Overlay Content */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-black/40 flex items-center justify-between px-2">
         <div className="flex items-center gap-1.5">
@@ -122,7 +82,7 @@ const HeaderAdBanner = () => {
             <span className="text-[6px] font-bold text-white/60 leading-none mt-0.5">{slot.subtitle}</span>
           </div>
         </div>
-        
+
       </div>
     </div>
   );

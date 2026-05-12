@@ -6,28 +6,14 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { useNotifications } from '@/components/NotificationProvider';
 import { mapCache } from '@/utils/map-cache';
-import { pushDebugLog } from './DebugBannerOverlay';
 
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadMessages, unreadNotifs } = useNotifications();
 
-  // DEBUG: Header 렌더링 추적
-  const renderRef = React.useRef(0);
-  renderRef.current += 1;
-  React.useEffect(() => {
-    pushDebugLog(`🏠 Header MOUNT path=${location.pathname}`);
-    return () => pushDebugLog(`🏠 Header UNMOUNT path=${location.pathname}`);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  pushDebugLog(`🏠 Header render #${renderRef.current} path=${location.pathname}`);
-
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
-  if (isHiddenPage) {
-    pushDebugLog(`🏠 Header HIDDEN (startSelection)`);
-    return null;
-  }
+  if (isHiddenPage) return null;
 
   const navigateKeepingMapPosition = (path: string) => {
     if (location.pathname === path) return;
