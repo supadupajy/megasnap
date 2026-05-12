@@ -89,10 +89,56 @@ const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그
 // ── 마커 24시간 만료 관련 상수 ────────────────────────────────────────
 const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000; // 24시간
 const MARKER_EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // 1분마다 만료/타이머 갱신
-// 카운트다운 링 SVG 파라미터 (60×60 마커 박스 기준)
-// 사진 영역 안쪽으로 살짝 들어와서 표시되도록 반지름 설정 (Q2=B 선택)
-const COUNTDOWN_RING_RADIUS = 25;
-const COUNTDOWN_RING_CIRCUMFERENCE = 2 * Math.PI * COUNTDOWN_RING_RADIUS;
+
+// 카운트다운 링 사각 둥근 테두리 파라미터 (60×60 마커 inner box 안쪽)
+// inner box: width=60, height=60, border-radius=20, border=4.5px
+// 사진 영역 안쪽으로 살짝 들어와서 표시 (Q2=B 선택)
+// → padding 만큼 안쪽으로 들여서 그리면 사진 영역 위에 떠 있는 형태가 됨
+const COUNTDOWN_RING_PADDING = 6; // 마커 박스 가장자리에서 안쪽으로 들이는 픽셀
+const COUNTDOWN_RING_BOX = 60;    // viewBox 크기 (마커 inner box 크기와 동일)
+const COUNTDOWN_RING_SIZE = COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2; // 사각 변 길이 = 48
+const COUNTDOWN_RING_R = 14;      // 둥근 모서리 반지름 (사진 영역의 둥근 정도와 맞춤)
+
+/**
+ * 12시 방향(상단 중앙)에서 시작해, 시계 반대방향으로 한 바퀴 도는
+ * 둥근 사각형 SVG path를 생성한다.
+ * → stroke-dashoffset을 음수로 늘리면 시작점에서부터 stroke가 깎여나가므로,
+ *    "남은 끝점"이 시계 반대방향으로 회전하면서 줄어드는 효과가 된다.
+ */
+const buildCountdownRingPath = (): string => {
+  const pad = COUNTDOWN_RING_PADDING;
+  const size = COUNTDOWN_RING_SIZE;
+  const r = COUNTDOWN_RING_R;
+  // 사각형 꼭짓점 좌표 (반지름 r만큼 안쪽에서 시작/종료)
+  const left = pad;
+  const right = pad + size;
+  const top = pad;
+  const bottom = pad + size;
+  const cx = pad + size / 2; // 상단 중앙 시작점 x
+  // 12시 방향(상단 중앙) → 시계 반대방향(왼쪽으로) 한 바퀴
+  // M cx,top                         시작: 상단 중앙
+  // H left + r                       ↖ 상단을 왼쪽으로
+  // A r,r 0 0 0 left,top + r         ↶ 좌상 모서리(반시계)
+  // V bottom - r                     ↙ 왼쪽 변 따라 아래로
+  // A r,r 0 0 0 left + r,bottom      ↶ 좌하 모서리(반시계)
+  // H right - r                      ↘ 하단을 오른쪽으로
+  // A r,r 0 0 0 right,bottom - r     ↶ 우하 모서리(반시계)
+  // V top + r                        ↗ 오른쪽 변 따라 위로
+  // A r,r 0 0 0 right - r,top        ↶ 우상 모서리(반시계)
+  // Z                                상단 중앙으로 닫기
+  return `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left} ${top + r} V ${bottom - r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right} ${bottom - r} V ${top + r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
+};
+
+/**
+ * 둥근 사각형 path의 총 둘레 길이 (대략):
+ *   직선 4개 + 코너 4개 호
+ *   직선 길이: 각 변의 (size - 2r) → 4 * (size - 2r)
+ *   호 길이: 코너 4개 합 = 2 * π * r (4개의 90도 호 = 1개의 원)
+ */
+const COUNTDOWN_RING_PERIMETER =
+  4 * (COUNTDOWN_RING_SIZE - 2 * COUNTDOWN_RING_R) + 2 * Math.PI * COUNTDOWN_RING_R;
+
+const COUNTDOWN_RING_PATH = buildCountdownRingPath();
 
 /** 포스트의 createdAt(Date | string | undefined)에서 ms timestamp 추출. 없으면 null. */
 const getPostCreatedAtMs = (post: any): number | null => {
@@ -1744,9 +1790,9 @@ const MapContainer = ({
 
     // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
     // 광고/광고대기 마커에는 표시하지 않음. createdAt이 없는 포스트도 skip.
-    // 12시 방향에서 시작(rotate -90deg) → dashoffset이 증가하면서 stroke가 줄어듦.
-    // dashoffset 부호를 음수로 설정하면 stroke 시작점에서 시계방향으로 깎여나가,
-    // 결과적으로 "남은 끝점"이 시계 반대방향으로 회전하며 줄어든다.
+    // path는 12시 방향에서 시작해 시계 반대방향으로 한 바퀴 도는 둥근 사각형.
+    // stroke-dashoffset을 음수로 둘수록 path의 시작점부터 stroke가 깎여나가
+    // → 남아있는 끝점이 시계 반대방향으로 회전하면서 줄어드는 효과.
     const createdAtMs = getPostCreatedAtMs(post);
     const showCountdownRing = isMarkerExpirable(post) && createdAtMs !== null;
     const countdownRingHtml = showCountdownRing
@@ -1754,10 +1800,11 @@ const MapContainer = ({
           const elapsed = Math.min(Math.max(Date.now() - (createdAtMs as number), 0), MARKER_LIFESPAN_MS);
           const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
           // 남은 비율 * 둘레 = 보여줄 stroke 길이
-          // dashoffset을 음수로 두면 시계 반대방향으로 끝점이 회전하면서 줄어든다.
-          const dashOffset = -(COUNTDOWN_RING_CIRCUMFERENCE * (1 - remainingRatio));
-          return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 60 60" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;transform:rotate(-90deg);overflow:visible;">
-            <circle cx="30" cy="30" r="${COUNTDOWN_RING_RADIUS}" fill="none" stroke="rgba(57,255,20,0.5)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="${COUNTDOWN_RING_CIRCUMFERENCE.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 2px rgba(57,255,20,0.6));" />
+          // dashoffset을 음수로 두면 시작점(12시 상단 중앙)에서부터 깎이고,
+          // path가 시계 반대방향으로 그려지므로 끝점이 반시계 방향으로 후퇴한다.
+          const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
+          return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
+            <path d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.5)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 3px rgba(57,255,20,0.55));" />
           </svg>`;
         })()
       : '';
@@ -1844,10 +1891,10 @@ const MapContainer = ({
 
         // 아직 만료 전 → dashoffset만 갱신 (innerHTML 교체 없음)
         const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
-        const dashOffset = -(COUNTDOWN_RING_CIRCUMFERENCE * (1 - remainingRatio));
-        const circle = ring.querySelector('circle');
-        if (circle) {
-          circle.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
+        const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
+        const path = ring.querySelector('path');
+        if (path) {
+          path.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
         }
       });
     };

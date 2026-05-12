@@ -699,11 +699,20 @@ const Index = () => {
     let leftSumLat = 0, leftSumLng = 0, rightSumLat = 0, rightSumLng = 0;
     const offScreenPoints: { lat: number; lng: number }[] = [];
 
+    // 마커 24시간 만료 룰: 만료된 포스트는 인디케이터 카운트/이동 대상에서 제외
+    const MARKER_LIFESPAN_MS_LOCAL = 24 * 60 * 60 * 1000;
+    const nowMs = Date.now();
+
     // stablePosts에서 카테고리 필터 적용 (displayedMarkers 대신)
     const filteredStable = stablePosts.filter((post: any) => {
       if (!post || post.lat == null || post.lng == null) return false;
       if (blockedIds.has(post.user?.id)) return false;
       if (post.isAd) return false;
+      // 24시간 만료 체크 (광고는 위에서 이미 제외됨)
+      const createdMs = post.createdAt instanceof Date
+        ? post.createdAt.getTime()
+        : (post.createdAt ? new Date(post.createdAt).getTime() : NaN);
+      if (Number.isFinite(createdMs) && nowMs - createdMs >= MARKER_LIFESPAN_MS_LOCAL) return false;
       if (selectedCategories.includes('friends')) return !!(post.user?.id && followingIds.has(post.user.id));
       if (selectedCategories.includes('mine')) return !!(authUser && post.user?.id === authUser.id);
       if (selectedCategories.includes('all')) return true;

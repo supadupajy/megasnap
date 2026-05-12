@@ -189,9 +189,15 @@ export const fetchOffScreenCounts = async (
   };
 
   try {
+    // 마커 24시간 만료 룰: 지도에 표시되지 않는 만료 포스트는 OffScreenMarkerIndicator에서도 제외
+    // (광고 마커는 ads 테이블에서 별도 관리되며 posts 테이블 쿼리 결과에는 포함되지 않음)
+    const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000;
+    const oneDayAgoIso = new Date(Date.now() - MARKER_LIFESPAN_MS).toISOString();
+
     const res = await applyFilters(
       supabase.from('posts').select('latitude, longitude')
         .or(`latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`)
+        .gte('created_at', oneDayAgoIso)
     );
 
     if (res.error) throw res.error;
@@ -263,9 +269,14 @@ export const fetchNearestInDirection = async (
   const lngRange = ne.lng - sw.lng;
 
   try {
+    // 24시간 만료 룰: 만료된 포스트는 인디케이터 클릭 이동 대상에서 제외
+    const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000;
+    const oneDayAgoIso = new Date(Date.now() - MARKER_LIFESPAN_MS).toISOString();
+
     // 화면 밖 전체 포스팅을 가져와서 클라이언트에서 45도 섹터 독점 분류 후 가장 가까운 것 선택
     let query = supabase.from('posts').select('latitude, longitude')
-      .or(`latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`);
+      .or(`latitude.gt.${ne.lat},latitude.lt.${sw.lat},longitude.lt.${sw.lng},longitude.gt.${ne.lng}`)
+      .gte('created_at', oneDayAgoIso);
 
     // 카테고리/사용자 필터 적용
     const cats = options?.categories || [];
