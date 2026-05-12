@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Mail } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
 
@@ -21,9 +20,7 @@ const HeaderAdBanner = () => {
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+      <div
         className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-indigo-100 via-indigo-50 to-violet-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-indigo-200/60"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
@@ -34,14 +31,12 @@ const HeaderAdBanner = () => {
           </div>
         </div>
         <Mail className="absolute top-2 right-2.5 w-2.5 h-2.5 text-indigo-400" />
-      </motion.div>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+    <div
       className="flex-1 max-w-[180px] ml-3 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
       onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank')}
     >
@@ -77,7 +72,7 @@ const HeaderAdBanner = () => {
         </div>
         
       </div>
-    </motion.div>
+    </div>
   );
 };
 
