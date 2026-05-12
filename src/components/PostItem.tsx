@@ -24,6 +24,7 @@ import PostCategoryBadge from './PostCategoryBadge';
 import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
 import HashtagText from './HashtagText';
+import PostItemVideo from './PostItemVideo';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
@@ -191,29 +192,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     if (!isAd && post.videoUrl) {
 
       return (
-        <div className="relative h-full w-full bg-gray-200">
-          <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
-          <video
-            ref={videoRef}
-            src={post.videoUrl}
-            className="relative z-[1] w-full h-full object-cover bg-gray-200"
-            muted
-            loop
-            playsInline
-            disablePictureInPicture
-            onClick={(e) => e.stopPropagation()}
-            onLoadedData={() => setVideoLoaded(true)}
-          />
-          {/* 비디오 로드 전이나 화면에 보이지 않을 때만 썸네일 노출 */}
-          {(!videoLoaded || !isVisible || !isReadyToPlay) && (
-            <img
-              src={currentImage}
-              alt=""
-              className="absolute inset-0 z-10 w-full h-full object-cover bg-gray-200 pointer-events-none"
-              onError={handleImageError}
-            />
-          )}
-        </div>
+        <PostItemVideo
+          videoRef={videoRef}
+          src={post.videoUrl}
+          posterImage={currentImage}
+          showPoster={!videoLoaded || !isVisible || !isReadyToPlay}
+          onLoadedData={() => setVideoLoaded(true)}
+          onImageError={handleImageError}
+        />
       );
     }
 
