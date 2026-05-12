@@ -40,6 +40,10 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   // 이렇게 해야 영상 시작 직후나 슬라이드 전환 중에 큰 재생 아이콘이 깜빡이는
   // 플리커링이 발생하지 않는다.
   const [userPaused, setUserPaused] = useState(false);
+  // 비디오의 첫 프레임이 실제로 그려졌는지(playing 이벤트 발생) 추적.
+  // 첫 프레임이 그려지기 전에 video를 노출하면 브라우저가 회색 placeholder나
+  // 기본 재생 아이콘을 잠깐 그려서 플리커링이 발생하므로, 그 전까지는 opacity:0으로 숨긴다.
+  const [firstFrameReady, setFirstFrameReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -73,7 +77,11 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     };
     // 영상이 외부 요인으로 다시 재생되기 시작하면 (예: 자동 재생),
     // userPaused 플래그도 해제해서 오버레이가 노출되지 않도록 한다.
-    const onPlaying = () => setUserPaused(false);
+    // 또한 첫 프레임이 그려진 신호로도 사용한다.
+    const onPlaying = () => {
+      setUserPaused(false);
+      setFirstFrameReady(true);
+    };
 
     v.addEventListener('timeupdate', onTimeUpdate);
     v.addEventListener('loadedmetadata', onLoadedMeta);
@@ -90,9 +98,10 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     };
   }, [videoRef, src]);
 
-  // src가 바뀌면 사용자 일시정지 상태도 초기화
+  // src가 바뀌면 사용자 일시정지 상태와 첫 프레임 준비 상태 초기화
   useEffect(() => {
     setUserPaused(false);
+    setFirstFrameReady(false);
   }, [src]);
 
   // 사용자가 영상 영역을 탭한 경우에만 명시적으로 일시정지/재생을 토글.
@@ -181,10 +190,19 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         disablePictureInPicture
         onClick={handleVideoTap}
         onLoadedData={onLoadedData}
+        // 첫 프레임이 그려지기 전에는 video를 시각적으로 숨겨서
+        // 안드로이드 Chrome/WebView 등에서 회색 placeholder나 기본 재생 아이콘이
+        // 잠깐 깜빡이는 플리커링을 방지한다.
+        style={{
+          opacity: firstFrameReady ? 1 : 0,
+          transition: 'opacity 150ms ease-out',
+        }}
       />
 
-      {/* 비디오 로드 전 썸네일 */}
-      {showPoster && (
+      {/* 비디오 첫 프레임이 그려지기 전까지는 항상 poster(썸네일)를 보여준다.
+          showPoster prop이 false여도 firstFrameReady가 아니면 계속 표시해서
+          video element의 빈 회색 영역이 노출되지 않도록 한다. */}
+      {(showPoster || !firstFrameReady) && (
         <img
           src={posterImage}
           alt=""
@@ -212,9 +230,9 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
 
       {/* 일시정지 시 중앙 플레이 아이콘 오버레이
           - 사용자가 직접 탭으로 일시정지한 경우(userPaused=true)에만 노출.
-          - 자동 재생/스크롤/buffering/loop 전환에 의한 짧은 pause로는
-            오버레이가 절대 표시되지 않아 플리커링이 발생하지 않는다. */}
-      {userPaused && !showPoster && (
+          - 그리고 비디오 첫 프레임이 그려진 후(firstFrameReady)에만 노출.
+          - 자동 재생/스크롤/buffering/loop 전환/로딩 중에는 절대 표시되지 않는다. */}
+      {userPaused && firstFrameReady && !showPoster && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
           aria-hidden="true"
