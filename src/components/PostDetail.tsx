@@ -141,12 +141,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
-  // contentRef가 마운트된 후 실제로 잘렸는지 감지
-
+  // contentRef가 마운트된 후 실제로 잘렸는지 감지.
+  // Flicks(ReelContentText)와 동일하게 한 줄 truncate 기반이므로 가로 overflow(scrollWidth > clientWidth)로 측정.
   const checkClamped = useCallback(() => {
     const el = contentRef.current;
     if (!el) return;
-    setIsContentClamped(el.scrollHeight > el.clientHeight + 2);
+    if (!el.isConnected || el.clientWidth === 0) return;
+    const overflow = el.scrollWidth > el.clientWidth + 1;
+    setIsContentClamped(prev => (prev === overflow ? prev : overflow));
   }, []);
 
   useEffect(() => {
@@ -563,20 +565,55 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       );
     }
 
+    // Flicks(ReelsViewer)와 동일한 디자인:
+    //   - 펼치기 전: 한 줄 truncate + 우측에 절대 위치 "... 더 보기" 버튼 (그라데이션 페이드)
+    //   - 펼치고 나면: 전체 내용 + 끝에 "... <닫기>" 인라인 버튼
+    // PostDetail은 라이트 테마이므로 색상만 어둡게(검정 글씨, 흰 배경) 맞춤.
     return (
-      <>
-        <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>
-          <HashtagText text={currentContent} />
-        </p>
-        {!contentExpanded && isContentClamped && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}
-            className="text-xs text-gray-400 font-medium mt-0.5 hover:text-gray-600 transition-colors"
-          >
-            더 보기
-          </button>
+      <div className="text-sm leading-snug text-gray-800">
+        {contentExpanded ? (
+          <div>
+            <p className="inline">
+              <HashtagText text={currentContent} />
+            </p>
+            {isContentClamped && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContentExpanded(false);
+                }}
+                className="ml-2 inline-flex items-center align-baseline text-xs font-black text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                {'... <닫기>'}
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="relative">
+            {/* 한 줄 truncate. 우측 패딩은 두지 않고 "더 보기" 버튼을 우측 절대위치로 오버레이 */}
+            <p ref={contentRef} className="block truncate leading-snug">
+              <HashtagText text={currentContent} />
+            </p>
+            {isContentClamped && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContentExpanded(true);
+                }}
+                className="absolute bottom-0 right-0 pl-3 text-xs font-bold text-gray-500 hover:text-gray-700 transition-colors"
+                style={{
+                  background:
+                    'linear-gradient(to right, transparent, rgba(255,255,255,0.85) 25%, rgba(255,255,255,0.95) 100%)',
+                }}
+              >
+                ... 더 보기
+              </button>
+            )}
+          </div>
         )}
-      </>
+      </div>
     );
   };
 
