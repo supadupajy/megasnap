@@ -736,29 +736,51 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   // 스크럽 시작 직전 재생 중이었는지 (드래그 끝나면 복원)
   const wasPlayingBeforeScrubRef = useRef(false);
 
-  const videoUrl = post.videoUrl;
-  const imageUrl = post.image_url || post.image;
-  const hasVideo = !!videoUrl || isVideoUrl(imageUrl);
-  const effectiveVideoUrl = videoUrl || (isVideoUrl(imageUrl) ? imageUrl : null);
+  // ── 다중 미디어 (이미지/영상 여러개) ────────────────────
+  // post.images 우선, 없으면 image_url/image 단일로 fallback
+  // post.videoUrl이 있으면 미디어 배열 첫번째에 영상을 추가 (이미지가 thumbnail이고 별도 영상이 있는 경우)
+  const mediaList = useMemo<string[]>(() => {
+    const candidates: string[] = [];
+    if (post.videoUrl) candidates.push(post.videoUrl);
+    if (Array.isArray(post.images) && post.images.length > 0) {
+      post.images.forEach((u) => {
+        if (u && !candidates.includes(u)) candidates.push(u);
+      });
+    } else {
+      const single = post.image_url || post.image;
+      if (single) candidates.push(single);
+    }
+    return candidates.filter(Boolean) as string[];
+  }, [post.videoUrl, post.images, post.image_url, post.image]);
+
+  const [mediaIndex, setMediaIndex] = useState(0);
+
+  // 새 포스트가 들어오면 인덱스 초기화
+  useEffect(() => {
+    setMediaIndex(0);
+  }, [post.id]);
+
+  const activeMediaUrl = mediaList[mediaIndex] || "";
+  const activeIsVideo = isVideoUrl(activeMediaUrl);
+  const hasVideo = activeIsVideo; // 현재 보여지는 미디어가 영상인지
 
   const fallbackImage = useMemo(() => {
-    if (!imageUrl || isVideoUrl(imageUrl)) return getFallbackImage(String(post.id));
-    return getOptimizedFeedImage(imageUrl, post.id);
-  }, [imageUrl, post.id]);
+    const firstImage = mediaList.find((u) => !isVideoUrl(u));
+    if (!firstImage) return getFallbackImage(String(post.id));
+    return getOptimizedFeedImage(firstImage, post.id);
+  }, [mediaList, post.id]);
 
-  // active 슬라이드만 재생 + 음소거 상태 적용
+  // active 슬라이드 + 현재 미디어가 영상일 때만 재생, 음소거 상태 적용
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    if (isActive) {
+    if (isActive && activeIsVideo) {
       v.muted = muted;
-      // 자동재생 시도: 사운드 ON일 때 실패하면 일단 muted로 강제 재생
       const tryPlay = async () => {
         try {
           await v.play();
           setIsPlaying(true);
         } catch {
-          // 자동재생 차단 → muted로 강제 재생 (소리는 사용자가 토글하면 들림)
           try {
             v.muted = true;
             await v.play();
@@ -775,7 +797,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       setIsPlaying(false);
       setCurrentTime(0);
     }
-  }, [isActive, muted]);
+  }, [isActive, muted, activeIsVideo, activeMediaUrl]);
 
   // 영상 시간/길이 추적
   useEffect(() => {
@@ -793,14 +815,13 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     v.addEventListener("timeupdate", handleTimeUpdate);
     v.addEventListener("loadedmetadata", handleLoadedMeta);
     v.addEventListener("durationchange", handleDurationChange);
-    // 이미 메타데이터가 로드된 경우 즉시 반영
     if (Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
     return () => {
       v.removeEventListener("timeupdate", handleTimeUpdate);
       v.removeEventListener("loadedmetadata", handleLoadedMeta);
       v.removeEventListener("durationchange", handleDurationChange);
     };
-  }, [effectiveVideoUrl, isScrubbing]);
+  }, [activeMediaUrl, isScrubbing]);
 
   // 댓글 수 fetch (활성화 시 1회)
   useEffect(() => {
@@ -872,27 +893,32 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           className="relative w-full overflow-hidden bg-black"
           style={{ aspectRatio: "3 / 4", maxHeight: "100%" }}
         >
-          {hasVideo && effectiveVideoUrl ? (
-            <video
-              ref={videoRef}
-              src={effectiveVideoUrl}
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline
-              loop
-              muted={muted}
-              preload="metadata"
-              poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
-            />
-          ) : (
-            <img
-              src={fallbackImage}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-              draggable={false}
-            />
+          {/* 가로 슬라이더 — 다중 미디어면 좌우 스와이프로 이동, 단일이면 그냥 표시 */}
+          <MediaCarousel
+            mediaList={mediaList}
+            currentIndex={mediaIndex}
+            onIndexChange={setMediaIndex}
+            videoRef={videoRef}
+            muted={muted}
+            poster={fallbackImage}
+          />
+
+          {/* 미디어 인디케이터 도트 (다중일 때만) */}
+          {mediaList.length > 1 && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pointer-events-none">
+              {mediaList.map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-1 rounded-full transition-all duration-200",
+                    i === mediaIndex ? "w-5 bg-white" : "w-1 bg-white/50"
+                  )}
+                />
+              ))}
+            </div>
           )}
 
-          {/* 영상 타임라인 (영상 박스 하단에 배치, 드래그로 스크럽 가능) */}
+          {/* 영상 타임라인 (현재 미디어가 영상일 때만) */}
           {hasVideo && (
             <VideoTimeline
               currentTime={isScrubbing ? scrubTime : currentTime}
@@ -1037,6 +1063,281 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── 다중 미디어 가로 슬라이더 (이미지/영상 혼합 지원) ───
+interface MediaCarouselProps {
+  mediaList: string[];
+  currentIndex: number;
+  onIndexChange: (idx: number) => void;
+  videoRef: React.RefObject<HTMLVideoElement>;
+  muted: boolean;
+  poster?: string;
+}
+
+const MediaCarousel: React.FC<MediaCarouselProps> = ({
+  mediaList,
+  currentIndex,
+  onIndexChange,
+  videoRef,
+  muted,
+  poster,
+}) => {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [dragX, setDragX] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const currentIndexRef = useRef(currentIndex);
+  const mediaCountRef = useRef(mediaList.length);
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
+  useEffect(() => {
+    mediaCountRef.current = mediaList.length;
+  }, [mediaList.length]);
+
+  // 제스처 상태
+  const gestureRef = useRef<{
+    active: boolean;
+    locked: "horizontal" | "vertical" | null;
+    startX: number;
+    startY: number;
+    lastX: number;
+    startTime: number;
+    pointerId: number | null;
+    startIndex: number;
+  }>({
+    active: false,
+    locked: null,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    startTime: 0,
+    pointerId: null,
+    startIndex: 0,
+  });
+
+  // 다중 미디어가 아닐 땐 제스처 비활성 → 부모 세로 스와이프가 자연스럽게 동작
+  const enabled = mediaList.length > 1;
+
+  // native touch 리스너로 부모 ReelsSlideTrack의 세로 스와이프와 충돌 처리
+  useEffect(() => {
+    if (!enabled) return;
+    const el = rootRef.current;
+    if (!el) return;
+
+    const HORIZONTAL_THRESHOLD = 8; // 처음 8px 이내에 방향 결정
+    const VERTICAL_THRESHOLD = 8;
+
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      if (!t) return;
+      gestureRef.current = {
+        active: true,
+        locked: null,
+        startX: t.clientX,
+        startY: t.clientY,
+        lastX: t.clientX,
+        startTime: Date.now(),
+        pointerId: null,
+        startIndex: currentIndexRef.current,
+      };
+      setIsAnimating(false);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const g = gestureRef.current;
+      if (!g.active) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - g.startX;
+      const dy = t.clientY - g.startY;
+      g.lastX = t.clientX;
+
+      // 첫 임계값 통과 시 방향 결정
+      if (!g.locked) {
+        if (Math.abs(dx) > HORIZONTAL_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+          g.locked = "horizontal";
+        } else if (Math.abs(dy) > VERTICAL_THRESHOLD && Math.abs(dy) >= Math.abs(dx)) {
+          g.locked = "vertical";
+        }
+      }
+
+      if (g.locked === "horizontal") {
+        // 가로 스와이프: 우리가 처리, 부모 세로 스와이프 차단
+        e.stopPropagation();
+        e.preventDefault();
+
+        // 끝에서 더 못 가도록 저항 적용
+        const atStart = g.startIndex === 0 && dx > 0;
+        const atEnd = g.startIndex === mediaCountRef.current - 1 && dx < 0;
+        let visualDx = dx;
+        if (atStart || atEnd) visualDx = dx * 0.25;
+        setDragX(visualDx);
+      }
+      // 세로면 아무것도 안 하고 부모가 처리하도록 둠
+    };
+
+    const settle = () => {
+      const g = gestureRef.current;
+      if (!g.active) return;
+      const wasHorizontal = g.locked === "horizontal";
+      const dx = g.lastX - g.startX;
+      const dt = Date.now() - g.startTime;
+      g.active = false;
+      g.locked = null;
+
+      if (!wasHorizontal) {
+        // 가로 제스처가 아니었으면 위치 복원만 (보통은 dragX가 0임)
+        setDragX(0);
+        return;
+      }
+
+      const width = rootRef.current?.clientWidth || 1;
+      const velocity = Math.abs(dx) / Math.max(dt, 1);
+      const distanceThreshold = width * 0.2;
+      const isFlick = velocity > 0.3 && Math.abs(dx) > 30;
+
+      let nextIndex = g.startIndex;
+      if (dx < -distanceThreshold || (isFlick && dx < 0)) {
+        nextIndex = g.startIndex + 1;
+      } else if (dx > distanceThreshold || (isFlick && dx > 0)) {
+        nextIndex = g.startIndex - 1;
+      }
+      const clamped = Math.max(0, Math.min(mediaCountRef.current - 1, nextIndex));
+
+      setIsAnimating(true);
+      setDragX(0);
+      if (clamped !== currentIndexRef.current) {
+        onIndexChange(clamped);
+      }
+      window.setTimeout(() => setIsAnimating(false), 240);
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (gestureRef.current.locked === "horizontal") {
+        e.stopPropagation();
+      }
+      settle();
+    };
+    const onTouchCancel = () => settle();
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: false });
+    el.addEventListener("touchcancel", onTouchCancel, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchCancel);
+    };
+  }, [enabled, onIndexChange]);
+
+  // 마우스 드래그 (데스크탑용)
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!enabled) return;
+    e.stopPropagation();
+    gestureRef.current = {
+      active: true,
+      locked: "horizontal",
+      startX: e.clientX,
+      startY: e.clientY,
+      lastX: e.clientX,
+      startTime: Date.now(),
+      pointerId: null,
+      startIndex: currentIndexRef.current,
+    };
+    setIsAnimating(false);
+
+    const onMove = (ev: MouseEvent) => {
+      const g = gestureRef.current;
+      if (!g.active) return;
+      const dx = ev.clientX - g.startX;
+      g.lastX = ev.clientX;
+      const atStart = g.startIndex === 0 && dx > 0;
+      const atEnd = g.startIndex === mediaCountRef.current - 1 && dx < 0;
+      let visualDx = dx;
+      if (atStart || atEnd) visualDx = dx * 0.25;
+      setDragX(visualDx);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      const g = gestureRef.current;
+      if (!g.active) return;
+      const dx = g.lastX - g.startX;
+      const dt = Date.now() - g.startTime;
+      g.active = false;
+      g.locked = null;
+      const width = rootRef.current?.clientWidth || 1;
+      const velocity = Math.abs(dx) / Math.max(dt, 1);
+      const distanceThreshold = width * 0.2;
+      const isFlick = velocity > 0.3 && Math.abs(dx) > 30;
+      let nextIndex = g.startIndex;
+      if (dx < -distanceThreshold || (isFlick && dx < 0)) {
+        nextIndex = g.startIndex + 1;
+      } else if (dx > distanceThreshold || (isFlick && dx > 0)) {
+        nextIndex = g.startIndex - 1;
+      }
+      const clamped = Math.max(0, Math.min(mediaCountRef.current - 1, nextIndex));
+      setIsAnimating(true);
+      setDragX(0);
+      if (clamped !== currentIndexRef.current) onIndexChange(clamped);
+      window.setTimeout(() => setIsAnimating(false), 240);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  return (
+    <div
+      ref={rootRef}
+      className="absolute inset-0 overflow-hidden"
+      onMouseDown={handleMouseDown}
+    >
+      <div
+        className="absolute inset-0 flex"
+        style={{
+          width: `${mediaList.length * 100}%`,
+          transform: `translate3d(calc(${-currentIndex * (100 / mediaList.length)}% + ${dragX}px), 0, 0)`,
+          transition: isAnimating ? "transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none",
+        }}
+      >
+        {mediaList.map((url, i) => {
+          const isVid = isVideoUrl(url);
+          const isCurrent = i === currentIndex;
+          return (
+            <div
+              key={`${url}-${i}`}
+              className="relative h-full shrink-0"
+              style={{ width: `${100 / mediaList.length}%` }}
+            >
+              {isVid ? (
+                <video
+                  ref={isCurrent ? videoRef : undefined}
+                  src={url}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  playsInline
+                  loop
+                  muted={isCurrent ? muted : true}
+                  preload={isCurrent ? "metadata" : "none"}
+                  poster={poster}
+                />
+              ) : (
+                <img
+                  src={getOptimizedFeedImage(url, url)}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  draggable={false}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
