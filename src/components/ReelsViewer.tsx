@@ -73,8 +73,23 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
   const containerRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<ReelItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [muted, setMuted] = useState(true);
+  // 한 번 음소거를 해제하면 세션 동안 유지 (localStorage 영구 저장)
+  const [muted, setMuted] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem("reels_muted_v1");
+      return stored === null ? true : stored === "true";
+    } catch {
+      return true;
+    }
+  });
   const [showHint, setShowHint] = useState(true);
+
+  // muted 변경 시 localStorage에 영구 저장
+  useEffect(() => {
+    try {
+      localStorage.setItem("reels_muted_v1", String(muted));
+    } catch {}
+  }, [muted]);
 
   // 댓글 다이얼로그 상태
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
@@ -320,6 +335,14 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     [navigate, onClose]
   );
 
+  // 현재 활성 슬라이드가 비디오 포스트인지 (음소거 버튼 표시 조건)
+  const activeIsVideo = useMemo(() => {
+    const current = items[activeIndex];
+    if (!current || current.kind !== "post") return false;
+    const p = current.post;
+    return !!p.videoUrl || isVideoUrl(p.image_url || p.image);
+  }, [items, activeIndex]);
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -332,28 +355,33 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-[9999] bg-black"
       >
-        {/* 닫기 버튼 + 음소거 토글 (상단 고정) */}
+        {/* 음소거 토글 (좌측, 비디오일 때만) + 닫기 버튼 (우측) */}
         <div
           className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
+          {activeIsVideo ? (
+            <button
+              onClick={() => setMuted((m) => !m)}
+              className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
+              aria-label={muted ? "음소거 해제" : "음소거"}
+            >
+              {muted ? (
+                <VolumeX className="w-5 h-5 text-white" />
+              ) : (
+                <Volume2 className="w-5 h-5 text-white" />
+              )}
+            </button>
+          ) : (
+            <div className="w-10 h-10" aria-hidden="true" />
+          )}
+
           <button
             onClick={onClose}
             className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
             aria-label="닫기"
           >
             <X className="w-5 h-5 text-white" />
-          </button>
-          <button
-            onClick={() => setMuted((m) => !m)}
-            className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
-            aria-label={muted ? "음소거 해제" : "음소거"}
-          >
-            {muted ? (
-              <VolumeX className="w-5 h-5 text-white" />
-            ) : (
-              <Volume2 className="w-5 h-5 text-white" />
-            )}
           </button>
         </div>
 
@@ -372,18 +400,29 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
           )}
         </AnimatePresence>
 
-        {/* 세로 스냅 스크롤 컨테이너 */}
+        {/* 세로 스냅 스크롤 컨테이너 — 쫀득한 짝짝 붙는 스냅 */}
         <div
           ref={containerRef}
-          className="h-full w-full overflow-y-scroll snap-y snap-mandatory no-scrollbar"
-          style={{ scrollSnapType: "y mandatory", overscrollBehavior: "contain" }}
+          className="h-full w-full overflow-y-scroll no-scrollbar"
+          style={{
+            scrollSnapType: "y mandatory",
+            scrollSnapStop: "always",
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "auto",
+            scrollBehavior: "auto",
+            touchAction: "pan-y",
+          }}
         >
           {items.map((item, index) => (
             <div
               key={item.key}
               data-reel-index={index}
-              className="relative h-full w-full snap-start snap-always"
-              style={{ scrollSnapAlign: "start" }}
+              className="relative w-full"
+              style={{
+                height: "100dvh",
+                scrollSnapAlign: "start",
+                scrollSnapStop: "always",
+              }}
             >
               {item.kind === "post" ? (
                 <ReelSlide
@@ -519,7 +558,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   };
 
   return (
-    <div className="relative h-full w-full bg-black overflow-hidden">
+    <div className="relative h-full w-full bg-black overflow-hidden" style={{ height: "100dvh" }}>
       {/* 배경 블러 (영상보다 큰 컨테이너 채우기 위한 backdrop) */}
       {fallbackImage && (
         <img
@@ -679,7 +718,7 @@ const ReelAdSlide: React.FC<{ isActive: boolean }> = ({ isActive }) => {
 
   if (loading || !slot) {
     return (
-      <div className="h-full w-full bg-gradient-to-br from-indigo-900 via-purple-900 to-black flex items-center justify-center">
+      <div className="h-full w-full bg-gradient-to-br from-indigo-900 via-purple-900 to-black flex items-center justify-center" style={{ height: "100dvh" }}>
         <div className="w-12 h-12 rounded-full border-4 border-white/20 border-t-white animate-spin" />
       </div>
     );
@@ -688,7 +727,7 @@ const ReelAdSlide: React.FC<{ isActive: boolean }> = ({ isActive }) => {
   // 구인 슬롯
   if (slot.isRecruitment) {
     return (
-      <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex items-center justify-center px-6">
+      <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex items-center justify-center px-6" style={{ height: "100dvh" }}>
         <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-20 -left-10 w-72 h-72 bg-indigo-300/20 rounded-full blur-3xl" />
 
@@ -727,7 +766,7 @@ const ReelAdSlide: React.FC<{ isActive: boolean }> = ({ isActive }) => {
 
   // 일반 광고
   return (
-    <div className="relative h-full w-full overflow-hidden bg-black">
+    <div className="relative h-full w-full overflow-hidden bg-black" style={{ height: "100dvh" }}>
       {slot.image_url && (
         <>
           <img
