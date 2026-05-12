@@ -22,6 +22,7 @@ import PostUserAvatar from './PostUserAvatar';
 import PostCategoryBadge from './PostCategoryBadge';
 import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
+import HashtagText from './HashtagText';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
@@ -563,7 +564,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
     return (
       <>
-        <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{currentContent}</p>
+        <p ref={contentRef} className={`text-gray-800 text-sm leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>
+          <HashtagText text={currentContent} />
+        </p>
         {!contentExpanded && isContentClamped && (
           <button
             onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}

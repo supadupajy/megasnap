@@ -24,6 +24,7 @@ import { cn, getOptimizedFeedImage, getFallbackImage } from "@/lib/utils";
 import { handleShare } from "@/utils/share";
 import PostCommentsDialog from "@/components/PostCommentsDialog";
 import PostUserAvatar from "@/components/PostUserAvatar";
+import HashtagText from "@/components/HashtagText";
 import AdMobInterstitialPlaceholder from "@/components/AdMobInterstitialPlaceholder";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 
@@ -919,7 +920,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
                 onClick={() => setContentExpanded((v) => !v)}
                 className="text-sm leading-snug font-medium drop-shadow-md cursor-pointer pr-2"
               >
-                <p className={cn(contentExpanded ? "" : "line-clamp-2")}>{post.content}</p>
+                <p className={cn(contentExpanded ? "" : "line-clamp-2")}>
+                  <HashtagText
+                    text={post.content}
+                    tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
+                  />
+                </p>
                 {!contentExpanded && post.content.length > 60 && (
                   <span className="text-xs text-white/60 font-bold mt-1 inline-block">더 보기</span>
                 )}

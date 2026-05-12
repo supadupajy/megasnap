@@ -23,6 +23,7 @@ import PostUserAvatar from './PostUserAvatar';
 import PostCategoryBadge from './PostCategoryBadge';
 import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
+import HashtagText from './HashtagText';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
@@ -484,7 +485,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
     return (
       <>
-        <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>{content}</p>
+        <p ref={contentRef} className={`text-sm text-gray-800 leading-snug ${contentExpanded ? '' : 'line-clamp-2'}`}>
+          <HashtagText text={content} />
+        </p>
         {!contentExpanded && isContentClamped && (
           <button
             onClick={(e) => { e.stopPropagation(); setContentExpanded(true); }}

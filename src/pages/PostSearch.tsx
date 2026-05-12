@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
@@ -221,11 +221,15 @@ const PostDetailOverlay = ({
 // ── 메인 PostSearch ────────────────────────────────────────────────
 const PostSearch = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialQueryFromState = (location.state as { initialQuery?: string } | null)?.initialQuery?.trim() || '';
 
   const [searchQuery, setSearchQuery] = useState<string>(() => {
+    if (initialQueryFromState) return initialQueryFromState;
     try { return sessionStorage.getItem(CACHE_KEY_QUERY) || ''; } catch { return ''; }
   });
   const [results, setResults] = useState<SearchPost[]>(() => {
+    if (initialQueryFromState) return [];
     try {
       const cached = sessionStorage.getItem(CACHE_KEY_RESULTS);
       return cached ? JSON.parse(cached) : [];
@@ -233,6 +237,7 @@ const PostSearch = () => {
   });
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState<boolean>(() => {
+    if (initialQueryFromState) return true;
     try { return !!sessionStorage.getItem(CACHE_KEY_QUERY); } catch { return false; }
   });
 
@@ -336,11 +341,23 @@ const PostSearch = () => {
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      // 외부에서 태그 클릭 등으로 initialQuery를 가지고 진입한 경우 즉시 검색.
+      if (initialQueryFromState) {
+        handleSearch(initialQueryFromState);
+        // history.state를 비워서 새로고침/뒤로가기 시 재실행되지 않도록 (선택).
+        try {
+          window.history.replaceState(
+            { ...(window.history.state || {}) },
+            '',
+            window.location.href,
+          );
+        } catch {}
+      }
       return;
     }
     const timer = setTimeout(() => handleSearch(searchQuery), 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, handleSearch]);
+  }, [searchQuery, handleSearch, initialQueryFromState]);
 
   const getThumbnail = (post: SearchPost) => {
     const raw = Array.isArray(post.images) && post.images.length > 0
