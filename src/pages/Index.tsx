@@ -1915,7 +1915,7 @@ const Index = () => {
             key="trending-backdrop"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[11999] bg-black/35"
+            className="fixed inset-0 z-[11999] bg-black/55"
             onClick={() => setIsTrendingExpanded(false)}
           >
             <div className="absolute left-0 right-0 flex flex-col items-center gap-2 pointer-events-none select-none" style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 5.5rem)' }}>              

@@ -127,9 +127,9 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
     return (
       <div className={cn("relative w-full h-full", className)}>
         <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
-            <svg className="w-2.5 h-2.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-7 h-7 bg-black/55 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30">
+            <svg className="w-3.5 h-3.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
           </div>
         </div>
       </div>
@@ -139,7 +139,9 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
   if (failed) {
     return (
       <div className={cn("w-full h-full bg-gray-800 flex items-center justify-center", className)}>
-        <svg className="w-4 h-4 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <div className="w-7 h-7 bg-black/55 rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30">
+          <svg className="w-3.5 h-3.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
       </div>
     );
   }
@@ -151,22 +153,35 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string }> = ({ vi
   );
 };
 
+// 플레이 버튼 오버레이 (영상 표시용)
+const PlayOverlay: React.FC = () => (
+  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div className="w-7 h-7 bg-black/55 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md ring-1 ring-white/30">
+      <svg className="w-3.5 h-3.5 text-white fill-white ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+  </div>
+);
+
 // 포스트 썸네일 컴포넌트 (이미지/동영상 자동 판별)
 const PostThumbnail: React.FC<{ post: Post; className?: string; imgClassName?: string; onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void }> = ({ post, className, imgClassName, onImgError }) => {
   const videoUrl = post.videoUrl;
   const imageUrl = post.image_url || post.image;
   const hasStoredThumbnail = !!imageUrl && !isVideoUrl(imageUrl) && imageUrl !== '/placeholder.svg';
+  const isVideo = !!videoUrl || isVideoUrl(imageUrl);
 
   if (hasStoredThumbnail) {
     return (
-      <img
-        src={getOptimizedMarkerImage(imageUrl, post.id)}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        className={cn("w-full h-full object-cover", imgClassName, className)}
-        onError={onImgError}
-      />
+      <div className={cn("relative w-full h-full", className)}>
+        <img
+          src={getOptimizedMarkerImage(imageUrl, post.id)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className={cn("w-full h-full object-cover", imgClassName)}
+          onError={onImgError}
+        />
+        {isVideo && <PlayOverlay />}
+      </div>
     );
   }
 
