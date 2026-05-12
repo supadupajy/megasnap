@@ -29,7 +29,6 @@ import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 import { invalidateAdCache } from '@/hooks/use-ad';
 import { formatRelativeTime } from '@/lib/utils';
-import { debugLog } from '@/utils/debug-log';
 
 interface PostDetailProps {
   posts: any[];
@@ -694,22 +693,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             style={{ top: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}
           />
           <DialogPrimitive.Content
-            onOpenAutoFocus={(e) => {
-              debugLog('[PostDetail] onOpenAutoFocus');
-              e.preventDefault();
-            }}
+            onOpenAutoFocus={(e) => e.preventDefault()}
             // 댓글창(PostCommentsDialog)이 Dialog 트리 밖(형제)에서 렌더링되므로,
-                                          // 댓글창 클릭이 "Dialog 외부 클릭"으로 잡혀 PostDetail이 닫히는 것을 막는다.
+            // 댓글창 클릭이 "Dialog 외부 클릭"으로 잡혀 PostDetail이 닫히는 것을 막는다.
             onPointerDownOutside={(e) => {
-              debugLog('[PostDetail] onPointerDownOutside', { commentsOpen: isCommentsDialogOpen, target: (e.detail.originalEvent.target as HTMLElement)?.tagName });
               if (isCommentsDialogOpen) e.preventDefault();
             }}
             onInteractOutside={(e) => {
-              debugLog('[PostDetail] onInteractOutside', { commentsOpen: isCommentsDialogOpen });
               if (isCommentsDialogOpen) e.preventDefault();
             }}
             onFocusOutside={(e) => {
-              debugLog('[PostDetail] onFocusOutside', { commentsOpen: isCommentsDialogOpen, target: (e.target as HTMLElement)?.tagName });
               // 댓글 input이 외부에 있으므로 focus가 나가더라도 FocusScope가 되돌리지 않도록.
               if (isCommentsDialogOpen) e.preventDefault();
             }}

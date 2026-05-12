@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, Heart, MessageCircle, Send, X } from 'lucide-react';
-import { debugLog } from '@/utils/debug-log';
 import { Input } from '@/components/ui/input';
 import { Comment } from '@/types';
 import {
@@ -123,12 +122,10 @@ const PostCommentsDialog = ({
   useEffect(() => {
     if (!shouldRender) return;
 
-    debugLog('[Comments] dialog mounted, shouldRender=true');
     (window as any).__commentsDialogOpen = true;
     window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: true } }));
 
     return () => {
-      debugLog('[Comments] dialog unmounting');
       (window as any).__commentsDialogOpen = false;
       window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: false } }));
     };
@@ -180,17 +177,7 @@ const PostCommentsDialog = ({
 
   const focusCommentInput = (e: React.SyntheticEvent) => {
     e.stopPropagation();
-    debugLog('[Comments] focusCommentInput called', {
-      hasRef: !!commentInputRef.current,
-      active: document.activeElement?.tagName,
-    });
     commentInputRef.current?.focus();
-    setTimeout(() => {
-      debugLog('[Comments] after focus()', {
-        active: document.activeElement?.tagName,
-        isInput: document.activeElement === commentInputRef.current,
-      });
-    }, 50);
   };
 
   const closeCommentsDialog = (e?: React.SyntheticEvent) => {
@@ -550,24 +537,6 @@ const PostCommentsDialog = ({
               onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
               maxLength={COMMENT_MAX_LENGTH}
               disabled={!authUser || isSubmitting}
-              onPointerDown={(e) => {
-                debugLog('[Input] onPointerDown', { type: e.pointerType, target: (e.target as HTMLElement).tagName });
-              }}
-              onTouchStart={() => {
-                debugLog('[Input] onTouchStart');
-              }}
-              onMouseDown={() => {
-                debugLog('[Input] onMouseDown');
-              }}
-              onFocus={() => {
-                debugLog('[Input] onFocus ✅', { active: document.activeElement?.tagName });
-              }}
-              onBlur={() => {
-                debugLog('[Input] onBlur ❌', { newActive: document.activeElement?.tagName, id: (document.activeElement as HTMLElement)?.id });
-              }}
-              onClick={() => {
-                debugLog('[Input] onClick');
-              }}
               className="h-10 flex-1 cursor-text border-none bg-transparent text-sm focus-visible:ring-0"
             />
             <button
