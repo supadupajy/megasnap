@@ -378,7 +378,7 @@ const PostSearch = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2">
-            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">포스팅 검색</h2>
+            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">검색</h2>
           </div>
         </div>
       </div>
