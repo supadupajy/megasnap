@@ -82,7 +82,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     }
   });
   const [showHint, setShowHint] = useState(true);
-  const [uiVisible, setUiVisible] = useState(true);
 
   // muted 변경 시 localStorage에 영구 저장
   useEffect(() => {
@@ -336,10 +335,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
       >
         {/* 음소거 토글 (좌측, 비디오일 때만) + 닫기 버튼 (우측) */}
         <div
-          className={cn(
-            "absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none transition-opacity duration-200",
-            uiVisible ? "opacity-100" : "opacity-0"
-          )}
+          className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
           {activeIsVideo ? (
@@ -407,8 +403,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
                   liked={likeMap[item.post.id]?.liked ?? !!item.post.isLiked}
                   likesCount={likeMap[item.post.id]?.count ?? item.post.likes ?? 0}
                   saved={savedMap[item.post.id] ?? !!item.post.isSaved}
-                  uiVisible={uiVisible}
-                  onToggleUi={() => setUiVisible((v) => !v)}
                   onLikeToggle={() => handleLikeToggle(item.post.id)}
                   onSaveToggle={() => handleSaveToggle(item.post.id)}
                   onCommentClick={() => setCommentsPostId(item.post.id)}
@@ -708,8 +702,6 @@ interface ReelSlideProps {
   liked: boolean;
   likesCount: number;
   saved: boolean;
-  uiVisible: boolean;
-  onToggleUi: () => void;
   onLikeToggle: () => void;
   onSaveToggle: () => void;
   onCommentClick: () => void;
@@ -724,8 +716,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   liked,
   likesCount,
   saved,
-  uiVisible,
-  onToggleUi,
   onLikeToggle,
   onSaveToggle,
   onCommentClick,
@@ -803,7 +793,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     }
   };
 
-  // 미디어 영역 탭 → UI 토글 (드래그가 아닌 단순 탭일 때만)
+  // 미디어 영역 탭 → 영상일 때만 재생/일시정지 토글 (드래그가 아닌 단순 탭일 때만)
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const handlePointerDown = (e: React.PointerEvent) => {
     tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
@@ -816,7 +806,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     const dy = Math.abs(e.clientY - start.y);
     const dt = Date.now() - start.t;
     if (dx < 8 && dy < 8 && dt < 300) {
-      onToggleUi();
+      if (hasVideo) togglePlay();
     }
   };
 
@@ -875,13 +865,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         </div>
       )}
 
-      {/* 하단 그라데이션 + 정보 + 액션 알약 (UI 토글 시 페이드) */}
-      <div
-        className={cn(
-          "absolute bottom-0 left-0 right-0 z-20 transition-opacity duration-200",
-          uiVisible ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"
-        )}
-      >
+      {/* 하단 그라데이션 + 정보 + 액션 알약 */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-16"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
