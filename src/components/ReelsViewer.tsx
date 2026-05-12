@@ -1347,6 +1347,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             videoRef={videoRef}
             muted={muted}
             poster={fallbackImage}
+            isSlideActive={isActive}
           />
 
           {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
@@ -1582,6 +1583,18 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     };
   }, [src, isCurrent]);
 
+  // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
+  // (비활성 슬라이드의 영상이 백그라운드에서 계속 재생되어 소리가 겹치는 문제 방지)
+  useEffect(() => {
+    const el = localRef.current;
+    if (!el) return;
+    if (!isCurrent) {
+      el.muted = true;
+      if (!el.paused) el.pause();
+      el.currentTime = 0;
+    }
+  }, [isCurrent]);
+
   // 첫 프레임이 200ms 안에 안 뜨면 로딩 스피너 노출 (깜빡임 방지)
   useEffect(() => {
     if (!isCurrent) {
@@ -1630,6 +1643,10 @@ interface MediaCarouselProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   muted: boolean;
   poster?: string;
+  // 부모 ReelSlide가 현재 활성 슬라이드인지 여부.
+  // false면 캐러셀 내부의 비디오가 canplay/loadeddata 이벤트로 자동 재생되는 것을 차단한다.
+  // (여러 슬라이드가 동시에 DOM에 마운트되어 있어도 활성 슬라이드만 영상을 재생하기 위함)
+  isSlideActive: boolean;
 }
 
 const MediaCarousel: React.FC<MediaCarouselProps> = ({
@@ -1639,6 +1656,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   videoRef,
   muted,
   poster,
+  isSlideActive,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [dragX, setDragX] = useState(0);
@@ -1864,6 +1882,10 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         {mediaList.map((url, i) => {
           const isVid = isVideoUrl(url);
           const isCurrent = i === currentIndex;
+          // 캐러셀 내부 활성 미디어이면서 동시에 부모 슬라이드가 활성 상태일 때만
+          // "재생 가능 상태"로 취급한다. 그래야 화면에 보이지 않는 다른 슬라이드의
+          // 영상이 canplay/loadeddata 이벤트로 자동 재생되어 소리가 겹치는 문제가 사라진다.
+          const isPlayable = isCurrent && isSlideActive;
           return (
             <div
               key={`${url}-${i}`}
@@ -1872,12 +1894,12 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
             >
               {isVid ? (
                 <ReelsVideo
-                  videoRef={isCurrent ? videoRef : undefined}
+                  videoRef={isPlayable ? videoRef : undefined}
                   src={url}
-                  muted={isCurrent ? muted : true}
-                  preload={isCurrent ? "metadata" : "none"}
+                  muted={isPlayable ? muted : true}
+                  preload={isPlayable ? "metadata" : "none"}
                   poster={poster}
-                  isCurrent={isCurrent}
+                  isCurrent={isPlayable}
                 />
               ) : (
                 <img
