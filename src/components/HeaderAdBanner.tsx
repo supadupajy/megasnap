@@ -65,6 +65,8 @@ const HeaderAdBanner = () => {
   if (slot.isRecruitment) {
     return (
       <div
+        data-debug-banner="recruit-v2"
+        data-render={renderCount}
         className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-indigo-100 via-indigo-50 to-violet-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-indigo-200/60"
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
