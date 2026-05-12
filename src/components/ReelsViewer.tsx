@@ -15,19 +15,16 @@ import {
   VolumeX,
   Play,
   ChevronUp,
-  ExternalLink,
-  Mail,
-  ShoppingBag,
 } from "lucide-react";
 import { Post } from "@/types";
 import { useAuth } from "@/components/AuthProvider";
-import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
 import { supabase } from "@/integrations/supabase/client";
 import { toggleLikeInDb } from "@/utils/like-utils";
 import { cn, getOptimizedFeedImage, getFallbackImage } from "@/lib/utils";
 import { handleShare } from "@/utils/share";
 import PostCommentsDialog from "@/components/PostCommentsDialog";
 import PostUserAvatar from "@/components/PostUserAvatar";
+import AdMobInterstitialPlaceholder from "@/components/AdMobInterstitialPlaceholder";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 
 // 광고 삽입 주기 (포스팅 3개마다 광고 1개)
@@ -422,7 +419,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
                   }}
                 />
               ) : (
-                <ReelAdSlide isActive={index === activeIndex} />
+                <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
               )}
             </div>
           ))}
@@ -953,123 +950,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               <Bookmark className={cn("h-[18px] w-[18px] transition-colors", saved ? "fill-amber-400 text-amber-400" : "text-white")} />
             </button>
           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ─── 광고 슬라이드 (DB 광고 + fallback) ────────────────────────────────
-const ReelAdSlide: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  const { ad, loading, now } = useAd("trending");
-
-  const slot = useMemo(() => {
-    if (loading) return null;
-    return ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
-  }, [ad, loading, now]);
-
-  if (loading || !slot) {
-    return (
-      <div className="h-full w-full bg-gradient-to-br from-indigo-900 via-purple-900 to-black flex items-center justify-center" style={{ height: "100dvh" }}>
-        <div className="w-12 h-12 rounded-full border-4 border-white/20 border-t-white animate-spin" />
-      </div>
-    );
-  }
-
-  // 구인 슬롯
-  if (slot.isRecruitment) {
-    return (
-      <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 flex items-center justify-center px-6" style={{ height: "100dvh" }}>
-        <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-20 -left-10 w-72 h-72 bg-indigo-300/20 rounded-full blur-3xl" />
-
-        <div className="relative z-10 w-full max-w-sm">
-          {/* AD 배지 */}
-          <div className="flex items-center gap-2 mb-6">
-            <span className="bg-white text-indigo-700 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
-              Ad
-            </span>
-            <span className="text-white/70 text-[11px] font-bold uppercase tracking-wider">Sponsored</span>
-          </div>
-
-          <h2 className="text-white text-3xl font-black leading-tight mb-3 tracking-tight">
-            좋은 브랜드를
-            <br />
-            기다리고 있어요.
-          </h2>
-          <p className="text-white/80 text-sm font-medium mb-8 leading-relaxed">
-            광고 문의는 언제든 환영이에요.
-            <br />
-            아래 이메일로 연락주세요.
-          </p>
-
-          <button
-            onClick={() => window.open("mailto:chorasnap@gmail.com", "_blank")}
-            className="w-full bg-white text-indigo-700 rounded-2xl px-5 py-4 flex items-center gap-3 shadow-2xl active:scale-95 transition-transform"
-          >
-            <Mail className="w-5 h-5 shrink-0" />
-            <span className="flex-1 text-left font-black text-sm tracking-tight">chorasnap@gmail.com</span>
-            <ExternalLink className="w-4 h-4 shrink-0 text-indigo-400" />
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // 일반 광고
-  return (
-    <div className="relative h-full w-full overflow-hidden bg-black" style={{ height: "100dvh" }}>
-      {slot.image_url && (
-        <>
-          <img
-            src={slot.image_url}
-            alt={slot.brand_name || "Ad"}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/40" />
-        </>
-      )}
-
-      <div className="relative z-10 h-full w-full flex flex-col justify-between px-6 py-12">
-        {/* 상단 */}
-        <div className="flex items-center gap-2 pt-4">
-          <span className="bg-white text-black text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
-            Ad
-          </span>
-          {slot.brand_logo_url ? (
-            <img src={slot.brand_logo_url} alt={slot.brand_name} className="h-4 invert brightness-200" />
-          ) : (
-            slot.brand_name && (
-              <span className="text-white/80 text-[11px] font-bold uppercase tracking-wider">
-                {slot.brand_name}
-              </span>
-            )
-          )}
-        </div>
-
-        {/* 하단 본문 + CTA */}
-        <div className="space-y-4">
-          <div>
-            {slot.title && (
-              <h2 className="text-white text-3xl font-black leading-tight tracking-tight italic drop-shadow-2xl">
-                {slot.title}
-              </h2>
-            )}
-            {slot.subtitle && (
-              <p className="text-white/90 text-base font-bold mt-2 drop-shadow-lg">{slot.subtitle}</p>
-            )}
-          </div>
-
-          {slot.link_url && (
-            <button
-              onClick={() => window.open(normalizeUrl(slot.link_url), "_blank", "noopener,noreferrer")}
-              className="w-full bg-white text-black rounded-2xl px-5 py-4 flex items-center gap-3 shadow-2xl active:scale-95 transition-transform"
-            >
-              <ShoppingBag className="w-5 h-5 shrink-0" />
-              <span className="flex-1 text-left font-black text-sm tracking-tight">자세히 보기</span>
-              <ExternalLink className="w-4 h-4 shrink-0 text-gray-400" />
-            </button>
-          )}
         </div>
       </div>
     </div>
