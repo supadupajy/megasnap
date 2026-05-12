@@ -200,8 +200,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             muted
             loop
             playsInline
-            controls
-            controlsList="nodownload noremoteplayback"
             disablePictureInPicture
             onClick={(e) => e.stopPropagation()}
             onLoadedData={() => setVideoLoaded(true)}

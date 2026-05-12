@@ -24,6 +24,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { Button } from '@/components/ui/button';
 import PostItem from '@/components/PostItem';
+import VideoThumbnailPreview from '@/components/VideoThumbnailPreview';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import {
@@ -377,11 +378,9 @@ const UserProfile = () => {
                       onClick={() => handleGridItemClick(post.id)}
                     >
                       {post.videoUrl ? (
-                        <video
-                          src={`${post.videoUrl}#t=0.5`}
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-                          muted
-                          playsInline
+                        <VideoThumbnailPreview
+                          src={post.videoUrl}
+                          className="w-full h-full object-cover hover:opacity-80 transition-opacity bg-gray-100"
                         />
                       ) : (
                         <img

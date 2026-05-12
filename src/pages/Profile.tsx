@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
+import VideoThumbnailPreview from '@/components/VideoThumbnailPreview';
 import { Post } from '@/types';
 import { cn, formatCount, getOptimizedMarkerImage } from '@/lib/utils';
 
@@ -470,7 +471,10 @@ const Profile = () => {
                       onClick={() => handleGridItemClick(post.id)}
                     >
                       {post.videoUrl ? (
-                        <video src={`${post.videoUrl}#t=0.5`} className="w-full h-full object-cover hover:opacity-80 transition-opacity" muted playsInline />
+                        <VideoThumbnailPreview
+                          src={post.videoUrl}
+                          className="w-full h-full object-cover hover:opacity-80 transition-opacity bg-gray-100"
+                        />
                       ) : (
                         <img
                           src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
