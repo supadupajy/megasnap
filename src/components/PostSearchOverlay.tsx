@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
@@ -35,7 +36,8 @@ const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, l
 const sanitizePostgrestSearchTerm = (term: string) =>
   term.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
 
-// ── 인라인 PostDetail 오버레이 ──────────────────────────────────────
+// ── 검색 결과 클릭 시 뜨는 PostDetail 오버레이 ───────────────────────
+// 시트 위에 덮여서 검색 결과를 가린 상태로 상세를 보여준다.
 const PostDetailOverlay = ({
   postId,
   searchResults,
@@ -165,18 +167,20 @@ const PostDetailOverlay = ({
     }
   };
 
+  // 시트 내부에 absolute로 채워서 표시 (시트 바깥은 백드롭에 가려져 있음)
   return (
-    <div className="fixed inset-0 z-[20002] bg-white flex flex-col overflow-hidden">
-      <div className="shrink-0 bg-white border-b border-gray-50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 64px)' }}>
-        <div className="flex items-center px-4 h-14 relative">
+    <div className="absolute inset-0 z-[2] bg-white flex flex-col overflow-hidden rounded-t-[32px] sm:rounded-[32px]">
+      <div className="shrink-0 bg-white border-b border-slate-100">
+        <div className="flex items-center px-5 py-4 relative">
           <button
             onClick={onClose}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
+            aria-label="검색 결과로 돌아가기"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="h-6 w-6" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">검색 결과</h2>
+            <p className="text-lg font-black tracking-tight text-slate-950">검색 결과</p>
           </div>
         </div>
       </div>
@@ -187,14 +191,11 @@ const PostDetailOverlay = ({
         </div>
       ) : allPosts.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <p className="text-gray-500 font-bold mb-4">게시물을 찾을 수 없습니다.</p>
+          <p className="text-slate-500 font-bold mb-4">게시물을 찾을 수 없습니다.</p>
           <button onClick={onClose} className="text-indigo-600 font-black">뒤로 가기</button>
         </div>
       ) : (
-        <div
-          className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-x-none"
-          style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
-        >
+        <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain">
           {allPosts.map((p) => (
             <div key={p.id} id={`overlay-post-${p.id}`} className="scroll-mt-4">
               <PostItem
@@ -203,7 +204,7 @@ const PostDetailOverlay = ({
                 autoPlayVideo={true}
                 onLikeToggle={() => handleLikeToggle(p.id)}
                 onDelete={() => handlePostDelete(p.id)}
-                onLocationClick={(e, lat, lng) =>
+                onLocationClick={(_e, lat, lng) =>
                   navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })
                 }
               />
@@ -215,27 +216,22 @@ const PostDetailOverlay = ({
   );
 };
 
-// ── 전역 PostSearchOverlay ─────────────────────────────────────────
-// 어디서든 `open-post-search` 이벤트를 dispatch하면 열린다.
-// `close-post-search` 이벤트 또는 백버튼으로 닫힌다.
-// 상위 라우트와 독립적으로 동작하여, 탭 이동 없이 검색을 띄울 수 있다.
+// ── 전역 PostSearchOverlay (댓글 시트와 동일한 디자인) ────────────────
 const PostSearchOverlay = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [results, setResults] = useState<SearchPost[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
 
   const [overlayPostId, setOverlayPostId] = useState<string | null>(null);
-  const overlayPostIdRef = useRef<string | null>(null);
 
-  // 외부에서 dispatch한 initialQuery가 있으면 자동 검색
   const autoSearchOnOpenRef = useRef<string | null>(null);
-  const initRef = useRef(false);
-
-  useEffect(() => {
-    overlayPostIdRef.current = overlayPostId;
-  }, [overlayPostId]);
+  const debounceInitRef = useRef(false);
+  const closeTimeoutRef = useRef<number | null>(null);
 
   // 검색 실행
   const handleSearch = useCallback(async (query: string) => {
@@ -309,7 +305,7 @@ const PostSearchOverlay = () => {
           sessionStorage.removeItem(CACHE_KEY_RESULTS);
         } catch {}
       } else {
-        // 새로 검색 버튼으로 진입할 때는 캐시된 마지막 쿼리/결과를 복원
+        // 마지막 쿼리/결과 복원
         try {
           const cachedQuery = sessionStorage.getItem(CACHE_KEY_QUERY) || '';
           const cachedResultsRaw = sessionStorage.getItem(CACHE_KEY_RESULTS);
@@ -335,7 +331,6 @@ const PostSearchOverlay = () => {
     const handleClose = () => {
       (window as any).__isPostSearchOpen = false;
       setIsOpen(false);
-      setOverlayPostId(null);
     };
 
     window.addEventListener('open-post-search', handleOpen);
@@ -349,6 +344,37 @@ const PostSearchOverlay = () => {
     };
   }, []);
 
+  // mount/unmount 애니메이션 처리 (댓글 시트와 동일)
+  useEffect(() => {
+    if (closeTimeoutRef.current) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+      return;
+    }
+
+    if (shouldRender) {
+      setIsClosing(true);
+      closeTimeoutRef.current = window.setTimeout(() => {
+        setShouldRender(false);
+        setIsClosing(false);
+        setOverlayPostId(null);
+        closeTimeoutRef.current = null;
+      }, 220);
+    }
+
+    return () => {
+      if (closeTimeoutRef.current) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+    };
+  }, [isOpen, shouldRender]);
+
   // 오픈 직후 initialQuery 자동 검색
   useEffect(() => {
     if (isOpen && autoSearchOnOpenRef.current) {
@@ -358,28 +384,40 @@ const PostSearchOverlay = () => {
     }
   }, [isOpen, handleSearch]);
 
-  // 타이핑 디바운스 검색 (오픈 상태일 때만)
+  // 타이핑 디바운스 검색
   useEffect(() => {
     if (!isOpen) return;
-    // 첫 렌더(오픈 직후)는 위의 auto-search가 처리하므로 스킵
-    if (!initRef.current) {
-      initRef.current = true;
+    if (!debounceInitRef.current) {
+      debounceInitRef.current = true;
       return;
     }
     const timer = setTimeout(() => handleSearch(searchQuery), 400);
     return () => clearTimeout(timer);
   }, [searchQuery, handleSearch, isOpen]);
 
-  // 닫힐 때 init flag 리셋
   useEffect(() => {
-    if (!isOpen) {
-      initRef.current = false;
-    }
+    if (!isOpen) debounceInitRef.current = false;
   }, [isOpen]);
 
-  const close = useCallback(() => {
+  // ESC 키로 닫기
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isOpen]);
+
+  const close = useCallback((e?: React.SyntheticEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
     window.dispatchEvent(new CustomEvent('close-post-search'));
   }, []);
+
+  const stopSheetEvent = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
 
   const openPostOverlay = useCallback((postId: string) => {
     setOverlayPostId(postId);
@@ -396,143 +434,197 @@ const PostSearchOverlay = () => {
     return raw ? getOptimizedMarkerImage(raw, post.id) : getFallbackImage(post.id);
   };
 
-  if (!isOpen) return null;
+  if (!shouldRender) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div className="fixed inset-0 z-[20001] bg-white flex flex-col overflow-hidden">
-      {/* 고정 상단 헤더 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[10] bg-white">
-        <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
-          <button
-            onClick={close}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <h2 className="text-lg font-semibold text-gray-900 tracking-tight">검색</h2>
+  const activeTag = getSearchHashtag(searchQuery);
+  // 시트는 상단에서 40px(≈1cm) 여백 두고 거의 풀스크린으로 올라옴 (댓글과 동일)
+  const sheetTopPx = 40;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[30000] pointer-events-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label="포스팅 검색"
+    >
+      {/* 백드롭 */}
+      <button
+        type="button"
+        className={`absolute inset-0 z-0 cursor-default bg-slate-950/60 pointer-events-auto ${
+          isClosing ? 'comment-backdrop-exit' : 'comment-backdrop-enter'
+        }`}
+        onPointerDown={close}
+        onClick={close}
+        aria-label="검색 닫기 배경"
+      />
+
+      {/* 시트 본체 */}
+      <section
+        className={`fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] pointer-events-auto sm:rounded-[32px] ${
+          isClosing ? 'comment-sheet-exit' : 'comment-sheet-enter'
+        }`}
+        style={{
+          top: `${sheetTopPx}px`,
+          bottom: '0px',
+        }}
+        onClick={stopSheetEvent}
+      >
+        {/* 상단 핸들 */}
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
+
+        {/* 헤더 */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+              <SearchIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-lg font-black tracking-tight text-slate-950">포스팅 검색</p>
+              <p className="text-sm font-bold text-slate-400">
+                {hasSearched
+                  ? `${results.length.toLocaleString()}개의 결과`
+                  : '키워드 또는 #해시태그'}
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onPointerDown={close}
+            onClick={close}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
+            aria-label="검색 닫기"
+          >
+            <X className="h-6 w-6" />
+          </button>
         </div>
-      </div>
 
-      {/* 검색 입력창 */}
-      <div className="shrink-0 bg-white z-[5] pt-[calc(env(safe-area-inset-top,0px)+122px)]">
-        <div className="px-4 pb-3">
+        {/* 검색 입력 영역 */}
+        <div className="shrink-0 border-b border-slate-100 bg-white px-4 py-3">
           <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-600 z-10" />
             <input
               placeholder="키워드 또는 #해시태그로 검색해 보세요"
-              className="w-full pl-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-semibold placeholder:text-gray-400 placeholder:font-normal shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
+              className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus={!searchQuery}
             />
-            {isSearching && (
+            {isSearching ? (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
-            )}
-          </div>
-          {(() => {
-            const activeTag = getSearchHashtag(searchQuery);
-            return activeTag ? (
-              <div className="mt-3 flex items-center gap-2 rounded-2xl bg-indigo-50 px-4 py-3 text-indigo-700">
-                <Hash className="h-4 w-4 shrink-0" />
-                <p className="text-xs font-black">
-                  #{activeTag} 태그와 일치하는 포스팅을 우선 검색 중
-                </p>
-              </div>
-            ) : null;
-          })()}
-        </div>
-      </div>
-
-      {/* 결과 영역 */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain bg-white">
-        {!hasSearched ? (
-          <div className="px-4 py-20 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-4">
-              <ImageIcon className="w-8 h-8 text-orange-300" />
-            </div>
-            <p className="text-sm text-gray-400 font-semibold leading-relaxed">
-              검색하면 결과가 여기에 나와요.
-            </p>
-          </div>
-        ) : isSearching ? (
-          <div className="px-3 pt-3 grid grid-cols-2 gap-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="aspect-square rounded-2xl bg-gray-100 animate-pulse" />
-            ))}
-          </div>
-        ) : results.length === 0 ? (
-          <div className="px-4 py-20 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <SearchIcon className="w-8 h-8 text-gray-200" />
-            </div>
-            <p className="text-sm text-gray-400 font-semibold leading-relaxed">
-              "{searchQuery}"에 대한 결과가 없습니다.
-            </p>
-          </div>
-        ) : (
-          <div
-            className="px-3 pt-3 grid grid-cols-2 gap-2"
-            style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}
-          >
-            {results.map((post) => (
-              <div
-                key={post.id}
-                onClick={() => openPostOverlay(post.id)}
-                className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 cursor-pointer active:scale-[0.97] transition-transform shadow-sm"
+            ) : searchQuery ? (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-500 transition active:scale-90"
+                aria-label="검색어 지우기"
               >
-                <img
-                  src={getThumbnail(post)}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = getFallbackImage(post.id);
-                  }}
-                />
-                {post.video_url && (
-                  <div className="absolute top-2 right-2 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <Play className="w-3.5 h-3.5 text-white fill-white" />
-                  </div>
-                )}
-                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
-                <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
-                  <div className="min-w-0 max-w-[70%]">
-                    <p className="text-white text-[11px] font-semibold truncate drop-shadow">
-                      {(post.profiles?.nickname || post.user_name || '').slice(0, 12)}
-                    </p>
-                    {post.hashtags && post.hashtags.length > 0 && (
-                      <p className="mt-0.5 truncate text-[10px] font-black text-indigo-100 drop-shadow">
-                        #{post.hashtags.slice(0, 2).join(' #')}
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
+          {activeTag && (
+            <div className="mt-3 flex items-center gap-2 rounded-2xl bg-indigo-50 px-4 py-2.5 text-indigo-700">
+              <Hash className="h-4 w-4 shrink-0" />
+              <p className="text-xs font-black">
+                #{activeTag} 태그와 일치하는 포스팅을 우선 검색 중
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* 결과 영역 */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white">
+          {!hasSearched ? (
+            <div className="flex h-full min-h-[260px] flex-col items-center justify-center px-6 text-center">
+              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+                <SearchIcon className="h-8 w-8" />
+              </div>
+              <p className="text-base font-black text-slate-700">검색어를 입력해 보세요</p>
+              <p className="mt-1 text-sm font-medium text-slate-400">
+                키워드나 #해시태그로 포스팅을 찾을 수 있어요.
+              </p>
+            </div>
+          ) : isSearching ? (
+            <div className="grid grid-cols-2 gap-2 px-3 pt-3 pb-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-square rounded-2xl bg-slate-100 animate-pulse" />
+              ))}
+            </div>
+          ) : results.length === 0 ? (
+            <div className="flex h-full min-h-[260px] flex-col items-center justify-center px-6 text-center">
+              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+                <ImageIcon className="h-8 w-8" />
+              </div>
+              <p className="text-base font-black text-slate-700">결과가 없어요</p>
+              <p className="mt-1 text-sm font-medium text-slate-400">
+                "{searchQuery}"에 대한 포스팅이 없습니다.
+              </p>
+            </div>
+          ) : (
+            <div
+              className="grid grid-cols-2 gap-2 px-3 pt-3"
+              style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
+            >
+              {results.map((post) => (
+                <div
+                  key={post.id}
+                  onClick={() => openPostOverlay(post.id)}
+                  className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 cursor-pointer active:scale-[0.97] transition-transform shadow-sm"
+                >
+                  <img
+                    src={getThumbnail(post)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = getFallbackImage(post.id);
+                    }}
+                  />
+                  {post.video_url && (
+                    <div className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+                      <Play className="h-3.5 w-3.5 fill-white text-white" />
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
+                  <div className="absolute inset-x-3 bottom-2 flex items-center justify-between">
+                    <div className="min-w-0 max-w-[70%]">
+                      <p className="truncate text-[11px] font-semibold text-white drop-shadow">
+                        {(post.profiles?.nickname || post.user_name || '').slice(0, 12)}
                       </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Heart className="w-3 h-3 text-white fill-white" />
-                    <span className="text-white text-[10px] font-semibold">
-                      {post.likes?.toLocaleString() ?? 0}
-                    </span>
+                      {post.hashtags && post.hashtags.length > 0 && (
+                        <p className="mt-0.5 truncate text-[10px] font-black text-indigo-100 drop-shadow">
+                          #{post.hashtags.slice(0, 2).join(' #')}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Heart className="h-3 w-3 fill-white text-white" />
+                      <span className="text-[10px] font-semibold text-white">
+                        {post.likes?.toLocaleString() ?? 0}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* 포스팅 상세 오버레이 */}
-      {overlayPostId && (
-        <PostDetailOverlay
-          postId={overlayPostId}
-          searchResults={results}
-          onClose={closePostOverlay}
-        />
-      )}
-    </div>
+        {/* 포스트 상세 오버레이 — 시트 내부를 덮음 */}
+        {overlayPostId && (
+          <PostDetailOverlay
+            postId={overlayPostId}
+            searchResults={results}
+            onClose={closePostOverlay}
+          />
+        )}
+      </section>
+    </div>,
+    document.body,
   );
 };
 
