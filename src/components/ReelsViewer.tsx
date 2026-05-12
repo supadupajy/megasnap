@@ -803,15 +803,14 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — X 버튼 중심과 닉네임 중심의 정확한 중점에 배치 */}
-      {/* X 버튼 중심 ≈ safe-top + 32px (헤더 paddingTop 12px + 버튼 높이 40px의 절반 20px) */}
-      {/* 닉네임 중심 ≈ 하단에서 165px (액션바 ~70px + 본문 ~50px + 닉네임 위치 ~45px) */}
-      {/* 두 중심 사이가 미디어가 차지할 공간이 되도록 top/bottom을 X/닉네임 중심에 정확히 맞춤 */}
+      {/* 메인 미디어 — X 버튼과 닉네임 사이의 정확한 시각적 중앙에 배치 */}
+      {/* 위/아래 여백을 동일하게 맞춰서 두 UI 요소 사이의 정중앙에 위치 + 어느 쪽과도 겹치지 않게 함 */}
+      {/* 하단 정보 영역(닉네임~액션바)이 약 210px이므로, 상단에도 같은 210px 여백을 줌 */}
       <div
         className="absolute left-0 right-0 flex items-center justify-center px-2"
         style={{
-          top: "calc(env(safe-area-inset-top, 0px) + 32px)",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 165px)",
+          top: "calc(env(safe-area-inset-top, 0px) + 210px)",
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 210px)",
         }}
       >
         <div
