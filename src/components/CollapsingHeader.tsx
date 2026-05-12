@@ -26,6 +26,8 @@ interface CollapsingHeaderProps {
   onActionClick: () => void;
   /** 축소 시 우측 버튼을 숨기지 않고 아이콘 버튼으로 유지 */
   collapseActionToIcon?: boolean;
+  /** 축소 시 우측에 표시되는 힌트 텍스트 (액션 버튼과 페이드 교차) */
+  collapsedHint?: string;
 }
 
 /**
@@ -48,6 +50,7 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
   actionLabel,
   onActionClick,
   collapseActionToIcon = false,
+  collapsedHint,
 }) => {
   // 보간 함수 (lerp)
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -117,31 +120,47 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
           </div>
         </div>
 
-        <button
-          onClick={onActionClick}
-          className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
-          style={{
-            gap: `${actionGap}px`,
-            opacity: actionOpacity,
-            transform: `translateX(${actionTranslate}px)`,
-            pointerEvents: actionOpacity < 0.1 ? 'none' : 'auto',
-            paddingLeft: actionPadX,
-            paddingRight: actionPadX,
-            paddingTop: actionPadY,
-            paddingBottom: actionPadY,
-          }}
-        >
-          <ActionIcon className="w-4 h-4 text-gray-900 shrink-0" />
-          <span
-            className="text-sm font-normal text-gray-900 whitespace-nowrap overflow-hidden"
+        <div className="relative flex items-center shrink-0">
+          {collapsedHint && (
+            <div
+              className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 flex items-center"
+              style={{
+                opacity: Math.max(0, (progress - 0.4) * 1.8),
+                transform: `translate(${(1 - Math.min(1, progress * 1.4)) * 12}px, -50%)`,
+              }}
+            >
+              <span className="text-[11px] font-semibold text-orange-600 whitespace-nowrap bg-orange-50 border border-orange-100 rounded-full px-2.5 py-1">
+                {collapsedHint}
+              </span>
+            </div>
+          )}
+
+          <button
+            onClick={onActionClick}
+            className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
             style={{
-              opacity: actionLabelOpacity,
-              maxWidth: actionLabelMaxWidth,
+              gap: `${actionGap}px`,
+              opacity: actionOpacity,
+              transform: `translateX(${actionTranslate}px)`,
+              pointerEvents: actionOpacity < 0.1 ? 'none' : 'auto',
+              paddingLeft: actionPadX,
+              paddingRight: actionPadX,
+              paddingTop: actionPadY,
+              paddingBottom: actionPadY,
             }}
           >
-            {actionLabel}
-          </span>
-        </button>
+            <ActionIcon className="w-4 h-4 text-gray-900 shrink-0" />
+            <span
+              className="text-sm font-normal text-gray-900 whitespace-nowrap overflow-hidden"
+              style={{
+                opacity: actionLabelOpacity,
+                maxWidth: actionLabelMaxWidth,
+              }}
+            >
+              {actionLabel}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -234,6 +234,7 @@ const Popular = () => {
           ActionIcon={Search}
           actionLabel="검색"
           onActionClick={() => window.dispatchEvent(new CustomEvent('open-post-search'))}
+          collapsedHint="이미지/영상을 눌러 Flicks로 전환"
         />
       </div>
 
