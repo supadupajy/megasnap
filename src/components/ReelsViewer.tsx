@@ -25,6 +25,7 @@ import { handleShare } from "@/utils/share";
 import PostCommentsDialog from "@/components/PostCommentsDialog";
 import PostUserAvatar from "@/components/PostUserAvatar";
 import HashtagText from "@/components/HashtagText";
+import ImageSliderDots from "@/components/ImageSliderDots";
 import AdMobInterstitialPlaceholder from "@/components/AdMobInterstitialPlaceholder";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 
@@ -903,20 +904,15 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             poster={fallbackImage}
           />
 
-          {/* 미디어 인디케이터 도트 (다중일 때만) */}
-          {mediaList.length > 1 && (
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 pointer-events-none">
-              {mediaList.map((_, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "h-1 rounded-full transition-all duration-200",
-                    i === mediaIndex ? "w-5 bg-white" : "w-1 bg-white/50"
-                  )}
-                />
-              ))}
-            </div>
-          )}
+          {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
+          <ImageSliderDots
+            count={mediaList.length}
+            currentIndex={mediaIndex}
+            activeWidthClass="w-4"
+            inactiveColorClass="bg-white/50"
+            bottomClass={hasVideo ? "bottom-6" : "bottom-4"}
+            zIndexClass="z-30"
+          />
 
           {/* 영상 타임라인 (현재 미디어가 영상일 때만) */}
           {hasVideo && (
