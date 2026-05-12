@@ -735,7 +735,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                       <div className="flex-1 min-h-0 flex flex-col relative bg-white">
                         {/* 닉네임 헤더 + 콘텐츠 - 스크롤 */}
                         <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto no-scrollbar overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
-                          <div className="flex items-center justify-between px-4 py-4 bg-white border-b border-gray-50" onClick={(e) => e.stopPropagation()}>
+                          {/* PostItem(여기보기 페이지)과 동일한 레이아웃: 구분선 없이 헤더 → 미디어가 자연스럽게 이어짐 */}
+                          <div className="flex items-center justify-between p-4 pb-3 bg-white" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                               <PostUserAvatar
                                 name={postDisplayName}
@@ -743,18 +744,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                                 postId={currentPost.id}
                                 userId={currentPost.user.id}
                                 isAd={isAd}
-                                size="sm"
+                                size="md"
                                 optimize
                                 activePress
                               />
-                              <div>
+                              <div className="flex flex-col">
                                 <div className="flex items-center gap-1.5">
                                   <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
                                   {isAd && <div className="ad-badge-fancy"><span>AD</span></div>}
                                 </div>
-                                <div className="flex items-center text-indigo-600 gap-0.5 mt-0.5" onClick={handleLocationClick}>
+                                <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleLocationClick}>
                                   <MapPin className="w-3 h-3" />
-                                  <span className="text-[10px] font-medium hover:underline">{displayLocation || '알 수 없는 장소'}</span>
+                                  <span className="text-[10px] font-medium">{displayLocation || '알 수 없는 장소'}</span>
                                 </div>
                               </div>
                             </div>
@@ -772,10 +773,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                             </div>
                           </div>
 
-                          <div className="flex flex-col">
-                            <div className="px-4 mt-2">
-                              {renderMediaArea()}
-                            </div>
+                          {/* 미디어 영역 — 헤더 아래에 별도 마진 없이 이어지도록 (PostItem과 동일) */}
+                          <div className="px-4">
+                            {renderMediaArea()}
                           </div>
 
                           <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()}>
