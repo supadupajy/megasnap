@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { pushDebugLog } from '@/components/DebugBannerOverlay';
 
 export interface AdData {
   id: string;
@@ -222,11 +223,16 @@ export function useAd(adId: string) {
   scheduleTransitionRef.current = (currentAd: AdData) => {
     if (timerRef.current) clearTimeout(timerRef.current);
     const ms = msUntilNextTransition(currentAd, new Date());
-    if (ms == null) return;
+    if (ms == null) {
+      pushDebugLog(`[useAd:${adId}] scheduleTransition: no next transition`);
+      return;
+    }
+    pushDebugLog(`[useAd:${adId}] scheduleTransition in ${ms}ms`);
 
     // 전환 시각 + 100ms 여유를 두고 now를 갱신 → resolveActiveSlot 재계산
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
+      pushDebugLog(`[useAd:${adId}] ⏲️ timer fired → setNow`);
       setNow(new Date());
       // ref를 통해 항상 최신 함수 + 최신 ad 참조 (stale closure 완전 방지)
       if (adRef.current) scheduleTransitionRef.current(adRef.current);
@@ -234,18 +240,25 @@ export function useAd(adId: string) {
   };
 
   useEffect(() => {
+    pushDebugLog(`[useAd:${adId}] ▶️ useEffect run (cached=${!!adCache[adId]})`);
     if (!listeners[adId]) listeners[adId] = new Set();
 
     const handler = (data: AdData) => {
-      if (adRef.current && JSON.stringify(adRef.current) === JSON.stringify(data)) return;
+      if (adRef.current && JSON.stringify(adRef.current) === JSON.stringify(data)) {
+        pushDebugLog(`[useAd:${adId}] handler: identical, skip`);
+        return;
+      }
+      pushDebugLog(`[useAd:${adId}] handler: NEW data → setAd + setNow`);
       adRef.current = data;
       setAd(data);
       setNow(new Date());
       scheduleTransitionRef.current(data);
     };
     listeners[adId].add(handler);
+    pushDebugLog(`[useAd:${adId}] listeners=${listeners[adId].size}`);
 
     if (!adCache[adId]) {
+      pushDebugLog(`[useAd:${adId}] fetching from supabase…`);
       supabase
         .from('ads')
         .select('*')
@@ -253,14 +266,18 @@ export function useAd(adId: string) {
         .maybeSingle()
         .then(({ data, error }) => {
           if (!error && data) {
+            pushDebugLog(`[useAd:${adId}] fetched OK → setAd`);
             adCache[adId] = data as AdData;
             adRef.current = data as AdData;
             setAd(data as AdData);
             scheduleTransitionRef.current(data as AdData);
+          } else {
+            pushDebugLog(`[useAd:${adId}] fetch error=${error?.message || 'none'} data=${!!data}`);
           }
           setLoading(false);
         });
     } else {
+      pushDebugLog(`[useAd:${adId}] using cache`);
       scheduleTransitionRef.current(adCache[adId]);
       setLoading(false);
     }
@@ -270,6 +287,7 @@ export function useAd(adId: string) {
     const channelName = `ads-realtime-${adId}`;
     const existingChannel = supabase.getChannels().find(ch => ch.topic === `realtime:${channelName}`);
     if (existingChannel) {
+      pushDebugLog(`[useAd:${adId}] ⚠️ removing existing channel`);
       supabase.removeChannel(existingChannel);
     }
 
@@ -279,14 +297,18 @@ export function useAd(adId: string) {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'ads', filter: `id=eq.${adId}` },
         (payload) => {
+          pushDebugLog(`[useAd:${adId}] 📡 realtime UPDATE received`);
           const updated = payload.new as AdData;
           adCache[adId] = updated;
           listeners[adId]?.forEach(fn => fn(updated));
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        pushDebugLog(`[useAd:${adId}] 📡 channel status=${status}`);
+      });
 
     return () => {
+      pushDebugLog(`[useAd:${adId}] 🧹 cleanup useEffect`);
       listeners[adId]?.delete(handler);
       if (timerRef.current) clearTimeout(timerRef.current);
       supabase.removeChannel(channel);

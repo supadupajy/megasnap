@@ -31,6 +31,7 @@ import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
+import DebugBannerOverlay from "./components/DebugBannerOverlay";
 import ExitDialog from "./components/ExitDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { NotificationProvider } from "./components/NotificationProvider";
@@ -290,6 +291,9 @@ const AnimatedRoutes = () => {
         onClose={() => setShowExitDialog(false)}
         onConfirm={() => CapApp.exitApp()}
       />
+
+      {/* 🐞 디버그 오버레이 — 깜빡임 원인 추적용 (스마트폰에서도 보임) */}
+      <DebugBannerOverlay />
     </div>
   );
 };

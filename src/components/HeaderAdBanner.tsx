@@ -4,11 +4,49 @@ import React from 'react';
 import { Mail } from 'lucide-react';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
+import { pushDebugLog } from './DebugBannerOverlay';
 
 const HeaderAdBanner = () => {
   const { ad, loading, now } = useAd('header');
 
+  // ─── DEBUG: 렌더 카운터 ──────────────────────────────────
+  const renderCountRef = React.useRef(0);
+  renderCountRef.current += 1;
+  const renderCount = renderCountRef.current;
+
+  // ─── DEBUG: 마운트/언마운트 ──────────────────────────────
+  React.useEffect(() => {
+    pushDebugLog(`🟢 MOUNT HeaderAdBanner`);
+    return () => {
+      pushDebugLog(`🔴 UNMOUNT HeaderAdBanner`);
+    };
+  }, []);
+
+  // ─── DEBUG: ad 변경 추적 ─────────────────────────────────
+  const prevAdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    const adKey = ad
+      ? `id=${ad.id} active=${ad.is_active} img=${(ad.image_url || '').slice(-12)} start=${ad.start_date || '-'} end=${ad.end_date || '-'}`
+      : 'null';
+    if (prevAdRef.current !== adKey) {
+      pushDebugLog(`📦 ad changed: ${adKey}`);
+      prevAdRef.current = adKey;
+    }
+  }, [ad]);
+
+  // ─── DEBUG: now 변경 추적 ────────────────────────────────
+  const prevNowRef = React.useRef<number>(0);
+  React.useEffect(() => {
+    const t = now.getTime();
+    if (prevNowRef.current !== t) {
+      const diff = prevNowRef.current ? t - prevNowRef.current : 0;
+      pushDebugLog(`⏰ now updated (+${diff}ms)`);
+      prevNowRef.current = t;
+    }
+  }, [now]);
+
   if (loading) {
+    pushDebugLog(`🎨 render #${renderCount}: LOADING skeleton`);
     return (
       <div className="flex-1 max-w-[180px] ml-3 h-10 bg-gray-100 rounded-xl animate-pulse" />
     );
@@ -16,6 +54,12 @@ const HeaderAdBanner = () => {
 
   // 광고가 없거나 비활성이면 구인 슬롯 사용
   const slot = ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
+
+  pushDebugLog(
+    `🎨 render #${renderCount}: slot=${
+      slot.isRecruitment ? 'RECRUIT' : slot.isPending ? 'PENDING' : slot.isNext ? 'NEXT' : 'CURRENT'
+    } title="${slot.title}"`,
+  );
 
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {
