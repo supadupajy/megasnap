@@ -7,6 +7,7 @@ import { cn, getOptimizedMarkerImage, getOptimizedBannerImage } from "@/lib/util
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
+import HashtagText from "@/components/HashtagText";
 
 // 동영상 URL인지 판별 (mp4, mov, webm 등)
 const isVideoUrl = (url: string | undefined | null): boolean => {
@@ -388,7 +389,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
 
       <div className="flex-1 min-w-0 overflow-hidden">
         <p className="text-[13px] font-bold text-gray-900 truncate leading-tight mb-1">
-          {post.content}
+          <HashtagText text={post.content || ''} />
         </p>
         <div className="flex items-center gap-2">
           <p className="text-[11px] font-medium text-gray-400 truncate">
@@ -786,7 +787,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
                         className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                       >
-                        {currentPost?.content}
+                        <HashtagText text={currentPost?.content || ''} />
                       </motion.p>
                     </AnimatePresence>
                   </div>
