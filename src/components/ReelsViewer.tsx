@@ -473,7 +473,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
           style={{
             paddingTop:
               "max(calc(env(safe-area-inset-top, 0px) + 12px), " +
-              "calc((100dvh - env(safe-area-inset-bottom, 0px) - 56px - min(100vw * 4 / 3, 100dvh - env(safe-area-inset-bottom, 0px) - 56px)) / 2 - 48px))",
+              "calc((100dvh - env(safe-area-inset-bottom, 0px) - 160px - min(100vw * 4 / 3, 100dvh - env(safe-area-inset-bottom, 0px) - 160px)) / 2 - 48px))",
           }}
         >
           <div className="flex items-center gap-2">
@@ -1122,7 +1122,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           embedded 모드에서는 페이지 자체가 헤더/BottomNav 사이로 한정되어 있어
           safe-area 추가 패딩이 필요 없으나, 액션 영역의 실측 높이만큼은 여유가 필요. */}
       <div
-        className="absolute left-0 right-0 top-0 flex items-center justify-center"
+        className="absolute left-0 right-0 top-0 flex items-end justify-center"
         style={{
           bottom: embedded
             ? "160px"
