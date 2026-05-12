@@ -683,6 +683,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           />
           <DialogPrimitive.Content
             onOpenAutoFocus={(e) => e.preventDefault()}
+            // 댓글창(PostCommentsDialog)이 Dialog 트리 밖(형제)에서 렌더링되므로,
+                                          // 댓글창 클릭이 "Dialog 외부 클릭"으로 잡혀 PostDetail이 닫히는 것을 막는다.
+            onPointerDownOutside={(e) => {
+              if (isCommentsDialogOpen) e.preventDefault();
+            }}
+            onInteractOutside={(e) => {
+              if (isCommentsDialogOpen) e.preventDefault();
+            }}
+            onFocusOutside={(e) => {
+              // 댓글 input이 외부에 있으므로 focus가 나가더라도 FocusScope가 되돌리지 않도록.
+              if (isCommentsDialogOpen) e.preventDefault();
+            }}
             className="fixed z-[13000] max-w-[100vw] w-full p-0 gap-0 border-none bg-transparent overflow-hidden flex flex-col data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
             style={{
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
