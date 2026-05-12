@@ -473,7 +473,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
           style={{
             paddingTop:
               "max(calc(env(safe-area-inset-top, 0px) + 12px), " +
-              "calc((100dvh - env(safe-area-inset-bottom, 0px) - 160px - min(100vw * 4 / 3, 100dvh - env(safe-area-inset-bottom, 0px) - 160px)) / 2 - 48px))",
+              "calc(100dvh - env(safe-area-inset-bottom, 0px) - 160px - min(100vw * 4 / 3, 100dvh - env(safe-area-inset-bottom, 0px) - 160px) - 48px))",
           }}
         >
           <div className="flex items-center gap-2">
