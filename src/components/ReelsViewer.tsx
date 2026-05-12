@@ -81,6 +81,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     }
   });
   const [showHint, setShowHint] = useState(true);
+  const [uiVisible, setUiVisible] = useState(true);
 
   // muted 변경 시 localStorage에 영구 저장
   useEffect(() => {
@@ -203,6 +204,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
   useEffect(() => {
     if (!isOpen) return;
     setShowHint(false);
+    setUiVisible(true); // 새 슬라이드로 이동하면 UI 다시 표시
   }, [activeIndex, isOpen]);
 
   // 끝에 가까워지면 추가 로드
@@ -333,7 +335,10 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
       >
         {/* 음소거 토글 (좌측, 비디오일 때만) + 닫기 버튼 (우측) */}
         <div
-          className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none"
+          className={cn(
+            "absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none transition-opacity duration-200",
+            uiVisible ? "opacity-100" : "opacity-0"
+          )}
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
           {activeIsVideo ? (
@@ -401,6 +406,8 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
                   liked={likeMap[item.post.id]?.liked ?? !!item.post.isLiked}
                   likesCount={likeMap[item.post.id]?.count ?? item.post.likes ?? 0}
                   saved={savedMap[item.post.id] ?? !!item.post.isSaved}
+                  uiVisible={uiVisible}
+                  onToggleUi={() => setUiVisible((v) => !v)}
                   onLikeToggle={() => handleLikeToggle(item.post.id)}
                   onSaveToggle={() => handleSaveToggle(item.post.id)}
                   onCommentClick={() => setCommentsPostId(item.post.id)}
@@ -700,6 +707,8 @@ interface ReelSlideProps {
   liked: boolean;
   likesCount: number;
   saved: boolean;
+  uiVisible: boolean;
+  onToggleUi: () => void;
   onLikeToggle: () => void;
   onSaveToggle: () => void;
   onCommentClick: () => void;
@@ -714,6 +723,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   liked,
   likesCount,
   saved,
+  uiVisible,
+  onToggleUi,
   onLikeToggle,
   onSaveToggle,
   onCommentClick,
@@ -791,9 +802,26 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     }
   };
 
+  // 미디어 영역 탭 → UI 토글 (드래그가 아닌 단순 탭일 때만)
+  const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const handlePointerDown = (e: React.PointerEvent) => {
+    tapStartRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+  };
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const start = tapStartRef.current;
+    tapStartRef.current = null;
+    if (!start) return;
+    const dx = Math.abs(e.clientX - start.x);
+    const dy = Math.abs(e.clientY - start.y);
+    const dt = Date.now() - start.t;
+    if (dx < 8 && dy < 8 && dt < 300) {
+      onToggleUi();
+    }
+  };
+
   return (
     <div className="relative h-full w-full bg-black overflow-hidden" style={{ height: "100dvh" }}>
-      {/* 배경 블러 (영상보다 큰 컨테이너 채우기 위한 backdrop) */}
+      {/* 배경 블러 (시각적 여유) */}
       {fallbackImage && (
         <img
           src={fallbackImage}
@@ -803,63 +831,51 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — X 버튼과 닉네임 사이의 정확한 시각적 중앙에 배치 */}
-      {/* 위/아래 여백을 동일하게 맞춰서 두 UI 요소 사이의 정중앙에 위치 + 어느 쪽과도 겹치지 않게 함 */}
-      {/* 하단 정보 영역(닉네임~액션바)이 약 210px이므로, 상단에도 같은 210px 여백을 줌 */}
+      {/* 메인 미디어 — 화면 가로 너비에 딱 맞게 + 화면 정중앙 배치 */}
+      {/* 탭하면 UI 토글 */}
       <div
-        className="absolute left-0 right-0 flex items-center justify-center px-2"
-        style={{
-          top: "calc(env(safe-area-inset-top, 0px) + 210px)",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 210px)",
-        }}
+        className="absolute inset-0 flex items-center justify-center"
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        style={{ cursor: "pointer" }}
       >
-        <div
-          className="relative bg-black rounded-2xl overflow-hidden shadow-2xl"
-          style={{
-            aspectRatio: "3 / 4",
-            maxHeight: "100%",
-            maxWidth: "calc(100vw - 16px)",
-            width: "auto",
-            height: "100%",
-          }}
-        >
-          {hasVideo && effectiveVideoUrl ? (
-            <video
-              ref={videoRef}
-              src={effectiveVideoUrl}
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline
-              loop
-              muted={muted}
-              preload="metadata"
-              poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
-              onClick={togglePlay}
-            />
-          ) : (
-            <img
-              src={fallbackImage}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          )}
-
-          {/* 재생 오버레이 아이콘 (비디오 일시정지 상태에서만) */}
-          {hasVideo && !isPlaying && (
-            <button
-              onClick={togglePlay}
-              className="absolute inset-0 z-10 flex items-center justify-center pointer-events-auto"
-              aria-label="재생"
-            >
-              <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
-                <Play className="w-10 h-10 text-white fill-white ml-1" />
-              </div>
-            </button>
-          )}
-        </div>
+        {hasVideo && effectiveVideoUrl ? (
+          <video
+            ref={videoRef}
+            src={effectiveVideoUrl}
+            className="w-full h-auto max-h-full object-contain"
+            playsInline
+            loop
+            muted={muted}
+            preload="metadata"
+            poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
+          />
+        ) : (
+          <img
+            src={fallbackImage}
+            alt=""
+            className="w-full h-auto max-h-full object-contain"
+            draggable={false}
+          />
+        )}
       </div>
 
-      {/* 하단 그라데이션 + 정보 + 액션 알약 */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
+      {/* 재생 오버레이 아이콘 (비디오 일시정지 상태일 때만) */}
+      {hasVideo && !isPlaying && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
+            <Play className="w-10 h-10 text-white fill-white ml-1" />
+          </div>
+        </div>
+      )}
+
+      {/* 하단 그라데이션 + 정보 + 액션 알약 (UI 토글 시 페이드) */}
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 right-0 z-20 transition-opacity duration-200",
+          uiVisible ? "opacity-100 pointer-events-none" : "opacity-0 pointer-events-none"
+        )}
+      >
         <div
           className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-16"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
