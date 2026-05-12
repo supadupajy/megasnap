@@ -78,9 +78,8 @@ const PostCommentsDialog = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const viewportHeight = window.innerHeight;
-    const desiredHeight = Math.min(viewportHeight * 0.76, 700, viewportHeight - 40);
-    setSheetTopPx(Math.max(20, viewportHeight - desiredHeight));
+    // 시트는 화면 상단에서 약 40px(≈1cm) 남기고 거의 풀스크린으로 올라온다.
+    setSheetTopPx(40);
   }, [isOpen]);
 
   useEffect(() => {
