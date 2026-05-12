@@ -1052,6 +1052,9 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
+  // video 첫 프레임이 그려진 이후에만 큰 "재생/일시정지" 오버레이를 노출
+  // (로딩 중에 회색 재생 버튼이 떠서 버그처럼 보이는 문제 방지)
+  const [videoFirstFrameReady, setVideoFirstFrameReady] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
 
@@ -1108,10 +1111,16 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const hasVideo = activeIsVideo; // 현재 보여지는 미디어가 영상인지
 
   const fallbackImage = useMemo(() => {
+    // 1순위: 일반 이미지 (영상이 아닌 슬라이드)
     const firstImage = mediaList.find((u) => !isVideoUrl(u));
-    if (!firstImage) return getFallbackImage(String(post.id));
-    return getOptimizedFeedImage(firstImage, post.id);
-  }, [mediaList, post.id]);
+    if (firstImage) return getOptimizedFeedImage(firstImage, post.id);
+    // 2순위: 영상이 있고 별도 이미지가 없더라도 image_url/image가 영상 썸네일로 저장돼 있음 → 그걸 poster로 사용
+    const thumb = post.image_url || post.image;
+    if (thumb && !isVideoUrl(thumb) && thumb !== '/placeholder.svg') {
+      return getOptimizedFeedImage(thumb, post.id);
+    }
+    return getFallbackImage(String(post.id));
+  }, [mediaList, post.id, post.image_url, post.image]);
 
   // active 슬라이드 + 현재 미디어가 영상일 때만 재생, 음소거 상태 적용
   useEffect(() => {
@@ -1142,8 +1151,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     }
   }, [isActive, muted, activeIsVideo, activeMediaUrl]);
 
-  // 영상 시간/길이 추적
+  // 영상 시간/길이 + 첫 프레임 준비 상태 추적
   useEffect(() => {
+    // 새 영상으로 바뀌면 ready 상태 리셋
+    setVideoFirstFrameReady(false);
+
     const v = videoRef.current;
     if (!v) return;
     const handleTimeUpdate = () => {
@@ -1155,14 +1167,29 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     const handleDurationChange = () => {
       setDuration(Number.isFinite(v.duration) ? v.duration : 0);
     };
+    const handlePlaying = () => {
+      setVideoFirstFrameReady(true);
+      setIsPlaying(true);
+    };
+    const handlePauseEvt = () => setIsPlaying(false);
+    const handleLoadedData = () => {
+      // 일부 디바이스에서 'playing'이 늦게 오므로 첫 프레임 디코드 신호로도 ready 처리
+      if (v.readyState >= 2) setVideoFirstFrameReady(true);
+    };
     v.addEventListener("timeupdate", handleTimeUpdate);
     v.addEventListener("loadedmetadata", handleLoadedMeta);
     v.addEventListener("durationchange", handleDurationChange);
+    v.addEventListener("playing", handlePlaying);
+    v.addEventListener("pause", handlePauseEvt);
+    v.addEventListener("loadeddata", handleLoadedData);
     if (Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
     return () => {
       v.removeEventListener("timeupdate", handleTimeUpdate);
       v.removeEventListener("loadedmetadata", handleLoadedMeta);
       v.removeEventListener("durationchange", handleDurationChange);
+      v.removeEventListener("playing", handlePlaying);
+      v.removeEventListener("pause", handlePauseEvt);
+      v.removeEventListener("loadeddata", handleLoadedData);
     };
   }, [activeMediaUrl, isScrubbing]);
 
@@ -1381,8 +1408,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         </div>
       </div>
 
-      {/* 재생 오버레이 아이콘 (비디오 일시정지 상태일 때만) */}
-      {hasVideo && !isPlaying && (
+      {/* 재생 오버레이 아이콘 (비디오 일시정지 상태일 때만)
+          - 첫 프레임이 그려진 후(videoFirstFrameReady)에만 노출해서
+            로딩 중에 회색 재생 버튼이 깜빡 떠서 버그처럼 보이는 문제를 방지 */}
+      {hasVideo && !isPlaying && videoFirstFrameReady && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
             <Play className="w-10 h-10 text-white fill-white ml-1" />
@@ -1525,6 +1554,8 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
+  // isCurrent && 아직 첫 프레임 렌더 전이면 로딩 스피너를 보여줌 (200ms 그레이스)
+  const [showSpinner, setShowSpinner] = useState(false);
 
   const setRefs = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -1544,27 +1575,63 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     const el = localRef.current;
     if (!el) return;
     const handlePlaying = () => setIsReady(true);
+    const handleCanPlay = () => {
+      // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
+      if (isCurrent && el.paused) {
+        el.play().catch(() => {
+          // 사운드 정책 등으로 실패하면 muted로 재시도
+          el.muted = true;
+          el.play().catch(() => {});
+        });
+      }
+    };
     el.addEventListener("playing", handlePlaying);
+    el.addEventListener("canplay", handleCanPlay);
+    el.addEventListener("loadeddata", handleCanPlay);
     return () => {
       el.removeEventListener("playing", handlePlaying);
+      el.removeEventListener("canplay", handleCanPlay);
+      el.removeEventListener("loadeddata", handleCanPlay);
     };
-  }, [src]);
+  }, [src, isCurrent]);
+
+  // 첫 프레임이 200ms 안에 안 뜨면 로딩 스피너 노출 (깜빡임 방지)
+  useEffect(() => {
+    if (!isCurrent) {
+      setShowSpinner(false);
+      return;
+    }
+    if (isReady) {
+      setShowSpinner(false);
+      return;
+    }
+    const t = window.setTimeout(() => setShowSpinner(true), 200);
+    return () => window.clearTimeout(t);
+  }, [isCurrent, isReady, src]);
 
   return (
-    <video
-      ref={setRefs}
-      src={src}
-      className="absolute inset-0 w-full h-full object-cover"
-      playsInline
-      loop
-      muted={muted}
-      preload={preload}
-      poster={poster}
-      style={{
-        opacity: isCurrent && !isReady ? 0 : 1,
-        transition: "opacity 150ms ease-out",
-      }}
-    />
+    <>
+      <video
+        ref={setRefs}
+        src={src}
+        className="absolute inset-0 w-full h-full object-cover"
+        playsInline
+        loop
+        muted={muted}
+        preload={preload}
+        poster={poster}
+        style={{
+          opacity: isCurrent && !isReady ? 0 : 1,
+          transition: "opacity 150ms ease-out",
+        }}
+      />
+      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 */}
+      {isCurrent && !isReady && showSpinner && (
+        <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none bg-black/20">
+          <div className="w-12 h-12 rounded-full border-[3px] border-white/30 border-t-white animate-spin" />
+        </div>
+      )}
+    </>
   );
 };
 
