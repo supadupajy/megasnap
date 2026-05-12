@@ -23,6 +23,7 @@ import PostCategoryBadge from './PostCategoryBadge';
 import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
 import HashtagText from './HashtagText';
+import VideoPlayer from './VideoPlayer';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
@@ -632,63 +633,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       style={{ aspectRatio: mediaAspectRatio }}
     >
       {currentPost.videoUrl && !currentPost.isAd ? (
-        <video
-          src={currentPost.videoUrl}
-          className="w-full h-full object-cover"
-          autoPlay
-          loop
-          muted
-          playsInline
-          preload="auto"
-          ref={(el) => {
-            if (!el || (el as any).__loggerAttached) return;
-            (el as any).__loggerAttached = true;
-            const t0 = performance.now();
-            const log = (event: string, extra?: Record<string, any>) => {
-              const dt = Math.round(performance.now() - t0);
-              const rect = el.getBoundingClientRect();
-              console.log(`[VideoDebug +${dt}ms] ${event}`, {
-                readyState: el.readyState,
-                networkState: el.networkState,
-                paused: el.paused,
-                currentTime: el.currentTime,
-                videoWidth: el.videoWidth,
-                videoHeight: el.videoHeight,
-                displaySize: `${Math.round(rect.width)}x${Math.round(rect.height)}`,
-                hasControls: el.hasAttribute('controls'),
-                muted: el.muted,
-                autoplay: el.autoplay,
-                computedDisplay: getComputedStyle(el).display,
-                ...extra,
-              });
-            };
-            log('mount');
-            const events = [
-              'loadstart', 'durationchange', 'loadedmetadata', 'loadeddata',
-              'progress', 'canplay', 'canplaythrough', 'play', 'playing',
-              'pause', 'waiting', 'stalled', 'suspend', 'emptied', 'error',
-            ];
-            events.forEach((ev) => {
-              el.addEventListener(ev, () => {
-                const extra: Record<string, any> = {};
-                if (ev === 'error') extra.errorCode = el.error?.code;
-                log(ev, extra);
-              });
-            });
-            // 첫 프레임 이후 paint 상태 추적
-            requestAnimationFrame(() => log('rAF#1'));
-            setTimeout(() => log('after-100ms'), 100);
-            setTimeout(() => log('after-300ms'), 300);
-            setTimeout(() => log('after-600ms'), 600);
-            // play 시도 결과
-            const playPromise = el.play();
-            if (playPromise && typeof playPromise.then === 'function') {
-              playPromise
-                .then(() => log('play() resolved'))
-                .catch((err) => log('play() rejected', { err: String(err) }));
-            }
-          }}
-        />
+        <VideoPlayer src={currentPost.videoUrl} />
       ) : (
         renderImageSlider()
       )}
