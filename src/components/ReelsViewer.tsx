@@ -452,17 +452,22 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
 
   // ── 스와이프 방향에 따른 버튼 슬라이드 인/아웃 효과 ─────────────
   // 위로 스와이프(=activeIndex 증가) → direction = 1
-  //   : 이전 버튼은 위로 사라지고, 새 버튼이 아래에서 올라오며 등장
+  //   : 이전 버튼은 위로 사라지고(상단 헤더 뒤로 밀려나는 느낌), 새 버튼이 아래에서 올라옴
   // 아래로 스와이프(=activeIndex 감소) → direction = -1
-  //   : 이전 버튼은 아래로 사라지고, 새 버튼이 위에서 내려오며 등장
+  //   : 이전 버튼은 아래로 사라지고, 새 버튼이 위(헤더 뒤)에서 내려오며 등장
+  //
+  // 방향 결정은 setActiveIndex 호출 시점에 동기적으로 함께 갱신한다.
+  // (useEffect 기반 비교는 빠른 연속 스와이프 시 batching/순서 꼬임으로
+  //  방향이 가끔 반대로 잡히는 버그가 있었음 → 그 자리에서 즉시 set)
   const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
-  const prevActiveIndexRef = useRef(activeIndex);
-  useEffect(() => {
-    const prev = prevActiveIndexRef.current;
-    if (activeIndex > prev) setSwipeDir(1);
-    else if (activeIndex < prev) setSwipeDir(-1);
-    prevActiveIndexRef.current = activeIndex;
-  }, [activeIndex]);
+  const setActiveIndexWithDir = useCallback((next: number | ((prev: number) => number)) => {
+    setActiveIndex((prev) => {
+      const resolved = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
+      if (resolved > prev) setSwipeDir(1);
+      else if (resolved < prev) setSwipeDir(-1);
+      return resolved;
+    });
+  }, []);
 
   if (!isOpen) return null;
 
@@ -554,73 +559,64 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         )}
       </AnimatePresence>
 
-      {/* embedded ranked 모드 전용 — 화면에 고정된 좌상단 순위 뱃지 / 우상단 X 버튼.
-          알약/원형 버튼 "전체"(배경·테두리·내용물 포함)가 통째로 위/아래로 빠지고,
-          새 버튼이 통째로 반대편에서 들어오는 효과.
-          - 위로 스와이프(swipeDir=1)  : 이전 버튼이 통째로 위로 빠지고, 새 버튼이 통째로 아래에서 올라옴
-          - 아래로 스와이프(swipeDir=-1): 이전 버튼이 통째로 아래로 빠지고, 새 버튼이 통째로 위에서 내려옴
-
-          버튼이 슬라이드되는 동안 위/아래 공간에서 자연스럽게 사라지도록 보이지 않는
-          클리핑 영역(왕복 거리 만큼 위/아래로 더 큰 박스)을 두고 그 안에서 통째로 이동시킨다. */}
-      {embedded && isRankedMode && (() => {
-        const rank = activeIndex + 1;
-        return (
-          <div
-            className="absolute top-0 left-3 z-40 pointer-events-none h-[60px] flex items-end overflow-hidden"
-            style={{ paddingTop: 12 }}
-            aria-label={`${rank}위`}
-          >
-            <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
-              <motion.div
-                key={`rank-${rank}`}
-                custom={swipeDir}
-                variants={{
-                  enter: (dir: 1 | -1) => ({ y: dir === 1 ? 48 : -48, opacity: 0 }),
-                  center: { y: 0, opacity: 1 },
-                  exit: (dir: 1 | -1) => ({ y: dir === 1 ? -48 : 48, opacity: 0 }),
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{ duration: 0.36, ease: [0.22, 0.61, 0.36, 1] }}
+      {/* embedded ranked 모드 전용 — 좌상단 순위 뱃지 / 우상단 X 버튼.
+          위로 스와이프(swipeDir=1)  : 알약/X 버튼이 통째로 위로 빠져 상단 헤더 뒤로 사라짐,
+                                       새 버튼이 통째로 아래에서 올라옴
+          아래로 스와이프(swipeDir=-1): 알약/X 버튼이 통째로 아래로 빠져 사라짐,
+                                       새 버튼이 통째로 위(헤더 뒤)에서 내려옴
+          - 컨테이너(ReelsViewer 임베디드 루트)는 stacking context를 만들고 (Index 페이지 z=11000),
+            그 위에 떠 있는 Header(z=12600)는 이 컨테이너 밖으로 빠져나간 자식을 자동으로 가려준다.
+          - 따라서 클리핑 박스는 두지 않고, motion.div가 음수 y로 자유롭게 빠질 수 있게 한다. */}
+      {embedded && isRankedMode && (
+        <div className="absolute top-3 left-3 z-40 pointer-events-none">
+          <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
+            <motion.div
+              key={`rank-${activeIndex + 1}`}
+              custom={swipeDir}
+              variants={{
+                enter: (dir: 1 | -1) => ({ y: dir === 1 ? 60 : -60, opacity: 0 }),
+                center: { y: 0, opacity: 1 },
+                exit: (dir: 1 | -1) => ({ y: dir === 1 ? -60 : 60, opacity: 0 }),
+              }}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.4, ease: [0.22, 0.61, 0.36, 1] }}
+              className={cn(
+                "pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
+                activeIndex + 1 === 1
+                  ? "from-amber-400 to-amber-500 shadow-amber-500/40"
+                  : activeIndex + 1 === 2
+                  ? "from-slate-300 to-slate-400 shadow-slate-400/40"
+                  : activeIndex + 1 === 3
+                  ? "from-orange-400 to-orange-500 shadow-orange-500/40"
+                  : "from-gray-300 to-gray-300 shadow-gray-400/40"
+              )}
+              aria-label={`${activeIndex + 1}위`}
+            >
+              <span
                 className={cn(
-                  "pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
-                  rank === 1
-                    ? "from-amber-400 to-amber-500 shadow-amber-500/40"
-                    : rank === 2
-                    ? "from-slate-300 to-slate-400 shadow-slate-400/40"
-                    : rank === 3
-                    ? "from-orange-400 to-orange-500 shadow-orange-500/40"
-                    : "from-gray-300 to-gray-300 shadow-gray-400/40"
+                  "text-[14px] font-black tabular-nums leading-none tracking-tight",
+                  activeIndex + 1 <= 3 ? "text-white" : "text-gray-900"
                 )}
               >
-                <span
-                  className={cn(
-                    "text-[14px] font-black tabular-nums leading-none tracking-tight",
-                    rank <= 3 ? "text-white" : "text-gray-900"
-                  )}
-                >
-                  {rank}
-                </span>
-                <span
-                  className={cn(
-                    "text-[10px] font-black leading-none tracking-tight",
-                    rank <= 3 ? "text-white" : "text-gray-900"
-                  )}
-                >
-                  위
-                </span>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        );
-      })()}
+                {activeIndex + 1}
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] font-black leading-none tracking-tight",
+                  activeIndex + 1 <= 3 ? "text-white" : "text-gray-900"
+                )}
+              >
+                위
+              </span>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      )}
 
       {embedded && showInlineCloseButton && (
-        <div
-          className="absolute top-0 right-3 z-40 pointer-events-none h-[60px] w-9 flex items-end overflow-hidden"
-          style={{ paddingTop: 12 }}
-        >
+        <div className="absolute top-3 right-3 z-40 pointer-events-none">
           <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
             <motion.button
               key={`x-${activeIndex}`}
@@ -629,14 +625,14 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
               aria-label="닫기"
               custom={swipeDir}
               variants={{
-                enter: (dir: 1 | -1) => ({ y: dir === 1 ? 48 : -48, opacity: 0 }),
+                enter: (dir: 1 | -1) => ({ y: dir === 1 ? 60 : -60, opacity: 0 }),
                 center: { y: 0, opacity: 1 },
-                exit: (dir: 1 | -1) => ({ y: dir === 1 ? -48 : 48, opacity: 0 }),
+                exit: (dir: 1 | -1) => ({ y: dir === 1 ? -60 : 60, opacity: 0 }),
               }}
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.36, ease: [0.22, 0.61, 0.36, 1] }}
+              transition={{ duration: 0.4, ease: [0.22, 0.61, 0.36, 1] }}
               whileTap={{ scale: 0.92 }}
               className="pointer-events-auto w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10"
             >
@@ -651,7 +647,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         containerRef={containerRef}
         activeIndex={activeIndex}
         itemCount={items.length}
-        onActiveIndexChange={setActiveIndex}
+        onActiveIndexChange={setActiveIndexWithDir}
         embedded={embedded}
       >
         {items.map((item, index) => (
@@ -727,9 +723,12 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   );
 
   // embedded: 페이지 안에 인라인으로 렌더 (portal X)
+  // 주의: overflow-hidden을 두지 않는다 → 상단의 알약/X 버튼이 위로 빠질 때
+  //       (헤더 뒤로 사라지는 효과) 컨테이너 밖으로 자유롭게 이동할 수 있어야 함.
+  //       슬라이드 미디어 자체의 클리핑은 ReelsSlideTrack 내부의 별도 컨테이너가 담당함.
   if (embedded) {
     return (
-      <div className="relative w-full h-full bg-black overflow-hidden">
+      <div className="relative w-full h-full bg-black">
         {sliderContent}
       </div>
     );
