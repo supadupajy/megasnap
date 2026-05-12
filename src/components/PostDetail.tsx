@@ -632,7 +632,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       style={{ aspectRatio: mediaAspectRatio }}
     >
       {currentPost.videoUrl && !currentPost.isAd ? (
-        <video src={currentPost.videoUrl} className="w-full h-full object-cover" autoPlay loop playsInline controls />
+        <video
+          src={currentPost.videoUrl}
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+        />
       ) : (
         renderImageSlider()
       )}
