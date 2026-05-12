@@ -803,21 +803,25 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — 3:4 비율, X 버튼과 닉네임 사이 정확한 정중앙에 배치 */}
-      {/* 상단 헤더(X 버튼 아래 ~64px) ~ 하단 정보 영역(액션 알약 위 ~210px) 사이를 가용 공간으로 두고 가운데 정렬 */}
+      {/* 메인 미디어 — X 버튼 중심과 닉네임 중심의 정확한 중점에 배치 */}
+      {/* X 버튼 중심 ≈ safe-top + 32px (헤더 paddingTop 12px + 버튼 높이 40px의 절반 20px) */}
+      {/* 닉네임 중심 ≈ 하단에서 165px (액션바 ~70px + 본문 ~50px + 닉네임 위치 ~45px) */}
+      {/* 두 중심 사이가 미디어가 차지할 공간이 되도록 top/bottom을 X/닉네임 중심에 정확히 맞춤 */}
       <div
         className="absolute left-0 right-0 flex items-center justify-center px-2"
         style={{
-          top: "calc(env(safe-area-inset-top, 0px) + 64px)",
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 210px)",
+          top: "calc(env(safe-area-inset-top, 0px) + 32px)",
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 165px)",
         }}
       >
         <div
           className="relative bg-black rounded-2xl overflow-hidden shadow-2xl"
           style={{
             aspectRatio: "3 / 4",
-            height: "100%",
+            maxHeight: "100%",
             maxWidth: "calc(100vw - 16px)",
+            width: "auto",
+            height: "100%",
           }}
         >
           {hasVideo && effectiveVideoUrl ? (
