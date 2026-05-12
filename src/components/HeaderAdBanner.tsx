@@ -65,9 +65,15 @@ const HeaderAdBanner = () => {
   if (slot.isRecruitment) {
     return (
       <div
-        data-debug-banner="recruit-v2"
+        data-debug-banner="recruit-v3-no-gradient"
         data-render={renderCount}
-        className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-indigo-100 via-indigo-50 to-violet-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-indigo-200/60"
+        className="flex-1 max-w-[180px] ml-3 h-10 bg-indigo-50 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-indigo-200/60"
+        style={{
+          // GPU 합성 레이어 강제 → WebView가 Dialog 마운트 시 그라데이션 재계산하다 깜빡거리는 현상 방지
+          willChange: 'transform',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+        }}
         onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
         <div className="absolute inset-0 flex items-center justify-center">
