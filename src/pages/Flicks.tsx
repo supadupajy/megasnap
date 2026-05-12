@@ -48,12 +48,15 @@ const shuffle = <T,>(arr: T[]): T[] => {
 };
 
 // 화면 viewport 중 Flicks 콘텐츠가 차지할 영역
-// - 상단: Header(safe-area-top + 64px)
-// - 하단: BottomNav(safe-area-bottom + 64px)
-const CONTENT_HEIGHT_STYLE: React.CSSProperties = {
-  height:
-    'calc(100dvh - env(safe-area-inset-top, 0px) - 64px - env(safe-area-inset-bottom, 0px) - 64px)',
-  marginTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+// Header (fixed top, safe-top + 64px) 와 BottomNav (fixed bottom, safe-bottom + 64px) 사이를 정확히 채움.
+// position: fixed 로 viewport 좌표 기준 배치하여, 본문 흐름에 영향 받지 않고
+// 위/아래에서 잘리거나 빈 공간이 생기지 않도록 함.
+const CONTENT_FIXED_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  left: 0,
+  right: 0,
+  top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+  bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
 
 const Flicks = () => {
@@ -134,7 +137,7 @@ const Flicks = () => {
 
   if (isLoading) {
     return (
-      <div className="w-full bg-black" style={CONTENT_HEIGHT_STYLE}>
+      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
         <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
           <Clapperboard className="w-10 h-10 text-white/80" />
           <Loader2 className="w-6 h-6 animate-spin text-white/80" />
@@ -146,7 +149,7 @@ const Flicks = () => {
 
   if (videoPool.length === 0) {
     return (
-      <div className="w-full bg-black" style={CONTENT_HEIGHT_STYLE}>
+      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
         <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
           <Clapperboard className="w-12 h-12 text-white/70" />
           <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
@@ -159,7 +162,7 @@ const Flicks = () => {
   }
 
   return (
-    <div className="w-full bg-black" style={CONTENT_HEIGHT_STYLE}>
+    <div className="bg-black" style={CONTENT_FIXED_STYLE}>
       <ReelsViewer
         isOpen={true}
         initialPost={videoPool[0]}

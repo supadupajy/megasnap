@@ -1118,11 +1118,15 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       )}
 
       {/* 메인 미디어 — 화면 가로 너비에 딱 맞는 3:4 비율 컨테이너 */}
-      {/* 하단을 살짝 띄워 타임라인이 닉네임/액션 영역과 겹치지 않도록 함 */}
+      {/* 하단을 충분히 띄워 닉네임/위치/본문/액션 알약 영역이 영상과 겹치지 않도록 함.
+          embedded 모드에서는 페이지 자체가 헤더/BottomNav 사이로 한정되어 있어
+          safe-area 추가 패딩이 필요 없으나, 액션 영역의 실측 높이만큼은 여유가 필요. */}
       <div
         className="absolute left-0 right-0 top-0 flex items-center justify-center"
         style={{
-          bottom: embedded ? "56px" : "calc(env(safe-area-inset-bottom, 0px) + 56px)",
+          bottom: embedded
+            ? "160px"
+            : "calc(env(safe-area-inset-bottom, 0px) + 160px)",
           cursor: "pointer",
         }}
         onPointerDown={handlePointerDown}
