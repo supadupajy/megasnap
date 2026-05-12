@@ -77,6 +77,10 @@ interface ReelsViewerProps {
   endMessage?: string;
   // 끝 슬라이드에 표시할 보조 텍스트
   endSubMessage?: string;
+  // embedded: 페이지 내부에 인라인으로 렌더링 (portal 사용 X, 전역 플래그/X버튼 없음)
+  // - BottomNav 등 페이지 chrome이 그대로 노출됨
+  // - 음소거 버튼은 영상 내부 좌상단에 배치됨
+  embedded?: boolean;
 }
 
 const ReelsViewer: React.FC<ReelsViewerProps> = ({
@@ -89,6 +93,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   noRepeat = false,
   endMessage = "더 이상 표시할 영상이 없습니다",
   endSubMessage = "처음으로 돌아가거나 닫아주세요.",
+  embedded = false,
 }) => {
   const isRankedMode = mode === "ranked";
   // 풀이 모두 소진되었는지 (noRepeat 모드 전용)
@@ -347,8 +352,10 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   }, [activeIndex, items.length, isOpen, appendMore, isRankedMode]);
 
   // 모달 열림 시 body 스크롤 잠금 + 전역 플래그/이벤트
+  // embedded 모드에서는 페이지의 일부로 동작하므로 전역 상태를 바꾸지 않는다 (BottomNav 등 chrome 유지)
   useEffect(() => {
     if (!isOpen) return;
+    if (embedded) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     (window as any).__isReelsViewerOpen = true;
@@ -358,11 +365,13 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       (window as any).__isReelsViewerOpen = false;
       window.dispatchEvent(new CustomEvent("close-reels-viewer"));
     };
-  }, [isOpen]);
+  }, [isOpen, embedded]);
 
   // ESC + 안드로이드 백버튼 닫기
+  // embedded 모드에서는 페이지 자체의 백버튼 처리(이전 페이지로 이동)에 위임
   useEffect(() => {
     if (!isOpen) return;
+    if (embedded) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -373,7 +382,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       window.removeEventListener("keydown", handler);
       window.removeEventListener("close-reels-viewer-by-back", handleBackClose);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, embedded]);
 
   const handleLikeToggle = useCallback(
     (postId: string) => {
@@ -453,24 +462,12 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <AnimatePresence>
-      <motion.div
-        key="reels-viewer"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-        className="fixed inset-0 z-[9999] bg-black"
-      >
-        {/* 좌측: 순위 뱃지 (ranked 모드) + 음소거 토글 (비디오일 때만) / 우측: 닫기 버튼 */}
-        {/* 헤더 버튼의 아랫변이 미디어(3:4) 컨테이너 윗변에 딱 닿도록(=버튼이 이미지 바로 위에 있도록) 위치 계산.
-            - 가용 높이 = 100dvh - safe-area-bottom - 56px (하단 정보 영역)
-            - 미디어 세로 = min(100vw * 4/3, 가용 높이)
-            - 미디어 윗변 Y = (가용 높이 - 미디어 세로) / 2
-            - 버튼 아랫변이 이 윗변에 닿으려면 paddingTop = 미디어 윗변 Y - 버튼높이(40) - 8(시각적 여유)
-            - safe-area-top 아래로는 내려가지 않도록 max로 클램프
-        */}
+  // 슬라이드 트랙 + 끝 슬라이드 콜백 (embedded 모드에서는 닫기 동작이 없음 → onClose는 페이지 뒤로가기로 위임)
+  const sliderContent = (
+    <>
+      {/* 좌측: 순위 뱃지 (ranked 모드) + 음소거 토글 (비디오일 때만) / 우측: 닫기 버튼
+          embedded 모드에서는 이 헤더 영역 전체를 숨기고, 음소거 버튼은 영상 내부 좌상단으로 옮긴다. */}
+      {!embedded && (
         <div
           className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none"
           style={{
@@ -482,7 +479,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
           <div className="flex items-center gap-2">
             {isRankedMode && (() => {
               const rank = activeIndex + 1;
-              // 1~3위는 메달 컬러, 그 외는 인디고
               const palette =
                 rank === 1
                   ? { bg: "from-amber-400 to-amber-500", text: "text-white", glow: "shadow-amber-500/40" }
@@ -526,7 +522,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
               </button>
             )}
 
-            {/* 좌측 영역 비어있을 때 우측 X 버튼과의 정렬을 위한 최소 높이 확보 */}
             {!isRankedMode && !activeIsVideo && <div className="w-10 h-10" aria-hidden="true" />}
           </div>
 
@@ -538,85 +533,120 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
             <X className="w-5 h-5 text-white" />
           </button>
         </div>
+      )}
 
-        {/* 스와이프 힌트 (처음에만) */}
-        <AnimatePresence>
-          {showHint && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-1"
-            >
-              <ChevronUp className="w-6 h-6 text-white/80 animate-bounce" />
-              <span className="text-white/80 text-xs font-bold tracking-wide">위로 스와이프</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* 스와이프 힌트 (처음에만) */}
+      <AnimatePresence>
+        {showHint && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute bottom-32 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-1"
+          >
+            <ChevronUp className="w-6 h-6 text-white/80 animate-bounce" />
+            <span className="text-white/80 text-xs font-bold tracking-wide">위로 스와이프</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Transform 기반 슬라이더 — 한 번에 1개씩만 이동 (스와이프 강도와 무관) */}
-        <ReelsSlideTrack
-          containerRef={containerRef}
-          activeIndex={activeIndex}
-          itemCount={items.length}
-          onActiveIndexChange={setActiveIndex}
-        >
-          {items.map((item, index) => (
-            <div
-              key={item.key}
-              data-reel-index={index}
-              className="absolute left-0 right-0 w-full"
-              style={{
-                height: "100dvh",
-                top: `${index * 100}dvh`,
-              }}
-            >
-              {item.kind === "post" ? (
-                <ReelSlide
-                  post={item.post}
-                  isActive={index === activeIndex}
-                  muted={muted}
-                  liked={likeMap[item.post.id]?.liked ?? !!item.post.isLiked}
-                  likesCount={likeMap[item.post.id]?.count ?? item.post.likes ?? 0}
-                  saved={savedMap[item.post.id] ?? !!item.post.isSaved}
-                  onLikeToggle={() => handleLikeToggle(item.post.id)}
-                  onSaveToggle={() => handleSaveToggle(item.post.id)}
-                  onCommentClick={() => setCommentsPostId(item.post.id)}
-                  onLocationClick={() => handleLocationClick(item.post)}
-                  onUserClick={() => {
-                    const targetUserId = item.post.owner_id || item.post.user_id || item.post.user.id;
-                    const isValidUUID =
-                      targetUserId &&
-                      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
-                    if (!isValidUUID) return;
-                    onClose();
-                    setTimeout(() => {
-                      if (authUser?.id === targetUserId) navigate("/profile");
-                      else navigate(`/profile/${targetUserId}`);
-                    }, 50);
-                  }}
-                />
-              ) : item.kind === "ad" ? (
-                <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
-              ) : (
-                <ReelsEndSlide message={endMessage} subMessage={endSubMessage} onClose={onClose} />
-              )}
-            </div>
-          ))}
-        </ReelsSlideTrack>
+      {/* Transform 기반 슬라이더 — 한 번에 1개씩만 이동 (스와이프 강도와 무관) */}
+      <ReelsSlideTrack
+        containerRef={containerRef}
+        activeIndex={activeIndex}
+        itemCount={items.length}
+        onActiveIndexChange={setActiveIndex}
+        embedded={embedded}
+      >
+        {items.map((item, index) => (
+          <div
+            key={item.key}
+            data-reel-index={index}
+            className="absolute left-0 right-0 w-full"
+            style={
+              embedded
+                ? { height: "100%", top: `${index * 100}%` }
+                : { height: "100dvh", top: `${index * 100}dvh` }
+            }
+          >
+            {item.kind === "post" ? (
+              <ReelSlide
+                post={item.post}
+                isActive={index === activeIndex}
+                muted={muted}
+                liked={likeMap[item.post.id]?.liked ?? !!item.post.isLiked}
+                likesCount={likeMap[item.post.id]?.count ?? item.post.likes ?? 0}
+                saved={savedMap[item.post.id] ?? !!item.post.isSaved}
+                onLikeToggle={() => handleLikeToggle(item.post.id)}
+                onSaveToggle={() => handleSaveToggle(item.post.id)}
+                onCommentClick={() => setCommentsPostId(item.post.id)}
+                onLocationClick={() => handleLocationClick(item.post)}
+                onUserClick={() => {
+                  const targetUserId = item.post.owner_id || item.post.user_id || item.post.user.id;
+                  const isValidUUID =
+                    targetUserId &&
+                    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
+                  if (!isValidUUID) return;
+                  onClose();
+                  setTimeout(() => {
+                    if (authUser?.id === targetUserId) navigate("/profile");
+                    else navigate(`/profile/${targetUserId}`);
+                  }, 50);
+                }}
+                embedded={embedded}
+                showInlineMuteButton={embedded}
+                onToggleMute={() => setMuted((m) => !m)}
+              />
+            ) : item.kind === "ad" ? (
+              <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
+            ) : (
+              <ReelsEndSlide
+                message={endMessage}
+                subMessage={endSubMessage}
+                onClose={onClose}
+                embedded={embedded}
+                showCloseButton={!embedded}
+              />
+            )}
+          </div>
+        ))}
+      </ReelsSlideTrack>
 
-        {/* 댓글 다이얼로그 */}
-        <PostCommentsDialog
-          isOpen={!!commentsPostId}
-          onOpenChange={(open) => {
-            if (!open) setCommentsPostId(null);
-          }}
-          postId={commentsPostId || ""}
-          initialComments={[]}
-          authUser={authUser}
-          profile={null}
-          onCommentsChange={() => {}}
-        />
+      {/* 댓글 다이얼로그 */}
+      <PostCommentsDialog
+        isOpen={!!commentsPostId}
+        onOpenChange={(open) => {
+          if (!open) setCommentsPostId(null);
+        }}
+        postId={commentsPostId || ""}
+        initialComments={[]}
+        authUser={authUser}
+        profile={null}
+        onCommentsChange={() => {}}
+      />
+    </>
+  );
+
+  // embedded: 페이지 안에 인라인으로 렌더 (portal X)
+  if (embedded) {
+    return (
+      <div className="relative w-full h-full bg-black overflow-hidden">
+        {sliderContent}
+      </div>
+    );
+  }
+
+  return createPortal(
+    <AnimatePresence>
+      <motion.div
+        key="reels-viewer"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[9999] bg-black"
+      >
+        {sliderContent}
       </motion.div>
     </AnimatePresence>,
     document.body
@@ -631,6 +661,8 @@ interface ReelsSlideTrackProps {
   itemCount: number;
   onActiveIndexChange: (idx: number) => void;
   children: React.ReactNode;
+  // embedded면 슬라이드 높이를 100dvh 대신 컨테이너 100% 기준으로 계산
+  embedded?: boolean;
 }
 
 const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
@@ -639,6 +671,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   itemCount,
   onActiveIndexChange,
   children,
+  embedded = false,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -862,7 +895,9 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
         ref={trackRef}
         className="absolute inset-0 will-change-transform"
         style={{
-          transform: `translate3d(0, calc(${-activeIndex * 100}dvh + ${dragOffset}px), 0)`,
+          transform: embedded
+            ? `translate3d(0, calc(${-activeIndex * 100}% + ${dragOffset}px), 0)`
+            : `translate3d(0, calc(${-activeIndex * 100}dvh + ${dragOffset}px), 0)`,
           transition: isTransitioning ? "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none",
         }}
       >
@@ -885,6 +920,11 @@ interface ReelSlideProps {
   onCommentClick: () => void;
   onLocationClick: () => void;
   onUserClick: () => void;
+  // embedded: 페이지 안에 인라인으로 들어간 모드 (BottomNav 등이 보이는 상태)
+  embedded?: boolean;
+  // 영상 내부 좌상단에 표시할 음소거 토글 (embedded 모드 전용)
+  showInlineMuteButton?: boolean;
+  onToggleMute?: () => void;
 }
 
 const ReelSlide: React.FC<ReelSlideProps> = ({
@@ -899,6 +939,9 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   onCommentClick,
   onLocationClick,
   onUserClick,
+  embedded = false,
+  showInlineMuteButton = false,
+  onToggleMute,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -1060,7 +1103,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   };
 
   return (
-    <div className="relative h-full w-full bg-black overflow-hidden" style={{ height: "100dvh" }}>
+    <div
+      className="relative h-full w-full bg-black overflow-hidden"
+      style={{ height: embedded ? "100%" : "100dvh" }}
+    >
       {/* 배경 블러 (시각적 여유) */}
       {fallbackImage && (
         <img
@@ -1076,7 +1122,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       <div
         className="absolute left-0 right-0 top-0 flex items-center justify-center"
         style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 56px)",
+          bottom: embedded ? "56px" : "calc(env(safe-area-inset-bottom, 0px) + 56px)",
           cursor: "pointer",
         }}
         onPointerDown={handlePointerDown}
@@ -1086,6 +1132,27 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           className="relative w-full overflow-hidden bg-black"
           style={{ aspectRatio: "3 / 4", maxHeight: "100%" }}
         >
+          {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용) */}
+          {showInlineMuteButton && hasVideo && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleMute?.();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+              aria-label={muted ? "음소거 해제" : "음소거"}
+              className="absolute top-3 left-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform border border-white/10"
+            >
+              {muted ? (
+                <VolumeX className="w-4 h-4 text-white" />
+              ) : (
+                <Volume2 className="w-4 h-4 text-white" />
+              )}
+            </button>
+          )}
+
           {/* 가로 슬라이더 — 다중 미디어면 좌우 스와이프로 이동, 단일이면 그냥 표시 */}
           <MediaCarousel
             mediaList={mediaList}
@@ -1154,7 +1221,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-16"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
+          style={{ paddingBottom: embedded ? "14px" : "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
         >
           {/* 유저 + 위치 + 본문 */}
           <div className="text-white pointer-events-auto mb-3">
@@ -1697,13 +1764,21 @@ interface ReelsEndSlideProps {
   message: string;
   subMessage?: string;
   onClose: () => void;
+  embedded?: boolean;
+  showCloseButton?: boolean;
 }
 
-const ReelsEndSlide: React.FC<ReelsEndSlideProps> = ({ message, subMessage, onClose }) => {
+const ReelsEndSlide: React.FC<ReelsEndSlideProps> = ({
+  message,
+  subMessage,
+  onClose,
+  embedded = false,
+  showCloseButton = true,
+}) => {
   return (
     <div
       className="relative h-full w-full bg-black overflow-hidden flex flex-col items-center justify-center px-10 text-center"
-      style={{ height: "100dvh" }}
+      style={{ height: embedded ? "100%" : "100dvh" }}
     >
       <div className="w-20 h-20 rounded-3xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center mb-6 shadow-lg">
         <Clapperboard className="w-9 h-9 text-white/80" />
@@ -1714,13 +1789,15 @@ const ReelsEndSlide: React.FC<ReelsEndSlideProps> = ({ message, subMessage, onCl
           {subMessage}
         </p>
       )}
-      <button
-        type="button"
-        onClick={onClose}
-        className="mt-7 inline-flex h-10 items-center justify-center px-5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-white text-sm font-black active:scale-95 transition-transform"
-      >
-        닫기
-      </button>
+      {showCloseButton && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-7 inline-flex h-10 items-center justify-center px-5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-white text-sm font-black active:scale-95 transition-transform"
+        >
+          닫기
+        </button>
+      )}
     </div>
   );
 };

@@ -47,6 +47,15 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
+// 화면 viewport 중 Flicks 콘텐츠가 차지할 영역
+// - 상단: Header(safe-area-top + 64px)
+// - 하단: BottomNav(safe-area-bottom + 64px)
+const CONTENT_HEIGHT_STYLE: React.CSSProperties = {
+  height:
+    'calc(100dvh - env(safe-area-inset-top, 0px) - 64px - env(safe-area-inset-bottom, 0px) - 64px)',
+  marginTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+};
+
 const Flicks = () => {
   const navigate = useNavigate();
   const { user: authUser, loading: authLoading } = useAuth();
@@ -58,7 +67,6 @@ const Flicks = () => {
   const fetchVideoPool = useCallback(async () => {
     try {
       setIsLoading(true);
-      // 트렌딩 풀에서 영상이 포함된 포스트만 추출
       const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 200 });
       if (error) throw error;
 
@@ -95,7 +103,6 @@ const Flicks = () => {
         };
       });
 
-      // 영상 있는 포스트만 + 광고/차단 사용자 제외 → 셔플
       const videosOnly = mapped.filter(
         (p) => !p.isAd && hasVideo(p) && p.user && !blockedIds.has(p.user.id)
       );
@@ -120,51 +127,50 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
-  // ReelsViewer를 닫으면 이전 페이지(보통 메인)로 돌아감
+  // 사용되지 않는 닫기 콜백(embedded에서는 호출되지 않지만 prop 시그니처 충족용)
   const handleClose = useCallback(() => {
     navigate(-1);
   }, [navigate]);
 
-  // 로딩 또는 빈 풀
   if (isLoading) {
     return (
-      <div className="fixed inset-0 z-[9998] bg-black flex flex-col items-center justify-center gap-3 text-white">
-        <Clapperboard className="w-10 h-10 text-white/80" />
-        <Loader2 className="w-6 h-6 animate-spin text-white/80" />
-        <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+      <div className="w-full bg-black" style={CONTENT_HEIGHT_STYLE}>
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
+          <Clapperboard className="w-10 h-10 text-white/80" />
+          <Loader2 className="w-6 h-6 animate-spin text-white/80" />
+          <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+        </div>
       </div>
     );
   }
 
   if (videoPool.length === 0) {
     return (
-      <div className="fixed inset-0 z-[9998] bg-black flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
-        <Clapperboard className="w-12 h-12 text-white/70" />
-        <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
-        <p className="text-xs font-bold text-white/60 leading-relaxed">
-          인기 포스팅에 영상이 등록되면<br />여기서 풀스크린으로 즐길 수 있어요.
-        </p>
-        <button
-          onClick={() => navigate(-1)}
-          className="mt-4 px-5 h-10 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-white text-sm font-black active:scale-95 transition-transform"
-        >
-          돌아가기
-        </button>
+      <div className="w-full bg-black" style={CONTENT_HEIGHT_STYLE}>
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
+          <Clapperboard className="w-12 h-12 text-white/70" />
+          <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
+          <p className="text-xs font-bold text-white/60 leading-relaxed">
+            인기 포스팅에 영상이 등록되면<br />여기서 풀스크린으로 즐길 수 있어요.
+          </p>
+        </div>
       </div>
     );
   }
 
-  // 영상 풀에서 첫 포스트로 시작 (이미 셔플되어 있음)
   return (
-    <ReelsViewer
-      isOpen={true}
-      initialPost={videoPool[0]}
-      pool={videoPool}
-      onClose={handleClose}
-      noRepeat
-      endMessage="더 이상 표시할 영상이 없습니다"
-      endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
-    />
+    <div className="w-full bg-black" style={CONTENT_HEIGHT_STYLE}>
+      <ReelsViewer
+        isOpen={true}
+        initialPost={videoPool[0]}
+        pool={videoPool}
+        onClose={handleClose}
+        noRepeat
+        embedded
+        endMessage="더 이상 표시할 영상이 없습니다"
+        endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
+      />
+    </div>
   );
 };
 
