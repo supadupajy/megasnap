@@ -402,16 +402,20 @@ const Index = () => {
   const rightMarkerIndicatorTop = ((indicatorTopOffset + (viewportHeight - (indicatorBottomOffset + 8))) / 2) - 26;
 
   // 지도 레벨 인디케이터 위치: "여기보기" 버튼 중심과 오른쪽 마커 인디케이터 중심의 정확한 중간에 배치
-  // - "여기보기" 버튼: bottom = bottomNavHeight + max(safeAreaBottom, 8) + 8, 크기 64x64
-  // - 오른쪽 마커 인디케이터 중심 Y = rightMarkerIndicatorTop + 26 (높이 약 52 기준)
-  // - 인디케이터 자체 높이 = 184 → 중심 보정 -92
+  // - 부모 motion.div는 paddingBottom: env(safe-area-inset-bottom)으로 mapArea 하단이 위로 밀려있음
+  // - "여기보기" 버튼은 mapArea 기준 absolute, bottom = bottomNavHeight(64) + max(safeAreaBottom, 8) + 8
+  // - 따라서 viewport 절대 좌표상 버튼 중심 Y = (viewportHeight - safeAreaBottom) - btnBottom - 32
+  // - 오른쪽 마커 인디케이터(position:fixed) 중심 Y = rightMarkerIndicatorTop + 26
+  // - 지도 레벨 인디케이터(position:fixed, 높이 184) top = 중간점 - 92
   const MAP_LEVEL_INDICATOR_HEIGHT = 184;
-  const viewAllBtnBottomDist = bottomNavHeight + Math.max(safeAreaBottom, 8) + 8;
-  const viewAllBtnCenterY = viewportHeight - viewAllBtnBottomDist - 32; // 버튼 height 64의 절반
+  const viewAllBtnBottomFromMapArea = bottomNavHeight + Math.max(safeAreaBottom, 8) + 8;
+  const viewAllBtnCenterY =
+    viewportHeight - safeAreaBottom - viewAllBtnBottomFromMapArea - 32; // 버튼 높이 64의 절반
   const rightMarkerIndicatorCenterY = rightMarkerIndicatorTop + 26;
   const desiredCenterY = (viewAllBtnCenterY + rightMarkerIndicatorCenterY) / 2;
   const minTop = indicatorTopOffset + 8;
-  const maxTop = viewportHeight - MAP_LEVEL_INDICATOR_HEIGHT - viewAllBtnBottomDist - 8;
+  const maxTop =
+    viewportHeight - safeAreaBottom - viewAllBtnBottomFromMapArea - 64 - 8 - MAP_LEVEL_INDICATOR_HEIGHT;
   const mapLevelIndicatorTop = Math.round(
     Math.min(Math.max(desiredCenterY - MAP_LEVEL_INDICATOR_HEIGHT / 2, minTop), Math.max(maxTop, minTop)),
   );
