@@ -769,18 +769,26 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                 </div>
               </div>
             </div>
-            <PostCommentsDialog
-              isOpen={isCommentsDialogOpen}
-              onOpenChange={setIsCommentsDialogOpen}
-              postId={currentPost.id}
-              initialComments={localComments}
-              authUser={authUser}
-              profile={authProfile}
-              onCommentsChange={setLocalComments}
-            />
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
+
+      {/*
+        PostCommentsDialog는 Dialog 트리 밖(형제)로 렌더링한다.
+        - Radix Dialog의 FocusScope/outside-interaction이 댓글창 input을 외부로 인식해
+          포커스가 막히고 키보드가 올라오지 않는 문제를 해결.
+        - PostCommentsDialog 자체가 createPortal로 document.body에 렌더링되므로
+          stacking context 문제도 그대로 해결된다.
+      */}
+      <PostCommentsDialog
+        isOpen={isCommentsDialogOpen}
+        onOpenChange={setIsCommentsDialogOpen}
+        postId={currentPost.id}
+        initialComments={localComments}
+        authUser={authUser}
+        profile={authProfile}
+        onCommentsChange={setLocalComments}
+      />
 
       <DeleteConfirmDialog
         isOpen={isDeleteDialogOpen}
