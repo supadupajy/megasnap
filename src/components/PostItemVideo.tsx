@@ -34,13 +34,12 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   onLoadedData,
   onImageError,
 }) => {
-  const [isPaused, setIsPaused] = useState(false);
-  // 화면에 실제로 노출할 "일시정지" 상태.
-  // 영상 로딩/버퍼링/리스트 스크롤 도중 video 요소가 짧은 시간(수십~수백ms) 동안
-  // paused 상태가 되었다가 즉시 다시 play 되는 케이스가 많은데, 그 짧은 순간마다
-  // 큰 재생 아이콘이 깜빡이는 플리커링이 발생한다. 이를 막기 위해
-  // isPaused가 일정 시간(300ms) 이상 유지된 경우에만 오버레이를 표시한다.
-  const [showPauseOverlay, setShowPauseOverlay] = useState(false);
+  // 화면에 표시할 "사용자가 직접 일시정지함" 상태.
+  // - 자동 재생/스크롤/buffering/loop 전환 등으로 인한 짧은 pause는 무시한다.
+  // - 사용자가 영상 영역을 탭해서 명시적으로 일시정지한 경우에만 true가 된다.
+  // 이렇게 해야 영상 시작 직후나 슬라이드 전환 중에 큰 재생 아이콘이 깜빡이는
+  // 플리커링이 발생하지 않는다.
+  const [userPaused, setUserPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -58,7 +57,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     v.muted = muted;
   }, [videoRef, muted, src]);
 
-  // 영상 시간/길이/재생 상태 추적
+  // 영상 시간/길이 추적 (재생 상태는 별도 — userPaused만 사용)
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -72,53 +71,41 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     const onDurationChange = () => {
       setDuration(Number.isFinite(v.duration) ? v.duration : 0);
     };
-    const onPlay = () => setIsPaused(false);
-    const onPlaying = () => setIsPaused(false);
-    const onPause = () => setIsPaused(true);
+    // 영상이 외부 요인으로 다시 재생되기 시작하면 (예: 자동 재생),
+    // userPaused 플래그도 해제해서 오버레이가 노출되지 않도록 한다.
+    const onPlaying = () => setUserPaused(false);
 
     v.addEventListener('timeupdate', onTimeUpdate);
     v.addEventListener('loadedmetadata', onLoadedMeta);
     v.addEventListener('durationchange', onDurationChange);
-    v.addEventListener('play', onPlay);
     v.addEventListener('playing', onPlaying);
-    v.addEventListener('pause', onPause);
 
     if (Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
-    setIsPaused(v.paused);
 
     return () => {
       v.removeEventListener('timeupdate', onTimeUpdate);
       v.removeEventListener('loadedmetadata', onLoadedMeta);
       v.removeEventListener('durationchange', onDurationChange);
-      v.removeEventListener('play', onPlay);
       v.removeEventListener('playing', onPlaying);
-      v.removeEventListener('pause', onPause);
     };
   }, [videoRef, src]);
 
-  // isPaused가 일정 시간(300ms) 동안 유지될 때만 오버레이를 표시.
-  // 짧은 buffering / loop 전환 / 자동 재생 토글로 인한 플리커링 방지.
+  // src가 바뀌면 사용자 일시정지 상태도 초기화
   useEffect(() => {
-    if (!isPaused) {
-      setShowPauseOverlay(false);
-      return;
-    }
-    const t = window.setTimeout(() => setShowPauseOverlay(true), 300);
-    return () => window.clearTimeout(t);
-  }, [isPaused]);
-
-  // src가 바뀌면 오버레이도 즉시 숨김
-  useEffect(() => {
-    setShowPauseOverlay(false);
+    setUserPaused(false);
   }, [src]);
 
+  // 사용자가 영상 영역을 탭한 경우에만 명시적으로 일시정지/재생을 토글.
+  // 이때만 userPaused가 true가 되어 큰 플레이 아이콘 오버레이가 노출된다.
   const handleVideoTap = (e: React.MouseEvent) => {
     e.stopPropagation();
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) {
+      setUserPaused(false);
       v.play().catch(() => {});
     } else {
+      setUserPaused(true);
       v.pause();
     }
   };
@@ -224,9 +211,10 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       </button>
 
       {/* 일시정지 시 중앙 플레이 아이콘 오버레이
-          - 짧은 buffering/loop 전환에 의한 깜빡임을 막기 위해
-            isPaused가 300ms 이상 유지된 경우에만(showPauseOverlay) 노출 */}
-      {showPauseOverlay && !showPoster && (
+          - 사용자가 직접 탭으로 일시정지한 경우(userPaused=true)에만 노출.
+          - 자동 재생/스크롤/buffering/loop 전환에 의한 짧은 pause로는
+            오버레이가 절대 표시되지 않아 플리커링이 발생하지 않는다. */}
+      {userPaused && !showPoster && (
         <div
           className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none"
           aria-hidden="true"
