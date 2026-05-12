@@ -555,25 +555,19 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       </AnimatePresence>
 
       {/* embedded ranked 모드 전용 — 화면에 고정된 좌상단 순위 뱃지 / 우상단 X 버튼.
-          슬라이드 트랙 바깥에 두어 스와이프 중에도 위치가 그대로 유지된다.
-          외곽 컨테이너는 버튼 모양(알약/원)에 맞춰 overflow-hidden으로 클리핑하고,
-          내부의 뱃지/X 아이콘만 스와이프 방향에 맞춰 위/아래로 슬라이드 인/아웃 한다.
-          - 위로 스와이프(swipeDir=1)  : 이전 내용 위로 빠짐, 새 내용 아래에서 올라옴
-          - 아래로 스와이프(swipeDir=-1): 이전 내용 아래로 빠짐, 새 내용 위에서 내려옴 */}
+          알약/원형 버튼 "전체"(배경·테두리·내용물 포함)가 통째로 위/아래로 빠지고,
+          새 버튼이 통째로 반대편에서 들어오는 효과.
+          - 위로 스와이프(swipeDir=1)  : 이전 버튼이 통째로 위로 빠지고, 새 버튼이 통째로 아래에서 올라옴
+          - 아래로 스와이프(swipeDir=-1): 이전 버튼이 통째로 아래로 빠지고, 새 버튼이 통째로 위에서 내려옴
+
+          버튼이 슬라이드되는 동안 위/아래 공간에서 자연스럽게 사라지도록 보이지 않는
+          클리핑 영역(왕복 거리 만큼 위/아래로 더 큰 박스)을 두고 그 안에서 통째로 이동시킨다. */}
       {embedded && isRankedMode && (() => {
         const rank = activeIndex + 1;
         return (
           <div
-            className={cn(
-              "absolute top-3 left-3 z-40 pointer-events-auto h-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 overflow-hidden",
-              rank === 1
-                ? "shadow-amber-500/40"
-                : rank === 2
-                ? "shadow-slate-400/40"
-                : rank === 3
-                ? "shadow-orange-500/40"
-                : "shadow-gray-400/40"
-            )}
+            className="absolute top-0 left-3 z-40 pointer-events-none h-[60px] flex items-end overflow-hidden"
+            style={{ paddingTop: 12 }}
             aria-label={`${rank}위`}
           >
             <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
@@ -581,23 +575,23 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 key={`rank-${rank}`}
                 custom={swipeDir}
                 variants={{
-                  enter: (dir: 1 | -1) => ({ y: dir === 1 ? "100%" : "-100%", opacity: 0 }),
-                  center: { y: "0%", opacity: 1 },
-                  exit: (dir: 1 | -1) => ({ y: dir === 1 ? "-100%" : "100%", opacity: 0 }),
+                  enter: (dir: 1 | -1) => ({ y: dir === 1 ? 48 : -48, opacity: 0 }),
+                  center: { y: 0, opacity: 1 },
+                  exit: (dir: 1 | -1) => ({ y: dir === 1 ? -48 : 48, opacity: 0 }),
                 }}
                 initial="enter"
                 animate="center"
                 exit="exit"
-                transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
+                transition={{ duration: 0.36, ease: [0.22, 0.61, 0.36, 1] }}
                 className={cn(
-                  "inline-flex items-center gap-1 h-9 px-3 bg-gradient-to-br",
+                  "pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
                   rank === 1
-                    ? "from-amber-400 to-amber-500"
+                    ? "from-amber-400 to-amber-500 shadow-amber-500/40"
                     : rank === 2
-                    ? "from-slate-300 to-slate-400"
+                    ? "from-slate-300 to-slate-400 shadow-slate-400/40"
                     : rank === 3
-                    ? "from-orange-400 to-orange-500"
-                    : "from-gray-300 to-gray-300"
+                    ? "from-orange-400 to-orange-500 shadow-orange-500/40"
+                    : "from-gray-300 to-gray-300 shadow-gray-400/40"
                 )}
               >
                 <span
@@ -623,31 +617,33 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       })()}
 
       {embedded && showInlineCloseButton && (
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="닫기"
-          className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10 overflow-hidden active:scale-95 transition-transform"
+        <div
+          className="absolute top-0 right-3 z-40 pointer-events-none h-[60px] w-9 flex items-end overflow-hidden"
+          style={{ paddingTop: 12 }}
         >
           <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
-            <motion.span
+            <motion.button
               key={`x-${activeIndex}`}
+              type="button"
+              onClick={onClose}
+              aria-label="닫기"
               custom={swipeDir}
               variants={{
-                enter: (dir: 1 | -1) => ({ y: dir === 1 ? 18 : -18, opacity: 0 }),
+                enter: (dir: 1 | -1) => ({ y: dir === 1 ? 48 : -48, opacity: 0 }),
                 center: { y: 0, opacity: 1 },
-                exit: (dir: 1 | -1) => ({ y: dir === 1 ? -18 : 18, opacity: 0 }),
+                exit: (dir: 1 | -1) => ({ y: dir === 1 ? -48 : 48, opacity: 0 }),
               }}
               initial="enter"
               animate="center"
               exit="exit"
-              transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
-              className="inline-flex items-center justify-center"
+              transition={{ duration: 0.36, ease: [0.22, 0.61, 0.36, 1] }}
+              whileTap={{ scale: 0.92 }}
+              className="pointer-events-auto w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10"
             >
               <X className="w-4 h-4 text-white" />
-            </motion.span>
+            </motion.button>
           </AnimatePresence>
-        </button>
+        </div>
       )}
 
       {/* Transform 기반 슬라이더 — 한 번에 1개씩만 이동 (스와이프 강도와 무관) */}
