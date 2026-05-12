@@ -232,7 +232,7 @@ const Popular = () => {
           title="인기 포스팅"
           subtitle="Trending Now"
           ActionIcon={Search}
-          actionLabel="포스팅 검색"
+          actionLabel="검색"
           onActionClick={() => navigate('/post-search')}
         />
       </div>
