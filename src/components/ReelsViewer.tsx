@@ -831,7 +831,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — 화면 가로 너비에 딱 맞게 + 화면 정중앙 배치 */}
+      {/* 메인 미디어 — 화면 가로 너비에 딱 맞는 3:4 비율 컨테이너, 화면 정중앙 배치 */}
       {/* 탭하면 UI 토글 */}
       <div
         className="absolute inset-0 flex items-center justify-center"
@@ -839,25 +839,30 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         onPointerUp={handlePointerUp}
         style={{ cursor: "pointer" }}
       >
-        {hasVideo && effectiveVideoUrl ? (
-          <video
-            ref={videoRef}
-            src={effectiveVideoUrl}
-            className="w-full h-auto max-h-full object-contain"
-            playsInline
-            loop
-            muted={muted}
-            preload="metadata"
-            poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
-          />
-        ) : (
-          <img
-            src={fallbackImage}
-            alt=""
-            className="w-full h-auto max-h-full object-contain"
-            draggable={false}
-          />
-        )}
+        <div
+          className="relative w-full overflow-hidden bg-black"
+          style={{ aspectRatio: "3 / 4", maxHeight: "100%" }}
+        >
+          {hasVideo && effectiveVideoUrl ? (
+            <video
+              ref={videoRef}
+              src={effectiveVideoUrl}
+              className="absolute inset-0 w-full h-full object-cover"
+              playsInline
+              loop
+              muted={muted}
+              preload="metadata"
+              poster={!isVideoUrl(imageUrl) ? imageUrl : undefined}
+            />
+          ) : (
+            <img
+              src={fallbackImage}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              draggable={false}
+            />
+          )}
+        </div>
       </div>
 
       {/* 재생 오버레이 아이콘 (비디오 일시정지 상태일 때만) */}
