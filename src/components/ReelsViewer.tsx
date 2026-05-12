@@ -727,6 +727,15 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const [contentExpanded, setContentExpanded] = useState(false);
   const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
 
+  // 영상 타임라인 상태
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  // 스크럽 중에는 사용자가 드래그하는 위치를 표시 (currentTime은 video element가 따라옴)
+  const [scrubTime, setScrubTime] = useState(0);
+  // 스크럽 시작 직전 재생 중이었는지 (드래그 끝나면 복원)
+  const wasPlayingBeforeScrubRef = useRef(false);
+
   const videoUrl = post.videoUrl;
   const imageUrl = post.image_url || post.image;
   const hasVideo = !!videoUrl || isVideoUrl(imageUrl);
@@ -764,8 +773,34 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       v.pause();
       v.currentTime = 0;
       setIsPlaying(false);
+      setCurrentTime(0);
     }
   }, [isActive, muted]);
+
+  // 영상 시간/길이 추적
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const handleTimeUpdate = () => {
+      if (!isScrubbing) setCurrentTime(v.currentTime || 0);
+    };
+    const handleLoadedMeta = () => {
+      setDuration(Number.isFinite(v.duration) ? v.duration : 0);
+    };
+    const handleDurationChange = () => {
+      setDuration(Number.isFinite(v.duration) ? v.duration : 0);
+    };
+    v.addEventListener("timeupdate", handleTimeUpdate);
+    v.addEventListener("loadedmetadata", handleLoadedMeta);
+    v.addEventListener("durationchange", handleDurationChange);
+    // 이미 메타데이터가 로드된 경우 즉시 반영
+    if (Number.isFinite(v.duration) && v.duration > 0) setDuration(v.duration);
+    return () => {
+      v.removeEventListener("timeupdate", handleTimeUpdate);
+      v.removeEventListener("loadedmetadata", handleLoadedMeta);
+      v.removeEventListener("durationchange", handleDurationChange);
+    };
+  }, [effectiveVideoUrl, isScrubbing]);
 
   // 댓글 수 fetch (활성화 시 1회)
   useEffect(() => {
@@ -851,6 +886,39 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
               draggable={false}
+            />
+          )}
+
+          {/* 영상 타임라인 (영상 박스 하단에 배치, 드래그로 스크럽 가능) */}
+          {hasVideo && (
+            <VideoTimeline
+              currentTime={isScrubbing ? scrubTime : currentTime}
+              duration={duration}
+              isScrubbing={isScrubbing}
+              onScrubStart={() => {
+                const v = videoRef.current;
+                if (!v) return;
+                wasPlayingBeforeScrubRef.current = !v.paused;
+                v.pause();
+                setIsScrubbing(true);
+                setScrubTime(v.currentTime || 0);
+              }}
+              onScrub={(t) => {
+                setScrubTime(t);
+                const v = videoRef.current;
+                if (v) v.currentTime = t;
+              }}
+              onScrubEnd={(t) => {
+                const v = videoRef.current;
+                if (v) {
+                  v.currentTime = t;
+                  setCurrentTime(t);
+                }
+                setIsScrubbing(false);
+                if (wasPlayingBeforeScrubRef.current && v) {
+                  v.play().then(() => setIsPlaying(true)).catch(() => {});
+                }
+              }}
             />
           )}
         </div>
@@ -966,6 +1034,152 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── 영상 타임라인 (드래그 스크럽 지원) ────────────────────
+interface VideoTimelineProps {
+  currentTime: number;
+  duration: number;
+  isScrubbing: boolean;
+  onScrubStart: () => void;
+  onScrub: (t: number) => void;
+  onScrubEnd: (t: number) => void;
+}
+
+const formatTime = (sec: number) => {
+  if (!Number.isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
+const VideoTimeline: React.FC<VideoTimelineProps> = ({
+  currentTime,
+  duration,
+  isScrubbing,
+  onScrubStart,
+  onScrub,
+  onScrubEnd,
+}) => {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const latestTimeRef = useRef(currentTime);
+
+  // 부모(ReelsSlideTrack)의 native touch 리스너가 슬라이드 스와이프로 인식하지 않도록 차단
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const stop = (e: TouchEvent) => {
+      e.stopPropagation();
+    };
+    el.addEventListener("touchstart", stop, { passive: true });
+    el.addEventListener("touchmove", stop, { passive: false });
+    el.addEventListener("touchend", stop, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", stop);
+      el.removeEventListener("touchmove", stop);
+      el.removeEventListener("touchend", stop);
+    };
+  }, []);
+
+  const progress =
+    duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+
+  const computeTimeFromClientX = useCallback(
+    (clientX: number): number => {
+      const el = trackRef.current;
+      if (!el || duration <= 0) return 0;
+      const rect = el.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      return ratio * duration;
+    },
+    [duration]
+  );
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (duration <= 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+    isDraggingRef.current = true;
+    onScrubStart();
+    const t = computeTimeFromClientX(e.clientX);
+    latestTimeRef.current = t;
+    onScrub(t);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const t = computeTimeFromClientX(e.clientX);
+    latestTimeRef.current = t;
+    onScrub(t);
+  };
+
+  const handlePointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    e.stopPropagation();
+    isDraggingRef.current = false;
+    onScrubEnd(latestTimeRef.current);
+  };
+
+  return (
+    <div
+      className="absolute left-0 right-0 bottom-0 z-30 select-none"
+      // 부모(미디어 영역)의 탭/스와이프 핸들러가 타임라인 조작을 가로채지 않도록 차단
+      onClick={(e) => e.stopPropagation()}
+      style={{ touchAction: "none" }}
+    >
+      {/* 드래그 영역 (히트박스 크게, 시각 트랙은 얇게) */}
+      <div
+        ref={trackRef}
+        className="relative w-full px-3 py-2 cursor-pointer"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+      >
+        {/* 시간 표시 (스크럽 중에만) */}
+        {isScrubbing && duration > 0 && (
+          <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
+            <span className="px-2 py-0.5 rounded-full bg-black/70 text-white text-[11px] font-black tabular-nums backdrop-blur-md">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          </div>
+        )}
+
+        {/* 트랙 (배경) */}
+        <div
+          className={cn(
+            "relative w-full rounded-full bg-white/25 overflow-hidden transition-[height] duration-150",
+            isScrubbing ? "h-1.5" : "h-1"
+          )}
+        >
+          {/* 진행 바 */}
+          <div
+            className="absolute left-0 top-0 bottom-0 bg-white rounded-full"
+            style={{
+              width: `${progress * 100}%`,
+              transition: isScrubbing ? "none" : "width 120ms linear",
+            }}
+          />
+        </div>
+
+        {/* 핸들 (스크럽 중에만 크게 표시) */}
+        <div
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-md pointer-events-none transition-all",
+            isScrubbing ? "w-3.5 h-3.5 opacity-100" : "w-0 h-0 opacity-0"
+          )}
+          style={{
+            left: `calc(12px + (100% - 24px) * ${progress})`,
+            transform: "translate(-50%, -50%)",
+          }}
+        />
       </div>
     </div>
   );
