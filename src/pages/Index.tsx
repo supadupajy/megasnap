@@ -12,7 +12,7 @@ import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
 import OffScreenMarkerIndicator from '@/components/OffScreenMarkerIndicator';
 import MapLevelIndicator from '@/components/MapLevelIndicator';
-import { Navigation, Search, Check, X, MapPin } from 'lucide-react';
+import { Navigation, Search, Check, X, MapPin, Camera } from 'lucide-react';
 import { Post } from '@/types';
 import { cn, getFallbackImage } from '@/lib/utils';
 
@@ -1805,8 +1805,16 @@ const Index = () => {
 
               <div
                 style={{ bottom: 'calc(64px + max(env(safe-area-inset-bottom, 0px), 8px) + 8px)' }}
-                className={cn("absolute right-4 z-20 flex flex-col items-center gap-4", isTrendingExpanded && "pointer-events-none")}
+                className={cn("absolute right-4 z-20 flex flex-col items-center gap-3", isTrendingExpanded && "pointer-events-none")}
               >
+                <button
+                  onClick={() => navigate('/write')}
+                  aria-label="사진/영상 업로드"
+                  className="w-16 h-16 bg-white/30 backdrop-blur-xl text-gray-700 rounded-[24px] flex flex-col items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50 gap-0.5"
+                >
+                  <Camera className="w-6 h-6" strokeWidth={2.2} />
+                  <span className="text-[10px] font-black tracking-tight leading-none">업로드</span>
+                </button>
                 <div className="relative">
                   <button
                     ref={viewAllBtnRef}
