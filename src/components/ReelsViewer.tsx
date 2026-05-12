@@ -16,6 +16,7 @@ import {
   VolumeX,
   Play,
   ChevronUp,
+  Clapperboard,
 } from "lucide-react";
 import { Post } from "@/types";
 import { useAuth } from "@/components/AuthProvider";
@@ -55,10 +56,11 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// 슬라이드 아이템 타입 (포스트 또는 광고)
+// 슬라이드 아이템 타입 (포스트 / 광고 / 끝-안내)
 type ReelItem =
   | { kind: "post"; post: Post; key: string }
-  | { kind: "ad"; key: string };
+  | { kind: "ad"; key: string }
+  | { kind: "end"; key: string };
 
 interface ReelsViewerProps {
   isOpen: boolean;
@@ -69,6 +71,12 @@ interface ReelsViewerProps {
   // rankedPosts의 0번 인덱스가 1위, 1번이 2위, ...
   mode?: "shuffle" | "ranked";
   rankedPosts?: Post[];
+  // noRepeat: shuffle 모드에서 풀이 소진되면 재셔플하지 않고 "끝" 슬라이드로 마무리
+  noRepeat?: boolean;
+  // 끝 슬라이드에 표시할 메시지
+  endMessage?: string;
+  // 끝 슬라이드에 표시할 보조 텍스트
+  endSubMessage?: string;
 }
 
 const ReelsViewer: React.FC<ReelsViewerProps> = ({
@@ -78,8 +86,13 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   onClose,
   mode = "shuffle",
   rankedPosts,
+  noRepeat = false,
+  endMessage = "더 이상 표시할 영상이 없습니다",
+  endSubMessage = "처음으로 돌아가거나 닫아주세요.",
 }) => {
   const isRankedMode = mode === "ranked";
+  // 풀이 모두 소진되었는지 (noRepeat 모드 전용)
+  const exhaustedRef = useRef(false);
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
 
@@ -157,6 +170,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     }
 
     seenIdsRef.current = new Set([initialPost.id]);
+    exhaustedRef.current = false;
     const remaining = pool.filter((p) => p.id !== initialPost.id);
     const shuffled = shuffle(remaining);
     queueRef.current = shuffled;
@@ -170,18 +184,29 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       ...initialBatch.map<ReelItem>((p) => ({ kind: "post", post: p, key: `post-${p.id}` })),
     ];
 
-    // 3개마다 광고 삽입
+    // noRepeat 모드에서 광고는 의미가 없고(반복/추가 로드 없음), 끝 안내가 더 중요하므로 광고 삽입 생략
     const withAds: ReelItem[] = [];
-    let postCounter = 0;
-    initialItems.forEach((it) => {
-      withAds.push(it);
-      if (it.kind === "post") {
-        postCounter++;
-        if (postCounter % AD_INSERT_INTERVAL === 0) {
-          withAds.push({ kind: "ad", key: `ad-${postCounter}-${Date.now()}` });
+    if (noRepeat) {
+      withAds.push(...initialItems);
+    } else {
+      // 3개마다 광고 삽입
+      let postCounter = 0;
+      initialItems.forEach((it) => {
+        withAds.push(it);
+        if (it.kind === "post") {
+          postCounter++;
+          if (postCounter % AD_INSERT_INTERVAL === 0) {
+            withAds.push({ kind: "ad", key: `ad-${postCounter}-${Date.now()}` });
+          }
         }
-      }
-    });
+      });
+    }
+
+    // noRepeat 모드에서 풀이 이미 소진되면 끝 슬라이드 추가
+    if (noRepeat && queueRef.current.length === 0) {
+      exhaustedRef.current = true;
+      withAds.push({ kind: "end", key: `end-${Date.now()}` });
+    }
 
     setItems(withAds);
     setActiveIndex(0);
@@ -203,7 +228,60 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   }, [isOpen, initialPost?.id, isRankedMode, rankedPosts]);
 
   // 풀에서 더 가져오기 (큐가 부족하면 알고리즘으로 재셔플)
+  // noRepeat 모드: 풀이 소진되면 재셔플하지 않고 끝 슬라이드를 한 번만 추가
   const appendMore = useCallback(() => {
+    if (noRepeat) {
+      // 이미 끝 슬라이드가 붙은 경우 더 이상 호출 X
+      if (exhaustedRef.current) return;
+
+      // 큐가 비었고 풀에 남은 새 포스트도 없으면 끝 슬라이드 추가 후 종료
+      if (queueRef.current.length === 0) {
+        exhaustedRef.current = true;
+        setItems((prev) => [...prev, { kind: "end", key: `end-${Date.now()}` }]);
+        return;
+      }
+
+      // noRepeat에서는 광고도 넣지 않고 남은 큐만 그대로 펼침
+      const nextBatch = queueRef.current.splice(0, 5);
+      if (nextBatch.length === 0) {
+        exhaustedRef.current = true;
+        setItems((prev) => [...prev, { kind: "end", key: `end-${Date.now()}` }]);
+        return;
+      }
+
+      nextBatch.forEach((p) => seenIdsRef.current.add(p.id));
+
+      setItems((prev) => {
+        const additions: ReelItem[] = nextBatch.map((p) => ({
+          kind: "post",
+          post: p,
+          key: `post-${p.id}-${Math.random().toString(36).slice(2, 6)}`,
+        }));
+        // 큐가 이번에 완전히 소진되었으면 곧바로 끝 슬라이드도 함께 추가
+        if (queueRef.current.length === 0) {
+          exhaustedRef.current = true;
+          additions.push({ kind: "end", key: `end-${Date.now()}` });
+        }
+        return [...prev, ...additions];
+      });
+
+      setLikeMap((prev) => {
+        const next = { ...prev };
+        nextBatch.forEach((p) => {
+          if (!next[p.id]) next[p.id] = { liked: !!p.isLiked, count: p.likes || 0 };
+        });
+        return next;
+      });
+      setSavedMap((prev) => {
+        const next = { ...prev };
+        nextBatch.forEach((p) => {
+          if (!(p.id in next)) next[p.id] = !!p.isSaved;
+        });
+        return next;
+      });
+      return;
+    }
+
     if (queueRef.current.length < 5) {
       // 풀 재셔플: 이미 본 것 제외 → 모두 봤다면 풀 전체를 재사용 (반복 노출 허용)
       const unseen = pool.filter((p) => !seenIdsRef.current.has(p.id));
@@ -247,7 +325,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       });
       return next;
     });
-  }, [pool]);
+  }, [pool, noRepeat]);
 
   // 활성 인덱스 추적 + 강제 스냅 (한 번에 1개씩만 이동)
   // CSS 스크롤은 비활성화하고 transform으로만 슬라이드 전환
@@ -518,8 +596,10 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                     }, 50);
                   }}
                 />
-              ) : (
+              ) : item.kind === "ad" ? (
                 <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
+              ) : (
+                <ReelsEndSlide message={endMessage} subMessage={endSubMessage} onClose={onClose} />
               )}
             </div>
           ))}
@@ -1608,6 +1688,39 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
           }}
         />
       </div>
+    </div>
+  );
+};
+
+// ─── 끝 슬라이드 (더 이상 영상이 없을 때) ────────────────────
+interface ReelsEndSlideProps {
+  message: string;
+  subMessage?: string;
+  onClose: () => void;
+}
+
+const ReelsEndSlide: React.FC<ReelsEndSlideProps> = ({ message, subMessage, onClose }) => {
+  return (
+    <div
+      className="relative h-full w-full bg-black overflow-hidden flex flex-col items-center justify-center px-10 text-center"
+      style={{ height: "100dvh" }}
+    >
+      <div className="w-20 h-20 rounded-3xl bg-white/10 border border-white/15 backdrop-blur-md flex items-center justify-center mb-6 shadow-lg">
+        <Clapperboard className="w-9 h-9 text-white/80" />
+      </div>
+      <p className="text-white text-base font-black tracking-tight leading-snug">{message}</p>
+      {subMessage && (
+        <p className="mt-2 text-white/60 text-xs font-bold leading-relaxed tracking-tight">
+          {subMessage}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={onClose}
+        className="mt-7 inline-flex h-10 items-center justify-center px-5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-white text-sm font-black active:scale-95 transition-transform"
+      >
+        닫기
+      </button>
     </div>
   );
 };
