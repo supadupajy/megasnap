@@ -14,10 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import PostItem from '@/components/PostItem';
 import AdMobBanner from '@/components/AdMobBanner';
-import { showError } from '@/utils/toast';
 import CollapsingHeader from '@/components/CollapsingHeader';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
-import ReelsViewer from '@/components/ReelsViewer';
 
 const getTierFromFollowers = (followers: number) => {
   if (followers >= 10000000) return 'diamond';
@@ -204,21 +202,6 @@ const Popular = () => {
     handleLikeToggle(postId);
   }, [handleLikeToggle]);
 
-  // ── 릴스 뷰어 (풀스크린 스와이프) ──
-  const [reelsOpen, setReelsOpen] = useState(false);
-  const [reelsInitialPost, setReelsInitialPost] = useState<Post | null>(null);
-
-  const handleMediaClick = useCallback((post: Post) => {
-    setReelsInitialPost(post);
-    setReelsOpen(true);
-  }, []);
-
-  // 릴스에 사용할 인기 포스트 풀: 광고 제외한 전체 셔플 풀
-  const reelsPool = useMemo(() => {
-    const source = shuffledPoolRef.current.length > 0 ? shuffledPoolRef.current : posts;
-    return source.filter((p) => !p.isAd);
-  }, [posts]);
-
   return (
     <div ref={scrollRef} className="h-screen w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 고정 상단 헤더 */}
@@ -234,7 +217,6 @@ const Popular = () => {
           ActionIcon={Search}
           actionLabel="검색"
           onActionClick={() => window.dispatchEvent(new CustomEvent('open-post-search'))}
-          collapsedHint="Flicks!"
         />
       </div>
 
@@ -258,7 +240,6 @@ const Popular = () => {
                       onLikeToggle={handleLikeToggleById}
                       onLocationClick={handleLocationClick}
                       onDelete={handlePostDelete}
-                      onMediaClick={handleMediaClick}
                       autoPlayVideo={true}
                       disablePulse={true}
                     />
@@ -296,14 +277,6 @@ const Popular = () => {
           </div>
         )}
       </div>
-
-      {/* 풀스크린 릴스 뷰어 */}
-      <ReelsViewer
-        isOpen={reelsOpen}
-        initialPost={reelsInitialPost}
-        pool={reelsPool}
-        onClose={() => setReelsOpen(false)}
-      />
     </div>
   );
 };
