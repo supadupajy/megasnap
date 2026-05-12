@@ -463,71 +463,93 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   children,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [dragOffset, setDragOffset] = useState(0); // 드래그 중 임시 오프셋 (px)
+  const [dragOffset, setDragOffset] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // 모든 상태를 ref로 관리해 클로저/state 비동기성 문제 회피
+  const activeIndexRef = useRef(activeIndex);
+  const itemCountRef = useRef(itemCount);
   const isDraggingRef = useRef(false);
   const startYRef = useRef(0);
   const lastYRef = useRef(0);
   const startTimeRef = useRef(0);
-  const lockTransitionRef = useRef(false); // 전환 애니메이션 중 추가 입력 차단
+  const startIndexRef = useRef(0); // 이번 터치 시작 시점의 인덱스 (고정)
+  const lockTransitionRef = useRef(false);
+  const consumedRef = useRef(false); // 이번 터치 제스처가 이미 슬라이드를 소비했는지
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  useEffect(() => {
+    itemCountRef.current = itemCount;
+  }, [itemCount]);
 
   const goTo = useCallback(
     (nextIndex: number) => {
-      if (lockTransitionRef.current) return;
-      const clamped = Math.max(0, Math.min(itemCount - 1, nextIndex));
-      if (clamped === activeIndex) {
-        // 동일 위치 → 단순 복귀 애니메이션
+      const currentActive = activeIndexRef.current;
+      const clamped = Math.max(0, Math.min(itemCountRef.current - 1, nextIndex));
+
+      // 같은 인덱스면 단순 복귀
+      if (clamped === currentActive) {
         setIsTransitioning(true);
         setDragOffset(0);
         window.setTimeout(() => setIsTransitioning(false), 320);
         return;
       }
+
       lockTransitionRef.current = true;
       setIsTransitioning(true);
       setDragOffset(0);
+      activeIndexRef.current = clamped; // 즉시 ref 업데이트 (state는 비동기)
       onActiveIndexChange(clamped);
-      // 전환 애니메이션 종료 후 락 해제 (320ms transition + 여유)
+
       window.setTimeout(() => {
         setIsTransitioning(false);
         lockTransitionRef.current = false;
       }, 360);
     },
-    [activeIndex, itemCount, onActiveIndexChange]
+    [onActiveIndexChange]
   );
 
-  // 터치 핸들러
   useEffect(() => {
     const root = containerRef.current;
     if (!root) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (lockTransitionRef.current) return;
+      // 전환 중이면 새 제스처 시작 자체를 거부
+      if (lockTransitionRef.current) {
+        consumedRef.current = true; // 이번 제스처는 무시
+        return;
+      }
       const touch = e.touches[0];
       if (!touch) return;
       isDraggingRef.current = true;
+      consumedRef.current = false;
       startYRef.current = touch.clientY;
       lastYRef.current = touch.clientY;
       startTimeRef.current = Date.now();
+      startIndexRef.current = activeIndexRef.current; // 시작 인덱스 고정
       setIsTransitioning(false);
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isDraggingRef.current) return;
+      if (!isDraggingRef.current || consumedRef.current) return;
       const touch = e.touches[0];
       if (!touch) return;
-      e.preventDefault(); // 페이지 스크롤 차단
+      e.preventDefault();
 
       let dy = touch.clientY - startYRef.current;
       lastYRef.current = touch.clientY;
 
-      // 경계에서 저항감 (rubber band)
-      const atTop = activeIndex === 0 && dy > 0;
-      const atBottom = activeIndex === itemCount - 1 && dy < 0;
+      const startIdx = startIndexRef.current;
+      const atTop = startIdx === 0 && dy > 0;
+      const atBottom = startIdx === itemCountRef.current - 1 && dy < 0;
       if (atTop || atBottom) {
         dy = dy * 0.25;
       }
 
-      // 최대 드래그 거리를 슬라이드 높이로 제한 — 한 번에 1개만 이동
+      // 손가락 이동량을 슬라이드 1개 높이로 제한 (시각적으로만)
       const maxDrag = root.clientHeight;
       if (dy > maxDrag) dy = maxDrag;
       if (dy < -maxDrag) dy = -maxDrag;
@@ -536,24 +558,36 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
     };
 
     const handleTouchEnd = () => {
-      if (!isDraggingRef.current) return;
+      if (!isDraggingRef.current) {
+        consumedRef.current = false;
+        return;
+      }
       isDraggingRef.current = false;
+
+      // 이미 소비된 제스처는 무시
+      if (consumedRef.current) {
+        consumedRef.current = false;
+        setDragOffset(0);
+        return;
+      }
+      consumedRef.current = true; // 이번 제스처 소비 처리
 
       const dy = lastYRef.current - startYRef.current;
       const dt = Date.now() - startTimeRef.current;
-      const velocity = Math.abs(dy) / Math.max(dt, 1); // px/ms
+      const velocity = Math.abs(dy) / Math.max(dt, 1);
       const slideHeight = root.clientHeight;
 
-      // 다음/이전/제자리 결정
-      // 1) 30% 이상 이동했거나 2) 빠른 플릭(velocity > 0.3) → 다음 슬라이드로
       const distanceThreshold = slideHeight * 0.2;
       const isFlick = velocity > 0.3 && Math.abs(dy) > 30;
 
-      let nextIndex = activeIndex;
+      const startIdx = startIndexRef.current;
+      let nextIndex = startIdx;
+
+      // 거리/속도와 무관하게 무조건 ±1만 이동 (시작 인덱스 기준)
       if (dy < -distanceThreshold || (isFlick && dy < 0)) {
-        nextIndex = activeIndex + 1;
+        nextIndex = startIdx + 1;
       } else if (dy > distanceThreshold || (isFlick && dy > 0)) {
-        nextIndex = activeIndex - 1;
+        nextIndex = startIdx - 1;
       }
 
       goTo(nextIndex);
@@ -566,21 +600,20 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (wheelLock || lockTransitionRef.current) return;
       if (Math.abs(e.deltaY) < 5) return;
       wheelLock = true;
-      goTo(activeIndex + (e.deltaY > 0 ? 1 : -1));
+      goTo(activeIndexRef.current + (e.deltaY > 0 ? 1 : -1));
       window.setTimeout(() => {
         wheelLock = false;
       }, 400);
     };
 
-    // 키보드 (PC)
     const handleKey = (e: KeyboardEvent) => {
       if (lockTransitionRef.current) return;
       if (e.key === "ArrowDown" || e.key === "PageDown") {
         e.preventDefault();
-        goTo(activeIndex + 1);
+        goTo(activeIndexRef.current + 1);
       } else if (e.key === "ArrowUp" || e.key === "PageUp") {
         e.preventDefault();
-        goTo(activeIndex - 1);
+        goTo(activeIndexRef.current - 1);
       }
     };
 
@@ -599,9 +632,8 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       root.removeEventListener("wheel", handleWheel);
       window.removeEventListener("keydown", handleKey);
     };
-  }, [activeIndex, itemCount, goTo, containerRef]);
+  }, [goTo, containerRef]);
 
-  // transform 위치 계산: -(activeIndex * 100dvh) + dragOffset
   return (
     <div
       ref={containerRef}
@@ -733,11 +765,19 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — 3:4 비율로 가운데 정렬 (PostItem과 동일) */}
-      <div className="absolute inset-0 flex items-center justify-center px-2">
+      {/* 메인 미디어 — 3:4 비율, 상단 가까이 배치하여 하단 정보 영역과 겹치지 않게 */}
+      <div
+        className="absolute left-0 right-0 flex justify-center px-2"
+        style={{
+          top: "calc(env(safe-area-inset-top, 0px) + 64px)",
+        }}
+      >
         <div
           className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl"
-          style={{ aspectRatio: "3 / 4", maxHeight: "calc(100dvh - 200px)" }}
+          style={{
+            aspectRatio: "3 / 4",
+            maxHeight: "calc(100dvh - 290px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+          }}
         >
           {hasVideo && effectiveVideoUrl ? (
             <video
