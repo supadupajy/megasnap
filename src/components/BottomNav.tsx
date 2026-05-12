@@ -27,10 +27,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 
-const navItems = [
+const navItems: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  path: string;
+  iconSizeClass?: string; // 기본 w-6 h-6 외에 따로 키우거나 줄이고 싶을 때 override
+}[] = [
   { icon: Map, label: '지도', path: '/' },
   { icon: Flame, label: '인기', path: '/popular' },
-  { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks' },
+  { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks', iconSizeClass: 'w-7 h-7' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
@@ -234,7 +239,8 @@ const BottomNav = () => {
               >
                 <Icon
                   className={cn(
-                    'w-6 h-6 transition-all duration-200',
+                    item.iconSizeClass || 'w-6 h-6',
+                    'transition-all duration-200',
                     isActive ? 'scale-110 text-gray-900' : 'scale-100 text-gray-400'
                   )}
                 />
