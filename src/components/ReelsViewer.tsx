@@ -1179,6 +1179,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               currentTime={isScrubbing ? scrubTime : currentTime}
               duration={duration}
               isScrubbing={isScrubbing}
+              compact={embedded}
               onScrubStart={() => {
                 const v = videoRef.current;
                 if (!v) return;
@@ -1621,6 +1622,8 @@ interface VideoTimelineProps {
   onScrubStart: () => void;
   onScrub: (t: number) => void;
   onScrubEnd: (t: number) => void;
+  // compact: 영상 가로 길이의 우측 절반에만 타임라인 표시 (닉네임/콘텐츠 오버레이와 겹치지 않도록)
+  compact?: boolean;
 }
 
 const formatTime = (sec: number) => {
@@ -1637,6 +1640,7 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
   onScrubStart,
   onScrub,
   onScrubEnd,
+  compact = false,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -1703,7 +1707,11 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
 
   return (
     <div
-      className="absolute left-0 right-0 bottom-0 z-30 select-none"
+      className={cn(
+        "absolute bottom-0 z-30 select-none",
+        // compact 모드: 우측 절반에만 타임라인 표시
+        compact ? "left-1/2 right-0" : "left-0 right-0"
+      )}
       // 부모(미디어 영역)의 탭/스와이프 핸들러가 타임라인 조작을 가로채지 않도록 차단
       onClick={(e) => e.stopPropagation()}
       style={{ touchAction: "none" }}
