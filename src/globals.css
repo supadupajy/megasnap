@@ -1,4 +1,10 @@
-@import url('https://cdn.jsdelivr.net/gh/fonts-archive/LINESeedKR/subsets/LINESeedKR-dynamic-subset.css');
+/*
+  [FIX] dynamic-subset 방식 제거.
+  - dynamic-subset은 글자 단위로 weight별 파일을 비동기 로드해서
+    모바일에서 일부 글자만 먼저 볼드로 보이는 "볼드 혼재" 현상이 발생.
+  - 정적 CSS는 weight별 통합 파일을 한 번만 로드하므로 안정적임.
+  - 실제 로드는 index.html의 <link>가 담당하므로 여기서는 import하지 않음.
+*/
 
 @tailwind base;
 @tailwind components;
@@ -44,7 +50,15 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'LINE Seed KR', sans-serif;
+    font-family: 'LINE Seed KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+    /* [FIX] 모바일 브라우저(특히 안드로이드 WebView)가 폰트가 늦게 로드된 글자에
+       대해 임의로 굵게 합성(synthetic bold)을 적용해서 텍스트 두께가 혼재되어
+       보이는 현상 방지. font-synthesis: none을 적용하면 폰트에 정의된 weight만
+       사용하고, 정의되지 않은 weight 글자는 fallback 폰트의 원래 두께를 유지. */
+    font-synthesis: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     /* [FIX] 안드로이드/iOS 상태바 침범 방지 - 상단만 적용, 하단은 BottomNav에서 처리 */
     padding-top: env(safe-area-inset-top, 0px) !important;
     padding-bottom: 0px !important;
