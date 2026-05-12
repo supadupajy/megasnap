@@ -450,19 +450,17 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     return !!p.videoUrl || isVideoUrl(p.image_url || p.image);
   }, [items, activeIndex]);
 
-  // ── 스와이프 방향에 따른 회전 카운터 ─────────────────────
-  // 위로 스와이프(=activeIndex 증가) → spin +1 (시계방향, 버튼 윗부분이 오른쪽→아래로 굴러감)
-  // 아래로 스와이프(=activeIndex 감소) → spin -1 (반시계방향, 버튼 윗부분이 왼쪽→아래로 굴러감)
-  // 같은 슬라이드 사이를 왔다갔다 해도 항상 스와이프 방향대로 회전한다.
-  const [spinCount, setSpinCount] = useState(0);
+  // ── 스와이프 방향에 따른 버튼 슬라이드 인/아웃 효과 ─────────────
+  // 위로 스와이프(=activeIndex 증가) → direction = 1
+  //   : 이전 버튼은 위로 사라지고, 새 버튼이 아래에서 올라오며 등장
+  // 아래로 스와이프(=activeIndex 감소) → direction = -1
+  //   : 이전 버튼은 아래로 사라지고, 새 버튼이 위에서 내려오며 등장
+  const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
   const prevActiveIndexRef = useRef(activeIndex);
   useEffect(() => {
     const prev = prevActiveIndexRef.current;
-    if (activeIndex > prev) {
-      setSpinCount((s) => s + (activeIndex - prev));
-    } else if (activeIndex < prev) {
-      setSpinCount((s) => s - (prev - activeIndex));
-    }
+    if (activeIndex > prev) setSwipeDir(1);
+    else if (activeIndex < prev) setSwipeDir(-1);
     prevActiveIndexRef.current = activeIndex;
   }, [activeIndex]);
 
@@ -557,62 +555,99 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       </AnimatePresence>
 
       {/* embedded ranked 모드 전용 — 화면에 고정된 좌상단 순위 뱃지 / 우상단 X 버튼.
-          슬라이드 트랙 바깥에 두어 스와이프 중에도 위치가 그대로 유지되고,
-          activeIndex가 바뀔 때마다 제자리에서 한 바퀴(360°) 회전한다.
-          (포스트 영상/이미지 컨테이너와 동일하게 화면 가로 전체에 펼쳐지므로
-           top-3 / left-3 / right-3가 시각적으로 미디어의 모서리와 동일하게 정렬됨) */}
+          슬라이드 트랙 바깥에 두어 스와이프 중에도 위치가 그대로 유지된다.
+          외곽 컨테이너는 버튼 모양(알약/원)에 맞춰 overflow-hidden으로 클리핑하고,
+          내부의 뱃지/X 아이콘만 스와이프 방향에 맞춰 위/아래로 슬라이드 인/아웃 한다.
+          - 위로 스와이프(swipeDir=1)  : 이전 내용 위로 빠짐, 새 내용 아래에서 올라옴
+          - 아래로 스와이프(swipeDir=-1): 이전 내용 아래로 빠짐, 새 내용 위에서 내려옴 */}
       {embedded && isRankedMode && (() => {
         const rank = activeIndex + 1;
         return (
-          <motion.div
-            initial={false}
-            animate={{ rotate: spinCount * 360 }}
-            transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
+          <div
             className={cn(
-              "absolute top-3 left-3 z-40 pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
+              "absolute top-3 left-3 z-40 pointer-events-auto h-9 rounded-full shadow-lg backdrop-blur-md border border-white/20 overflow-hidden",
               rank === 1
-                ? "from-amber-400 to-amber-500 shadow-amber-500/40"
+                ? "shadow-amber-500/40"
                 : rank === 2
-                ? "from-slate-300 to-slate-400 shadow-slate-400/40"
+                ? "shadow-slate-400/40"
                 : rank === 3
-                ? "from-orange-400 to-orange-500 shadow-orange-500/40"
-                : "from-gray-300 to-gray-300 shadow-gray-400/40"
+                ? "shadow-orange-500/40"
+                : "shadow-gray-400/40"
             )}
             aria-label={`${rank}위`}
           >
-            <span
-              className={cn(
-                "text-[14px] font-black tabular-nums leading-none tracking-tight",
-                rank <= 3 ? "text-white" : "text-gray-900"
-              )}
-            >
-              {rank}
-            </span>
-            <span
-              className={cn(
-                "text-[10px] font-black leading-none tracking-tight",
-                rank <= 3 ? "text-white" : "text-gray-900"
-              )}
-            >
-              위
-            </span>
-          </motion.div>
+            <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
+              <motion.div
+                key={`rank-${rank}`}
+                custom={swipeDir}
+                variants={{
+                  enter: (dir: 1 | -1) => ({ y: dir === 1 ? "100%" : "-100%", opacity: 0 }),
+                  center: { y: "0%", opacity: 1 },
+                  exit: (dir: 1 | -1) => ({ y: dir === 1 ? "-100%" : "100%", opacity: 0 }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
+                className={cn(
+                  "inline-flex items-center gap-1 h-9 px-3 bg-gradient-to-br",
+                  rank === 1
+                    ? "from-amber-400 to-amber-500"
+                    : rank === 2
+                    ? "from-slate-300 to-slate-400"
+                    : rank === 3
+                    ? "from-orange-400 to-orange-500"
+                    : "from-gray-300 to-gray-300"
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-[14px] font-black tabular-nums leading-none tracking-tight",
+                    rank <= 3 ? "text-white" : "text-gray-900"
+                  )}
+                >
+                  {rank}
+                </span>
+                <span
+                  className={cn(
+                    "text-[10px] font-black leading-none tracking-tight",
+                    rank <= 3 ? "text-white" : "text-gray-900"
+                  )}
+                >
+                  위
+                </span>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         );
       })()}
 
       {embedded && showInlineCloseButton && (
-        <motion.button
+        <button
           type="button"
           onClick={onClose}
           aria-label="닫기"
-          initial={false}
-          animate={{ rotate: spinCount * 360 }}
-          transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
-          whileTap={{ scale: 0.9 }}
-          className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10"
+          className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10 overflow-hidden active:scale-95 transition-transform"
         >
-          <X className="w-4 h-4 text-white" />
-        </motion.button>
+          <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
+            <motion.span
+              key={`x-${activeIndex}`}
+              custom={swipeDir}
+              variants={{
+                enter: (dir: 1 | -1) => ({ y: dir === 1 ? 18 : -18, opacity: 0 }),
+                center: { y: 0, opacity: 1 },
+                exit: (dir: 1 | -1) => ({ y: dir === 1 ? -18 : 18, opacity: 0 }),
+              }}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.32, ease: [0.22, 0.61, 0.36, 1] }}
+              className="inline-flex items-center justify-center"
+            >
+              <X className="w-4 h-4 text-white" />
+            </motion.span>
+          </AnimatePresence>
+        </button>
       )}
 
       {/* Transform 기반 슬라이더 — 한 번에 1개씩만 이동 (스와이프 강도와 무관) */}
