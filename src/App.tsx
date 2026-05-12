@@ -52,6 +52,7 @@ import DBImageCompression from "./pages/DBImageCompression";
 import DeleteAccount from "./pages/DeleteAccount";
 import AuthCallback from "./pages/AuthCallback";
 import NearbyPosts from "./pages/NearbyPosts";
+import Flicks from "./pages/Flicks";
 import PostSearchOverlay from "./components/PostSearchOverlay";
 
 const queryClient = new QueryClient();
@@ -265,6 +266,7 @@ const AnimatedRoutes = () => {
               <Route path="/settings/db-image-compression" element={<ProtectedRoute><DBImageCompression /></ProtectedRoute>} />
               <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
               <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
+              <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
               <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             </Routes>
           </motion.div>

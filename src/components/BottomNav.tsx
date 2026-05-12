@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Map, Flame, PlusCircle, UsersRound, User } from 'lucide-react';
+import { Map, Flame, Clapperboard, UsersRound, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -13,7 +13,7 @@ import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 const navItems = [
   { icon: Map, label: '지도', path: '/' },
   { icon: Flame, label: '인기', path: '/popular' },
-  { icon: PlusCircle, label: '업로드', path: '/write' },
+  { icon: Clapperboard, label: 'Flicks', path: '/flicks' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
@@ -29,8 +29,8 @@ const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[]
   { match: (p) => p.startsWith('/popular'), tabPath: '/popular' },
   // 내정보 탭: /profile, /settings 하위 경로
   { match: (p) => p.startsWith('/profile') || p.startsWith('/settings'), tabPath: '/profile' },
-  // 업로드 탭
-  { match: (p) => p.startsWith('/write'), tabPath: '/write' },
+  // Flicks 탭
+  { match: (p) => p.startsWith('/flicks'), tabPath: '/flicks' },
 ];
 
 const PILL_WIDTH = 64;
