@@ -63,11 +63,23 @@ type ReelItem =
 interface ReelsViewerProps {
   isOpen: boolean;
   initialPost: Post | null;
-  pool: Post[]; // 알고리즘에서 사용할 인기 포스트 풀
+  pool: Post[]; // 알고리즘에서 사용할 인기 포스트 풀 (shuffle 모드 전용)
   onClose: () => void;
+  // ranked 모드: 1~20위 같은 고정 순서로 보여주고, 무한 스크롤/셔플/광고 없음
+  // rankedPosts의 0번 인덱스가 1위, 1번이 2위, ...
+  mode?: "shuffle" | "ranked";
+  rankedPosts?: Post[];
 }
 
-const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, onClose }) => {
+const ReelsViewer: React.FC<ReelsViewerProps> = ({
+  isOpen,
+  initialPost,
+  pool,
+  onClose,
+  mode = "shuffle",
+  rankedPosts,
+}) => {
+  const isRankedMode = mode === "ranked";
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
 
@@ -104,8 +116,45 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
   const seenIdsRef = useRef<Set<string>>(new Set());
 
   // 초기화: initialPost를 첫 슬라이드로 두고, 풀에서 셔플한 나머지를 큐에 보관
+  // ranked 모드: rankedPosts 전체를 고정 순서로 사용, initialPost는 시작 인덱스만 결정
   useEffect(() => {
     if (!isOpen || !initialPost) return;
+
+    if (isRankedMode) {
+      const list = rankedPosts && rankedPosts.length > 0 ? rankedPosts : [initialPost];
+      const rankedItems: ReelItem[] = list.map((p) => ({
+        kind: "post",
+        post: p,
+        key: `ranked-post-${p.id}`,
+      }));
+
+      const startIdx = Math.max(
+        0,
+        list.findIndex((p) => p.id === initialPost.id)
+      );
+
+      // 좋아요/저장 초기 상태 시드
+      const seedLikes: Record<string, { liked: boolean; count: number }> = {};
+      const seedSaved: Record<string, boolean> = {};
+      list.forEach((p) => {
+        seedLikes[p.id] = { liked: !!p.isLiked, count: p.likes || 0 };
+        seedSaved[p.id] = !!p.isSaved;
+      });
+
+      // ranked 모드에서는 큐/seen 사용 안 함
+      queueRef.current = [];
+      seenIdsRef.current = new Set(list.map((p) => p.id));
+
+      setItems(rankedItems);
+      setActiveIndex(startIdx);
+      setLikeMap(seedLikes);
+      setSavedMap(seedSaved);
+
+      requestAnimationFrame(() => {
+        if (containerRef.current) containerRef.current.scrollTop = 0;
+      });
+      return;
+    }
 
     seenIdsRef.current = new Set([initialPost.id]);
     const remaining = pool.filter((p) => p.id !== initialPost.id);
@@ -151,7 +200,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     requestAnimationFrame(() => {
       if (containerRef.current) containerRef.current.scrollTop = 0;
     });
-  }, [isOpen, initialPost?.id]);
+  }, [isOpen, initialPost?.id, isRankedMode, rankedPosts]);
 
   // 풀에서 더 가져오기 (큐가 부족하면 알고리즘으로 재셔플)
   const appendMore = useCallback(() => {
@@ -209,14 +258,15 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
     // 새 슬라이드로 이동해도 사용자가 마지막에 선택한 UI 표시 상태를 유지함
   }, [activeIndex, isOpen]);
 
-  // 끝에 가까워지면 추가 로드
+  // 끝에 가까워지면 추가 로드 (ranked 모드에서는 무한 스크롤 없음)
   useEffect(() => {
     if (!isOpen) return;
+    if (isRankedMode) return;
     if (items.length === 0) return;
     if (activeIndex >= items.length - 3) {
       appendMore();
     }
-  }, [activeIndex, items.length, isOpen, appendMore]);
+  }, [activeIndex, items.length, isOpen, appendMore, isRankedMode]);
 
   // 모달 열림 시 body 스크롤 잠금 + 전역 플래그/이벤트
   useEffect(() => {
@@ -335,26 +385,61 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({ isOpen, initialPost, pool, on
         transition={{ duration: 0.2 }}
         className="fixed inset-0 z-[9999] bg-black"
       >
-        {/* 음소거 토글 (좌측, 비디오일 때만) + 닫기 버튼 (우측) */}
+        {/* 좌측: 순위 뱃지 (ranked 모드) + 음소거 토글 (비디오일 때만) / 우측: 닫기 버튼 */}
         <div
           className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between px-4 pointer-events-none"
           style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
         >
-          {activeIsVideo ? (
-            <button
-              onClick={() => setMuted((m) => !m)}
-              className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
-              aria-label={muted ? "음소거 해제" : "음소거"}
-            >
-              {muted ? (
-                <VolumeX className="w-5 h-5 text-white" />
-              ) : (
-                <Volume2 className="w-5 h-5 text-white" />
-              )}
-            </button>
-          ) : (
-            <div className="w-10 h-10" aria-hidden="true" />
-          )}
+          <div className="flex items-center gap-2">
+            {isRankedMode && (() => {
+              const rank = activeIndex + 1;
+              // 1~3위는 메달 컬러, 그 외는 인디고
+              const palette =
+                rank === 1
+                  ? { bg: "from-amber-400 to-amber-500", text: "text-white", glow: "shadow-amber-500/40" }
+                  : rank === 2
+                  ? { bg: "from-slate-300 to-slate-400", text: "text-white", glow: "shadow-slate-400/40" }
+                  : rank === 3
+                  ? { bg: "from-orange-400 to-orange-500", text: "text-white", glow: "shadow-orange-500/40" }
+                  : { bg: "from-indigo-500 to-violet-600", text: "text-white", glow: "shadow-indigo-500/40" };
+              return (
+                <motion.div
+                  key={`rank-${rank}`}
+                  initial={{ opacity: 0, scale: 0.85, y: -6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className={cn(
+                    "pointer-events-auto inline-flex items-center gap-1 h-10 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
+                    palette.bg,
+                    palette.glow
+                  )}
+                  aria-label={`${rank}위`}
+                >
+                  <span className={cn("text-[15px] font-black tabular-nums leading-none tracking-tight", palette.text)}>
+                    {rank}
+                  </span>
+                  <span className={cn("text-[11px] font-black leading-none tracking-tight", palette.text)}>위</span>
+                </motion.div>
+              );
+            })()}
+
+            {activeIsVideo && (
+              <button
+                onClick={() => setMuted((m) => !m)}
+                className="pointer-events-auto w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform"
+                aria-label={muted ? "음소거 해제" : "음소거"}
+              >
+                {muted ? (
+                  <VolumeX className="w-5 h-5 text-white" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-white" />
+                )}
+              </button>
+            )}
+
+            {/* 좌측 영역 비어있을 때 우측 X 버튼과의 정렬을 위한 최소 높이 확보 */}
+            {!isRankedMode && !activeIsVideo && <div className="w-10 h-10" aria-hidden="true" />}
+          </div>
 
           <button
             onClick={onClose}

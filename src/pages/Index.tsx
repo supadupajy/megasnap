@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
+import ReelsViewer from '@/components/ReelsViewer';
 import PostDetail from '@/components/PostDetail';
 import PlaceSearch from '@/components/PlaceSearch';
 import CategoryMenu from '@/components/CategoryMenu';
@@ -1574,30 +1575,22 @@ const Index = () => {
     };
   }, []);
 
+  // ── 실시간 인기 TOP20 릴스 뷰어 ──────────────────────────────
+  // 트렌딩 리스트의 N위를 누르면 ReelsViewer를 ranked 모드로 열어
+  // 1~20위를 순서대로 보여주고, 클릭한 순위에서 시작한다.
+  const [trendingReelsInitialPost, setTrendingReelsInitialPost] = useState<Post | null>(null);
+
   const handleTrendingPostClick = useCallback((post: Post) => {
     setIsTrendingExpanded(false);
+    // 패널 닫힘 애니메이션이 살짝 진행된 뒤 풀스크린 뷰어를 연다
+    window.setTimeout(() => {
+      setTrendingReelsInitialPost(post);
+    }, 180);
+  }, []);
 
-    // 트렌딩 포스트가 allPosts에 없으면 먼저 추가 (bounds 밖 포스트도 마커로 표시되도록)
-    setAllPosts(prev => {
-      if (prev.some(p => p.id === post.id)) return prev;
-      const combined = [post, ...prev];
-      mapCache.posts = combined;
-      return combined;
-    });
-
-    // 줌 레벨 7 이상이면 마커가 숨겨지므로 6으로 강제 변경
-    const needsZoomChange = currentZoomRef.current >= 7;
-    if (needsZoomChange) {
-      setCurrentZoom(6);
-      currentZoomRef.current = 6;
-    }
-
-    // TrendingPosts 패널 닫힘(500ms) + 줌 변경 시 마커 렌더링 대기(추가 300ms)
-    const delay = needsZoomChange ? 900 : 700;
-    setTimeout(() => {
-      focusPostOnMap(post, { lat: post.lat, lng: post.lng });
-    }, delay);
-  }, [focusPostOnMap]);
+  const handleCloseTrendingReels = useCallback(() => {
+    setTrendingReelsInitialPost(null);
+  }, []);
 
   return (
     <>
@@ -1980,6 +1973,16 @@ const Index = () => {
         onClose={() => setIsSearchOpen(false)}
         onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }}
         mapCenter={mapData?.center || mapCache.lastCenter}
+      />
+
+      {/* 실시간 인기 TOP20 풀스크린 릴스 뷰어 */}
+      <ReelsViewer
+        isOpen={!!trendingReelsInitialPost}
+        initialPost={trendingReelsInitialPost}
+        pool={globalTrendingPosts}
+        mode="ranked"
+        rankedPosts={globalTrendingPosts}
+        onClose={handleCloseTrendingReels}
       />
     </>
   );
