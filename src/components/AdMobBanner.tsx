@@ -23,15 +23,16 @@ interface AdMobBannerProps {
 const AdMobBanner: React.FC<AdMobBannerProps> = ({ className = '' }) => {
   return (
     <div
-      className={`relative w-full max-w-full overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-black border-b border-white/5 ${className}`}
+      className={`relative w-full max-w-full overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-black border-b border-white/5 flex items-center justify-center ${className}`}
+      style={{ minHeight: '600px' }}
     >
       {/* 배경 글로우 장식 */}
-      <div className="absolute -top-16 -right-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-16 -left-16 w-72 h-72 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 left-1/3 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute -top-20 -right-20 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/3 left-1/4 w-40 h-40 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
 
       {/* 콘텐츠 */}
-      <div className="relative z-10 flex flex-col items-center gap-4 px-6 py-8">
+      <div className="relative z-10 flex flex-col items-center gap-5 px-6 py-12 w-full">
         {/* AD 배지 */}
         <div className="flex items-center gap-2">
           <span className="bg-white text-indigo-700 text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
