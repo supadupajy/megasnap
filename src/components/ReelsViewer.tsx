@@ -450,6 +450,22 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     return !!p.videoUrl || isVideoUrl(p.image_url || p.image);
   }, [items, activeIndex]);
 
+  // ── 스와이프 방향에 따른 회전 카운터 ─────────────────────
+  // 위로 스와이프(=activeIndex 증가) → spin +1 (시계방향, 버튼 윗부분이 오른쪽→아래로 굴러감)
+  // 아래로 스와이프(=activeIndex 감소) → spin -1 (반시계방향, 버튼 윗부분이 왼쪽→아래로 굴러감)
+  // 같은 슬라이드 사이를 왔다갔다 해도 항상 스와이프 방향대로 회전한다.
+  const [spinCount, setSpinCount] = useState(0);
+  const prevActiveIndexRef = useRef(activeIndex);
+  useEffect(() => {
+    const prev = prevActiveIndexRef.current;
+    if (activeIndex > prev) {
+      setSpinCount((s) => s + (activeIndex - prev));
+    } else if (activeIndex < prev) {
+      setSpinCount((s) => s - (prev - activeIndex));
+    }
+    prevActiveIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
   if (!isOpen) return null;
 
   // 슬라이드 트랙 + 끝 슬라이드 콜백 (embedded 모드에서는 닫기 동작이 없음 → onClose는 페이지 뒤로가기로 위임)
@@ -550,7 +566,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         return (
           <motion.div
             initial={false}
-            animate={{ rotate: activeIndex * 360 }}
+            animate={{ rotate: spinCount * 360 }}
             transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
             className={cn(
               "absolute top-3 left-3 z-40 pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
@@ -590,7 +606,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
           onClick={onClose}
           aria-label="닫기"
           initial={false}
-          animate={{ rotate: activeIndex * 360 }}
+          animate={{ rotate: spinCount * 360 }}
           transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
           whileTap={{ scale: 0.9 }}
           className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10"
