@@ -27,6 +27,7 @@ import { toggleLikeInDb } from "@/utils/like-utils";
 import { cn, getOptimizedFeedImage, getFallbackImage } from "@/lib/utils";
 import { handleShare } from "@/utils/share";
 import PostCommentsDialog from "@/components/PostCommentsDialog";
+import PostUserAvatar from "@/components/PostUserAvatar";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 
 // 광고 삽입 주기 (포스팅 3개마다 광고 1개)
@@ -805,8 +806,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 메인 미디어 — 3:4 비율, X 버튼과 닉네임 사이 정중앙에 배치 */}
-      {/* 상단 헤더 영역(X 버튼 아래 ~64px) ~ 하단 정보 영역(액션 알약 위 ~210px) 사이를 가용 공간으로 두고 가운데 정렬 */}
+      {/* 메인 미디어 — 3:4 비율, X 버튼과 닉네임 사이 정확한 정중앙에 배치 */}
+      {/* 상단 헤더(X 버튼 아래 ~64px) ~ 하단 정보 영역(액션 알약 위 ~210px) 사이를 가용 공간으로 두고 가운데 정렬 */}
       <div
         className="absolute left-0 right-0 flex items-center justify-center px-2"
         style={{
@@ -815,10 +816,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         }}
       >
         <div
-          className="relative w-full bg-black rounded-2xl overflow-hidden shadow-2xl"
+          className="relative bg-black rounded-2xl overflow-hidden shadow-2xl"
           style={{
             aspectRatio: "3 / 4",
-            maxHeight: "100%",
+            height: "100%",
+            maxWidth: "calc(100vw - 16px)",
           }}
         >
           {hasVideo && effectiveVideoUrl ? (
@@ -866,17 +868,16 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           <div className="text-white pointer-events-auto mb-3">
             <button
               onClick={onUserClick}
-              className="flex items-center gap-2 mb-2 active:opacity-70 transition-opacity"
+              className="group flex items-center gap-2 mb-2 active:opacity-70 transition-opacity"
             >
-              <div className="w-9 h-9 rounded-full overflow-hidden bg-gray-700 ring-2 ring-white/30">
-                {post.user.avatar ? (
-                  <img src={post.user.avatar} alt={post.user.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold">
-                    {post.user.name?.[0] || "?"}
-                  </div>
-                )}
-              </div>
+              <PostUserAvatar
+                name={post.user.name}
+                avatar={post.user.avatar}
+                postId={post.id}
+                userId={post.user.id}
+                size="sm"
+                activePress
+              />
               <span className="text-sm font-black drop-shadow-md">{post.user.name}</span>
             </button>
 
