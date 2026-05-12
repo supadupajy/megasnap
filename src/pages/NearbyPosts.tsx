@@ -322,7 +322,7 @@ const NearbyPosts = () => {
         />
       </div>
 
-      <div className="flex flex-col">
+      <div className="flex flex-col isolate">
         {(() => {
           const items: React.ReactNode[] = [];
           let postCount = 0;
