@@ -540,6 +540,65 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         )}
       </AnimatePresence>
 
+      {/* embedded ranked 모드 전용 — 화면에 고정된 좌상단 순위 뱃지 / 우상단 X 버튼.
+          슬라이드 트랙 바깥에 두어 스와이프 중에도 위치가 그대로 유지되고,
+          activeIndex가 바뀔 때마다 제자리에서 한 바퀴(360°) 회전한다.
+          (포스트 영상/이미지 컨테이너와 동일하게 화면 가로 전체에 펼쳐지므로
+           top-3 / left-3 / right-3가 시각적으로 미디어의 모서리와 동일하게 정렬됨) */}
+      {embedded && isRankedMode && (() => {
+        const rank = activeIndex + 1;
+        return (
+          <motion.div
+            initial={false}
+            animate={{ rotate: activeIndex * 360 }}
+            transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
+            className={cn(
+              "absolute top-3 left-3 z-40 pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
+              rank === 1
+                ? "from-amber-400 to-amber-500 shadow-amber-500/40"
+                : rank === 2
+                ? "from-slate-300 to-slate-400 shadow-slate-400/40"
+                : rank === 3
+                ? "from-orange-400 to-orange-500 shadow-orange-500/40"
+                : "from-gray-300 to-gray-300 shadow-gray-400/40"
+            )}
+            aria-label={`${rank}위`}
+          >
+            <span
+              className={cn(
+                "text-[14px] font-black tabular-nums leading-none tracking-tight",
+                rank <= 3 ? "text-white" : "text-gray-900"
+              )}
+            >
+              {rank}
+            </span>
+            <span
+              className={cn(
+                "text-[10px] font-black leading-none tracking-tight",
+                rank <= 3 ? "text-white" : "text-gray-900"
+              )}
+            >
+              위
+            </span>
+          </motion.div>
+        );
+      })()}
+
+      {embedded && showInlineCloseButton && (
+        <motion.button
+          type="button"
+          onClick={onClose}
+          aria-label="닫기"
+          initial={false}
+          animate={{ rotate: activeIndex * 360 }}
+          transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
+          whileTap={{ scale: 0.9 }}
+          className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10"
+        >
+          <X className="w-4 h-4 text-white" />
+        </motion.button>
+      )}
+
       {/* Transform 기반 슬라이더 — 한 번에 1개씩만 이동 (스와이프 강도와 무관) */}
       <ReelsSlideTrack
         containerRef={containerRef}
@@ -1045,31 +1104,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const [contentExpanded, setContentExpanded] = useState(false);
   const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
 
-  // ── 스와이프(슬라이드 전환) 시 좌상단 순위 뱃지 / 우상단 X 버튼이
-  //    제자리에서 한 바퀴 회전하는 효과 ───────────────────
-  // post.id가 바뀌거나 inlineRank가 바뀔 때마다 회전 카운터를 누적시켜
-  // framer-motion이 이전 각도 → 새 각도까지 360도 보간하도록 한다.
-  const [rankSpin, setRankSpin] = useState(0);
-  const [closeSpin, setCloseSpin] = useState(0);
-  const prevRankRef = useRef<number | undefined>(inlineRank);
-  const prevPostIdRef = useRef<string | number | undefined>(post.id);
-
-  useEffect(() => {
-    // 첫 마운트는 회전시키지 않음 (이전 값과 동일)
-    if (prevRankRef.current !== inlineRank) {
-      prevRankRef.current = inlineRank;
-      // inlineRank가 정의된 경우에만(=ranked 모드) 회전 트리거
-      if (inlineRank != null) setRankSpin((s) => s + 1);
-    }
-  }, [inlineRank]);
-
-  useEffect(() => {
-    if (prevPostIdRef.current !== post.id) {
-      prevPostIdRef.current = post.id;
-      setCloseSpin((s) => s + 1);
-    }
-  }, [post.id]);
-
   // 영상 타임라인 상태
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -1305,71 +1339,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
                 <Volume2 className="w-4 h-4 text-white" />
               )}
             </button>
-          )}
-
-          {/* 영상/이미지 좌상단 순위 뱃지 (embedded ranked 모드 전용)
-              스와이프로 슬라이드가 바뀌면 제자리에서 한 바퀴(360°) 돌면서 숫자가 갱신됨 */}
-          {inlineRank && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.85, rotate: 0 }}
-              animate={{ opacity: 1, scale: 1, rotate: rankSpin * 360 }}
-              transition={{
-                opacity: { duration: 0.22, ease: "easeOut" },
-                scale: { duration: 0.22, ease: "easeOut" },
-                rotate: { duration: 0.55, ease: [0.22, 0.61, 0.36, 1] },
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-              className={cn(
-                "absolute top-3 left-3 z-40 pointer-events-auto inline-flex items-center gap-1 h-9 px-3 rounded-full bg-gradient-to-br shadow-lg backdrop-blur-md border border-white/20",
-                inlineRank === 1
-                  ? "from-amber-400 to-amber-500 shadow-amber-500/40"
-                  : inlineRank === 2
-                  ? "from-slate-300 to-slate-400 shadow-slate-400/40"
-                  : inlineRank === 3
-                  ? "from-orange-400 to-orange-500 shadow-orange-500/40"
-                  : "from-gray-300 to-gray-300 shadow-gray-400/40"
-              )}
-              aria-label={`${inlineRank}위`}
-            >
-              <span
-                className={cn(
-                  "text-[14px] font-black tabular-nums leading-none tracking-tight",
-                  inlineRank <= 3 ? "text-white" : "text-gray-900"
-                )}
-              >
-                {inlineRank}
-              </span>
-              <span
-                className={cn(
-                  "text-[10px] font-black leading-none tracking-tight",
-                  inlineRank <= 3 ? "text-white" : "text-gray-900"
-                )}
-              >
-                위
-              </span>
-            </motion.div>
-          )}
-
-          {/* 영상/이미지 우상단 닫기(X) 버튼 (embedded 트렌딩 뷰어 전용)
-              스와이프로 슬라이드가 바뀔 때마다 제자리에서 한 바퀴(360°) 도는 효과 */}
-          {showInlineCloseButton && (
-            <motion.button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose?.();
-              }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onPointerUp={(e) => e.stopPropagation()}
-              aria-label="닫기"
-              animate={{ rotate: closeSpin * 360 }}
-              transition={{ duration: 0.55, ease: [0.22, 0.61, 0.36, 1] }}
-              whileTap={{ scale: 0.9 }}
-              className="absolute top-3 right-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10"
-            >
-              <X className="w-4 h-4 text-white" />
-            </motion.button>
           )}
 
           {/* 가로 슬라이더 — 다중 미디어면 좌우 스와이프로 이동, 단일이면 그냥 표시 */}
