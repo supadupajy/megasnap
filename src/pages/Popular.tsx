@@ -234,7 +234,7 @@ const Popular = () => {
           ActionIcon={Search}
           actionLabel="검색"
           onActionClick={() => window.dispatchEvent(new CustomEvent('open-post-search'))}
-          collapsedHint="영상을 눌러 Flicks!"
+          collapsedHint="Flicks!"
         />
       </div>
 
