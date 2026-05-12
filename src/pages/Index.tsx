@@ -403,26 +403,27 @@ const Index = () => {
   const rightMarkerIndicatorTop = ((indicatorTopOffset + (viewportHeight - (indicatorBottomOffset + 8))) / 2) - 26;
 
   // 지도 레벨 인디케이터 위치:
-  // "여기보기" 버튼의 윗변(top edge)과 오른쪽 마커 인디케이터의 아랫변(bottom edge) 사이의
-  // 빈 공간 중앙에 지도 레벨 인디케이터를 배치한다.
+  // 실시간 인기 포스팅 패널(trendingDivRef)의 아랫변과
+  // 오른쪽 마커 인디케이터의 윗변 사이의 빈 공간 중앙에 배치한다.
   //
-  // 좌표계 혼선을 피하기 위해 "여기보기" 버튼의 실제 DOM 위치(getBoundingClientRect)를 측정해서
-  // viewport 절대 좌표상의 버튼 윗변 Y를 직접 얻는다. (안드로이드/iOS/웹 환경 차이 무관)
+  // 좌표계 혼선을 피하기 위해 트렌딩 패널의 실제 DOM 위치(getBoundingClientRect)를 측정해서
+  // viewport 절대 좌표를 직접 얻는다. (안드로이드/iOS/웹 환경 차이 무관)
   const MAP_LEVEL_INDICATOR_HEIGHT = 156;
-  const RIGHT_MARKER_INDICATOR_SIZE = 52;
-  const [viewAllBtnTopY, setViewAllBtnTopY] = useState<number | null>(null);
+  const [trendingBottomY, setTrendingBottomY] = useState<number | null>(null);
   useEffect(() => {
     const measure = () => {
-      const el = viewAllBtnRef.current;
+      const el = trendingDivRef.current;
       if (!el) return;
+      // 트렌딩 패널이 펼쳐진 상태에서는 측정하지 않음(접힌 상태 기준 고정 유지)
+      if (isTrendingExpandedRef.current) return;
       const rect = el.getBoundingClientRect();
-      if (rect.top > 0) {
-        setViewAllBtnTopY(prev => (prev !== null && Math.abs(prev - rect.top) < 0.5 ? prev : rect.top));
+      if (rect.bottom > 0) {
+        setTrendingBottomY(prev => (prev !== null && Math.abs(prev - rect.bottom) < 0.5 ? prev : rect.bottom));
       }
     };
     measure();
     const ro = new ResizeObserver(measure);
-    if (viewAllBtnRef.current) ro.observe(viewAllBtnRef.current);
+    if (trendingDivRef.current) ro.observe(trendingDivRef.current);
     window.addEventListener('resize', measure);
     window.visualViewport?.addEventListener('resize', measure);
     return () => {
@@ -430,16 +431,14 @@ const Index = () => {
       window.removeEventListener('resize', measure);
       window.visualViewport?.removeEventListener('resize', measure);
     };
-  }, [viewportHeight, safeAreaBottom, isSelectingLocation, isSelectingAdLocation]);
+  }, [viewportHeight, safeAreaBottom, isPostListOpen, isSearchOpen, isSelectingLocation, isSelectingAdLocation]);
 
-  const rightMarkerIndicatorBottomY = rightMarkerIndicatorTop + RIGHT_MARKER_INDICATOR_SIZE;
-  // 버튼 측정값이 있으면 그것을 사용, 없으면 계산값으로 fallback (초기 렌더 시 한 프레임)
-  const fallbackBtnTopY =
-    viewportHeight - safeAreaBottom - (bottomNavHeight + Math.max(safeAreaBottom, 8) + 8) - 64;
-  const effectiveBtnTopY = viewAllBtnTopY ?? fallbackBtnTopY;
-  const gapCenterY = (effectiveBtnTopY + rightMarkerIndicatorBottomY) / 2;
-  const minTop = indicatorTopOffset + 8;
-  const maxTop = effectiveBtnTopY - 8 - MAP_LEVEL_INDICATOR_HEIGHT;
+  // 위쪽 경계: 트렌딩 패널 아랫변 (실측값 우선, 없으면 trendingBottom state 기반 fallback)
+  const effectiveTrendingBottomY = trendingBottomY ?? trendingBottom;
+  // 아래쪽 경계: 오른쪽 마커 인디케이터 윗변
+  const gapCenterY = (effectiveTrendingBottomY + rightMarkerIndicatorTop) / 2;
+  const minTop = effectiveTrendingBottomY + 8;
+  const maxTop = rightMarkerIndicatorTop - 8 - MAP_LEVEL_INDICATOR_HEIGHT;
   const mapLevelIndicatorTop = Math.round(
     Math.min(Math.max(gapCenterY - MAP_LEVEL_INDICATOR_HEIGHT / 2, minTop), Math.max(maxTop, minTop)),
   );
