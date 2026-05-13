@@ -18,37 +18,41 @@ const isVideoUrl = (url: string | undefined | null): boolean => {
 };
 
 // ── 24시간 카운트다운 링 (지도 마커와 동일 룰) ─────────────────────────
-// MapContainer.tsx의 상수/path/색상과 1:1 동일하게 유지.
+// 마커는 60x60 박스에 border-radius=20, 패딩=2 로 ring을 그리고 있다.
+// 썸네일은 박스 크기/모서리 반경이 다르므로, 외곽 크기·반경·테두리 두께를
+// 인자로 받아 동일한 path/spark 계산식을 그대로 적용한다.
 const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000;
 const COUNTDOWN_TIMER_UPDATE_MS = 60 * 1000;
-const COUNTDOWN_RING_PADDING = 2;
-const COUNTDOWN_RING_BOX = 60;
-const COUNTDOWN_RING_SIZE = COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2;
-const COUNTDOWN_RING_R = 16;
 const COUNTDOWN_PROGRESS_COLOR = '#39FF14';
 const COUNTDOWN_TRACK_COLOR = 'rgba(34,197,94,0.55)';
 const COUNTDOWN_GLOW = '0 0 4px rgba(57,255,20,0.7)';
 
-const buildCountdownRingPath = (): string => {
-  const pad = COUNTDOWN_RING_PADDING;
-  const size = COUNTDOWN_RING_SIZE;
-  const r = COUNTDOWN_RING_R;
+interface RingGeometry {
+  box: number;          // viewBox 한 변 길이 = 외곽 사각형의 한 변 길이 (px 단위와 동일)
+  pad: number;          // 외곽에서 안쪽으로 들이는 픽셀 (= border 두께 절반 정도)
+  size: number;         // 실제 path가 그려지는 안쪽 사각형 한 변
+  r: number;            // 둥근 모서리 반지름
+  strokeWidth: number;  // stroke 두께
+  perimeter: number;    // path 총 둘레 길이
+  path: string;
+}
+
+const createRingGeometry = (box: number, borderWidth: number, borderRadius: number, strokeWidth: number): RingGeometry => {
+  const pad = borderWidth / 2 + 0.5;
+  const size = box - pad * 2;
+  const r = Math.max(0, borderRadius - pad);
   const left = pad;
   const right = pad + size;
   const top = pad;
   const bottom = pad + size;
   const cx = pad + size / 2;
-  return `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left} ${top + r} V ${bottom - r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right} ${bottom - r} V ${top + r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
+  const path = `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left} ${top + r} V ${bottom - r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right} ${bottom - r} V ${top + r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
+  const perimeter = 4 * (size - 2 * r) + 2 * Math.PI * r;
+  return { box, pad, size, r, strokeWidth, perimeter, path };
 };
 
-const COUNTDOWN_RING_PERIMETER =
-  4 * (COUNTDOWN_RING_SIZE - 2 * COUNTDOWN_RING_R) + 2 * Math.PI * COUNTDOWN_RING_R;
-const COUNTDOWN_RING_PATH = buildCountdownRingPath();
-
-const getCountdownRingSparkPoint = (remainingRatio: number): { x: number; y: number } => {
-  const pad = COUNTDOWN_RING_PADDING;
-  const size = COUNTDOWN_RING_SIZE;
-  const r = COUNTDOWN_RING_R;
+const getRingSparkPoint = (geo: RingGeometry, remainingRatio: number): { x: number; y: number } => {
+  const { pad, size, r, perimeter } = geo;
   const left = pad;
   const right = pad + size;
   const top = pad;
@@ -58,7 +62,7 @@ const getCountdownRingSparkPoint = (remainingRatio: number): { x: number; y: num
   const halfTop = size / 2 - r;
   const straight = size - 2 * r;
   const arc = (Math.PI * r) / 2;
-  let d = (COUNTDOWN_RING_PERIMETER * remainingRatio) % COUNTDOWN_RING_PERIMETER;
+  let d = (perimeter * remainingRatio) % perimeter;
 
   if (d <= halfTop) return { x: cx - d, y: top };
   d -= halfTop;
@@ -94,6 +98,12 @@ const getCountdownRingSparkPoint = (remainingRatio: number): { x: number; y: num
   d -= arc;
   return { x: right - r - d, y: top };
 };
+
+// 썸네일 박스 사이즈별 ring geometry (Tailwind 클래스와 일치시켜야 함)
+// - 펼친 리스트: w-12 h-12 (48px), rounded-xl (12px), border 2.5px
+// - 접힌 헤더:   w-6  h-6  (24px), rounded-lg (8px),  border 1.5px
+const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 12, 3);
+const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 8, 1.8);
 
 const getPostCreatedAtMs = (post: Post): number | null => {
   const raw = post.createdAt;
@@ -288,7 +298,8 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
 // - 12시 방향에서 시계 반대방향으로 한 바퀴 도는 둥근 사각형 path
 // - dashoffset을 음수로 늘려 시작점부터 깎아내며 끝점이 반시계로 후퇴
 // - 끝점에는 펄스 spark (남은 시간이 1~99% 사이일 때만 표시)
-const ThumbnailCountdownRing: React.FC<{ post: Post; now: number }> = ({ post, now }) => {
+// - 박스 크기/모서리 반경/테두리 두께에 맞춰 path를 재계산하여 외곽에 hug
+const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; geometry: RingGeometry }> = ({ post, now, geometry }) => {
   if (!isThumbnailExpirable(post)) return null;
 
   const createdAtMs = getPostCreatedAtMs(post);
@@ -299,14 +310,13 @@ const ThumbnailCountdownRing: React.FC<{ post: Post; now: number }> = ({ post, n
 
   const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
   const elapsedRatio = 1 - remainingRatio;
-  const dashOffset = -(COUNTDOWN_RING_PERIMETER * elapsedRatio);
-  const spark = getCountdownRingSparkPoint(elapsedRatio);
+  const dashOffset = -(geometry.perimeter * elapsedRatio);
+  const spark = getRingSparkPoint(geometry, elapsedRatio);
   const showSpark = remainingRatio > 0.01 && remainingRatio < 0.995;
 
   return (
     <svg
-      viewBox={`0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}`}
-      preserveAspectRatio="none"
+      viewBox={`0 0 ${geometry.box} ${geometry.box}`}
       style={{
         position: 'absolute',
         inset: 0,
@@ -319,21 +329,21 @@ const ThumbnailCountdownRing: React.FC<{ post: Post; now: number }> = ({ post, n
       aria-hidden="true"
     >
       <path
-        d={COUNTDOWN_RING_PATH}
+        d={geometry.path}
         fill="none"
         stroke={COUNTDOWN_TRACK_COLOR}
-        strokeWidth={4}
+        strokeWidth={geometry.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d={COUNTDOWN_RING_PATH}
+        d={geometry.path}
         fill="none"
         stroke={COUNTDOWN_PROGRESS_COLOR}
-        strokeWidth={4}
+        strokeWidth={geometry.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeDasharray={COUNTDOWN_RING_PERIMETER.toFixed(2)}
+        strokeDasharray={geometry.perimeter.toFixed(2)}
         strokeDashoffset={dashOffset.toFixed(2)}
         style={{ filter: `drop-shadow(${COUNTDOWN_GLOW})` }}
       />
@@ -342,11 +352,11 @@ const ThumbnailCountdownRing: React.FC<{ post: Post; now: number }> = ({ post, n
           transform={`translate(${spark.x.toFixed(2)} ${spark.y.toFixed(2)})`}
           style={{ filter: 'drop-shadow(0 0 5px rgba(57,255,20,0.95))' }}
         >
-          <circle cx="0" cy="0" r="5" fill="rgba(57,255,20,0.22)">
-            <animate attributeName="r" values="3;6;3" dur="1.15s" repeatCount="indefinite" />
+          <circle cx="0" cy="0" r={geometry.strokeWidth * 1.4} fill="rgba(57,255,20,0.22)">
+            <animate attributeName="r" values={`${geometry.strokeWidth};${geometry.strokeWidth * 1.9};${geometry.strokeWidth}`} dur="1.15s" repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.15s" repeatCount="indefinite" />
           </circle>
-          <circle cx="0" cy="0" r="2.1" fill="#ecfccb" stroke="#39FF14" strokeWidth={1}>
+          <circle cx="0" cy="0" r={geometry.strokeWidth * 0.7} fill="#ecfccb" stroke="#39FF14" strokeWidth={geometry.strokeWidth * 0.35}>
             <animate attributeName="opacity" values="1;0.45;1" dur="0.75s" repeatCount="indefinite" />
           </circle>
         </g>
@@ -368,6 +378,7 @@ const PostThumbnail: React.FC<{
   const imageUrl = post.image_url || post.image;
   const hasStoredThumbnail = !!imageUrl && !isVideoUrl(imageUrl) && imageUrl !== '/placeholder.svg';
   const isVideo = !!videoUrl || isVideoUrl(imageUrl);
+  const ringGeometry = size === 'sm' ? RING_GEOMETRY_SM : RING_GEOMETRY_MD;
 
   if (hasStoredThumbnail) {
     return (
@@ -381,7 +392,7 @@ const PostThumbnail: React.FC<{
           onError={onImgError}
         />
         {isVideo && <PlayOverlay size={size} />}
-        <ThumbnailCountdownRing post={post} now={now} />
+        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} />
       </div>
     );
   }
@@ -392,7 +403,7 @@ const PostThumbnail: React.FC<{
     return (
       <div className={cn("relative w-full h-full", className)}>
         <VideoThumbnail videoUrl={effectiveVideoUrl} size={size} />
-        <ThumbnailCountdownRing post={post} now={now} />
+        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} />
       </div>
     );
   }
@@ -407,7 +418,7 @@ const PostThumbnail: React.FC<{
         className={cn("w-full h-full object-cover", imgClassName)}
         onError={onImgError}
       />
-      <ThumbnailCountdownRing post={post} now={now} />
+      <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} />
     </div>
   );
 };
