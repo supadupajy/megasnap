@@ -29,6 +29,8 @@ interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
   /** 광고는 만료 룰 적용 안 함 */
   isAd?: boolean;
+  /** 좌표가 없는 포스트: 비활성 + 위치없음 표시 */
+  unavailable?: boolean;
   /** 만료/경과 정보를 무시하고 항상 활성 (lat/lng 자체가 없는 경우는 별도 처리, 여기는 표시되는 경우만 사용) */
   forceActive?: boolean;
   onClick: (e: React.MouseEvent) => void;
@@ -45,6 +47,7 @@ interface LocationButtonWithTimerProps {
 const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   createdAt,
   isAd = false,
+  unavailable = false,
   forceActive = false,
   onClick,
   variant = 'light',
@@ -69,7 +72,8 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   }, [isExpirable]);
 
   const elapsed = isExpirable ? now - (createdMs as number) : 0;
-  const isExpired = isExpirable && elapsed >= MARKER_LIFESPAN_MS;
+  const isExpiredByTime = isExpirable && elapsed >= MARKER_LIFESPAN_MS;
+  const isExpired = unavailable || isExpiredByTime;
   const remainingRatio = isExpirable
     ? Math.max(0, 1 - elapsed / MARKER_LIFESPAN_MS)
     : 1;

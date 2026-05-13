@@ -47,7 +47,9 @@ const PostActions = ({
   const AdIcon = adIcon === 'shopping-bag' ? ShoppingBag : ExternalLink;
   const adIconClassName = adIcon === 'shopping-bag' ? 'w-3.5 h-3.5 fill-white' : 'w-3.5 h-3.5';
   const adHref = linkUrl ? (linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`) : 'https://s.baemin.com/t3000fBqlbHGL';
-  const canShowLocation = lat !== undefined && lng !== undefined && onLocationClick;
+  const hasValidLocation = typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng);
+  const canShowLocation = hasValidLocation && onLocationClick;
+  const shouldShowLocationUnavailable = !isAd && !!onLocationClick && !hasValidLocation;
 
   const saveButton = (
     <button
@@ -78,6 +80,13 @@ const PostActions = ({
       createdAt={createdAt}
       isAd={isAd}
       onClick={(e) => onLocationClick(e, lat as number, lng as number)}
+      variant="light"
+    />
+  ) : shouldShowLocationUnavailable ? (
+    <LocationButtonWithTimer
+      createdAt={null}
+      unavailable
+      onClick={(e) => e.stopPropagation()}
       variant="light"
     />
   ) : null;
