@@ -243,7 +243,7 @@ const BottomNav = () => {
             className={cn(
               'absolute pointer-events-none overflow-hidden',
               isMapTabActive
-                ? 'border border-indigo-300/70 bg-indigo-600 shadow-[0_10px_28px_rgba(79,70,229,0.34)]'
+                ? 'border border-cyan-200/80 bg-cyan-50 shadow-[0_10px_26px_rgba(6,182,212,0.22)]'
                 : 'bg-gray-200'
             )}
             style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
@@ -254,34 +254,27 @@ const BottomNav = () => {
             {isMapTabActive && (
               <>
                 <motion.div
-                  className="absolute inset-[-60%] opacity-95"
+                  className="absolute inset-[-55%] opacity-90"
                   style={{
                     backgroundImage:
-                      'radial-gradient(circle at 18% 28%, rgba(255,255,255,0.46) 0 4%, transparent 14%), radial-gradient(circle at 72% 18%, rgba(199,210,254,0.52) 0 5%, transparent 15%), radial-gradient(circle at 62% 72%, rgba(255,255,255,0.30) 0 6%, transparent 18%), linear-gradient(135deg, #4338ca 0%, #6366f1 48%, #312e81 100%)',
+                      'radial-gradient(circle at 25% 25%, rgba(34, 211, 238, 0.42) 0 12%, transparent 22%), radial-gradient(circle at 72% 58%, rgba(59, 130, 246, 0.24) 0 10%, transparent 24%), linear-gradient(135deg, rgba(240, 253, 250, 0.96), rgba(219, 234, 254, 0.92), rgba(236, 253, 245, 0.96))',
                   }}
-                  animate={{ x: ['-9%', '14%', '-9%'], y: ['7%', '-12%', '7%'] }}
-                  transition={{ duration: 4.8, ease: 'easeInOut', repeat: Infinity }}
+                  animate={{ x: ['-5%', '12%', '-5%'], y: ['4%', '-10%', '4%'] }}
+                  transition={{ duration: 7.5, ease: 'easeInOut', repeat: Infinity }}
                 />
                 <motion.div
-                  className="absolute inset-[-40%] opacity-55"
+                  className="absolute inset-[-25%] opacity-45 mix-blend-multiply"
                   style={{
                     backgroundImage:
-                      'radial-gradient(ellipse at center, transparent 0 38%, rgba(255,255,255,0.42) 39% 41%, transparent 42% 100%), radial-gradient(ellipse at center, transparent 0 56%, rgba(224,231,255,0.34) 57% 59%, transparent 60% 100%)',
-                    backgroundSize: '34px 22px, 48px 32px',
+                      'repeating-linear-gradient(115deg, transparent 0 10px, rgba(14, 116, 144, 0.16) 10px 12px), repeating-linear-gradient(25deg, transparent 0 16px, rgba(37, 99, 235, 0.10) 16px 18px)',
                   }}
-                  animate={{ x: [0, -34], y: [0, 20] }}
-                  transition={{ duration: 4.2, ease: 'linear', repeat: Infinity }}
+                  animate={{ x: [0, -28], y: [0, 18] }}
+                  transition={{ duration: 8.5, ease: 'linear', repeat: Infinity }}
                 />
-                <motion.div
-                  className="absolute inset-y-[-20%] left-[-80%] w-3/4 rotate-12 bg-gradient-to-r from-transparent via-white/38 to-transparent blur-[1px]"
-                  animate={{ x: ['0%', '240%'] }}
-                  transition={{ duration: 2.9, ease: 'easeInOut', repeat: Infinity, repeatDelay: 0.4 }}
-                />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.22),transparent_42%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.9),transparent_38%)]" />
               </>
             )}
           </motion.div>
-
         )}
 
         {navItems.map((item, index) => {
@@ -305,14 +298,13 @@ const BottomNav = () => {
                     item.iconSizeClass || 'w-6 h-6',
                     'transition-all duration-200',
                     isActiveMap
-                      ? 'scale-[1.15] text-white drop-shadow-[0_2px_4px_rgba(30,27,75,0.55)]'
+                      ? 'scale-[1.15] text-slate-950 drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]'
                       : isActive
                         ? 'scale-110 text-gray-900'
                         : 'scale-100 text-gray-400'
                   )}
                 />
                 {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
-
                   <span className="absolute right-2 top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white shadow-sm" />
                 )}
               </div>
@@ -321,13 +313,12 @@ const BottomNav = () => {
                 className={cn(
                   'relative text-[10px] tracking-tighter leading-none transition-all duration-200',
                   isActiveMap
-                    ? 'font-black text-white drop-shadow-[0_1px_3px_rgba(30,27,75,0.65)]'
+                    ? 'font-black text-slate-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]'
                     : isActive
                       ? 'font-bold text-gray-900'
                       : 'font-medium text-gray-400'
                 )}
               >
-
                 {item.label}
               </span>
             </button>
