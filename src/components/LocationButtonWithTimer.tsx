@@ -98,29 +98,37 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     return () => ro.disconnect();
   }, []);
 
-  // rect 기반 알약: <rect rx=ry=h/2>를 쓰면 브라우저가 CSS border-radius와 동일한
-  // 렌더링 엔진으로 곡선을 그려 버튼 외곽선과 픽셀 단위로 정렬된다.
-  // (SVG arc path와 CSS border-radius는 미세한 렌더링 차이가 있어 직선/곡선 연결부에서
-  //  안티앨리어싱이 어긋나 보이는 문제를 회피)
-  //
-  // <rect>의 stroke 시작점은 좌상단(x+rx, y). rx=ry=h/2인 알약의 경우 이 점은
-  // 정확히 12시(상단 중앙) 위치이며, 진행 방향은 시계방향이다.
-  // 우리는 12시 시작 + 시계 반대방향으로 stroke가 줄어드는 효과를 원하므로,
-  // dashoffset을 양수로 두면 12시에서 반시계 방향으로 stroke 끝점이 후퇴하게 된다.
+  // 알약 링은 SVG path로 직접 그려 시작점을 버튼의 12시 방향(상단 중앙)에 고정한다.
+  // rect stroke는 브라우저마다 stroke 시작점이 코너 쪽으로 잡힐 수 있어 위치보기 버튼에서는 사용하지 않는다.
   const rectGeom = useMemo(() => {
     if (size.w === 0) return null;
     const pad = RING_PADDING;
     const w = size.w - pad * 2;
     const h = size.h - pad * 2;
     const r = h / 2;
+    const startX = pad + w / 2;
+    const topY = pad;
+    const bottomY = pad + h;
+    const leftX = pad;
+    const rightX = pad + w;
+    const leftCenterX = pad + r;
+    const rightCenterX = pad + w - r;
     // 알약 둘레 = 상·하 직선 + 좌·우 반원(= 원 1개)
     const peri = 2 * (w - 2 * r) + 2 * Math.PI * r;
-    return { x: pad, y: pad, w, h, r, perimeter: peri };
+    const pathD = [
+      `M ${startX} ${topY}`,
+      `H ${rightCenterX}`,
+      `A ${r} ${r} 0 0 1 ${rightCenterX} ${bottomY}`,
+      `H ${leftCenterX}`,
+      `A ${r} ${r} 0 0 1 ${leftCenterX} ${topY}`,
+      `H ${startX}`,
+    ].join(' ');
+
+    return { x: pad, y: pad, w, h, r, startX, topY, bottomY, leftX, rightX, leftCenterX, rightCenterX, perimeter: peri, pathD };
   }, [size]);
 
   const perimeter = rectGeom?.perimeter ?? 0;
 
-  // rect의 진행 방향은 시계방향이므로, 반시계 방향 후퇴를 위해 dashoffset 양수.
   const dashOffset = perimeter * (1 - remainingRatio);
 
   // 남은 stroke의 끝점 좌표. 이 위치에 작은 반짝임을 표시해
@@ -128,21 +136,23 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   const sparkPoint = useMemo(() => {
     if (!rectGeom || perimeter <= 0) return null;
 
-    const line = rectGeom.w - 2 * rectGeom.r;
+    const topRightLine = rectGeom.rightCenterX - rectGeom.startX;
+    const bottomLine = rectGeom.w - 2 * rectGeom.r;
+    const topLeftLine = rectGeom.startX - rectGeom.leftCenterX;
     const arc = Math.PI * rectGeom.r;
     let d = (perimeter * remainingRatio) % perimeter;
 
-    // 상단 직선: 좌상단 접점 → 우상단 접점
-    if (d <= line) {
-      return { x: rectGeom.x + rectGeom.r + d, y: rectGeom.y };
+    // 12시 상단 중앙 → 우상단 접점
+    if (d <= topRightLine) {
+      return { x: rectGeom.startX + d, y: rectGeom.topY };
     }
-    d -= line;
+    d -= topRightLine;
 
     // 우측 반원: 위 → 아래
     if (d <= arc) {
       const t = d / arc;
       const angle = -Math.PI / 2 + Math.PI * t;
-      const cx = rectGeom.x + rectGeom.w - rectGeom.r;
+      const cx = rectGeom.rightCenterX;
       const cy = rectGeom.y + rectGeom.r;
       return {
         x: cx + rectGeom.r * Math.cos(angle),
@@ -152,20 +162,26 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     d -= arc;
 
     // 하단 직선: 우하단 접점 → 좌하단 접점
-    if (d <= line) {
-      return { x: rectGeom.x + rectGeom.w - rectGeom.r - d, y: rectGeom.y + rectGeom.h };
+    if (d <= bottomLine) {
+      return { x: rectGeom.rightCenterX - d, y: rectGeom.bottomY };
     }
-    d -= line;
+    d -= bottomLine;
 
     // 좌측 반원: 아래 → 위
-    const t = Math.min(1, d / arc);
-    const angle = Math.PI / 2 + Math.PI * t;
-    const cx = rectGeom.x + rectGeom.r;
-    const cy = rectGeom.y + rectGeom.r;
-    return {
-      x: cx + rectGeom.r * Math.cos(angle),
-      y: cy + rectGeom.r * Math.sin(angle),
-    };
+    if (d <= arc) {
+      const t = d / arc;
+      const angle = Math.PI / 2 + Math.PI * t;
+      const cx = rectGeom.leftCenterX;
+      const cy = rectGeom.y + rectGeom.r;
+      return {
+        x: cx + rectGeom.r * Math.cos(angle),
+        y: cy + rectGeom.r * Math.sin(angle),
+      };
+    }
+    d -= arc;
+
+    // 좌상단 접점 → 12시 상단 중앙
+    return { x: rectGeom.leftCenterX + Math.min(d, topLeftLine), y: rectGeom.topY };
   }, [rectGeom, perimeter, remainingRatio]);
 
   // 스타일 분기
@@ -251,29 +267,17 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
         >
           {/* 트랙 (지난 시간 — 진한 초록) */}
           {rectGeom && (
-            <rect
-              x={rectGeom.x}
-              y={rectGeom.y}
-              width={rectGeom.w}
-              height={rectGeom.h}
-              rx={rectGeom.r}
-              ry={rectGeom.r}
+            <path
+              d={rectGeom.pathD}
               fill="none"
               stroke={RING_TRACK_COLOR}
               strokeWidth={RING_TRACK_STROKE}
             />
           )}
-          {/* 진행 (남은 시간 — 형광 네온 그린)
-              <rect>의 stroke 시작점은 12시 위치(좌상단 코너 끝).
-              시계방향으로 그려지므로 dashoffset 양수일 때 12시에서 반시계 후퇴 */}
+          {/* 진행 (남은 시간 — 형광 네온 그린): path 시작점이 항상 12시 방향 */}
           {rectGeom && (
-            <rect
-              x={rectGeom.x}
-              y={rectGeom.y}
-              width={rectGeom.w}
-              height={rectGeom.h}
-              rx={rectGeom.r}
-              ry={rectGeom.r}
+            <path
+              d={rectGeom.pathD}
               fill="none"
               stroke={RING_PROGRESS_COLOR}
               strokeWidth={RING_STROKE}
