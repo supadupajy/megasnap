@@ -271,7 +271,7 @@ const BottomNav = () => {
                     'transition-all duration-200',
                     isActive
                       ? isMainMapTab
-                        ? 'scale-110 text-orange-500'
+                        ? 'scale-110 text-orange-400'
                         : 'scale-110 text-gray-900'
                       : 'scale-100 text-gray-400'
                   )}
@@ -279,6 +279,7 @@ const BottomNav = () => {
                 {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
                   <span className="absolute right-2 top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white shadow-sm" />
                 )}
+
               </div>
               {/* Label */}
               <span
