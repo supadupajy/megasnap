@@ -698,6 +698,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   const renderActionButtons = () => {
     const commentsDisplayCount = Math.max(localComments.length, currentPost.commentsCount || 0);
+    const hasUserCommented = !!authUser?.id && localComments.some(comment => comment.userId === authUser.id);
 
     return (
       <PostActions
@@ -706,6 +707,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         isSaved={isSaved}
         likesCount={currentPost.likes}
         commentsCount={commentsDisplayCount}
+        hasUserCommented={hasUserCommented}
         isAd={isAd}
         linkUrl={currentPost.link_url}
         lat={currentPost.lat}

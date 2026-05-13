@@ -10,6 +10,7 @@ interface PostActionsProps {
   isSaved: boolean;
   likesCount: number;
   commentsCount: number;
+  hasUserCommented?: boolean;
   isAd?: boolean;
   linkUrl?: string | null;
   lat?: number;
@@ -31,6 +32,7 @@ const PostActions = ({
   isSaved,
   likesCount,
   commentsCount,
+  hasUserCommented = false,
   isAd = false,
   linkUrl,
   lat,
@@ -112,10 +114,15 @@ const PostActions = ({
           <button
             type="button"
             onClick={onCommentClick}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50 px-3 text-sm font-black text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
+            className={cn(
+              'inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-all active:scale-95',
+              hasUserCommented
+                ? 'border-indigo-100 bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/50'
+                : 'border-gray-100 bg-gray-50 text-gray-700 hover:bg-gray-100'
+            )}
             aria-label={`댓글 ${commentsCount.toLocaleString()}개`}
           >
-            <MessageCircle className="h-[18px] w-[18px] text-gray-600" />
+            <MessageCircle className={cn('h-[18px] w-[18px] transition-colors', hasUserCommented ? 'fill-indigo-100 text-indigo-600' : 'text-gray-600')} />
             <span className="tabular-nums leading-none">{commentsCount.toLocaleString()}</span>
           </button>
           <button

@@ -579,6 +579,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const renderInteractionButtons = (adFooterContent?: React.ReactNode) => {
     const commentsDisplayCount = Math.max(localComments.length, post.commentsCount || 0);
+    const hasUserCommented = !!authUser?.id && localComments.some(comment => comment.userId === authUser.id);
 
     return (
       <PostActions
@@ -588,6 +589,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         isSaved={isSaved}
         likesCount={likesCount}
         commentsCount={commentsDisplayCount}
+        hasUserCommented={hasUserCommented}
         isAd={isAd}
         linkUrl={post.link_url}
         lat={lat}
