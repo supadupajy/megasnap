@@ -167,26 +167,38 @@ const NearbyPosts = () => {
     return posts.filter(post => post?.user && !blockedIds.has(post.user.id));
   }, [posts, blockedIds]);
 
+  const visibleMapPostIds = useMemo(() => {
+    return new Set((payload?.initialPosts || []).map(post => post.id));
+  }, [payload?.initialPosts]);
+
   const displayPosts = useMemo(() => {
     if (dividerViewedIds.size === 0) return filteredPosts;
 
-    // 광고는 원래 자리(인덱스)를 유지하고, 일반 포스팅만 unseen → seen 순으로 재정렬한다.
-    // 그렇지 않으면 광고가 항상 unseen 그룹에 묶여 상단으로 올라가는 문제가 생긴다.
-    const nonAdQueue = filteredPosts.filter(p => !p.isAd);
-    const unseenNonAds = nonAdQueue.filter(p => !dividerViewedIds.has(p.id));
-    const seenNonAds = nonAdQueue.filter(p => dividerViewedIds.has(p.id));
-    const reorderedNonAds = [...unseenNonAds, ...seenNonAds];
+    const reorderByViewed = (group: Post[]) => {
+      // 광고는 원래 자리(인덱스)를 유지하고, 일반 포스팅만 unseen → seen 순으로 재정렬한다.
+      // 그렇지 않으면 광고가 항상 unseen 그룹에 묶여 상단으로 올라가는 문제가 생긴다.
+      const nonAdQueue = group.filter(p => !p.isAd);
+      const unseenNonAds = nonAdQueue.filter(p => !dividerViewedIds.has(p.id));
+      const seenNonAds = nonAdQueue.filter(p => dividerViewedIds.has(p.id));
+      const reorderedNonAds = [...unseenNonAds, ...seenNonAds];
 
-    let cursor = 0;
-    return filteredPosts.map(post => {
-      if (post.isAd) return post; // 광고는 기존 위치 그대로 유지
-      const next = reorderedNonAds[cursor];
-      cursor++;
-      return next;
-    });
-  }, [filteredPosts, dividerViewedIds]);
+      let cursor = 0;
+      return group.map(post => {
+        if (post.isAd) return post;
+        const next = reorderedNonAds[cursor];
+        cursor++;
+        return next;
+      });
+    };
+
+    const visiblePosts = filteredPosts.filter(post => visibleMapPostIds.has(post.id));
+    const hiddenPosts = filteredPosts.filter(post => !visibleMapPostIds.has(post.id));
+
+    return [...reorderByViewed(visiblePosts), ...reorderByViewed(hiddenPosts)];
+  }, [filteredPosts, dividerViewedIds, visibleMapPostIds]);
 
   const loadMorePosts = useCallback(async () => {
+
     if (!payload || isLoadingMore || !hasMore) return;
 
     setIsLoadingMore(true);
@@ -289,12 +301,14 @@ const NearbyPosts = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
+  const firstHiddenMapPostIndex = displayPosts.findIndex(post => !post.isAd && !visibleMapPostIds.has(post.id));
   const firstViewedIndex = displayPosts.findIndex(post => !post.isAd && dividerViewedIds.has(post.id));
 
   if (!payload) return null;
 
   const handleClose = () => {
     mapCache.keepPosition = true;
+
     mapCache.lastCenter = payload.mapCenter;
     if (payload.zoom != null) mapCache.lastZoom = payload.zoom;
     navigate('/', {
@@ -329,6 +343,18 @@ const NearbyPosts = () => {
 
           displayPosts.forEach((post, index) => {
 
+            if (firstHiddenMapPostIndex !== -1 && index === firstHiddenMapPostIndex) {
+              items.push(
+                <div key="hidden-map-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-slate-50">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black text-slate-600 whitespace-nowrap shrink-0 shadow-sm">
+                    여기부터는 지도에 보이지 않는 포스팅입니다.
+                  </span>
+                  <div className="flex-1 h-px bg-slate-200" />
+                </div>
+              );
+            }
+
             if (firstViewedIndex !== -1 && index === firstViewedIndex) {
               items.push(
                 <div key="viewed-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-white">
@@ -343,6 +369,7 @@ const NearbyPosts = () => {
 
             items.push(
               <ViewedAwarePostItem
+
                 key={post.id}
                 post={post}
                 isViewed={viewedIds.has(post.id)}
