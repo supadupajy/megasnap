@@ -16,6 +16,19 @@ const isVideoUrl = (url: string | undefined | null): boolean => {
   return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
 };
 
+const THUMBNAIL_LIFESPAN_MS = 24 * 60 * 60 * 1000;
+const THUMBNAIL_TIMER_UPDATE_MS = 60 * 1000;
+const THUMBNAIL_TIMER_COLOR = '#39FF14';
+const THUMBNAIL_TIMER_TRACK = 'rgba(34,197,94,0.55)';
+
+const getPostCreatedAtMs = (post: Post): number | null => {
+  const raw = post.createdAt;
+  if (!raw) return null;
+  if (raw instanceof Date) return raw.getTime();
+  const time = new Date(raw).getTime();
+  return Number.isFinite(time) ? time : null;
+};
+
 // ── 비디오 썸네일 인메모리 캐시 ──────────────────────────────
 const videoThumbCache = new Map<string, string | 'failed'>();
 
@@ -190,6 +203,53 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
   </div>
 );
 
+const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; size?: PlayBadgeSize }> = ({ post, now, size = 'md' }) => {
+  if (post.isAd || post.isAdPending) return null;
+
+  const createdAtMs = getPostCreatedAtMs(post);
+  if (createdAtMs === null) return null;
+
+  const elapsed = Math.max(0, now - createdAtMs);
+  if (elapsed >= THUMBNAIL_LIFESPAN_MS) return null;
+
+  const remainingRatio = 1 - elapsed / THUMBNAIL_LIFESPAN_MS;
+  const dash = Math.max(0, Math.min(100, remainingRatio * 100));
+  const strokeWidth = size === 'sm' ? 3 : 3.5;
+  const inset = strokeWidth / 2 + 0.75;
+  const rectSize = 48 - inset * 2;
+  const radius = size === 'sm' ? 8 : 11;
+
+  return (
+    <svg className="absolute inset-0 z-20 pointer-events-none" viewBox="0 0 48 48" aria-hidden="true">
+      <rect
+        x={inset}
+        y={inset}
+        width={rectSize}
+        height={rectSize}
+        rx={radius}
+        fill="none"
+        stroke={THUMBNAIL_TIMER_TRACK}
+        strokeWidth={strokeWidth}
+      />
+      <rect
+        x={inset}
+        y={inset}
+        width={rectSize}
+        height={rectSize}
+        rx={radius}
+        fill="none"
+        stroke={THUMBNAIL_TIMER_COLOR}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        pathLength={100}
+        strokeDasharray={`${dash} 100`}
+        strokeDashoffset={25}
+        style={{ filter: 'drop-shadow(0 0 3px rgba(57,255,20,0.8))' }}
+      />
+    </svg>
+  );
+};
+
 // 포스트 썸네일 컴포넌트 (이미지/동영상 자동 판별)
 const PostThumbnail: React.FC<{
   post: Post;
@@ -197,7 +257,8 @@ const PostThumbnail: React.FC<{
   imgClassName?: string;
   onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   size?: PlayBadgeSize;
-}> = ({ post, className, imgClassName, onImgError, size = 'md' }) => {
+  now: number;
+}> = ({ post, className, imgClassName, onImgError, size = 'md', now }) => {
   const videoUrl = post.videoUrl;
   const imageUrl = post.image_url || post.image;
   const hasStoredThumbnail = !!imageUrl && !isVideoUrl(imageUrl) && imageUrl !== '/placeholder.svg';
@@ -215,6 +276,7 @@ const PostThumbnail: React.FC<{
           onError={onImgError}
         />
         {isVideo && <PlayOverlay size={size} />}
+        <ThumbnailCountdownRing post={post} now={now} size={size} />
       </div>
     );
   }
@@ -222,22 +284,31 @@ const PostThumbnail: React.FC<{
   const effectiveVideoUrl = videoUrl || (isVideoUrl(imageUrl) ? imageUrl : null);
 
   if (effectiveVideoUrl) {
-    return <VideoThumbnail videoUrl={effectiveVideoUrl} className={className} size={size} />;
+    return (
+      <div className={cn("relative w-full h-full", className)}>
+        <VideoThumbnail videoUrl={effectiveVideoUrl} size={size} />
+        <ThumbnailCountdownRing post={post} now={now} size={size} />
+      </div>
+    );
   }
 
   return (
-    <img
-      src={getOptimizedMarkerImage(imageUrl, post.id)}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      className={cn("w-full h-full object-cover", imgClassName)}
-      onError={onImgError}
-    />
+    <div className={cn("relative w-full h-full", className)}>
+      <img
+        src={getOptimizedMarkerImage(imageUrl, post.id)}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className={cn("w-full h-full object-cover", imgClassName)}
+        onError={onImgError}
+      />
+      <ThumbnailCountdownRing post={post} now={now} size={size} />
+    </div>
   );
 };
 
 // ── 순위 변동 추적 유틸 ──────────────────────────────────────
+
 // localStorage에 직전 fetch의 순위 스냅샷을 저장 → 새 데이터와 비교
 const RANK_STORAGE_KEY = 'trending_prev_ranks_v2';
 
@@ -276,10 +347,12 @@ interface TrendingPostItemProps {
   onPostClick: (post: Post) => void;
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   rankChange: RankChange;
+  now: number;
 }
 
-const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange }) => {
+const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange, now }) => {
   const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
+
   const hasDisplayLocation = !!displayLocation && !['위치 정보 없음', '위치 미지정', '알 수 없는 장소'].includes(displayLocation);
   const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
@@ -374,10 +447,11 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
         borderThickness,
         borderColor
       )}>
-        <PostThumbnail post={post} onImgError={handleImageError} />
+        <PostThumbnail post={post} onImgError={handleImageError} now={now} />
         {borderType !== 'none' && (
-          <div className="absolute top-0.5 right-0.5 z-10">
+          <div className="absolute top-0.5 right-0.5 z-30">
             <Sparkles className={cn(
+
               "w-2.5 h-2.5",
               borderType === 'popular' ? "text-rose-500 fill-rose-500" :
               borderType === 'diamond' ? "text-cyan-400 fill-cyan-400" :
@@ -536,9 +610,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [renderExpandedBody, setRenderExpandedBody] = useState(isExpanded);
   const [visibleItemLimit, setVisibleItemLimit] = useState(8);
+  const [thumbnailTimerNow, setThumbnailTimerNow] = useState(() => Date.now());
   // 비교 기준이 되는 "이전 순위" 스냅샷 — localStorage에서 1회 로드
   // 현재 posts와 비교해 변동을 표시
   const [prevRanks, setPrevRanks] = useState<PrevRankMap>(() => loadPrevRanks());
+
   // 첫 진입 시(localStorage가 비어있던 사용자) 신규 표시를 억제하기 위한 플래그
   const [isFirstSnapshot, setIsFirstSnapshot] = useState<boolean>(() => {
     const loaded = loadPrevRanks();
@@ -551,7 +627,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     isExpandedRef.current = isExpanded;
   }, [isExpanded]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setThumbnailTimerNow(Date.now()), THUMBNAIL_TIMER_UPDATE_MS);
+    return () => window.clearInterval(timer);
+  }, []);
+
   // posts ID:rank 시그니처가 바뀌면 다음 비교의 기준을 갱신
+
   // - 이전 시그니처가 비어있던 경우: 현재 posts를 첫 스냅샷으로 저장(첫 비교 기준 마련)
   // - 이전 시그니처가 있던 경우: 직전 시그니처의 순위를 prevRanks로 사용
   const postsSignature = posts.map((p: any) => `${p.id}:${p.rank}`).join('|');
@@ -779,10 +861,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
                   <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                    <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" />
+                    <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" now={thumbnailTimerNow} />
                   </div>
                   <div className="flex-1 overflow-hidden relative h-5">
                     <AnimatePresence mode="wait">
+
                       <motion.p
                         key={`${currentPost?.id}-${currentIndex}`}
                         initial={{ y: 15, opacity: 0 }}
@@ -885,7 +968,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   onPostClick={onPostClick}
                   handleImageError={handleImageError}
                   rankChange={getRankChange(post as Post & { rank: number })}
+                  now={thumbnailTimerNow}
                 />
+
               ))}
 
               {/* 하단 스톱바 (20위 아래) */}
