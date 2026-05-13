@@ -9,11 +9,9 @@ const TICK_INTERVAL_MS = 60 * 1000;
 // 둥근 사각 카운트다운 링 (지도 마커와 동일한 시각 룰)
 // 12시 방향 상단 중앙에서 시작 → 시계 반대방향으로 한 바퀴 도는 path
 const RING_PADDING = 1.5;          // 버튼 외곽에서 안쪽으로 들이는 픽셀 (외곽선에 가깝게 hug)
-const RING_VIEWBOX = 100;          // 비율 기반 (가로/세로 비율이 달라도 stretch)
-const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤
+const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤 — 초기값 용도
 const RING_STROKE = 2.5;           // 깔끔하고 세련된 두께
 const RING_TRACK_STROKE = 2.5;     // 트랙도 동일 두께(자연스러운 연속감)
-const RING_CORNER = 18;            // 알약 형태 (h-9 → border-radius:9999 → 코너 r = h/2 = 18)
 
 // 카운트다운 링 컬러 (지도 마커와 통일)
 const RING_PROGRESS_COLOR = '#16a34a';            // 진한 초록 (Tailwind green-600) — 남은 시간
@@ -95,22 +93,35 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   }, []);
 
   // path와 둘레 계산 (메모이즈)
+  // 버튼이 알약 형태(border-radius: 9999)이므로 좌/우 끝은 완전한 반원이어야 함.
+  // → 반지름 r = (높이 - padding*2) / 2로 두면 좌/우 변(V 직선)이 사라지고
+  //    좌우 끝이 정확한 반원이 되어 알약 외곽선과 완벽히 일치한다.
   const { path, perimeter } = useMemo(() => {
     if (size.w === 0) return { path: '', perimeter: 0 };
     const pad = RING_PADDING;
     const w = size.w - pad * 2;
     const h = size.h - pad * 2;
-    // 코너 반지름은 높이의 절반 (알약 형태) — 단, 너비/높이 한쪽보다 크면 안 됨
-    const r = Math.min(RING_CORNER - pad, h / 2, w / 2);
+    // 알약 형태: 반지름 = 높이의 절반 (좌/우 끝이 완전한 반원)
+    const r = h / 2;
     const left = pad;
     const right = pad + w;
     const top = pad;
     const bottom = pad + h;
     const cx = pad + w / 2;
     // 12시(상단 중앙) → 시계 반대방향
-    const d = `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left} ${top + r} V ${bottom - r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right} ${bottom - r} V ${top + r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
-    // 둘레 길이: 직선 4개 + 90°*4 호(=원 1개)
-    const peri = 2 * (w - 2 * r) + 2 * (h - 2 * r) + 2 * Math.PI * r;
+    // 좌/우 끝의 V(수직 직선) 명령을 제거 — 반원만 그리면 됨.
+    // M cx,top                                     상단 중앙에서 시작
+    // H left + r                                    상단을 왼쪽으로 (직선)
+    // A r,r 0 0 0 left + r,bottom (sweep=0, large=0) 좌측 반원 (반시계, 12시→6시 방향)
+    //                                              ↑ x좌표 동일, y만 +h → 180도 호
+    // H right - r                                   하단을 오른쪽으로 (직선)
+    // A r,r 0 0 0 right - r,top                     우측 반원 (반시계, 6시→12시 방향)
+    // Z                                             닫기
+    const d = `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
+    // 둘레 길이: 상단 직선 + 좌측 반원 + 하단 직선 + 우측 반원
+    //          = 2 * (w - 2r) + 2 * (π * r)
+    //          = 2 * (w - 2r) + 2πr
+    const peri = 2 * (w - 2 * r) + 2 * Math.PI * r;
     return { path: d, perimeter: peri };
   }, [size]);
 
