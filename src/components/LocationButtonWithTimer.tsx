@@ -193,12 +193,12 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
         isolation: 'isolate',
       }
     : {
-        // 왼쪽 액션 아이콘 버튼들과 톤을 맞춘 연한 그레이 스타일
+        // 활성화된 위치 버튼처럼 보이도록 아주 연한 초록 배경 사용
         // 타이머 stroke가 유일한 외곽선 역할을 하므로 별도 border는 제거
-        backgroundColor: '#f9fafb',          // gray-50
+        backgroundColor: '#f0fdf4',          // green-50
         color: '#4b5563',                    // gray-600
         border: '0 solid transparent',
-        boxShadow: '0 1px 3px rgba(15,23,42,0.08)',
+        boxShadow: '0 1px 3px rgba(34,197,94,0.14)',
         isolation: 'isolate',
       };
 
