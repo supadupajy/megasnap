@@ -728,11 +728,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             {showNewPostBadge && (
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute right-3 top-3 z-30 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-[0_10px_26px_rgba(220,38,38,0.28)] ring-1 ring-white/80 backdrop-blur-md"
+                className="pointer-events-none absolute right-3 top-3 z-30 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white/85 shadow-[0_4px_12px_rgba(225,29,72,0.28)] ring-[1px] ring-white/70 backdrop-blur-sm"
               >
-                <span className="absolute h-4 w-4 rounded-full bg-rose-400/30 animate-ping" />
-                <span className="relative h-3.5 w-3.5 rounded-full bg-[radial-gradient(circle_at_32%_28%,#fff7ed_0_18%,#fb7185_24%,#e11d48_58%,#be123c_100%)] shadow-[inset_0_1px_2px_rgba(255,255,255,0.85),0_0_14px_rgba(225,29,72,0.75)] ring-[2px] ring-rose-100" />
-                <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-white/90" />
+                <span className="absolute h-3.5 w-3.5 rounded-full bg-rose-500/25 animate-ping" />
+                <span className="relative h-3 w-3 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.55)] ring-[1px] ring-rose-200/80" />
               </span>
             )}
           </div>
