@@ -367,6 +367,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     currentPost?.lat ?? currentPost?.latitude,
     currentPost?.lng ?? currentPost?.longitude
   );
+  const isLocationMissing = !displayLocation || ['위치 미지정', '위치 정보 없음', '알 수 없는 장소'].includes(displayLocation);
 
   if (!currentPost) return null;
 
@@ -825,7 +826,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                                   <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
                                   {isAd && <div className="ad-badge-fancy"><span>AD</span></div>}
                                 </div>
-                                <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleLocationClick}>
+                                <div
+                                  className={cn(
+                                    "flex items-center gap-0.5 mt-1",
+                                    isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
+                                  )}
+                                  onClick={handleLocationClick}
+                                >
                                   <MapPin className="w-3 h-3" />
                                   <span className="text-[10px] font-medium">{displayLocation || '알 수 없는 장소'}</span>
                                 </div>

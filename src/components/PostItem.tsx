@@ -245,6 +245,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const lng = post.longitude ?? post.lng;
 
   const displayLocation = useLocationDisplay(post.location || '', lat, lng);
+  const isLocationMissing = !displayLocation || ['위치 미지정', '위치 정보 없음', '알 수 없는 장소'].includes(displayLocation);
 
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
 
@@ -636,7 +637,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                     </p>
                     <div className="ad-badge-fancy"><span>AD</span></div>
                   </div>
-                  <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
+                  <div
+                    className={cn(
+                      "flex items-center gap-0.5 mt-1",
+                      isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
+                    )}
+                    onClick={handleHeaderLocationClick}
+                  >
                     <MapPin className="w-3 h-3" />
                     <span className="text-[10px] font-medium">{displayLocation || '알 수 없는 장소'}</span>
                   </div>
@@ -672,7 +679,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                     {user.name}
                   </p>
                 </div>
-                <div className="flex items-center text-indigo-600 gap-0.5 mt-1 cursor-pointer hover:underline" onClick={handleHeaderLocationClick}>
+                <div
+                  className={cn(
+                    "flex items-center gap-0.5 mt-1",
+                    isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
+                  )}
+                  onClick={handleHeaderLocationClick}
+                >
                   <MapPin className="w-3 h-3" />
                   <span className="text-[10px] font-medium">{displayLocation || '알 수 없는 장소'}</span>
                 </div>
