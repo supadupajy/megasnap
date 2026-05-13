@@ -8,10 +8,13 @@ const TICK_INTERVAL_MS = 60 * 1000;
 
 // 둥근 사각 카운트다운 링 (지도 마커와 동일한 시각 룰)
 // 12시 방향 상단 중앙에서 시작 → 시계 반대방향으로 한 바퀴 도는 path
-const RING_PADDING = 1.5;          // 버튼 외곽에서 안쪽으로 들이는 픽셀 (외곽선에 가깝게 hug)
 const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤 — 초기값 용도
 const RING_STROKE = 2.5;           // 깔끔하고 세련된 두께
 const RING_TRACK_STROKE = 2.5;     // 트랙도 동일 두께(자연스러운 연속감)
+// path 중심선이 박스 가장자리에서 정확히 stroke의 절반만큼 안쪽에 위치하도록 함.
+// 이렇게 하면 stroke의 바깥 경계가 박스(=버튼) 외곽선과 정확히 일치하여
+// 알약 좌/우 끝이 버튼 바깥으로 떠 보이는 현상이 사라진다.
+const RING_PADDING = RING_STROKE / 2;
 
 // 카운트다운 링 컬러 (지도 마커와 통일)
 const RING_PROGRESS_COLOR = '#16a34a';            // 진한 초록 (Tailwind green-600) — 남은 시간
@@ -184,7 +187,8 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     >
       {/* 카운트다운 링 (만료 전에만 표시)
           - 트랙(지난 시간): 연한 초록 stroke로 전체 둘레를 깔아둠
-          - 진행(남은 시간): 그 위에 진한 초록 stroke를 dashoffset으로 보여줌 */}
+          - 진행(남은 시간): 그 위에 진한 초록 stroke를 dashoffset으로 보여줌
+          - stroke의 바깥 경계가 버튼 외곽선과 정확히 일치하도록 padding/viewBox 정렬 */}
       {showRing && (
         <svg
           width={size.w}
