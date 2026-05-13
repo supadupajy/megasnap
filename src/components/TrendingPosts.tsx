@@ -280,7 +280,7 @@ interface TrendingPostItemProps {
 
 const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange }) => {
   const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
-  const hasDisplayLocation = !!displayLocation && displayLocation !== '위치 정보 없음';
+  const hasDisplayLocation = !!displayLocation && !['위치 정보 없음', '위치 미지정', '알 수 없는 장소'].includes(displayLocation);
   const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
   const borderType = post.borderType || 'none';
