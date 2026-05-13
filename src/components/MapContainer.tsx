@@ -1831,8 +1831,9 @@ const MapContainer = ({
           ${isAd ? adSparklesHtml : ''}
           <div style="width:100%;height:100%;position:relative;border-radius:${isAd ? '15px' : '16px'};overflow:hidden;" class="${shineClass}">
             ${imgContent}
-            <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.7);backdrop-filter:blur(2px);color:white;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px;z-index:5;border:1px solid rgba(255,255,255,0.2);line-height:1;">
-              ${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}
+            <div style="position:absolute;bottom:3px;right:3px;background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:8px;z-index:5;line-height:1;display:flex;align-items:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+              <span>${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</span>
             </div>
             ${videoIconHtml}
             ${countdownRingHtml}
