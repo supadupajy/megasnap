@@ -146,6 +146,73 @@ const COUNTDOWN_RING_PERIMETER =
 
 const COUNTDOWN_RING_PATH = buildCountdownRingPath();
 
+const getCountdownRingSparkPoint = (remainingRatio: number): { x: number; y: number } => {
+  const pad = COUNTDOWN_RING_PADDING;
+  const size = COUNTDOWN_RING_SIZE;
+  const r = COUNTDOWN_RING_R;
+  const left = pad;
+  const right = pad + size;
+  const top = pad;
+  const bottom = pad + size;
+  const cx = pad + size / 2;
+
+  const halfTop = size / 2 - r;
+  const straight = size - 2 * r;
+  const arc = (Math.PI * r) / 2;
+  let d = (COUNTDOWN_RING_PERIMETER * remainingRatio) % COUNTDOWN_RING_PERIMETER;
+
+  // 상단 중앙 → 좌상단 직선
+  if (d <= halfTop) return { x: cx - d, y: top };
+  d -= halfTop;
+
+  // 좌상단 모서리
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = -Math.PI / 2 - (Math.PI / 2) * t;
+    return { x: left + r + r * Math.cos(angle), y: top + r + r * Math.sin(angle) };
+  }
+  d -= arc;
+
+  // 왼쪽 변
+  if (d <= straight) return { x: left, y: top + r + d };
+  d -= straight;
+
+  // 좌하단 모서리
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = Math.PI - (Math.PI / 2) * t;
+    return { x: left + r + r * Math.cos(angle), y: bottom - r + r * Math.sin(angle) };
+  }
+  d -= arc;
+
+  // 하단 변
+  if (d <= straight) return { x: left + r + d, y: bottom };
+  d -= straight;
+
+  // 우하단 모서리
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = Math.PI / 2 - (Math.PI / 2) * t;
+    return { x: right - r + r * Math.cos(angle), y: bottom - r + r * Math.sin(angle) };
+  }
+  d -= arc;
+
+  // 오른쪽 변
+  if (d <= straight) return { x: right, y: bottom - r - d };
+  d -= straight;
+
+  // 우상단 모서리
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = 0 - (Math.PI / 2) * t;
+    return { x: right - r + r * Math.cos(angle), y: top + r + r * Math.sin(angle) };
+  }
+  d -= arc;
+
+  // 상단 우측 → 상단 중앙
+  return { x: right - r - d, y: top };
+};
+
 /** 포스트의 createdAt(Date | string | undefined)에서 ms timestamp 추출. 없으면 null. */
 const getPostCreatedAtMs = (post: any): number | null => {
   const raw = post?.createdAt ?? post?.created_at;
@@ -1809,9 +1876,20 @@ const MapContainer = ({
           // dashoffset을 음수로 두면 시작점(12시 상단 중앙)에서부터 깎이고,
           // path가 시계 반대방향으로 그려지므로 끝점이 반시계 방향으로 후퇴한다.
           const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
+          const spark = getCountdownRingSparkPoint(remainingRatio);
+          const showSpark = remainingRatio > 0.01 && remainingRatio < 0.995;
           return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
             <path class="marker-countdown-ring-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="${COUNTDOWN_TRACK_COLOR}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
             <path class="marker-countdown-ring-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="${COUNTDOWN_PROGRESS_COLOR}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(${COUNTDOWN_GLOW});" />
+            <g class="marker-countdown-ring-spark" transform="translate(${spark.x.toFixed(2)} ${spark.y.toFixed(2)})" style="display:${showSpark ? 'block' : 'none'};filter:drop-shadow(0 0 5px rgba(57,255,20,0.95));">
+              <circle cx="0" cy="0" r="5" fill="rgba(57,255,20,0.22)">
+                <animate attributeName="r" values="3;6;3" dur="1.15s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.15s" repeatCount="indefinite" />
+              </circle>
+              <circle cx="0" cy="0" r="2.1" fill="#ecfccb" stroke="#39FF14" stroke-width="1">
+                <animate attributeName="opacity" values="1;0.45;1" dur="0.75s" repeatCount="indefinite" />
+              </circle>
+            </g>
           </svg>`;
         })()
       : '';
@@ -1897,12 +1975,19 @@ const MapContainer = ({
           return;
         }
 
-        // 아직 만료 전 → 진행 path의 dashoffset만 갱신 (트랙은 정적이므로 그대로)
+        // 아직 만료 전 → 진행 path의 dashoffset과 반짝임 위치만 갱신 (트랙은 정적이므로 그대로)
         const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
         const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
         const progressPath = ring.querySelector('.marker-countdown-ring-progress');
         if (progressPath) {
           progressPath.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
+        }
+
+        const spark = ring.querySelector('.marker-countdown-ring-spark') as SVGGElement | null;
+        if (spark) {
+          const point = getCountdownRingSparkPoint(remainingRatio);
+          spark.setAttribute('transform', `translate(${point.x.toFixed(2)} ${point.y.toFixed(2)})`);
+          spark.style.display = remainingRatio > 0.01 && remainingRatio < 0.995 ? 'block' : 'none';
         }
       });
     };
