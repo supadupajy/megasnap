@@ -96,29 +96,30 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     return () => ro.disconnect();
   }, []);
 
-  // path와 둘레 계산 (메모이즈)
-  // 버튼이 알약 형태(border-radius: 9999)이므로 좌/우 끝은 완전한 반원.
-  // → 반지름 r = (높이 - padding*2) / 2로 두면 ring의 반원 중심이
-  //    버튼 알약 반원 중심과 일치하는 동심 알약이 된다.
-  const { path, perimeter } = useMemo(() => {
-    if (size.w === 0) return { path: '', perimeter: 0 };
+  // rect 기반 알약: <rect rx=ry=h/2>를 쓰면 브라우저가 CSS border-radius와 동일한
+  // 렌더링 엔진으로 곡선을 그려 버튼 외곽선과 픽셀 단위로 정렬된다.
+  // (SVG arc path와 CSS border-radius는 미세한 렌더링 차이가 있어 직선/곡선 연결부에서
+  //  안티앨리어싱이 어긋나 보이는 문제를 회피)
+  //
+  // <rect>의 stroke 시작점은 좌상단(x+rx, y). rx=ry=h/2인 알약의 경우 이 점은
+  // 정확히 12시(상단 중앙) 위치이며, 진행 방향은 시계방향이다.
+  // 우리는 12시 시작 + 시계 반대방향으로 stroke가 줄어드는 효과를 원하므로,
+  // dashoffset을 양수로 두면 12시에서 반시계 방향으로 stroke 끝점이 후퇴하게 된다.
+  const rectGeom = useMemo(() => {
+    if (size.w === 0) return null;
     const pad = RING_PADDING;
     const w = size.w - pad * 2;
     const h = size.h - pad * 2;
     const r = h / 2;
-    const left = pad;
-    const right = pad + w;
-    const top = pad;
-    const bottom = pad + h;
-    const cx = pad + w / 2;
-    // 12시(상단 중앙) → 시계 반대방향, 좌/우 끝은 180° 반원
-    const d = `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
-    // 둘레 = 상·하 직선 + 좌·우 반원(=원 1개)
+    // 알약 둘레 = 상·하 직선 + 좌·우 반원(= 원 1개)
     const peri = 2 * (w - 2 * r) + 2 * Math.PI * r;
-    return { path: d, perimeter: peri };
+    return { x: pad, y: pad, w, h, r, perimeter: peri };
   }, [size]);
 
-  const dashOffset = -(perimeter * (1 - remainingRatio));
+  const perimeter = rectGeom?.perimeter ?? 0;
+
+  // rect의 진행 방향은 시계방향이므로, 반시계 방향 후퇴를 위해 dashoffset 양수.
+  const dashOffset = perimeter * (1 - remainingRatio);
 
   // 스타일 분기
   // - 만료: 회색 + disabled
@@ -158,7 +159,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   const label = isExpired ? '위치없음' : '위치보기';
 
   // 링은 광고/만료/createdAt 없음에서는 표시하지 않음
-  const showRing = isExpirable && !isExpired && path.length > 0;
+  const showRing = isExpirable && !isExpired && rectGeom !== null;
 
   return (
     <button
@@ -198,28 +199,39 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
           }}
         >
           {/* 트랙 (지난 시간 — 진한 초록) */}
-          <path
-            d={path}
-            fill="none"
-            stroke={RING_TRACK_COLOR}
-            strokeWidth={RING_TRACK_STROKE}
-            strokeLinecap="butt"
-            strokeLinejoin="round"
-          />
+          {rectGeom && (
+            <rect
+              x={rectGeom.x}
+              y={rectGeom.y}
+              width={rectGeom.w}
+              height={rectGeom.h}
+              rx={rectGeom.r}
+              ry={rectGeom.r}
+              fill="none"
+              stroke={RING_TRACK_COLOR}
+              strokeWidth={RING_TRACK_STROKE}
+            />
+          )}
           {/* 진행 (남은 시간 — 형광 네온 그린)
-              linecap을 'butt'로 두어 dashoffset에 의해 잘린 끝점이
-              둥글게 부풀어 곡률이 달라 보이는 시각적 착시를 방지 */}
-          <path
-            d={path}
-            fill="none"
-            stroke={RING_PROGRESS_COLOR}
-            strokeWidth={RING_STROKE}
-            strokeLinecap="butt"
-            strokeLinejoin="round"
-            strokeDasharray={perimeter.toFixed(2)}
-            strokeDashoffset={dashOffset.toFixed(2)}
-            style={{ filter: `drop-shadow(${RING_GLOW})` }}
-          />
+              <rect>의 stroke 시작점은 12시 위치(좌상단 코너 끝).
+              시계방향으로 그려지므로 dashoffset 양수일 때 12시에서 반시계 후퇴 */}
+          {rectGeom && (
+            <rect
+              x={rectGeom.x}
+              y={rectGeom.y}
+              width={rectGeom.w}
+              height={rectGeom.h}
+              rx={rectGeom.r}
+              ry={rectGeom.r}
+              fill="none"
+              stroke={RING_PROGRESS_COLOR}
+              strokeWidth={RING_STROKE}
+              strokeLinecap="butt"
+              strokeDasharray={perimeter.toFixed(2)}
+              strokeDashoffset={dashOffset.toFixed(2)}
+              style={{ filter: `drop-shadow(${RING_GLOW})` }}
+            />
+          )}
         </svg>
       )}
 
