@@ -1798,18 +1798,6 @@ const MapContainer = ({
     // → 남아있는 끝점이 시계 반대방향으로 회전하면서 줄어드는 효과.
     const createdAtMs = getPostCreatedAtMs(post);
     const showCountdownRing = isMarkerExpirable(post) && createdAtMs !== null;
-    // [debug-ring] 마커 카운트다운 링 생성 여부 추적
-    console.log('[debug-ring] marker', {
-      postId: post?.id,
-      isAd: post?.isAd,
-      isAdPending: post?.isAdPending,
-      createdAtRaw: post?.createdAt ?? post?.created_at,
-      createdAtMs,
-      isExpirable: isMarkerExpirable(post),
-      showCountdownRing,
-      ringPath: COUNTDOWN_RING_PATH,
-      ringPerimeter: COUNTDOWN_RING_PERIMETER,
-    });
     const countdownRingHtml = showCountdownRing
       ? (() => {
           const elapsed = Math.min(Math.max(Date.now() - (createdAtMs as number), 0), MARKER_LIFESPAN_MS);
