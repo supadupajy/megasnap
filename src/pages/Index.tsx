@@ -314,8 +314,13 @@ const Index = () => {
   // 위치 선택 모드에서 throttle 없이 즉시 최신 center를 추적 (stale closure 방지)
   const tempSelectedLocationRef = useRef<{ lat: number; lng: number } | null>(null);
   const [searchResultLocation, setSearchResultLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(() => mapCache.userLocation);
   const [stableViewportHeight, setStableViewportHeight] = useState(() => window.innerHeight);
+
+  const updateUserLocationMarker = useCallback((loc: { lat: number; lng: number }) => {
+    mapCache.userLocation = loc;
+    setUserLocation(loc);
+  }, []);
 
   useEffect(() => {
     const updateStableViewportHeight = () => {
@@ -1232,6 +1237,39 @@ const Index = () => {
   }, []);
 
   // ── 현재 위치 ────────────────────────────────────────────────
+  const refreshUserLocationMarker = useCallback(async () => {
+    const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+
+    if (isNative) {
+      try {
+        const permStatus = await Geolocation.checkPermissions();
+        if (permStatus.location === 'denied') return;
+        if (permStatus.location === 'prompt' || permStatus.location === 'prompt-with-rationale') {
+          const requested = await Geolocation.requestPermissions();
+          if (requested.location === 'denied') return;
+        }
+        const pos = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 30000,
+        });
+        if (pos?.coords) {
+          updateUserLocationMarker({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        }
+      } catch (e) {}
+      return;
+    }
+
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        updateUserLocationMarker({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }, [updateUserLocationMarker]);
+
   const moveToCurrentLocation = useCallback(async (showToast = true, force = false) => {
     // route state로 위치가 이미 지정된 경우 자동 geolocation으로 덮어쓰지 않음
     // 단, 사용자가 현재위치 버튼을 직접 누른 경우에는 명시적 동작이므로 허용
@@ -1272,7 +1310,7 @@ const Index = () => {
         if (pos?.coords) {
           const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
           setMapCenter(loc);
-          setUserLocation(loc);
+          updateUserLocationMarker(loc);
           if (toastId) dismissToast(toastId);
           if (showToast) showSuccess('현재 위치로 이동했습니다.');
         }
@@ -1302,7 +1340,7 @@ const Index = () => {
           (pos) => {
             const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
             setMapCenter(loc);
-            setUserLocation(loc);
+            updateUserLocationMarker(loc);
             if (toastId) dismissToast(toastId);
             if (showToast) showSuccess('현재 위치로 이동했습니다.');
           },
@@ -1332,32 +1370,38 @@ const Index = () => {
       };
       tryGetPosition();
     }
-  }, []);
+  }, [updateUserLocationMarker]);
 
   const handleCurrentLocation = () => moveToCurrentLocation(true, true);
 
-  // ── 앱 시작 시 현재 위치로 자동 이동 (앱 세션 최초 1회만) ──────────
-  // 다른 탭/페이지에서 뒤로가기로 지도에 돌아오는 경우에는 현재위치로 자동 이동하지 않음
+  // ── 앱 시작 시 현재 위치 확인 ───────────────────────────────
+  // 지도 페이지로 다시 돌아올 때는 지도 중심은 유지하되, 현재 위치 마커만 즉시 복원/갱신한다.
   useEffect(() => {
     if (mapCache.didInitialAutoLocate) {
       if (mapCache.keepPosition) mapCache.keepPosition = false;
+      refreshUserLocationMarker();
       return;
     }
     mapCache.didInitialAutoLocate = true;
 
     if (initialFocusRef.current) {
       sessionStorage.removeItem('pendingMapFocus');
+      refreshUserLocationMarker();
       return;
     }
     // 위치 선택 모드 진입 시 현재 위치로 자동 이동하지 않음 (보고 있던 지도 유지)
-    if (locationLockedRef.current) return;
+    if (locationLockedRef.current) {
+      refreshUserLocationMarker();
+      return;
+    }
     // Write 페이지 등에서 돌아올 때 현재 위치로 자동이동하지 않음 (보고 있던 지도 유지)
     if (mapCache.keepPosition) {
       mapCache.keepPosition = false;
+      refreshUserLocationMarker();
       return;
     }
     moveToCurrentLocation(false);
-  }, [moveToCurrentLocation]);
+  }, [moveToCurrentLocation, refreshUserLocationMarker]);
 
   // ── 좋아요 토글 ──────────────────────────────────────────────
   const handleLikeToggle = useCallback((postId: string) => {
@@ -1743,7 +1787,7 @@ const Index = () => {
               onMapClick={() => setSearchResultLocation(null)}
               userLocation={userLocation}
               draggable={!isTrendingExpanded}
-              hideUserLocation={!!selectedPostId || isPostListOpen}
+              hideUserLocation={false}
               toastTopOffset={indicatorTopOffset}
             />
 
