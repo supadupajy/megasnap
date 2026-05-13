@@ -305,9 +305,74 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
 //   width/height:100% 는 content box (= box - border*2) 가 된다.
 //   따라서 SVG를 박스의 외곽선(border box) 에 정확히 맞추려면
 //   borderWidth 만큼 음수 offset 으로 박스 바깥으로 펼쳐서 절대 좌표로 배치해야 한다.
-const DEBUG_THUMB_RING = false;
+const DEBUG_THUMB_RING = true;
 
 const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; geometry: RingGeometry; borderWidth: number }> = ({ post, now, geometry, borderWidth }) => {
+  const svgRef = React.useRef<SVGSVGElement | null>(null);
+
+  // 마운트 후 실제 DOM 측정값을 찍는다.
+  // 부모 박스(외곽 컨테이너), 부모의 부모, SVG 자체의 boundingClientRect 와
+  // computed style(border-width, box-sizing) 까지 모두 출력해서
+  // ring 이 어디에 어떤 크기로 그려지고 있는지 정확히 파악한다.
+  React.useEffect(() => {
+    if (!DEBUG_THUMB_RING) return;
+    const svg = svgRef.current;
+    if (!svg) return;
+    const directParent = svg.parentElement;       // <div class="relative w-full h-full">
+    const frame = directParent?.parentElement;    // <div class="relative w-12 h-12 rounded-xl ... border ..."> (md size일 때)
+
+    const svgRect = svg.getBoundingClientRect();
+    const parentRect = directParent?.getBoundingClientRect();
+    const frameRect = frame?.getBoundingClientRect();
+    const frameStyle = frame ? window.getComputedStyle(frame) : null;
+    const parentStyle = directParent ? window.getComputedStyle(directParent) : null;
+
+    // eslint-disable-next-line no-console
+    console.log('[ThumbnailCountdownRing.measure]', {
+      postId: post.id,
+      passedBorderWidth: borderWidth,
+      geometry: {
+        box: geometry.box,
+        pad: geometry.pad,
+        size: geometry.size,
+        r: geometry.r,
+        strokeWidth: geometry.strokeWidth,
+        perimeter: geometry.perimeter,
+      },
+      frame: frame ? {
+        tag: frame.tagName,
+        className: frame.className,
+        rect: { w: frameRect?.width, h: frameRect?.height, x: frameRect?.x, y: frameRect?.y },
+        borderTopWidth: frameStyle?.borderTopWidth,
+        borderLeftWidth: frameStyle?.borderLeftWidth,
+        boxSizing: frameStyle?.boxSizing,
+        borderRadius: frameStyle?.borderRadius,
+        offsetWidth: (frame as HTMLElement).offsetWidth,
+        clientWidth: (frame as HTMLElement).clientWidth,
+      } : null,
+      directParent: directParent ? {
+        tag: directParent.tagName,
+        className: directParent.className,
+        rect: { w: parentRect?.width, h: parentRect?.height, x: parentRect?.x, y: parentRect?.y },
+        position: parentStyle?.position,
+        offsetWidth: (directParent as HTMLElement).offsetWidth,
+      } : null,
+      svg: {
+        rect: { w: svgRect.width, h: svgRect.height, x: svgRect.x, y: svgRect.y },
+        attrW: svg.getAttribute('width'),
+        attrH: svg.getAttribute('height'),
+        viewBox: svg.getAttribute('viewBox'),
+      },
+      // 핵심 비교: SVG 외곽이 frame 외곽(border box)과 일치하는가?
+      svgVsFrame: frameRect ? {
+        leftDelta: svgRect.x - frameRect.x,
+        topDelta: svgRect.y - frameRect.y,
+        widthDelta: svgRect.width - frameRect.width,
+        heightDelta: svgRect.height - frameRect.height,
+      } : null,
+    });
+  }, [post.id, borderWidth, geometry]);
+
   if (!isThumbnailExpirable(post)) return null;
 
   const createdAtMs = getPostCreatedAtMs(post);
@@ -322,23 +387,9 @@ const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; geometry: Ring
   const spark = getRingSparkPoint(geometry, elapsedRatio);
   const showSpark = remainingRatio > 0.01 && remainingRatio < 0.995;
 
-  if (DEBUG_THUMB_RING) {
-    // eslint-disable-next-line no-console
-    console.log('[ThumbnailCountdownRing]', {
-      postId: post.id,
-      box: geometry.box,
-      borderWidth,
-      pad: geometry.pad,
-      r: geometry.r,
-      strokeWidth: geometry.strokeWidth,
-      perimeter: geometry.perimeter,
-      dashOffset,
-      remainingRatio,
-    });
-  }
-
   return (
     <svg
+      ref={svgRef}
       viewBox={`0 0 ${geometry.box} ${geometry.box}`}
       width={geometry.box}
       height={geometry.box}
