@@ -821,7 +821,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   transition={{ duration: 0.25, ease: "easeOut" }}
                   className="flex-1 flex items-center min-w-0 overflow-hidden"
                 >
-                  <span className="text-[10px] font-black text-gray-400 font-bold uppercase tracking-tight truncate">
+                  <span className="text-[10px] font-black text-gray-400 text-bold uppercase tracking-tight truncate">
                     Real-time HOT (Top 20)
                   </span>
                 </motion.div>
