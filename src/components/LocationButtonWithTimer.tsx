@@ -123,6 +123,51 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   // rect의 진행 방향은 시계방향이므로, 반시계 방향 후퇴를 위해 dashoffset 양수.
   const dashOffset = perimeter * (1 - remainingRatio);
 
+  // 남은 stroke의 끝점 좌표. 이 위치에 작은 반짝임을 표시해
+  // 타이머가 줄어드는 지점을 직관적으로 보여준다.
+  const sparkPoint = useMemo(() => {
+    if (!rectGeom || perimeter <= 0) return null;
+
+    const line = rectGeom.w - 2 * rectGeom.r;
+    const arc = Math.PI * rectGeom.r;
+    let d = (perimeter * remainingRatio) % perimeter;
+
+    // 상단 직선: 좌상단 접점 → 우상단 접점
+    if (d <= line) {
+      return { x: rectGeom.x + rectGeom.r + d, y: rectGeom.y };
+    }
+    d -= line;
+
+    // 우측 반원: 위 → 아래
+    if (d <= arc) {
+      const t = d / arc;
+      const angle = -Math.PI / 2 + Math.PI * t;
+      const cx = rectGeom.x + rectGeom.w - rectGeom.r;
+      const cy = rectGeom.y + rectGeom.r;
+      return {
+        x: cx + rectGeom.r * Math.cos(angle),
+        y: cy + rectGeom.r * Math.sin(angle),
+      };
+    }
+    d -= arc;
+
+    // 하단 직선: 우하단 접점 → 좌하단 접점
+    if (d <= line) {
+      return { x: rectGeom.x + rectGeom.w - rectGeom.r - d, y: rectGeom.y + rectGeom.h };
+    }
+    d -= line;
+
+    // 좌측 반원: 아래 → 위
+    const t = Math.min(1, d / arc);
+    const angle = Math.PI / 2 + Math.PI * t;
+    const cx = rectGeom.x + rectGeom.r;
+    const cy = rectGeom.y + rectGeom.r;
+    return {
+      x: cx + rectGeom.r * Math.cos(angle),
+      y: cy + rectGeom.r * Math.sin(angle),
+    };
+  }, [rectGeom, perimeter, remainingRatio]);
+
   // 스타일 분기
   // - 만료: 회색 + disabled
   // - 활성: 인디고 배경 + 흰색 텍스트(라이트) / 흰색-반투명(다크)
@@ -237,6 +282,31 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
               strokeDashoffset={dashOffset.toFixed(2)}
               style={{ filter: `drop-shadow(${RING_GLOW})` }}
             />
+          )}
+
+          {/* 남은 시간 경계점 반짝임 */}
+          {sparkPoint && remainingRatio > 0.01 && remainingRatio < 0.995 && (
+            <g style={{ filter: 'drop-shadow(0 0 5px rgba(57,255,20,0.95))' }}>
+              <circle
+                cx={sparkPoint.x}
+                cy={sparkPoint.y}
+                r="5"
+                fill="rgba(57,255,20,0.22)"
+              >
+                <animate attributeName="r" values="3;6;3" dur="1.15s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.15s" repeatCount="indefinite" />
+              </circle>
+              <circle
+                cx={sparkPoint.x}
+                cy={sparkPoint.y}
+                r="2.1"
+                fill="#ecfccb"
+                stroke="#39FF14"
+                strokeWidth="1"
+              >
+                <animate attributeName="opacity" values="1;0.45;1" dur="0.75s" repeatCount="indefinite" />
+              </circle>
+            </g>
           )}
         </svg>
       )}
