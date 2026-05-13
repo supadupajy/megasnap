@@ -1803,8 +1803,13 @@ const MapContainer = ({
           // dashoffset을 음수로 두면 시작점(12시 상단 중앙)에서부터 깎이고,
           // path가 시계 반대방향으로 그려지므로 끝점이 반시계 방향으로 후퇴한다.
           const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
+          // 두 개의 stroke를 겹침:
+          //   1) 배경(track): 둘레 전체를 옅은 초록으로 깔아 "지나간 시간"을 표현
+          //   2) 진행(progress): 남은 시간만큼만 짙은 초록으로 덮어 그림
+          // → 시간이 흐를수록 진행 stroke가 줄어들며 옅은 배경이 드러난다.
           return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
-            <path d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.5)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 3px rgba(57,255,20,0.55));" />
+            <path class="marker-countdown-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.18)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path class="marker-countdown-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.95)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 3px rgba(57,255,20,0.55));" />
           </svg>`;
         })()
       : '';
@@ -1891,11 +1896,12 @@ const MapContainer = ({
         }
 
         // 아직 만료 전 → dashoffset만 갱신 (innerHTML 교체 없음)
+        // 진행 path(짙은 초록)만 갱신; track path(옅은 초록)는 정적으로 유지.
         const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
         const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
-        const path = ring.querySelector('path');
-        if (path) {
-          path.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
+        const progressPath = ring.querySelector('.marker-countdown-progress');
+        if (progressPath) {
+          progressPath.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
         }
       });
     };
