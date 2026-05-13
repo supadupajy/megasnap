@@ -100,9 +100,10 @@ const COUNTDOWN_RING_SIZE = COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2; // 
 const COUNTDOWN_RING_R = 16;      // 둥근 모서리 반지름 (마커 border-radius=20에 맞춰 살짝 작게)
 
 // 카운트다운 링 컬러 (LocationButtonWithTimer와 통일)
-const COUNTDOWN_PROGRESS_COLOR = '#16a34a';            // 진한 초록 — 남은 시간
-const COUNTDOWN_TRACK_COLOR = 'rgba(34,197,94,0.22)';  // 연한 초록 — 지난 시간
-const COUNTDOWN_GLOW = '0 0 4px rgba(22,163,74,0.55)'; // 진행 stroke 발광
+// 남은 시간: 형광 네온 그린 / 지난 시간: 진한 초록 (opacity ↑)
+const COUNTDOWN_PROGRESS_COLOR = '#39FF14';            // 형광 네온 그린 — 남은 시간
+const COUNTDOWN_TRACK_COLOR = 'rgba(34,197,94,0.55)';  // 진한 초록(opacity 0.55) — 지난 시간
+const COUNTDOWN_GLOW = '0 0 4px rgba(57,255,20,0.7)';  // 네온 발광
 
 /**
  * 12시 방향(상단 중앙)에서 시작해, 시계 반대방향으로 한 바퀴 도는
