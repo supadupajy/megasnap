@@ -1803,13 +1803,8 @@ const MapContainer = ({
           // dashoffset을 음수로 두면 시작점(12시 상단 중앙)에서부터 깎이고,
           // path가 시계 반대방향으로 그려지므로 끝점이 반시계 방향으로 후퇴한다.
           const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
-          // 2개 path 겹쳐 그리기:
-          //   1) 트랙 (지나간 시간) — 옅은 초록, 항상 전체 둘레
-          //   2) 진행 (남은 시간) — 진한 초록, dashoffset으로 줄어듦
-          // 색상은 LocationButtonWithTimer.tsx와 동일 톤으로 통일.
           return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
-            <path d="${COUNTDOWN_RING_PATH}" fill="none" stroke="#D8F1DE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-            <path class="marker-countdown-ring-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="#5BC078" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" />
+            <path d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.5)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 3px rgba(57,255,20,0.55));" />
           </svg>`;
         })()
       : '';
@@ -1895,12 +1890,12 @@ const MapContainer = ({
           return;
         }
 
-        // 아직 만료 전 → 진행 path의 dashoffset만 갱신 (innerHTML 교체 없음)
+        // 아직 만료 전 → dashoffset만 갱신 (innerHTML 교체 없음)
         const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
         const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
-        const progressPath = ring.querySelector('.marker-countdown-ring-progress');
-        if (progressPath) {
-          progressPath.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
+        const path = ring.querySelector('path');
+        if (path) {
+          path.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
         }
       });
     };

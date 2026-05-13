@@ -6,30 +6,13 @@ const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000;
 // 1분마다 갱신 (지도 마커의 카운트다운 링과 같은 주기)
 const TICK_INTERVAL_MS = 60 * 1000;
 
-// ── 카운트다운 링 (알약 외부) ───────────────────────────────────────────────
-// 알약 버튼을 감싸는 형태로, 버튼 가장자리에서 일정 픽셀만큼 바깥에 그려진다.
-const RING_OUTSET = 4;   // 버튼 가장자리에서 바깥으로 벌어지는 픽셀 (외부 링)
-const RING_STROKE = 2.5; // 링 두께
-
-// ── 색상 팔레트 (스크린샷 기반 초록 톤) ──────────────────────────────────────
-const COLOR = {
-  // 알약 버튼
-  pillBg: '#2D5F3F',          // 진한 숲 초록 (배경)
-  pillFg: '#A8E0B5',          // 연한 잎새 초록 (텍스트/아이콘)
-  pillBorder: 'rgba(168,224,181,0.35)',
-  // 외부 카운트다운 링
-  ringTrack: '#D8F1DE',       // 아주 옅은 초록 (지나간 시간)
-  ringActive: '#5BC078',      // 진한 잎새 초록 (남은 시간)
-  // 어두운 배경(Reels)에서의 트랙 — 너무 밝으면 튀므로 살짝 톤다운
-  ringTrackDark: 'rgba(216,241,222,0.35)',
-  // 만료 상태
-  expiredBgLight: '#f3f4f6',
-  expiredFgLight: '#9ca3af',
-  expiredBorderLight: '#e5e7eb',
-  expiredBgDark: 'rgba(255,255,255,0.06)',
-  expiredFgDark: 'rgba(255,255,255,0.45)',
-  expiredBorderDark: 'rgba(255,255,255,0.10)',
-};
+// 둥근 사각 카운트다운 링 (지도 마커와 동일한 시각 룰)
+// 12시 방향 상단 중앙에서 시작 → 시계 반대방향으로 한 바퀴 도는 path
+const RING_PADDING = 2;            // 버튼 외곽에서 안쪽으로 들이는 픽셀
+const RING_VIEWBOX = 100;          // 비율 기반 (가로/세로 비율이 달라도 stretch)
+const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤
+const RING_STROKE = 3;             // 버튼은 마커보다 작아서 살짝 얇게
+const RING_CORNER = 18;            // 알약 형태 (h-9 → border-radius:9999 → 코너 r = h/2 = 18)
 
 interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
@@ -43,12 +26,10 @@ interface LocationButtonWithTimerProps {
 }
 
 /**
- * 24h 카운트다운 링이 알약 외부에 둘러진 "위치보기" 버튼.
- *
- * - 알약 자체: 진한 초록 배경 + 연한 초록 텍스트
- * - 외부 링: 트랙(옅은 초록, 지나간 시간) + 진행(진한 초록, 남은 시간)
- * - 24h 경과 시: 회색 알약 + "위치없음" + disabled (링 제거)
- * - 광고(`isAd`)는 만료 룰 적용 안 됨 (링도 표시 X)
+ * 24h 카운트다운 링이 있는 "위치보기" 버튼.
+ * - 24h 경과 시: 회색 + "위치없음" + disabled
+ * - 광고(`isAd`)는 만료 룰 적용 안 됨
+ * - 광고이거나 createdAt이 없으면 링도 표시하지 않음
  */
 const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   createdAt,
@@ -65,7 +46,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     return Number.isFinite(t) ? t : null;
   }, [createdAt]);
 
-  // 만료 룰이 적용되는지 (광고 X, 시간 정보 있음)
+  // 만료 룰이 적용되는지 (광고/광고대기 X, 시간 정보 있음)
   const isExpirable = !isAd && createdMs !== null && !forceActive;
 
   // 현재 시간 (1분마다 tick)
@@ -82,9 +63,12 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     ? Math.max(0, 1 - elapsed / MARKER_LIFESPAN_MS)
     : 1;
 
-  // 버튼 실제 크기 측정 → 외부 링의 path 계산에 사용
+  // 사각 둥근 path (12시 → 반시계 방향)를 동적으로 계산 (버튼 비율에 맞춤)
+  // 단순화를 위해 viewBox=preserveAspectRatio="none"으로 늘리지 않고,
+  // 비율 보존하면서도 stroke가 자연스럽도록 실제 픽셀 좌표 기반 path 사용.
+  // 단, 버튼 너비를 사전에 알 수 없으므로 ResizeObserver로 측정.
   const wrapRef = useRef<HTMLButtonElement>(null);
-  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 36 });
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: RING_HEIGHT });
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -104,63 +88,65 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     return () => ro.disconnect();
   }, []);
 
-  // 외부 링 path: 버튼 사방으로 RING_OUTSET 만큼 벌어진 알약 윤곽
-  // 시작점은 12시 방향(상단 중앙), 시계 반대방향 1회전.
-  const { path, perimeter, svgW, svgH, svgOffset } = useMemo(() => {
-    if (size.w === 0) {
-      return { path: '', perimeter: 0, svgW: 0, svgH: 0, svgOffset: 0 };
-    }
-    // 링이 그려질 사각형 영역 (버튼보다 outset만큼 큰 알약)
-    const w = size.w + RING_OUTSET * 2;
-    const h = size.h + RING_OUTSET * 2;
-    const r = Math.min(h / 2, w / 2); // 알약: 코너 = height/2
-    // SVG 자체는 stroke가 잘리지 않게 stroke 두께만큼 더 확보
-    const padForStroke = Math.ceil(RING_STROKE / 2) + 1;
-    const svgW = w + padForStroke * 2;
-    const svgH = h + padForStroke * 2;
-
-    const left = padForStroke;
-    const right = padForStroke + w;
-    const top = padForStroke;
-    const bottom = padForStroke + h;
-    const cx = padForStroke + w / 2;
-
+  // path와 둘레 계산 (메모이즈)
+  const { path, perimeter } = useMemo(() => {
+    if (size.w === 0) return { path: '', perimeter: 0 };
+    const pad = RING_PADDING;
+    const w = size.w - pad * 2;
+    const h = size.h - pad * 2;
+    // 코너 반지름은 높이의 절반 (알약 형태) — 단, 너비/높이 한쪽보다 크면 안 됨
+    const r = Math.min(RING_CORNER - pad, h / 2, w / 2);
+    const left = pad;
+    const right = pad + w;
+    const top = pad;
+    const bottom = pad + h;
+    const cx = pad + w / 2;
     // 12시(상단 중앙) → 시계 반대방향
     const d = `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left} ${top + r} V ${bottom - r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right} ${bottom - r} V ${top + r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
-    // 둘레 = 직선 4개 + 원 1개
-    const peri = 2 * Math.max(0, w - 2 * r) + 2 * Math.max(0, h - 2 * r) + 2 * Math.PI * r;
-    return { path: d, perimeter: peri, svgW, svgH, svgOffset: padForStroke + RING_OUTSET };
+    // 둘레 길이: 직선 4개 + 90°*4 호(=원 1개)
+    const peri = 2 * (w - 2 * r) + 2 * (h - 2 * r) + 2 * Math.PI * r;
+    return { path: d, perimeter: peri };
   }, [size]);
 
   const dashOffset = -(perimeter * (1 - remainingRatio));
 
   // 스타일 분기
   // - 만료: 회색 + disabled
-  // - 활성: 진한 초록(공통) — variant는 외부 링 트랙 색에만 영향
+  // - 활성: 기존 인디고(라이트) / 흰색-반투명(다크)
   const baseStyle: React.CSSProperties = isExpired
     ? {
-        backgroundColor: variant === 'dark' ? COLOR.expiredBgDark : COLOR.expiredBgLight,
-        color: variant === 'dark' ? COLOR.expiredFgDark : COLOR.expiredFgLight,
-        border: `1px solid ${variant === 'dark' ? COLOR.expiredBorderDark : COLOR.expiredBorderLight}`,
+        backgroundColor: variant === 'dark' ? 'rgba(255,255,255,0.06)' : '#f3f4f6',
+        color: variant === 'dark' ? 'rgba(255,255,255,0.45)' : '#9ca3af',
+        border: variant === 'dark'
+          ? '1px solid rgba(255,255,255,0.10)'
+          : '1px solid #e5e7eb',
         cursor: 'not-allowed',
         isolation: 'isolate',
       }
+    : variant === 'dark'
+    ? {
+        backgroundColor: 'rgba(255,255,255,0.10)',
+        color: '#ffffff',
+        border: '1px solid rgba(255,255,255,0.20)',
+        backdropFilter: 'blur(6px)',
+        isolation: 'isolate',
+      }
     : {
-        backgroundColor: COLOR.pillBg,
-        color: COLOR.pillFg,
-        border: `1px solid ${COLOR.pillBorder}`,
+        backgroundColor: '#eef2ff',
+        color: '#4f46e5',
+        border: '1px solid #c7d2fe',
         isolation: 'isolate',
       };
 
   const iconColor = isExpired
-    ? (variant === 'dark' ? COLOR.expiredFgDark : COLOR.expiredFgLight)
-    : COLOR.pillFg;
+    ? (variant === 'dark' ? 'rgba(255,255,255,0.45)' : '#9ca3af')
+    : (variant === 'dark' ? '#ffffff' : '#4f46e5');
+
   const textColor = iconColor;
   const label = isExpired ? '위치만료' : '위치보기';
 
   // 링은 광고/만료/createdAt 없음에서는 표시하지 않음
   const showRing = isExpirable && !isExpired && path.length > 0;
-  const trackColor = variant === 'dark' ? COLOR.ringTrackDark : COLOR.ringTrack;
 
   return (
     <button
@@ -179,43 +165,33 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
       className="relative inline-flex h-9 items-center justify-center gap-1.5 px-3 rounded-full transition-all shrink-0 whitespace-nowrap active:scale-95 disabled:active:scale-100"
       style={baseStyle}
     >
-      {/* 카운트다운 링 — 알약 외부에 표시 (버튼보다 약간 크게 absolute로 띄움) */}
+      {/* 카운트다운 링 (만료 전에만 표시) */}
       {showRing && (
         <svg
-          width={svgW}
-          height={svgH}
-          viewBox={`0 0 ${svgW} ${svgH}`}
+          width={size.w}
+          height={size.h}
+          viewBox={`0 0 ${size.w} ${size.h}`}
           style={{
             position: 'absolute',
-            // 버튼 중앙을 기준으로 svg가 사방으로 svgOffset 만큼 더 큰 상태
-            top: -svgOffset,
-            left: -svgOffset,
-            width: `calc(100% + ${svgOffset * 2}px)`,
-            height: `calc(100% + ${svgOffset * 2}px)`,
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             pointerEvents: 'none',
             overflow: 'visible',
-            zIndex: 0,
+            zIndex: 1,
           }}
         >
-          {/* 트랙 (지나간 시간 = 옅은 초록) — 항상 전체 둘레 */}
           <path
             d={path}
             fill="none"
-            stroke={trackColor}
-            strokeWidth={RING_STROKE}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          {/* 진행 (남은 시간 = 진한 초록) — 12시에서 반시계방향으로 줄어듦 */}
-          <path
-            d={path}
-            fill="none"
-            stroke={COLOR.ringActive}
+            stroke="rgba(57,255,20,0.5)"
             strokeWidth={RING_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={perimeter.toFixed(2)}
             strokeDashoffset={dashOffset.toFixed(2)}
+            style={{ filter: 'drop-shadow(0 0 3px rgba(57,255,20,0.55))' }}
           />
         </svg>
       )}

@@ -78,7 +78,7 @@ const PostActions = ({
       createdAt={createdAt}
       isAd={isAd}
       onClick={(e) => onLocationClick(e, lat as number, lng as number)}
-      variant="dark"
+      variant="light"
     />
   ) : null;
 
