@@ -280,6 +280,7 @@ interface TrendingPostItemProps {
 
 const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange }) => {
   const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
+  const hasDisplayLocation = !!displayLocation && displayLocation !== '위치 정보 없음';
   const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
   const borderType = post.borderType || 'none';
@@ -392,7 +393,10 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           <HashtagText text={post.content || ''} />
         </p>
         <div className="flex items-center gap-2">
-          <p className="text-[11px] font-medium text-gray-400 truncate">
+          <p className={cn(
+            "text-[11px] font-medium truncate",
+            hasDisplayLocation ? "text-indigo-500" : "text-gray-400"
+          )}>
             {displayLocation || '위치 정보 없음'}
           </p>
           <div className="flex items-center gap-0.5 text-rose-500 shrink-0">
