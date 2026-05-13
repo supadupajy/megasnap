@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
+import MarkerExpiryNotice from '@/components/MarkerExpiryNotice';
 import ReelsViewer from '@/components/ReelsViewer';
 import PostDetail from '@/components/PostDetail';
 import PlaceSearch from '@/components/PlaceSearch';
@@ -1951,6 +1952,10 @@ const Index = () => {
               onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
               maxHeight="calc(100dvh - env(safe-area-inset-top, 0px) - 74px - env(safe-area-inset-bottom, 0px) - 3rem - 74px)"
             />
+            {/* 마커 24시간 자동 삭제 안내 - 트렌딩 패널 하단에 배치되어
+                좌/우 마커 인디케이터를 가리지 않도록 가운데 좁은 폭으로 표시됨.
+                패널이 펼쳐졌을 때는 숨겨서 패널 내용과 겹치지 않도록 함. */}
+            {!isTrendingExpanded && <MarkerExpiryNotice />}
           </div>
 
         </div>
