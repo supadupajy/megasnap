@@ -33,10 +33,17 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { formatAdministrativeAddress } from '@/utils/location-format';
 
-const reverseGeocode = (lat: number, lng: number): Promise<string> => {
+const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+  try {
+    await loadKakaoMapsSdk();
+  } catch (e) {
+    return resolveOfflineLocationName(lat, lng);
+  }
+
   return new Promise(resolve => {
     const kakao = (window as any).kakao;
     if (!kakao?.maps?.services) {

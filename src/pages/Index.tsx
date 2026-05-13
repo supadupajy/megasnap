@@ -32,6 +32,7 @@ import { fetchLikedPostIds, toggleLikeInDb } from '@/utils/like-utils';
 import { useMapMarkerAds, resolveActiveSlot } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
 import { formatAdministrativeAddress } from '@/utils/location-format';
+import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 
@@ -802,7 +803,13 @@ const Index = () => {
 
     const AD_POST_PREFIX = 'ad-map-marker-';
 
-    const getLocation = (lat: number, lng: number): Promise<string> => {
+    const getLocation = async (lat: number, lng: number): Promise<string> => {
+      try {
+        await loadKakaoMapsSdk();
+      } catch (e) {
+        return resolveOfflineLocationName(lat, lng);
+      }
+
       return new Promise(resolve => {
         const kakao = (window as any).kakao;
         if (!kakao?.maps?.services) {

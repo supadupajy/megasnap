@@ -16,6 +16,7 @@ import { useWriteStore } from '@/utils/write-store';
 import { mapCache } from '@/utils/map-cache';
 import { extractHashtags } from '@/utils/hashtags';
 import { formatAdministrativeAddress } from '@/utils/location-format';
+import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 
 interface MediaFile {
   file: File;
@@ -80,30 +81,43 @@ const Write = () => {
       return;
     }
     const { lat, lng } = initialLocation;
+    let cancelled = false;
 
-    // 카카오맵 역지오코딩 API로 정확한 주소 조회
-    const kakao = (window as any).kakao;
-    if (kakao?.maps?.services) {
-      const geocoder = new kakao.maps.services.Geocoder();
-      geocoder.coord2Address(lng, lat, (result: any, status: any) => {
-        if (status === kakao.maps.services.Status.OK && result[0]) {
-          const addr = result[0].address;
-          setAddress(formatAdministrativeAddress(
-            addr.region_1depth_name,
-            addr.region_2depth_name,
-            addr.region_3depth_name
-          ));
-        } else {
-          // API 실패 시 폴리곤 → 오프라인 순으로 fallback
-          const district = getSeoulDistrict(lat, lng);
-          setAddress(district ?? resolveOfflineLocationName(lat, lng));
-        }
-      });
-    } else {
-      // 카카오맵 미로드 시 폴리곤 → 오프라인 순으로 fallback
+    const setFallbackAddress = () => {
       const district = getSeoulDistrict(lat, lng);
       setAddress(district ?? resolveOfflineLocationName(lat, lng));
-    }
+    };
+
+    loadKakaoMapsSdk()
+      .then(() => {
+        if (cancelled) return;
+        const kakao = (window as any).kakao;
+        if (!kakao?.maps?.services) {
+          setFallbackAddress();
+          return;
+        }
+        const geocoder = new kakao.maps.services.Geocoder();
+        geocoder.coord2Address(lng, lat, (result: any, status: any) => {
+          if (cancelled) return;
+          if (status === kakao.maps.services.Status.OK && result[0]) {
+            const addr = result[0].address;
+            setAddress(formatAdministrativeAddress(
+              addr.region_1depth_name,
+              addr.region_2depth_name,
+              addr.region_3depth_name
+            ));
+          } else {
+            setFallbackAddress();
+          }
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setFallbackAddress();
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [initialLocation]);
 
   useEffect(() => {

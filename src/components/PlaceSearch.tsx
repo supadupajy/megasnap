@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useKeyboard } from '@/hooks/use-keyboard';
+import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 import { normalizeLocationName } from '@/utils/location-format';
 
 interface Place {
@@ -56,22 +57,42 @@ const PlaceSearch = ({ isOpen, onClose, onSelect, mapCenter }: PlaceSearchProps)
   }, [isOpen, onClose]);
 
   useEffect(() => {
-    const kakao = (window as any).kakao;
-    if (isOpen && kakao?.maps?.services) {
-      if (!searchService.current) searchService.current = new kakao.maps.services.Places();
-      if (!geocoderService.current) geocoderService.current = new kakao.maps.services.Geocoder();
-    }
+    if (!isOpen) return;
+    let cancelled = false;
+
+    loadKakaoMapsSdk()
+      .then(() => {
+        if (cancelled) return;
+        const kakao = (window as any).kakao;
+        if (kakao?.maps?.services) {
+          if (!searchService.current) searchService.current = new kakao.maps.services.Places();
+          if (!geocoderService.current) geocoderService.current = new kakao.maps.services.Geocoder();
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen]);
 
   const performSearch = useCallback(async (keyword: string) => {
-    if (!keyword.trim() || !searchService.current || !geocoderService.current) return;
+    if (!keyword.trim()) return;
     if (isSearching.current) return;
 
     isSearching.current = true;
     setIsLoading(true);
-    const kakao = (window as any).kakao;
 
     try {
+      if (!searchService.current || !geocoderService.current) {
+        await loadKakaoMapsSdk();
+        const loadedKakao = (window as any).kakao;
+        if (!loadedKakao?.maps?.services) return;
+        searchService.current = new loadedKakao.maps.services.Places();
+        geocoderService.current = new loadedKakao.maps.services.Geocoder();
+      }
+
+      const kakao = (window as any).kakao;
       const addressPromise = new Promise<Place[]>((resolve) => {
         geocoderService.current.addressSearch(keyword, (data: any, status: any) => {
           if (status === kakao.maps.services.Status.OK) {
