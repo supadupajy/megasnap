@@ -8,11 +8,17 @@ const TICK_INTERVAL_MS = 60 * 1000;
 
 // 둥근 사각 카운트다운 링 (지도 마커와 동일한 시각 룰)
 // 12시 방향 상단 중앙에서 시작 → 시계 반대방향으로 한 바퀴 도는 path
-const RING_PADDING = 2;            // 버튼 외곽에서 안쪽으로 들이는 픽셀
+const RING_PADDING = 1.5;          // 버튼 외곽에서 안쪽으로 들이는 픽셀 (외곽선에 가깝게 hug)
 const RING_VIEWBOX = 100;          // 비율 기반 (가로/세로 비율이 달라도 stretch)
 const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤
-const RING_STROKE = 3;             // 버튼은 마커보다 작아서 살짝 얇게
+const RING_STROKE = 2.5;           // 깔끔하고 세련된 두께
+const RING_TRACK_STROKE = 2.5;     // 트랙도 동일 두께(자연스러운 연속감)
 const RING_CORNER = 18;            // 알약 형태 (h-9 → border-radius:9999 → 코너 r = h/2 = 18)
+
+// 카운트다운 링 컬러 (지도 마커와 통일)
+const RING_PROGRESS_COLOR = '#16a34a';            // 진한 초록 (Tailwind green-600) — 남은 시간
+const RING_TRACK_COLOR = 'rgba(34,197,94,0.22)';  // 연한 초록 — 지난 시간 트랙
+const RING_GLOW = '0 0 4px rgba(22,163,74,0.55)'; // 부드러운 발광
 
 interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
@@ -166,8 +172,8 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
       style={baseStyle}
     >
       {/* 카운트다운 링 (만료 전에만 표시)
-          - 트랙(경과 부분): 옅은 stroke로 전체 둘레를 깔아둠
-          - 진행(남은 부분): 그 위에 네온 그린 stroke를 dashoffset으로 보여줌 */}
+          - 트랙(지난 시간): 연한 초록 stroke로 전체 둘레를 깔아둠
+          - 진행(남은 시간): 그 위에 진한 초록 stroke를 dashoffset으로 보여줌 */}
       {showRing && (
         <svg
           width={size.w}
@@ -184,26 +190,26 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
             zIndex: 1,
           }}
         >
-          {/* 트랙 (경과한 시간 부분) */}
+          {/* 트랙 (지난 시간 — 연한 초록) */}
           <path
             d={path}
             fill="none"
-            stroke={variant === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(99,102,241,0.18)'}
-            strokeWidth={RING_STROKE}
+            stroke={RING_TRACK_COLOR}
+            strokeWidth={RING_TRACK_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* 진행 (남은 시간 부분) */}
+          {/* 진행 (남은 시간 — 진한 초록) */}
           <path
             d={path}
             fill="none"
-            stroke="rgba(57,255,20,0.5)"
+            stroke={RING_PROGRESS_COLOR}
             strokeWidth={RING_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={perimeter.toFixed(2)}
             strokeDashoffset={dashOffset.toFixed(2)}
-            style={{ filter: 'drop-shadow(0 0 3px rgba(57,255,20,0.55))' }}
+            style={{ filter: `drop-shadow(${RING_GLOW})` }}
           />
         </svg>
       )}

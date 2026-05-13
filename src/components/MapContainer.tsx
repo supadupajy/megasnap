@@ -99,6 +99,11 @@ const COUNTDOWN_RING_BOX = 60;    // viewBox 크기 (마커 inner box 크기와 
 const COUNTDOWN_RING_SIZE = COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2; // 사각 변 길이 = 56
 const COUNTDOWN_RING_R = 16;      // 둥근 모서리 반지름 (마커 border-radius=20에 맞춰 살짝 작게)
 
+// 카운트다운 링 컬러 (LocationButtonWithTimer와 통일)
+const COUNTDOWN_PROGRESS_COLOR = '#16a34a';            // 진한 초록 — 남은 시간
+const COUNTDOWN_TRACK_COLOR = 'rgba(34,197,94,0.22)';  // 연한 초록 — 지난 시간
+const COUNTDOWN_GLOW = '0 0 4px rgba(22,163,74,0.55)'; // 진행 stroke 발광
+
 /**
  * 12시 방향(상단 중앙)에서 시작해, 시계 반대방향으로 한 바퀴 도는
  * 둥근 사각형 SVG path를 생성한다.
@@ -1804,7 +1809,8 @@ const MapContainer = ({
           // path가 시계 반대방향으로 그려지므로 끝점이 반시계 방향으로 후퇴한다.
           const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
           return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
-            <path d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.5)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 3px rgba(57,255,20,0.55));" />
+            <path class="marker-countdown-ring-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="${COUNTDOWN_TRACK_COLOR}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path class="marker-countdown-ring-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="${COUNTDOWN_PROGRESS_COLOR}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(${COUNTDOWN_GLOW});" />
           </svg>`;
         })()
       : '';
@@ -1890,12 +1896,12 @@ const MapContainer = ({
           return;
         }
 
-        // 아직 만료 전 → dashoffset만 갱신 (innerHTML 교체 없음)
+        // 아직 만료 전 → 진행 path의 dashoffset만 갱신 (트랙은 정적이므로 그대로)
         const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
         const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
-        const path = ring.querySelector('path');
-        if (path) {
-          path.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
+        const progressPath = ring.querySelector('.marker-countdown-ring-progress');
+        if (progressPath) {
+          progressPath.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
         }
       });
     };
