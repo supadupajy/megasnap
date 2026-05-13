@@ -347,7 +347,7 @@ const NearbyPosts = () => {
               items.push(
                 <div key="hidden-map-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-slate-50">
                   <div className="flex-1 h-px bg-slate-200" />
-                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-black text-slate-600 whitespace-nowrap shrink-0 shadow-sm">
+                  <span className="rounded-full border border-gray-900 bg-gray-900 px-3 py-1 text-[11px] font-black text-white whitespace-nowrap shrink-0 shadow-sm">
                     여기부터는 지도에 보이지 않는 포스팅입니다.
                   </span>
                   <div className="flex-1 h-px bg-slate-200" />
