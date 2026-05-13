@@ -49,41 +49,6 @@ const Chat = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
 
-  // 🐛 디버그 정보
-  const [debugInfo, setDebugInfo] = useState<{
-    windowInnerHeight: number;
-    vpHeight: number;
-    vpOffsetTop: number;
-    vpPageTop: number;
-    keyboardHeight: number;
-    isKeyboardOpen: boolean;
-    inputTop: number | string;
-    inputBottom: string;
-    inputHeight: number;
-    hasVisualViewport: boolean;
-    userAgent: string;
-    docHeight: number;
-    screenHeight: number;
-    eventType: string;
-    eventCount: number;
-  }>({
-    windowInnerHeight: 0,
-    vpHeight: 0,
-    vpOffsetTop: 0,
-    vpPageTop: 0,
-    keyboardHeight: 0,
-    isKeyboardOpen: false,
-    inputTop: 'auto',
-    inputBottom: '112px',
-    inputHeight: 0,
-    hasVisualViewport: false,
-    userAgent: '',
-    docHeight: 0,
-    screenHeight: 0,
-    eventType: 'init',
-    eventCount: 0,
-  });
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
@@ -171,73 +136,45 @@ const Chat = () => {
     } catch (err) {}
   }, [authUser, chatId]);
 
-  // 키보드 대응 — 안드로이드 WebView는 키보드 띄울 때 viewport 자체를 resize함
-  // 그래서 visualViewport.height와 window.innerHeight 차이가 0이 나옴.
-  // 해결: 페이지 진입 시점의 "키보드 없는 상태"의 높이를 기준값으로 저장하고,
-  //       현재 innerHeight와의 차이를 키보드 높이로 계산.
+  // 키보드 대응 — 안드로이드 WebView는 키보드 띄울 때 viewport 자체를 resize함.
+  // visualViewport.height와 window.innerHeight 차이가 0이 나오므로 baseline 비교 방식 병용.
   useEffect(() => {
     const vp = window.visualViewport;
-    const hasVP = !!vp;
-    console.log('[Chat Debug] visualViewport supported:', hasVP);
-    console.log('[Chat Debug] userAgent:', navigator.userAgent);
 
-    // ✅ 기준 높이: 페이지 진입 시점의 innerHeight (키보드 없는 상태)
-    // 향후 더 큰 값이 들어오면 기준 갱신 (회전 등)
+    // 페이지 진입 시점의 innerHeight (키보드 없는 상태)를 baseline으로 저장
     let baselineHeight = window.innerHeight;
-    let eventCount = 0;
 
-    const handleViewport = (eventType: string = 'manual') => {
-      eventCount++;
+    const handleViewport = () => {
       const winH = window.innerHeight;
-      const docH = document.documentElement.clientHeight;
-      const screenH = window.screen.height;
-
       const vpHeight = vp?.height ?? winH;
       const offsetTop = vp?.offsetTop ?? 0;
-      const pageTop = vp?.pageTop ?? 0;
 
-      // 기준 높이보다 현재 innerHeight가 크면 baseline 갱신 (회전, 주소창 변화 등)
-      if (winH > baselineHeight) {
-        baselineHeight = winH;
-      }
+      // baseline 갱신 (회전, 주소창 변화 등)
+      if (winH > baselineHeight) baselineHeight = winH;
 
-      // ✅ 안드로이드 WebView 대응:
-      // - 표준 방식: keyboardHeight = winH - vpHeight - offsetTop (iOS Safari)
-      // - WebView 방식: keyboardHeight = baselineHeight - winH (viewport가 resize됨)
-      // 두 값 중 큰 값을 사용
-      const standardKbH = Math.max(0, winH - vpHeight - offsetTop);
-      const fallbackKbH = Math.max(0, baselineHeight - winH);
+      // 두 가지 방식 중 큰 값 사용
+      const standardKbH = Math.max(0, winH - vpHeight - offsetTop);  // iOS Safari
+      const fallbackKbH = Math.max(0, baselineHeight - winH);        // Android WebView
       const keyboardHeight = Math.max(standardKbH, fallbackKbH);
       const isKeyboardOpen = keyboardHeight > 100;
-
-      const inputHeight = inputRef.current?.offsetHeight ?? 0;
 
       // 채팅 상세 헤더: visualViewport offsetTop 따라가기 (iOS용)
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
 
-      let appliedTop: number | string = 'auto';
-      let appliedBottom = '112px';
-
       if (inputRef.current) {
         if (isKeyboardOpen) {
-          // ✅ 안드로이드 WebView에서는 viewport가 이미 resize되었으므로
-          // bottom: 0 으로 두면 키보드 바로 위에 자연스럽게 붙음
-          // iOS에서는 visualViewport 기반으로 top 계산
           if (standardKbH > 100) {
             // iOS 패턴: visual viewport 하단에 맞춤
+            const inputHeight = inputRef.current.offsetHeight || 64;
             const inputTop = offsetTop + vpHeight - inputHeight;
             inputRef.current.style.bottom = 'auto';
             inputRef.current.style.top = `${inputTop}px`;
-            appliedTop = inputTop;
-            appliedBottom = 'auto';
           } else {
-            // 안드로이드 WebView 패턴: 그냥 bottom: 0
+            // 안드로이드 WebView 패턴: bottom: 0
             inputRef.current.style.top = 'auto';
             inputRef.current.style.bottom = '0px';
-            appliedTop = 'auto';
-            appliedBottom = '0px';
           }
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '8px';
@@ -246,73 +183,32 @@ const Chat = () => {
           inputRef.current.style.bottom = '112px';
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '12px';
-          appliedTop = 'auto';
-          appliedBottom = '112px';
         }
       }
 
       if (scrollRef.current) {
-        const baseBottomPad = isKeyboardOpen ? 80 : 220;
-        scrollRef.current.style.paddingBottom = `${baseBottomPad}px`;
+        scrollRef.current.style.paddingBottom = isKeyboardOpen ? '80px' : '220px';
       }
-
-      setDebugInfo({
-        windowInnerHeight: winH,
-        vpHeight: Math.round(vpHeight),
-        vpOffsetTop: Math.round(offsetTop),
-        vpPageTop: Math.round(pageTop),
-        keyboardHeight: Math.round(keyboardHeight),
-        isKeyboardOpen,
-        inputTop: typeof appliedTop === 'number' ? Math.round(appliedTop) : appliedTop,
-        inputBottom: appliedBottom,
-        inputHeight,
-        hasVisualViewport: hasVP,
-        userAgent: `baseline:${baselineHeight} | std:${standardKbH} fb:${fallbackKbH} | ${navigator.userAgent.substring(0, 50)}`,
-        docHeight: docH,
-        screenHeight: screenH,
-        eventType,
-        eventCount,
-      });
-
-      console.log(`[Chat Debug] ${eventType}:`, {
-        winH, vpHeight, offsetTop, baselineHeight, standardKbH, fallbackKbH, keyboardHeight, isKeyboardOpen,
-      });
 
       setTimeout(scrollToBottom, 50);
     };
 
-    handleViewport('init');
+    handleViewport();
 
-    const onWinResize = () => handleViewport('window.resize');
+    const onWinResize = () => handleViewport();
     window.addEventListener('resize', onWinResize);
 
     if (vp) {
-      const onVpResize = () => handleViewport('vp.resize');
-      const onVpScroll = () => handleViewport('vp.scroll');
-      vp.addEventListener('resize', onVpResize);
-      vp.addEventListener('scroll', onVpScroll);
+      vp.addEventListener('resize', handleViewport);
+      vp.addEventListener('scroll', handleViewport);
       return () => {
-        vp.removeEventListener('resize', onVpResize);
-        vp.removeEventListener('scroll', onVpScroll);
+        vp.removeEventListener('resize', handleViewport);
+        vp.removeEventListener('scroll', handleViewport);
         window.removeEventListener('resize', onWinResize);
       };
     }
     return () => window.removeEventListener('resize', onWinResize);
   }, [scrollToBottom]);
-
-  // 입력창 포커스/블러 이벤트도 디버그
-  useEffect(() => {
-    const input = inputRef.current?.querySelector('input');
-    if (!input) return;
-    const onFocus = () => console.log('[Chat Debug] input FOCUS');
-    const onBlur = () => console.log('[Chat Debug] input BLUR');
-    input.addEventListener('focus', onFocus);
-    input.addEventListener('blur', onBlur);
-    return () => {
-      input.removeEventListener('focus', onFocus);
-      input.removeEventListener('blur', onBlur);
-    };
-  }, []);
 
   // 상대방 프로필 조회
   useEffect(() => {
@@ -538,27 +434,6 @@ const Chat = () => {
             );
           })}
         </div>
-      </div>
-
-      {/* 🐛 DEBUG PANEL — 키보드/뷰포트 디버깅용 (확인 후 제거) */}
-      <div
-        className="fixed top-[140px] left-2 right-2 z-[200] bg-black/85 text-white text-[10px] font-mono p-2 rounded-lg leading-tight pointer-events-none"
-        style={{ maxWidth: '380px' }}
-      >
-        <div className="font-bold text-yellow-300 mb-1">🐛 KEYBOARD DEBUG (#{debugInfo.eventCount}) [{debugInfo.eventType}]</div>
-        <div>hasVisualViewport: <span className={debugInfo.hasVisualViewport ? 'text-green-400' : 'text-red-400'}>{String(debugInfo.hasVisualViewport)}</span></div>
-        <div>window.innerHeight: <span className="text-cyan-300">{debugInfo.windowInnerHeight}</span></div>
-        <div>doc.clientHeight: <span className="text-cyan-300">{debugInfo.docHeight}</span></div>
-        <div>screen.height: <span className="text-cyan-300">{debugInfo.screenHeight}</span></div>
-        <div>vp.height: <span className="text-cyan-300">{debugInfo.vpHeight}</span></div>
-        <div>vp.offsetTop: <span className="text-cyan-300">{debugInfo.vpOffsetTop}</span></div>
-        <div>vp.pageTop: <span className="text-cyan-300">{debugInfo.vpPageTop}</span></div>
-        <div>keyboardHeight: <span className={debugInfo.keyboardHeight > 100 ? 'text-green-400 font-bold' : 'text-red-400'}>{debugInfo.keyboardHeight}</span></div>
-        <div>isKeyboardOpen: <span className={debugInfo.isKeyboardOpen ? 'text-green-400' : 'text-red-400'}>{String(debugInfo.isKeyboardOpen)}</span></div>
-        <div>inputHeight: <span className="text-cyan-300">{debugInfo.inputHeight}</span></div>
-        <div>applied top: <span className="text-yellow-300">{String(debugInfo.inputTop)}</span></div>
-        <div>applied bottom: <span className="text-yellow-300">{debugInfo.inputBottom}</span></div>
-        <div className="text-[8px] text-gray-400 mt-1 break-all">{debugInfo.userAgent}</div>
       </div>
 
       <div
