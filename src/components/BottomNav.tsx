@@ -195,12 +195,10 @@ const BottomNav = () => {
 
   const activeIndex = resolveActiveIndex();
   const safeIndex = activeIndex === -1 ? lastActiveTabIndexRef.current : activeIndex;
-  const isMapTabActive = navItems[safeIndex]?.path === '/';
 
   useEffect(() => {
     if (location.pathname === '/notifications' || location.pathname === '/messages') return;
     const currentTabIndex = getTabIndexForPath(location.pathname);
-
     if (currentTabIndex !== -1) {
       lastActiveTabIndexRef.current = currentTabIndex;
     }
@@ -240,47 +238,17 @@ const BottomNav = () => {
         {/* Sliding pill background */}
         {ready && (
           <motion.div
-            className={cn(
-              'absolute pointer-events-none overflow-hidden',
-              isMapTabActive
-                ? 'border border-cyan-200/80 bg-cyan-50 shadow-[0_10px_26px_rgba(6,182,212,0.22)]'
-                : 'bg-gray-200'
-            )}
+            className="absolute bg-gray-200 pointer-events-none"
             style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-          >
-            {isMapTabActive && (
-              <>
-                <motion.div
-                  className="absolute inset-[-55%] opacity-90"
-                  style={{
-                    backgroundImage:
-                      'radial-gradient(circle at 25% 25%, rgba(34, 211, 238, 0.42) 0 12%, transparent 22%), radial-gradient(circle at 72% 58%, rgba(59, 130, 246, 0.24) 0 10%, transparent 24%), linear-gradient(135deg, rgba(240, 253, 250, 0.96), rgba(219, 234, 254, 0.92), rgba(236, 253, 245, 0.96))',
-                  }}
-                  animate={{ x: ['-5%', '12%', '-5%'], y: ['4%', '-10%', '4%'] }}
-                  transition={{ duration: 7.5, ease: 'easeInOut', repeat: Infinity }}
-                />
-                <motion.div
-                  className="absolute inset-[-25%] opacity-45 mix-blend-multiply"
-                  style={{
-                    backgroundImage:
-                      'repeating-linear-gradient(115deg, transparent 0 10px, rgba(14, 116, 144, 0.16) 10px 12px), repeating-linear-gradient(25deg, transparent 0 16px, rgba(37, 99, 235, 0.10) 16px 18px)',
-                  }}
-                  animate={{ x: [0, -28], y: [0, 18] }}
-                  transition={{ duration: 8.5, ease: 'linear', repeat: Infinity }}
-                />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,255,255,0.9),transparent_38%)]" />
-              </>
-            )}
-          </motion.div>
+          />
         )}
 
         {navItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = safeIndex === index;
-          const isActiveMap = isActive && item.path === '/';
 
           return (
             <button
@@ -297,11 +265,7 @@ const BottomNav = () => {
                   className={cn(
                     item.iconSizeClass || 'w-6 h-6',
                     'transition-all duration-200',
-                    isActiveMap
-                      ? 'scale-[1.15] text-slate-950 drop-shadow-[0_1px_2px_rgba(255,255,255,0.95)]'
-                      : isActive
-                        ? 'scale-110 text-gray-900'
-                        : 'scale-100 text-gray-400'
+                    isActive ? 'scale-110 text-gray-900' : 'scale-100 text-gray-400'
                   )}
                 />
                 {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
@@ -312,11 +276,7 @@ const BottomNav = () => {
               <span
                 className={cn(
                   'relative text-[10px] tracking-tighter leading-none transition-all duration-200',
-                  isActiveMap
-                    ? 'font-black text-slate-950 drop-shadow-[0_1px_1px_rgba(255,255,255,0.95)]'
-                    : isActive
-                      ? 'font-bold text-gray-900'
-                      : 'font-medium text-gray-400'
+                  isActive ? 'font-bold text-gray-900' : 'font-medium text-gray-400'
                 )}
               >
                 {item.label}
@@ -324,7 +284,6 @@ const BottomNav = () => {
             </button>
           );
         })}
-
       </div>
     </nav>
   );
