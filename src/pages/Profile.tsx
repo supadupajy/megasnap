@@ -273,7 +273,7 @@ const Profile = () => {
       if (element && container) {
         const containerTop = container.getBoundingClientRect().top;
         const elementTop = element.getBoundingClientRect().top;
-        const offset = elementTop - containerTop + container.scrollTop - 30;
+        const offset = elementTop - containerTop + container.scrollTop - 10;
         container.scrollTo({ top: offset, behavior: 'smooth' });
       }
     }, 150);
