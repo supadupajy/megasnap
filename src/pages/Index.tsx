@@ -7,7 +7,7 @@ import TrendingPosts from '@/components/TrendingPosts';
 import MarkerExpiryNotice from '@/components/MarkerExpiryNotice';
 import ReelsViewer from '@/components/ReelsViewer';
 import PostDetail from '@/components/PostDetail';
-import PlaceSearch from '@/components/PlaceSearch';
+// PlaceSearch는 PlaceSearchOverlay로 대체되어 App.tsx에 전역 마운트됨
 import CategoryMenu from '@/components/CategoryMenu';
 import PostListOverlay from '@/components/PostListOverlay';
 import ShutterOverlay, { ShutterOverlayHandle } from '@/components/ShutterOverlay';
@@ -438,6 +438,17 @@ const Index = () => {
       window.visualViewport?.removeEventListener('resize', measure);
     };
   }, [viewportHeight, safeAreaBottom, isPostListOpen, isSearchOpen, isSelectingLocation, isSelectingAdLocation]);
+
+  // PlaceSearchOverlay 닫힘 이벤트 동기화 (트렌딩 패널 노출 등 UI 상태 복귀용)
+  useEffect(() => {
+    const handlePlaceSearchClose = () => setIsSearchOpen(false);
+    window.addEventListener('close-place-search', handlePlaceSearchClose);
+    window.addEventListener('close-place-search-by-back', handlePlaceSearchClose);
+    return () => {
+      window.removeEventListener('close-place-search', handlePlaceSearchClose);
+      window.removeEventListener('close-place-search-by-back', handlePlaceSearchClose);
+    };
+  }, []);
 
   // 위쪽 경계: 트렌딩 패널 아랫변 (실측값 우선, 없으면 trendingBottom state 기반 fallback)
   const effectiveTrendingBottomY = trendingBottomY ?? trendingBottom;
@@ -1944,7 +1955,22 @@ const Index = () => {
                     <line x1="19.5" y1="18" x2="20" y2="18" />
                   </svg>
                 </button>
-                <button onClick={() => setIsSearchOpen(true)} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Search className="w-6 h-6" /></button>
+                <button
+                  onClick={() => {
+                    setIsSearchOpen(true);
+                    window.dispatchEvent(new CustomEvent('open-place-search', {
+                      detail: {
+                        onSelect: (p: { lat: number; lng: number }) => {
+                          setMapCenter({ lat: p.lat, lng: p.lng });
+                          setSearchResultLocation({ lat: p.lat, lng: p.lng });
+                        }
+                      }
+                    }));
+                  }}
+                  className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"
+                >
+                  <Search className="w-6 h-6" />
+                </button>
                 <button onClick={handleCurrentLocation} className="w-12 h-12 bg-white/30 backdrop-blur-xl text-gray-700 rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all border border-white/50"><Navigation className="w-6 h-6 fill-gray-700" /></button>
               </div>
 
@@ -2126,13 +2152,7 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      <PlaceSearch
-
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-        onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }}
-        mapCenter={mapData?.center || mapCache.lastCenter}
-      />
+      {/* PlaceSearchOverlay는 App.tsx에 전역 마운트됨. 여기선 select 콜백만 처리. */}
 
       {/* 실시간 인기 TOP20 릴스 뷰어
           Flicks 페이지와 동일하게 Header(top)/BottomNav(bottom) 사이의 영역에
