@@ -590,17 +590,20 @@ const Write = () => {
       const uploadedUrls = uploadedMedia.map((item) => item.url);
       const previewUrls = uploadedMedia.map((item) => item.previewUrl);
 
-      // 위치 정보: 선택된 위치 → 지도 마지막 중심 순으로 fallback
-      const fallbackCenter = mapCache.lastCenter;
-      const postLat = initialLocation?.lat ?? fallbackCenter?.lat ?? null;
-      const postLng = initialLocation?.lng ?? fallbackCenter?.lng ?? null;
+      // 위치 정보는 사용자가 명시적으로 선택한 경우에만 저장한다.
+      // 선택하지 않았을 때 지도 중심/마지막 위치를 fallback으로 넣으면
+      // 위치 미지정 포스트가 엉뚱한 곳에 마커로 표시된다.
+      const hasSelectedLocation =
+        Number.isFinite(initialLocation?.lat) && Number.isFinite(initialLocation?.lng);
+      const postLat = hasSelectedLocation ? initialLocation.lat : null;
+      const postLng = hasSelectedLocation ? initialLocation.lng : null;
 
       const firstUploadedMedia = uploadedMedia[0];
       const isFirstMediaVideo = firstUploadedMedia?.type === 'video';
       
       const postData = {
         content: content.trim(),
-        location_name: address || '위치 미지정',
+        location_name: hasSelectedLocation ? (address || '위치 선택됨') : '위치 미지정',
         latitude: postLat,
         longitude: postLng,
         image_url: previewUrls[0],
@@ -657,15 +660,17 @@ const Write = () => {
       clear();
       postDraftStore.clear();
       
-      // 업로드 완료 후 메인으로 이동 - 포스트 위치가 있으면 해당 위치로, 없으면 현재 지도 중심으로
-      const navigateCenter = (mappedPost.lat != null && mappedPost.lng != null)
+      // 업로드 완료 후 메인으로 이동한다.
+      // 위치 미지정 포스트는 post/center로 전달하지 않아 지도 마커 생성 경로에 들어가지 않게 한다.
+      const hasCreatedLocation = mappedPost.lat != null && mappedPost.lng != null;
+      const navigateCenter = hasCreatedLocation
         ? { lat: mappedPost.lat, lng: mappedPost.lng }
-        : (mapCache.lastCenter || undefined);
+        : undefined;
       navigate('/', {
         state: {
           triggerConfetti: true,
           filterUserId: 'me',
-          post: mappedPost.lat != null ? mappedPost : undefined,
+          post: hasCreatedLocation ? mappedPost : undefined,
           center: navigateCenter,
         },
         replace: true

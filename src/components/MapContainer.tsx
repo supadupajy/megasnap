@@ -1000,7 +1000,7 @@ const MapContainer = ({
 
     const nowForExpiry = Date.now();
     posts.forEach(post => {
-      if (!post || post.lat === null || post.lng === null) return;
+      if (!post || post.lat == null || post.lng == null) return;
       // 24시간 지난 일반 포스트(광고 제외)는 마커를 만들지 않음
       if (isMarkerExpired(post, nowForExpiry)) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
