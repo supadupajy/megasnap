@@ -8,13 +8,12 @@ const TICK_INTERVAL_MS = 60 * 1000;
 
 // 둥근 사각 카운트다운 링 (지도 마커와 동일한 시각 룰)
 // 12시 방향 상단 중앙에서 시작 → 시계 반대방향으로 한 바퀴 도는 path
-// 버튼 테두리(1px) 바깥쪽으로 충분히 떨어뜨려, ring이 버튼 테두리와 겹치지 않고
-// "버튼 외곽을 감싸는 별도의 띠"처럼 보이도록 padding을 키움.
-// 계산: ring stroke 3 + 외곽선 2 + 여유 2 ≈ 7px 바깥에 ring 중심을 둠
-const RING_PADDING = -7;           // 음수 = 버튼 외곽 바깥으로 들이는 픽셀
+// RING_PADDING이 음수면 버튼 바깥쪽으로 링이 확장되어 외곽 테두리 밖에 표시됨.
+// (SVG에 overflow:visible이 있어 잘리지 않음)
+const RING_PADDING = -3;           // 음수 = 버튼 외곽 바깥으로 들이는 픽셀
 const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤
 const RING_STROKE = 3;             // 버튼은 마커보다 작아서 살짝 얇게
-const RING_CORNER = 25;            // 알약 형태 (h-9=36 + 바깥 확장 14 = 50 → r = 25)
+const RING_CORNER = 21;            // 알약 형태 (h-9=36 + 바깥 확장 6 = 42 → r = 21)
 
 interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
@@ -172,24 +171,18 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
             1) outline-track (흰색, 둘레 전체) — 옅은 앰버의 외곽선
             2) track (옅은 앰버, 둘레 전체) — 지나간 시간
             3) outline-progress (흰색, dasharray) — 진한 앰버의 외곽선
-            4) progress (진한 앰버, dasharray) — 남은 시간
-          SVG element 자체를 음수 padding만큼 키워서 path 좌표가 SVG 박스 안에
-          들어가도록 함 — 부모 HTML이 SVG를 클리핑해도 stroke가 잘리지 않음. */}
-      {showRing && (() => {
-        const overflow = -RING_PADDING; // 7
-        const svgW = size.w + overflow * 2;
-        const svgH = size.h + overflow * 2;
-        return (
+            4) progress (진한 앰버, dasharray) — 남은 시간 */}
+      {showRing && (
         <svg
-          width={svgW}
-          height={svgH}
-          viewBox={`${RING_PADDING} ${RING_PADDING} ${svgW} ${svgH}`}
+          width={size.w}
+          height={size.h}
+          viewBox={`0 0 ${size.w} ${size.h}`}
           style={{
             position: 'absolute',
-            top: -overflow,
-            left: -overflow,
-            width: svgW,
-            height: svgH,
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
             pointerEvents: 'none',
             overflow: 'visible',
             zIndex: 1,
@@ -239,8 +232,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
             style={{ filter: 'drop-shadow(0 0 2px rgba(245,158,11,0.55))' }}
           />
         </svg>
-        );
-      })()}
+      )}
 
       <Navigation
         className="w-3.5 h-3.5 relative"
