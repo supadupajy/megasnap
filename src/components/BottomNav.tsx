@@ -263,18 +263,17 @@ const BottomNav = () => {
                   transition={{ duration: 4.8, ease: 'easeInOut', repeat: Infinity }}
                 />
                 <motion.div
-                  className="absolute inset-[-42%] opacity-70"
+                  className="absolute inset-[-40%] opacity-55"
                   style={{
                     backgroundImage:
-                      'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'30\' height=\'24\' viewBox=\'0 0 30 24\'%3E%3Cpath d=\'M3 8c3-5 9-5 12 0\' fill=\'none\' stroke=\'rgba(255,255,255,0.66)\' stroke-width=\'3.4\' stroke-linecap=\'round\'/%3E%3Cpath d=\'M18 20c3-5 9-5 12 0\' fill=\'none\' stroke=\'rgba(224,231,255,0.58)\' stroke-width=\'3.4\' stroke-linecap=\'round\'/%3E%3C/svg%3E")',
-                    backgroundSize: '30px 24px',
+                      'radial-gradient(ellipse at center, transparent 0 38%, rgba(255,255,255,0.42) 39% 41%, transparent 42% 100%), radial-gradient(ellipse at center, transparent 0 56%, rgba(224,231,255,0.34) 57% 59%, transparent 60% 100%)',
+                    backgroundSize: '34px 22px, 48px 32px',
                   }}
-                  animate={{ x: [0, -30], y: [0, 24] }}
-                  transition={{ duration: 3.2, ease: 'linear', repeat: Infinity }}
+                  animate={{ x: [0, -34], y: [0, 20] }}
+                  transition={{ duration: 4.2, ease: 'linear', repeat: Infinity }}
                 />
                 <motion.div
                   className="absolute inset-y-[-20%] left-[-80%] w-3/4 rotate-12 bg-gradient-to-r from-transparent via-white/38 to-transparent blur-[1px]"
-
                   animate={{ x: ['0%', '240%'] }}
                   transition={{ duration: 2.9, ease: 'easeInOut', repeat: Infinity, repeatDelay: 0.4 }}
                 />
