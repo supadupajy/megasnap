@@ -299,7 +299,15 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
 // - dashoffset을 음수로 늘려 시작점부터 깎아내며 끝점이 반시계로 후퇴
 // - 끝점에는 펄스 spark (남은 시간이 1~99% 사이일 때만 표시)
 // - 박스 크기/모서리 반경/테두리 두께에 맞춰 path를 재계산하여 외곽에 hug
-const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; geometry: RingGeometry }> = ({ post, now, geometry }) => {
+//
+// ⚠️ 정렬 주의:
+//   부모 썸네일 박스가 `box-sizing: border-box` + `border: Xpx` 이면 자식의
+//   width/height:100% 는 content box (= box - border*2) 가 된다.
+//   따라서 SVG를 박스의 외곽선(border box) 에 정확히 맞추려면
+//   borderWidth 만큼 음수 offset 으로 박스 바깥으로 펼쳐서 절대 좌표로 배치해야 한다.
+const DEBUG_THUMB_RING = false;
+
+const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; geometry: RingGeometry; borderWidth: number }> = ({ post, now, geometry, borderWidth }) => {
   if (!isThumbnailExpirable(post)) return null;
 
   const createdAtMs = getPostCreatedAtMs(post);
@@ -314,14 +322,32 @@ const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; geometry: Ring
   const spark = getRingSparkPoint(geometry, elapsedRatio);
   const showSpark = remainingRatio > 0.01 && remainingRatio < 0.995;
 
+  if (DEBUG_THUMB_RING) {
+    // eslint-disable-next-line no-console
+    console.log('[ThumbnailCountdownRing]', {
+      postId: post.id,
+      box: geometry.box,
+      borderWidth,
+      pad: geometry.pad,
+      r: geometry.r,
+      strokeWidth: geometry.strokeWidth,
+      perimeter: geometry.perimeter,
+      dashOffset,
+      remainingRatio,
+    });
+  }
+
   return (
     <svg
       viewBox={`0 0 ${geometry.box} ${geometry.box}`}
+      width={geometry.box}
+      height={geometry.box}
       style={{
         position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
+        top: -borderWidth,
+        left: -borderWidth,
+        width: `${geometry.box}px`,
+        height: `${geometry.box}px`,
         pointerEvents: 'none',
         zIndex: 12,
         overflow: 'visible',
@@ -373,7 +399,8 @@ const PostThumbnail: React.FC<{
   onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   size?: PlayBadgeSize;
   now: number;
-}> = ({ post, className, imgClassName, onImgError, size = 'md', now }) => {
+  borderWidth: number;
+}> = ({ post, className, imgClassName, onImgError, size = 'md', now, borderWidth }) => {
   const videoUrl = post.videoUrl;
   const imageUrl = post.image_url || post.image;
   const hasStoredThumbnail = !!imageUrl && !isVideoUrl(imageUrl) && imageUrl !== '/placeholder.svg';
@@ -392,7 +419,7 @@ const PostThumbnail: React.FC<{
           onError={onImgError}
         />
         {isVideo && <PlayOverlay size={size} />}
-        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} />
+        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
       </div>
     );
   }
@@ -403,7 +430,7 @@ const PostThumbnail: React.FC<{
     return (
       <div className={cn("relative w-full h-full", className)}>
         <VideoThumbnail videoUrl={effectiveVideoUrl} size={size} />
-        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} />
+        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
       </div>
     );
   }
@@ -418,7 +445,7 @@ const PostThumbnail: React.FC<{
         className={cn("w-full h-full object-cover", imgClassName)}
         onError={onImgError}
       />
-      <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} />
+      <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
     </div>
   );
 };
@@ -469,27 +496,31 @@ interface TrendingPostItemProps {
 
 // 지도 마커와 동일한 테두리/그림자 룰을 썸네일에 그대로 적용한다.
 // 우선순위: 광고 > 내 포스팅 > popular(HOT) > diamond/gold/silver > 일반
-const getThumbnailFrameStyle = (post: Post, isMine: boolean): { border: string; boxShadow?: string } => {
+//
+// borderWidth 를 분리해서 반환하는 이유:
+//   카운트다운 링 SVG 는 box-sizing 으로 인해 줄어든 content box 가 아니라
+//   border box (= 외곽 박스 자체) 에 정확히 맞춰 그려야 정렬이 어긋나지 않는다.
+const getThumbnailFrameStyle = (post: Post, isMine: boolean): { borderWidth: number; border: string; boxShadow?: string } => {
   if (post.isAd) {
-    return { border: '2.5px solid #2563eb' };
+    return { borderWidth: 2.5, border: '2.5px solid #2563eb' };
   }
   if (isMine) {
-    return { border: '2.5px solid #4f46e5' };
+    return { borderWidth: 2.5, border: '2.5px solid #4f46e5' };
   }
   const borderType = post.borderType || 'none';
   if (borderType === 'popular') {
-    return { border: '2.5px solid #ef4444', boxShadow: '0 0 12px rgba(239, 68, 68, 0.45)' };
+    return { borderWidth: 2.5, border: '2.5px solid #ef4444', boxShadow: '0 0 12px rgba(239, 68, 68, 0.45)' };
   }
   if (borderType === 'diamond') {
-    return { border: '2.5px solid #22d3ee', boxShadow: '0 0 12px rgba(34, 211, 238, 0.7), inset 0 0 6px rgba(34, 211, 238, 0.45)' };
+    return { borderWidth: 2.5, border: '2.5px solid #22d3ee', boxShadow: '0 0 12px rgba(34, 211, 238, 0.7), inset 0 0 6px rgba(34, 211, 238, 0.45)' };
   }
   if (borderType === 'gold') {
-    return { border: '2.5px solid #fbbf24', boxShadow: '0 0 12px rgba(251, 191, 36, 0.55), inset 0 0 6px rgba(251, 191, 36, 0.35)' };
+    return { borderWidth: 2.5, border: '2.5px solid #fbbf24', boxShadow: '0 0 12px rgba(251, 191, 36, 0.55), inset 0 0 6px rgba(251, 191, 36, 0.35)' };
   }
   if (borderType === 'silver') {
-    return { border: '2.5px solid #94a3b8', boxShadow: '0 0 10px rgba(148, 163, 184, 0.65), inset 0 0 5px rgba(148, 163, 184, 0.25)' };
+    return { borderWidth: 2.5, border: '2.5px solid #94a3b8', boxShadow: '0 0 10px rgba(148, 163, 184, 0.65), inset 0 0 5px rgba(148, 163, 184, 0.25)' };
   }
-  return { border: '2px solid #ffffff', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)' };
+  return { borderWidth: 2, border: '2px solid #ffffff', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)' };
 };
 
 const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange, now, authUserId }) => {
@@ -572,9 +603,9 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
 
       <div
         className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50 box-border"
-        style={frameStyle}
+        style={{ border: frameStyle.border, boxShadow: frameStyle.boxShadow }}
       >
-        <PostThumbnail post={post} onImgError={handleImageError} now={now} />
+        <PostThumbnail post={post} onImgError={handleImageError} now={now} borderWidth={frameStyle.borderWidth} />
         {borderType !== 'none' && !post.isAd && !isMine && (
           <div className="absolute top-0.5 right-0.5 z-30">
             <Sparkles className={cn(
@@ -989,7 +1020,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
                   <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
-                    <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" now={thumbnailTimerNow} />
+                    <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" now={thumbnailTimerNow} borderWidth={0} />
                   </div>
                   <div className="flex-1 overflow-hidden relative h-5">
                     <AnimatePresence mode="wait">
