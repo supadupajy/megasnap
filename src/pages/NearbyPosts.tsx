@@ -74,6 +74,7 @@ const mapDbToPost = (p: any): Post => {
 const ViewedAwarePostItem = React.memo(({
   post,
   isViewed,
+  hideBottomBorder = false,
   onVisible,
   onLikeToggle,
   onLocationClick,
@@ -81,6 +82,7 @@ const ViewedAwarePostItem = React.memo(({
 }: {
   post: Post;
   isViewed: boolean;
+  hideBottomBorder?: boolean;
   onVisible: (id: string) => void;
   onLikeToggle: () => void;
   onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
@@ -106,7 +108,7 @@ const ViewedAwarePostItem = React.memo(({
   }, [post.id, post.isAd, onVisible]);
 
   return (
-    <div ref={itemRef} className="border-b border-gray-100 last:border-0 bg-white">
+    <div ref={itemRef} className={`${hideBottomBorder ? '' : 'border-b border-gray-100'} last:border-0 bg-white`}>
       <PostItem
         post={post}
         isViewed={isViewed}
@@ -373,6 +375,7 @@ const NearbyPosts = () => {
                 key={post.id}
                 post={post}
                 isViewed={viewedIds.has(post.id)}
+                hideBottomBorder={index + 1 === firstHiddenMapPostIndex}
                 onVisible={markAsViewed}
                 onLikeToggle={() => handleLikeToggle(post.id)}
                 onLocationClick={(e, lat, lng) => {
