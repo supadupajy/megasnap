@@ -1786,10 +1786,7 @@ const MapContainer = ({
 
     const adGlowLayer = '';
 
-    // 주의: overflow는 hidden으로 두지 않음. 카운트다운 링이 박스 바깥쪽으로
-    // 그려져야 하기 때문. 내부 이미지 div가 자체적으로 border-radius:16px+overflow:hidden을
-    // 적용해 이미지/배지 클리핑은 이미 보장됨.
-    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:#e5e7eb;box-sizing:border-box;`;
+    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:#e5e7eb;box-sizing:border-box;overflow:hidden;`;
 
     // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
     // 광고/광고대기 마커에는 표시하지 않음. createdAt이 없는 포스트도 skip.
@@ -1811,8 +1808,8 @@ const MapContainer = ({
           //   2) 진행(progress): 남은 시간만큼만 짙은 초록으로 덮어 그림
           // → 시간이 흐를수록 진행 stroke가 줄어들며 옅은 배경이 드러난다.
           return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
-            <path class="marker-countdown-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(245,158,11,0.25)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-            <path class="marker-countdown-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 2px rgba(245,158,11,0.55));" />
+            <path class="marker-countdown-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(34,197,94,0.25)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path class="marker-countdown-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 2px rgba(22,163,74,0.5));" />
           </svg>`;
         })()
       : '';
@@ -1830,8 +1827,6 @@ const MapContainer = ({
         ? `<div style="width:100%;height:100%;background:#1e1b4b;display:flex;align-items:center;justify-content:center;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#a5b4fc'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
         : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`);
 
-    // 카운트다운 링은 overflow:hidden인 이미지 div 밖(innerBox div의 직접 자식)에
-     // 배치해야 박스 바깥쪽으로 stroke가 잘리지 않고 보임.
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
         ${isAd ? adGlowLayer : ''}
@@ -1846,8 +1841,8 @@ const MapContainer = ({
               <span>${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</span>
             </div>
             ${videoIconHtml}
+            ${countdownRingHtml}
           </div>
-          ${countdownRingHtml}
         </div>
         ${isAd ? adFlipWrapperEnd : ''}
       </div>
