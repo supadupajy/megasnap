@@ -1577,13 +1577,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
                 <Bookmark className={cn("h-[18px] w-[18px] transition-colors", saved ? "fill-amber-400 text-amber-400" : "text-white")} />
               </button>
 
-              {/* 광고는 좌표 없으면 표시 X. 일반 포스트는 좌표 없어도 알약 자리 유지 →
-                  내부에서 만료/좌표 없음 상태를 "위치만료"로 비활성 처리. */}
-              {(post.isAd ? (post.lat != null && post.lng != null) : true) && (
+              {(post.lat != null && post.lng != null) && (
                 <LocationButtonWithTimer
                   createdAt={post.createdAt}
                   isAd={post.isAd}
-                  hasCoords={post.lat != null && post.lng != null}
                   onClick={onLocationClick as (e: React.MouseEvent) => void}
                   variant="dark"
                 />

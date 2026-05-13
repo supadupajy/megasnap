@@ -47,10 +47,7 @@ const PostActions = ({
   const AdIcon = adIcon === 'shopping-bag' ? ShoppingBag : ExternalLink;
   const adIconClassName = adIcon === 'shopping-bag' ? 'w-3.5 h-3.5 fill-white' : 'w-3.5 h-3.5';
   const adHref = linkUrl ? (linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`) : 'https://s.baemin.com/t3000fBqlbHGL';
-  // 좌표 보유 여부. 좌표가 없어도 알약 자리는 유지하되, 내부에서 "위치만료"로 비활성 처리됨.
-  // (광고는 좌표가 없으면 알약을 표시하지 않음 — 광고는 만료 룰도 없으므로)
-  const hasCoords = lat !== undefined && lng !== undefined && !!onLocationClick;
-  const canShowLocation = isAd ? hasCoords : true;
+  const canShowLocation = lat !== undefined && lng !== undefined && onLocationClick;
 
   const saveButton = (
     <button
@@ -80,12 +77,7 @@ const PostActions = ({
     <LocationButtonWithTimer
       createdAt={createdAt}
       isAd={isAd}
-      hasCoords={hasCoords}
-      onClick={(e) => {
-        if (hasCoords && onLocationClick) {
-          onLocationClick(e, lat as number, lng as number);
-        }
-      }}
+      onClick={(e) => onLocationClick(e, lat as number, lng as number)}
       variant="dark"
     />
   ) : null;
