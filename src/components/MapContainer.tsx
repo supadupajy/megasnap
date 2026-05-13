@@ -1808,8 +1808,8 @@ const MapContainer = ({
           //   2) 진행(progress): 남은 시간만큼만 짙은 초록으로 덮어 그림
           // → 시간이 흐를수록 진행 stroke가 줄어들며 옅은 배경이 드러난다.
           return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
-            <path class="marker-countdown-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(34,197,94,0.25)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-            <path class="marker-countdown-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 2px rgba(22,163,74,0.5));" />
+            <path class="marker-countdown-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.18)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+            <path class="marker-countdown-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(57,255,20,0.95)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 3px rgba(57,255,20,0.55));" />
           </svg>`;
         })()
       : '';
