@@ -223,7 +223,50 @@ const BottomNav = () => {
     navigate(path);
   };
 
+  // 🐛 DEBUG: 키보드 이벤트 추적
+  const [kbEvents, setKbEvents] = useState<any[]>([]);
+  useEffect(() => {
+    const dbg = (window as any).__kbDebug;
+    if (!dbg) return;
+    const listener = () => setKbEvents([...dbg.events]);
+    dbg.listeners.add(listener);
+    listener();
+    return () => { dbg.listeners.delete(listener); };
+  }, []);
+  const firstTs = kbEvents[0]?.ts ?? Date.now();
+
   return (
+    <>
+      {/* 🐛 DEBUG PANEL — BottomNav 키보드 슬라이딩 디버그 (확인 후 제거) */}
+      <div
+        className="fixed top-[100px] left-1 right-1 z-[99999] bg-black/85 text-white text-[9px] font-mono p-2 rounded-lg leading-tight pointer-events-none max-h-[60vh] overflow-hidden"
+      >
+        <div className="font-bold text-yellow-300 mb-1">
+          🐛 BOTTOMNAV DEBUG | offset={keyboardOffset} | open={String(isKeyboardOpen)} | transform={isKeyboardOpen ? '120%' : '0'}
+        </div>
+        <div className="text-cyan-300 mb-1">
+          path={location.pathname} | events={kbEvents.length}
+        </div>
+        <div className="grid grid-cols-[40px_60px_30px_30px_30px_30px_30px_30px_20px_20px_30px] gap-x-1 text-[8px] border-b border-white/20 pb-0.5 mb-0.5 font-bold text-gray-300">
+          <span>+ms</span><span>source</span><span>winH</span><span>vpH</span><span>vpTop</span><span>baseH</span><span>layD</span><span>baseD</span><span>shr</span><span>edit</span><span>cmt</span>
+        </div>
+        {kbEvents.map((e, i) => (
+          <div key={i} className="grid grid-cols-[40px_60px_30px_30px_30px_30px_30px_30px_20px_20px_30px] gap-x-1 text-[8px]">
+            <span className="text-gray-400">{e.ts - firstTs}</span>
+            <span className="text-cyan-200 truncate">{e.source}</span>
+            <span>{e.winH}</span>
+            <span>{e.vpH}</span>
+            <span>{e.vpTop}</span>
+            <span className="text-purple-300">{e.baseH}</span>
+            <span>{e.layoutDiff}</span>
+            <span className="text-purple-300">{e.baseDiff}</span>
+            <span className={e.shrunken ? 'text-green-400' : 'text-red-400'}>{e.shrunken ? 'Y' : 'N'}</span>
+            <span className={e.editable ? 'text-green-400' : 'text-red-400'}>{e.editable ? 'Y' : 'N'}</span>
+            <span className={e.committed > 0 ? 'text-green-400 font-bold' : 'text-gray-400'}>{e.committed}</span>
+          </div>
+        ))}
+      </div>
+
     <nav
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000]"
       style={{
@@ -300,6 +343,7 @@ const BottomNav = () => {
 
       </div>
     </nav>
+    </>
   );
 };
 
