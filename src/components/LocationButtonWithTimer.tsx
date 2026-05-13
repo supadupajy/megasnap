@@ -138,10 +138,13 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
       }
     : variant === 'dark'
     ? {
+        // dark variant도 타이머 stroke가 유일한 외곽선이 되도록 border 제거
+        // → 실시간 인기/플릭스의 어두운 배경 버튼에서도 ring이 바깥으로 튀어나와 보이지 않음
         backgroundColor: 'rgba(255,255,255,0.10)',
         color: '#ffffff',
-        border: '1px solid rgba(255,255,255,0.20)',
+        border: '0 solid transparent',
         backdropFilter: 'blur(6px)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
         isolation: 'isolate',
       }
     : {
