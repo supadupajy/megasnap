@@ -11,10 +11,12 @@ const TICK_INTERVAL_MS = 60 * 1000;
 const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤 — 초기값 용도
 const RING_STROKE = 2.5;           // 깔끔하고 세련된 두께
 const RING_TRACK_STROKE = 2.5;     // 트랙도 동일 두께(자연스러운 연속감)
-// path 중심선이 박스 가장자리에서 정확히 stroke의 절반만큼 안쪽에 위치하도록 함.
-// 이렇게 하면 stroke의 바깥 경계가 박스(=버튼) 외곽선과 정확히 일치하여
-// 알약 좌/우 끝이 버튼 바깥으로 떠 보이는 현상이 사라진다.
-const RING_PADDING = RING_STROKE / 2;
+
+// path는 padding=0으로 두어 path 중심선이 버튼 외곽선 바로 위에 오게 함.
+// → ring 반지름 = 버튼 반지름과 동일해져 곡률이 완벽히 일치한다.
+// → stroke 두께의 절반은 박스 안쪽, 절반은 바깥쪽으로 그려지므로
+//   SVG에는 overflow:visible이 유지되어야 한다.
+const RING_PADDING = 0;
 
 // 🐛 디버그: 버튼 위에 측정값/계산값 오버레이를 띄움. 정렬 작업 완료 후 false로.
 const RING_DEBUG = true;
