@@ -238,7 +238,10 @@ const BottomNav = () => {
         {/* Sliding pill background */}
         {ready && (
           <motion.div
-            className="absolute bg-gray-200 pointer-events-none"
+            className={cn(
+              'absolute pointer-events-none transition-colors duration-200',
+              navItems[safeIndex]?.path === '/' ? 'bg-gray-500' : 'bg-gray-200'
+            )}
             style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
@@ -249,6 +252,7 @@ const BottomNav = () => {
         {navItems.map((item, index) => {
           const Icon = item.icon;
           const isActive = safeIndex === index;
+          const isMainMapTab = item.path === '/';
 
           return (
             <button
@@ -265,7 +269,11 @@ const BottomNav = () => {
                   className={cn(
                     item.iconSizeClass || 'w-6 h-6',
                     'transition-all duration-200',
-                    isActive ? 'scale-110 text-gray-900' : 'scale-100 text-gray-400'
+                    isActive
+                      ? isMainMapTab
+                        ? 'scale-110 text-orange-500'
+                        : 'scale-110 text-gray-900'
+                      : 'scale-100 text-gray-400'
                   )}
                 />
                 {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
@@ -276,7 +284,11 @@ const BottomNav = () => {
               <span
                 className={cn(
                   'relative text-[10px] tracking-tighter leading-none transition-all duration-200',
-                  isActive ? 'font-bold text-gray-900' : 'font-medium text-gray-400'
+                  isActive
+                    ? isMainMapTab
+                      ? 'font-bold text-amber-50'
+                      : 'font-bold text-gray-900'
+                    : 'font-medium text-gray-400'
                 )}
               >
                 {item.label}
@@ -284,6 +296,7 @@ const BottomNav = () => {
             </button>
           );
         })}
+
       </div>
     </nav>
   );
