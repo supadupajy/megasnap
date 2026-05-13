@@ -148,18 +148,18 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
         isolation: 'isolate',
       }
     : {
-        // 타이머 stroke가 버튼의 유일한 외곽선처럼 보이도록 별도 border 제거
-        // → SVG ring과 CSS border가 따로 렌더링되며 어긋나는 문제 방지
-        backgroundColor: '#4f46e5',          // Tailwind indigo-600
-        color: '#ffffff',
+        // 왼쪽 액션 아이콘 버튼들과 톤을 맞춘 연한 그레이 스타일
+        // 타이머 stroke가 유일한 외곽선 역할을 하므로 별도 border는 제거
+        backgroundColor: '#f9fafb',          // gray-50
+        color: '#4b5563',                    // gray-600
         border: '0 solid transparent',
-        boxShadow: '0 2px 6px rgba(79,70,229,0.24)',
+        boxShadow: '0 1px 3px rgba(15,23,42,0.08)',
         isolation: 'isolate',
       };
 
   const iconColor = isExpired
     ? (variant === 'dark' ? 'rgba(255,255,255,0.45)' : '#9ca3af')
-    : '#ffffff'; // light/dark 모두 밝은 텍스트/아이콘
+    : (variant === 'dark' ? '#ffffff' : '#4b5563');
 
   const textColor = iconColor;
   const label = isExpired ? '위치없음' : '위치보기';
