@@ -74,7 +74,7 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
             className="fixed left-4 z-[12510] bg-white rounded-[28px] shadow-2xl border border-gray-100 p-4 w-60"
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-gray-900 uppercase tracking-widest">필터 설정</span>
+              <span className="text-[15px] font-black text-gray-900 uppercase tracking-widest">필터 설정</span>
               <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
                 <X className="w-4 h-4 text-gray-400" />
               </button>
