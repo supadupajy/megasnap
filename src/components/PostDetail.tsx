@@ -432,17 +432,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     );
   }
 
+  const closeDetailForNavigation = () => {
+    if (history.state?.postDetailOpen) {
+      history.replaceState({ ...history.state, postDetailOpen: false }, '');
+    }
+    onClose();
+  };
+
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isMine) {
-      onClose();
+      closeDetailForNavigation();
       navigate('/profile');
       return;
     }
     const targetUserId = currentPost.user.id || currentPost.user_id;
     const isValidUUID = targetUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetUserId);
     if (isValidUUID) {
-      onClose();
+      closeDetailForNavigation();
       navigate(`/profile/${targetUserId}`);
     }
   };
