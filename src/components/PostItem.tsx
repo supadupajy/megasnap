@@ -727,11 +727,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             {renderMedia()}
             {showNewPostBadge && (
               <span
-                aria-hidden="true"
-                className="pointer-events-none absolute right-3 top-3 z-30 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-white/85 shadow-[0_4px_12px_rgba(225,29,72,0.28)] ring-[1px] ring-white/70 backdrop-blur-sm"
+                aria-label="새 포스팅"
+                className="pointer-events-none absolute right-3 top-3 z-30 rounded-full border-2 border-white bg-yellow-400 px-2.5 py-1 text-[10px] font-black leading-none tracking-[0.08em] text-amber-950 shadow-[0_6px_16px_rgba(234,179,8,0.38)]"
               >
-                <span className="absolute h-3.5 w-3.5 rounded-full bg-rose-500/25 animate-ping" />
-                <span className="relative h-3 w-3 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.55)] ring-[1px] ring-rose-200/80" />
+                NEW
               </span>
             )}
           </div>
