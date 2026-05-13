@@ -179,10 +179,11 @@ export const usePushNotifications = () => {
         if (data?.type === 'message' && data.chatId) {
           navigate(`/chat/${data.chatId}`);
         } else if (data?.type !== 'message' && data?.postId) {
-          navigate('/', { state: { postId: data.postId } });
+          navigate('/', { state: { postId: data.postId, openPostDetail: true } });
         } else {
           navigate('/notifications');
         }
+
       });
     };
 

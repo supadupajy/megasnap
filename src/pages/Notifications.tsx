@@ -254,11 +254,12 @@ const Notifications = () => {
     }
 
     if (notif.type === 'message') navigate(`/chat/${notif.actor_id}`);
-    else if (notif.post_id) navigate('/', { state: { postId: notif.post_id } });
+    else if (notif.post_id) navigate('/', { state: { postId: notif.post_id, openPostDetail: true } });
     else navigate(`/profile/${notif.actor_id}`);
   };
 
   return (
+
     <div
       className="h-screen min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-contain"
       style={{

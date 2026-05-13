@@ -1478,8 +1478,47 @@ const Index = () => {
         currentZoomRef.current = routeState.zoom;
       }
       focusPostOnMap(routeState.post, routeState.center);
+      if (routeState.openPostDetail) {
+        setIsPostListOpen(false);
+        setTimeout(() => handleMarkerClick(routeState.post), 250);
+      }
       setTimeout(() => { locationLockedRef.current = false; }, 5000);
+    } else if (routeState.postId) {
+      locationLockedRef.current = true;
+      setIsPostListOpen(false);
+
+      void (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('posts')
+            .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
+            .eq('id', routeState.postId)
+            .single();
+
+          if (error || !data) {
+            showError('포스팅을 찾을 수 없습니다.');
+            return;
+          }
+
+          const post = mapRawToPost(data, null);
+          setAllPosts(prev => {
+            const idx = prev.findIndex(p => p.id === post.id);
+            const next = idx === -1 ? [post, ...prev] : [...prev];
+            if (idx !== -1) next[idx] = post;
+            mapCache.posts = next;
+            return next;
+          });
+          focusPostOnMap(post, { lat: post.lat, lng: post.lng });
+          setSelectedPostId(post.id);
+        } catch (error) {
+          console.error('[Index] notification post open error:', error);
+          showError('포스팅을 여는 중 오류가 발생했습니다.');
+        } finally {
+          setTimeout(() => { locationLockedRef.current = false; }, 5000);
+        }
+      })();
     } else if (routeState.center) {
+
       locationLockedRef.current = true;
       setSelectedPostId(null);
       if (routeState.zoom != null) {
@@ -1489,6 +1528,7 @@ const Index = () => {
       setMapCenter(routeState.center);
       setTimeout(() => { locationLockedRef.current = false; }, 5000);
     }
+
     // initialFocusRef는 한 번 사용 후 클리어
     if (initialFocusRef.current) {
       initialFocusRef.current = null;
