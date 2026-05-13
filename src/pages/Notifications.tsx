@@ -103,40 +103,40 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
         className="relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer bg-white active:bg-gray-50 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
+          const target = e.target as HTMLElement;
+          if (target.closest('[data-notification-actor="true"]')) {
+            onActorClick(notif);
+            return;
+          }
           onClick(notif);
         }}
       >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onActorClick(notif);
-          }}
+        <div
+          data-notification-actor="true"
           className="shrink-0 rounded-full active:scale-95 transition-transform"
+          role="button"
           aria-label={`${notif.actor?.nickname || '사용자'} 프로필 보기`}
         >
-          <Avatar className="w-11 h-11 border border-gray-100">
+          <Avatar className="w-11 h-11 border border-gray-100 pointer-events-none">
             <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
             <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
           </Avatar>
-        </button>
+        </div>
         <div className="flex-1 text-sm leading-tight">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onActorClick(notif);
-            }}
-            className="font-bold text-left active:opacity-70 transition-opacity"
+          <span
+            data-notification-actor="true"
+            className="inline-block font-bold active:opacity-70 transition-opacity"
+            role="button"
           >
             {notif.actor?.nickname || '알 수 없는 사용자'}
-          </button>
+          </span>
           <span className="text-gray-700"> {getNotificationText(notif)}</span>
           <span className="text-[10px] text-gray-400 ml-2 block mt-1">
             {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
           </span>
         </div>
       </motion.div>
+
     </div>
   );
 };

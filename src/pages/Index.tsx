@@ -2092,9 +2092,9 @@ const Index = () => {
       </AnimatePresence>
 
       <AnimatePresence>
-        {selectedPostId && (
+        {selectedPostId && allPosts.some(p => p.id === selectedPostId) && (
           <PostDetail
-            key="post-detail-modal"
+            key={`post-detail-modal-${selectedPostId}`}
             posts={allPosts}
             initialIndex={allPosts.findIndex(p => p.id === selectedPostId)}
             isOpen={true}
@@ -2109,6 +2109,7 @@ const Index = () => {
       </AnimatePresence>
 
       <PlaceSearch
+
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onSelect={p => { setMapCenter({ lat: p.lat, lng: p.lng }); setSearchResultLocation({ lat: p.lat, lng: p.lng }); }}
