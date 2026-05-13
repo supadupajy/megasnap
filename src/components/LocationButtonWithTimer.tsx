@@ -143,15 +143,17 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
         isolation: 'isolate',
       }
     : {
-        backgroundColor: '#eef2ff',
-        color: '#4f46e5',
-        border: '1px solid #c7d2fe',
+        // 인디고 배경 + 밝은 텍스트로 강조감 ↑
+        backgroundColor: '#4f46e5',          // Tailwind indigo-600
+        color: '#ffffff',
+        border: '1px solid #4338ca',         // indigo-700 — 살짝 진한 테두리
+        boxShadow: '0 1px 2px rgba(79,70,229,0.25)',
         isolation: 'isolate',
       };
 
   const iconColor = isExpired
     ? (variant === 'dark' ? 'rgba(255,255,255,0.45)' : '#9ca3af')
-    : (variant === 'dark' ? '#ffffff' : '#4f46e5');
+    : '#ffffff'; // light/dark 모두 밝은 텍스트/아이콘
 
   const textColor = iconColor;
   const label = isExpired ? '위치없음' : '위치보기';
