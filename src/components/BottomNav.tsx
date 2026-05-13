@@ -33,9 +33,9 @@ const navItems: {
   path: string;
   iconSizeClass?: string; // 기본 w-6 h-6 외에 따로 키우거나 줄이고 싶을 때 override
 }[] = [
-  { icon: Map, label: '지도', path: '/' },
   { icon: Flame, label: '인기', path: '/popular' },
   { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks', iconSizeClass: 'w-7 h-7' },
+  { icon: Map, label: '지도', path: '/' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
@@ -44,6 +44,7 @@ const navItems: {
 // path 우선순위: 첫 번째로 매치되는 것이 사용됨
 // 참고: 포스팅 검색(/post-search)은 더 이상 라우트가 아닌 전역 오버레이로 동작하므로
 //       BottomNav 매칭에서 제외되었다. 검색 중에도 현재 탭이 그대로 유지된다.
+
 const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[] = [
   // 친구 탭: /friends 하위 경로 + /search (친구 검색)
   { match: (p) => p === '/search' || p.startsWith('/friends'), tabPath: '/friends' },
