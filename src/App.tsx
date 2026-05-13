@@ -27,7 +27,6 @@ import LanguageSettings from "./pages/LanguageSettings";
 import PrivacySettings from "./pages/PrivacySettings";
 import AdInquiry from "./pages/AdInquiry";
 import AdminAds from "./pages/AdminAds";
-import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
@@ -140,46 +139,38 @@ const AnimatedRoutes = () => {
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
-      console.log('[App] Back button pressed. Path:', location.pathname);
-
       // 0순위: ReelsViewer가 열려 있으면 닫기 (최상단 풀스크린 오버레이)
       if ((window as any).__isReelsViewerOpen === true) {
-        console.log('[App] Intercepting back button to close ReelsViewer');
         window.dispatchEvent(new CustomEvent('close-reels-viewer-by-back'));
         return;
       }
 
       // 0.1순위: 트렌딩 릴스(인덱스 페이지의 임베디드 ReelsViewer)가 열려 있으면 닫기
       if ((window as any).__isTrendingReelsOpen === true) {
-        console.log('[App] Intercepting back button to close TrendingReels');
         window.dispatchEvent(new CustomEvent('close-trending-reels-by-back'));
         return;
       }
 
       // 0.3순위: PostSearch 오버레이가 열려 있으면 닫기 (전역 검색 오버레이)
       if ((window as any).__isPostSearchOpen === true) {
-        console.log('[App] Intercepting back button to close PostSearchOverlay');
         window.dispatchEvent(new CustomEvent('close-post-search'));
         return;
       }
 
       // 0.5순위: PlaceSearch가 열려 있으면 닫기 (지도 위 최상단 오버레이)
       if ((window as any).__isPlaceSearchOpen === true) {
-        console.log('[App] Intercepting back button to close PlaceSearch');
         window.dispatchEvent(new CustomEvent('close-place-search-by-back'));
         return;
       }
 
       // 1순위: PostDetail이 열려 있으면 닫기
       if ((window as any).__isPostDetailOpen === true) {
-        console.log('[App] Intercepting back button to close PostDetail');
         window.dispatchEvent(new CustomEvent('close-post-detail-by-back'));
         return;
       }
 
       // 2순위: window 플래그로 PostListOverlay 열림 여부를 즉시 확인 (타이밍 이슈 없음)
       if (location.pathname === '/' && (window as any).__isPostListOpen === true) {
-        console.log('[App] Intercepting back button to close PostListOverlay');
         window.dispatchEvent(new CustomEvent('close-post-list-overlay'));
         return;
       }

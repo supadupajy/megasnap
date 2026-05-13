@@ -117,7 +117,6 @@ const Index = () => {
           zoom: routeState.zoom,
           post: routeState.post,
         };
-        console.log('[Index] Initial focus from routeState:', initialFocusRef.current);
       } else if (routeState?.post?.lat != null && routeState?.post?.lng != null) {
         initialFocusRef.current = {
           lat: routeState.post.lat,
@@ -125,14 +124,12 @@ const Index = () => {
           zoom: routeState.zoom,
           post: routeState.post,
         };
-        console.log('[Index] Initial focus from routeState.post:', initialFocusRef.current);
       } else {
         const stored = sessionStorage.getItem('pendingMapFocus');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (parsed?.lat != null && parsed?.lng != null) {
             initialFocusRef.current = parsed;
-            console.log('[Index] Initial focus from sessionStorage:', initialFocusRef.current);
           }
         }
       }

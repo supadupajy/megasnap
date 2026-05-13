@@ -1631,7 +1631,6 @@ const MapContainer = ({
     if (videoThumbCacheRef.current.has(postId)) return; // 이미 캐시됨
     if (videoThumbPendingRef.current.has(postId)) return; // 이미 추출 중
     videoThumbPendingRef.current.add(postId);
-    console.log('[MapContainer] 비디오 썸네일 추출 시작:', postId);
 
     const video = document.createElement('video');
     // crossOrigin을 설정하면 Supabase storage에서 CORS preflight가 필요해 실패할 수 있음
@@ -1658,7 +1657,6 @@ const MapContainer = ({
         cleanup();
         videoThumbCacheRef.current.set(postId, dataUrl);
         videoThumbPendingRef.current.delete(postId);
-        console.log('[MapContainer] 비디오 썸네일 추출 완료, 마커 교체:', postId);
 
         // 마커 DOM을 썸네일로 즉시 완전 교체
         const overlay = overlaysRef.current.get(postId);

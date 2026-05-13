@@ -16,7 +16,6 @@ export const getTimezones = (): string[] => {
     // 브라우저의 Intl API를 사용하여 지원되는 전체 타임존 목록을 가져옵니다.
     // (대부분의 현대 브라우저에서 지원하는 표준 방식입니다)
     timezoneCache = (Intl as any).supportedValuesOf('timeZone');
-    console.log('[Timezone] 타임존 목록이 메모리에 캐싱되었습니다.');
   } catch (error) {
     console.error('[Timezone] 타임존 목록을 로드하는 중 오류 발생:', error);
     // 폴백(Fallback)으로 기본 타임존만 반환

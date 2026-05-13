@@ -60,7 +60,6 @@ const AdInquiry = () => {
         },
       });
 
-      console.log('[AdInquiry] 응답:', { data, error });
 
       if (error) throw new Error(error.message || JSON.stringify(error));
       if (data?.error) throw new Error(data.error);

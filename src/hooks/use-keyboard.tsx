@@ -31,8 +31,3 @@ export function useKeyboard() {
 
   return { keyboardHeight, isKeyboardOpen };
 }
-
-// 가상 키보드 트리거 함수는 인터페이스 유지를 위해 빈 함수로 남겨둠
-export const triggerVirtualKeyboard = (_isOpen: boolean) => {
-  // 가상 키보드 시뮬레이션 중단
-};

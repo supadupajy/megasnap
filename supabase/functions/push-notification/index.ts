@@ -125,21 +125,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 1. 수신자 프로필 및 토큰 가져오기
-    const { data: receiverProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('push_token, nickname, is_foreground')
+    // 1. 수신자 토큰/포그라운드 상태 (profiles_private)
+    const { data: receiverPrivate, error: privateError } = await supabaseAdmin
+      .from('profiles_private')
+      .select('push_token, is_foreground')
       .eq('id', receiverId)
-      .single()
+      .single();
 
-    if (profileError || !receiverProfile?.push_token) {
+    if (privateError || !receiverPrivate?.push_token) {
       console.log("[push-notification] No push token for receiver:", receiverId);
       return new Response("No token", { status: 200, headers: corsHeaders })
     }
 
     // 앱이 포그라운드 상태이면 시스템 푸시 알림 전송 안 함
     // (앱 내 Realtime 채널이 이미 알림음과 뱃지를 처리하므로 중복 불필요)
-    if (receiverProfile.is_foreground === true) {
+    if (receiverPrivate.is_foreground === true) {
       console.log("[push-notification] Receiver is in foreground, skipping push notification.");
       return new Response("Skipped (foreground)", { status: 200, headers: corsHeaders });
     }
@@ -161,7 +161,7 @@ serve(async (req) => {
     // 4. FCM v1 전송 페이로드
     const fcmV1Payload = {
       message: {
-        token: receiverProfile.push_token,
+        token: receiverPrivate.push_token,
         notification: {
           title: title,
           body: body
