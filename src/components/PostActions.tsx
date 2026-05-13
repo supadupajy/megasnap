@@ -117,12 +117,12 @@ const PostActions = ({
             className={cn(
               'inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-black transition-all active:scale-95',
               hasUserCommented
-                ? 'border-indigo-100 bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100/50'
+                ? 'border-indigo-100 bg-indigo-50 text-indigo-500 shadow-sm shadow-indigo-100/50'
                 : 'border-gray-100 bg-gray-50 text-gray-700 hover:bg-gray-100'
             )}
             aria-label={`댓글 ${commentsCount.toLocaleString()}개`}
           >
-            <MessageCircle className={cn('h-[18px] w-[18px] transition-colors', hasUserCommented ? 'fill-indigo-100 text-indigo-600' : 'text-gray-600')} />
+            <MessageCircle className={cn('h-[18px] w-[18px] transition-colors', hasUserCommented ? 'fill-indigo-500 text-indigo-500' : 'text-gray-600')} />
             <span className="tabular-nums leading-none">{commentsCount.toLocaleString()}</span>
           </button>
           <button
