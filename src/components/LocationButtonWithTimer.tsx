@@ -167,11 +167,8 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
       style={baseStyle}
     >
       {/* 카운트다운 링 (만료 전에만 표시)
-          네 개의 stroke를 겹쳐 가독성을 확보:
-            1) outline-track (흰색, 둘레 전체) — 옅은 앰버의 외곽선
-            2) track (옅은 앰버, 둘레 전체) — 지나간 시간
-            3) outline-progress (흰색, dasharray) — 진한 앰버의 외곽선
-            4) progress (진한 앰버, dasharray) — 남은 시간 */}
+          - track(옅은 초록): 둘레 전체에 깔려 "지나간 시간"을 표현
+          - progress(짙은 초록): 남은 시간만큼만 덮어 그리며 점점 줄어듦 */}
       {showRing && (
         <svg
           width={size.w}
@@ -188,38 +185,14 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
             zIndex: 1,
           }}
         >
-          {/* 1) 외곽 track */}
           <path
             d={path}
             fill="none"
-            stroke="#ffffff"
-            strokeWidth={RING_STROKE + 2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity={0.95}
-          />
-          {/* 2) track */}
-          <path
-            d={path}
-            fill="none"
-            stroke="rgba(245,158,11,0.55)"
+            stroke="rgba(245,158,11,0.4)"
             strokeWidth={RING_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          {/* 3) 외곽 progress */}
-          <path
-            d={path}
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth={RING_STROKE + 2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray={perimeter.toFixed(2)}
-            strokeDashoffset={dashOffset.toFixed(2)}
-            opacity={0.95}
-          />
-          {/* 4) progress */}
           <path
             d={path}
             fill="none"
