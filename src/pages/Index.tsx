@@ -1944,7 +1944,7 @@ const Index = () => {
           )}
           style={{ touchAction: isTrendingExpanded ? 'none' : 'auto' }}
         >
-          <div className="max-w-md mx-auto pointer-events-auto">
+          <div className="max-w-md mx-auto pointer-events-auto relative">
             <TrendingPosts
               posts={globalTrendingPosts}
               onPostClick={handleTrendingPostClick}
@@ -1952,10 +1952,17 @@ const Index = () => {
               onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
               maxHeight="calc(100dvh - env(safe-area-inset-top, 0px) - 74px - env(safe-area-inset-bottom, 0px) - 3rem - 74px)"
             />
-            {/* 마커 24시간 자동 삭제 안내 - 트렌딩 패널 하단에 배치되어
-                좌/우 마커 인디케이터를 가리지 않도록 가운데 좁은 폭으로 표시됨.
-                패널이 펼쳐졌을 때는 숨겨서 패널 내용과 겹치지 않도록 함. */}
-            {!isTrendingExpanded && <MarkerExpiryNotice />}
+            {/* 마커 24시간 자동 삭제 안내 -
+                트렌딩 패널의 레이아웃 흐름 밖(absolute)에 배치하여 패널의 DOM
+                높이에 영향을 주지 않도록 함. 이렇게 하면 지도 레벨 인디케이터
+                위치 계산(trendingDivRef의 rect.bottom 기반)이 원래대로 유지되고,
+                안내문은 지도 레벨 인디케이터 앞으로 자연스럽게 겹쳐 보임.
+                (안내문은 10초 후 자동으로 사라짐) */}
+            {!isTrendingExpanded && (
+              <div className="absolute left-0 right-0 top-full">
+                <MarkerExpiryNotice />
+              </div>
+            )}
           </div>
 
         </div>
