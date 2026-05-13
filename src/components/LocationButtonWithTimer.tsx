@@ -8,11 +8,12 @@ const TICK_INTERVAL_MS = 60 * 1000;
 
 // 둥근 사각 카운트다운 링 (지도 마커와 동일한 시각 룰)
 // 12시 방향 상단 중앙에서 시작 → 시계 반대방향으로 한 바퀴 도는 path
-const RING_PADDING = 2;            // 버튼 외곽에서 안쪽으로 들이는 픽셀
-const RING_VIEWBOX = 100;          // 비율 기반 (가로/세로 비율이 달라도 stretch)
+// RING_PADDING이 음수면 버튼 바깥쪽으로 링이 확장되어 외곽 테두리 밖에 표시됨.
+// (SVG에 overflow:visible이 있어 잘리지 않음)
+const RING_PADDING = -3;           // 음수 = 버튼 외곽 바깥으로 들이는 픽셀
 const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤
 const RING_STROKE = 3;             // 버튼은 마커보다 작아서 살짝 얇게
-const RING_CORNER = 18;            // 알약 형태 (h-9 → border-radius:9999 → 코너 r = h/2 = 18)
+const RING_CORNER = 21;            // 알약 형태 (h-9=36 + 바깥 확장 6 = 42 → r = 21)
 
 interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
