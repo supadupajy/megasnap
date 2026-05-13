@@ -197,11 +197,13 @@ const Index = () => {
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
   // displayedMarkers: MapContainer에 실제로 전달되는 마커 목록
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>(() => mapCache.posts);
+  const [visibleMarkerIds, setVisibleMarkerIds] = useState<Set<string> | null>(null);
 
   const [mapData, setMapData] = useState<any>(null);
   // 초기 mapCenter/zoom은 항상 마지막 위치(mapCache) 사용 → 카카오맵이 이전 위치에서 시작
   // routeState로 위치가 지정된 경우 focusPostOnMap에서 setMapCenter를 호출 → 부드러운 smoothMoveTo
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
+
   const mapCenterRef = useRef<{ lat: number; lng: number } | undefined>(mapCache.lastCenter);
   const [centerAddress, setCenterAddress] = useState(() => (
     mapCache.lastCenter
@@ -1025,20 +1027,28 @@ const Index = () => {
   // 카카오맵 CustomOverlay는 화면 밖 마커를 자동으로 렌더링하지 않으므로
   // bounds 필터링을 React 레벨에서 하면 드래그 시 마커가 사라지는 버그 발생
 
-  // viewport 안 전체 포스트 수 (모두보기 배지용) - 광고 포함
-  // 원래 좌표 기준으로 계산 - displayedMarkers 사용
-  const viewportPostCount = useMemo(() => {
-    if (!mapData?.bounds) return displayedMarkers.length;
-    const { sw, ne } = mapData.bounds;
-    return displayedMarkers.filter(m =>
-      m.lat != null && m.lng != null &&
-      m.lat >= sw.lat && m.lat <= ne.lat &&
-      m.lng >= sw.lng && m.lng <= ne.lng
-    ).length;
-  }, [displayedMarkers, mapData?.bounds]);
+  // 지도에 실제 CustomOverlay로 표시 중인 마커 목록 (여기보기 배지/목록용)
+  const mapVisibleMarkers = useMemo(() => {
+    if (!visibleMarkerIds) {
+      if (!mapData?.bounds) return displayedMarkers;
+      const { sw, ne } = mapData.bounds;
+      return displayedMarkers.filter(m =>
+        m.lat != null && m.lng != null &&
+        m.lat >= Math.min(sw.lat, ne.lat) && m.lat <= Math.max(sw.lat, ne.lat) &&
+        m.lng >= Math.min(sw.lng, ne.lng) && m.lng <= Math.max(sw.lng, ne.lng)
+      );
+    }
+    return displayedMarkers.filter(marker => visibleMarkerIds.has(String(marker.id)));
+  }, [displayedMarkers, mapData?.bounds, visibleMarkerIds]);
 
-  // 배지 숫자: viewport 안 전체 포스트 수
-  const displayedPostCount = viewportPostCount;
+  const displayedPostCount = mapVisibleMarkers.length;
+
+  const handleVisibleMarkerIdsChange = useCallback((ids: string[]) => {
+    setVisibleMarkerIds(prev => {
+      if (prev && prev.size === ids.length && ids.every(id => prev.has(id))) return prev;
+      return new Set(ids);
+    });
+  }, []);
 
   // ── 지도 변경 핸들러 ─────────────────────────────────────────
   // ref를 사용해 stale closure 완전 방지
@@ -1679,6 +1689,7 @@ const Index = () => {
               viewedPostIds={viewedIds}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
+              onVisibleMarkerIdsChange={handleVisibleMarkerIdsChange}
               center={mapCenter}
               level={currentZoom}
               searchResultLocation={searchResultLocation}
@@ -1688,6 +1699,7 @@ const Index = () => {
               hideUserLocation={!!selectedPostId || isPostListOpen}
               toastTopOffset={indicatorTopOffset}
             />
+
           </div>
 
 
@@ -1845,19 +1857,14 @@ const Index = () => {
                     onClick={() => {
                       if (displayedPostCount > 0 && currentZoom < 7) {
                         // 포스트 목록 미리 계산
-                        const adIds = displayedMarkers.filter(p => p.isAd).map(p => p.id);
+                        const adIds = mapVisibleMarkers.filter(p => p.isAd).map(p => p.id);
                         setPostListOpenedViewedIds(new Set([...viewedIds, ...adIds]));
-                        const bounds = mapData?.bounds;
-                        const boundsFiltered = bounds
-                          ? displayedMarkers.filter(m =>
-                              m.lat != null && m.lng != null &&
-                              m.lat >= bounds.sw.lat && m.lat <= bounds.ne.lat &&
-                              m.lng >= bounds.sw.lng && m.lng <= bounds.ne.lng
-                            )
-                          : displayedMarkers;
+                        const boundsFiltered = mapVisibleMarkers;
                         // 일반 포스팅만 시간 순 정렬
                         const normalPosts = boundsFiltered.filter(p => !p.isAd);
+
                         const adPosts = boundsFiltered.filter(p => p.isAd);
+
                         const sorted = [...normalPosts].sort((a, b) => {
                           const aTime = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
                           const bTime = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
@@ -1884,7 +1891,7 @@ const Index = () => {
                         sessionStorage.setItem('nearby-posts-payload', JSON.stringify({
                           initialPosts: finalList,
                           mapCenter: returnCenter,
-                          currentBounds: latestMapData?.bounds || bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } },
+                          currentBounds: latestMapData?.bounds || mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } },
                           selectedCategories,
                           openedViewedIds: Array.from(new Set([...viewedIds, ...adIds])),
                           zoom: returnZoom,

@@ -13,6 +13,7 @@ interface MapContainerProps {
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
   onMapClick?: (location: { lat: number; lng: number }) => void;
+  onVisibleMarkerIdsChange?: (ids: string[]) => void;
   center?: { lat: number; lng: number };
   level?: number;
   searchResultLocation?: { lat: number; lng: number } | null;
@@ -244,6 +245,7 @@ const MapContainer = ({
   onMarkerClick,
   onMapChange,
   onMapClick,
+  onVisibleMarkerIdsChange,
   center,
   level = 6,
   searchResultLocation,
@@ -252,6 +254,7 @@ const MapContainer = ({
   hideUserLocation = false,
   toastTopOffset,
 }: MapContainerProps) => {
+
   const containerRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<any>(null);
   const [isMapReady, setIsMapReady] = useState(false);
@@ -326,12 +329,14 @@ const MapContainer = ({
   const onMapChangeRef = useRef(onMapChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const onMapClickRef = useRef(onMapClick);
+  const onVisibleMarkerIdsChangeRef = useRef(onVisibleMarkerIdsChange);
   const getMarkerInnerHtmlRef = useRef<(post: any, isViewed: boolean) => string>(() => '' );
   const authUserRef = useRef(authUser);
 
   useEffect(() => { onMapChangeRef.current = onMapChange; }, [onMapChange]);
   useEffect(() => { onMarkerClickRef.current = onMarkerClick; }, [onMarkerClick]);
   useEffect(() => { onMapClickRef.current = onMapClick; }, [onMapClick]);
+  useEffect(() => { onVisibleMarkerIdsChangeRef.current = onVisibleMarkerIdsChange; }, [onVisibleMarkerIdsChange]);
   useEffect(() => { postsRef.current = posts; }, [posts]);
   useEffect(() => { authUserRef.current = authUser; }, [authUser]);
   useEffect(() => { viewedPostIdsRef.current = viewedPostIds; }, [viewedPostIds]);
@@ -342,6 +347,7 @@ const MapContainer = ({
   }, [currentLevel]);
 
   const isOverlayInsideViewport = useCallback((overlay: any) => {
+
     const map = mapInstance.current;
     if (!map) return true;
 
@@ -412,13 +418,23 @@ const MapContainer = ({
   }, [clearViewportAnimationTimer]);
 
   const updateMarkerViewportVisibility = useCallback((animate = true) => {
-    if (!mapInstance.current || currentLevelRef.current >= 7) return;
+    if (!mapInstance.current || currentLevelRef.current >= 7) {
+      onVisibleMarkerIdsChangeRef.current?.([]);
+      return;
+    }
     // 드래그 중에는 평가/애니메이션을 보류 (dragend에서 한 번에 처리)
     if (isDraggingViewportRef.current) return;
 
+    const visibleIds: string[] = [];
     overlaysRef.current.forEach((overlay, id) => {
-      applyMarkerViewportState(String(id), overlay, isOverlayInsideViewport(overlay), animate);
+      const isVisible = isOverlayInsideViewport(overlay);
+      applyMarkerViewportState(String(id), overlay, isVisible, animate);
+      const content = overlay.getContent() as HTMLElement | null;
+      if (isVisible && overlay.getMap?.() !== null && !content?.classList.contains('marker-disappear-animation')) {
+        visibleIds.push(String(id));
+      }
     });
+    onVisibleMarkerIdsChangeRef.current?.(visibleIds);
   }, [applyMarkerViewportState, isOverlayInsideViewport]);
 
   const scheduleMarkerViewportVisibilityUpdate = useCallback((animate = true) => {
@@ -1211,6 +1227,7 @@ const MapContainer = ({
         });
         overlaysRef.current.clear();
         viewportVisibilityRef.current.clear();
+        onVisibleMarkerIdsChangeRef.current?.([]);
         // 진행 중인 removalTimeout도 모두 취소
         removalTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
         removalTimeoutsRef.current.clear();
