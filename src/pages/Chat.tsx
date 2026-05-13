@@ -136,30 +136,52 @@ const Chat = () => {
     } catch (err) {}
   }, [authUser, chatId]);
 
-  // 키보드 대응 (visualViewport)
+  // 키보드 대응 (visualViewport) — 입력창을 키보드 바로 위에 sticky하게 붙임
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
+
     const handleViewport = () => {
       const offsetTop = vp.offsetTop ?? 0;
-      const keyboardHeight = window.innerHeight - vp.height - offsetTop;
+      // 키보드가 차지하는 높이 = layout viewport 높이 - visual viewport 높이 - 상단 오프셋
+      const keyboardHeight = Math.max(0, window.innerHeight - vp.height - offsetTop);
       const isKeyboardOpen = keyboardHeight > 100;
-      if (headerRef.current) headerRef.current.style.transform = `translateY(${offsetTop}px)`;
+
+      // 채팅 상세 헤더: 키보드가 올라와도 페이지 상단에 고정 유지
+      if (headerRef.current) {
+        headerRef.current.style.transform = `translateY(${offsetTop}px)`;
+      }
+
+      // 입력창: visualViewport의 bottom (= offsetTop + height) 바로 아래에 위치하도록
+      // top 좌표를 직접 계산해서 키보드 바로 위에 sticky하게 붙임
       if (inputRef.current) {
         if (isKeyboardOpen) {
-          inputRef.current.style.bottom = `${keyboardHeight}px`;
-          inputRef.current.style.transform = `translateY(${offsetTop}px)`;
+          const inputHeight = inputRef.current.offsetHeight || 64;
+          // visual viewport의 하단 = offsetTop + vp.height
+          // 입력창의 top = visual viewport 하단 - 입력창 높이
+          const inputTop = offsetTop + vp.height - inputHeight;
+          inputRef.current.style.bottom = 'auto';
+          inputRef.current.style.top = `${inputTop}px`;
+          inputRef.current.style.transform = 'translateY(0px)';
+          inputRef.current.style.paddingBottom = '8px';
         } else {
+          // 키보드 닫힘: 원래대로 하단 네비게이션 위 위치로 복귀
+          inputRef.current.style.top = 'auto';
           inputRef.current.style.bottom = '112px';
           inputRef.current.style.transform = 'translateY(0px)';
+          inputRef.current.style.paddingBottom = '12px';
         }
       }
+
+      // 스크롤 영역 하단 패딩: 키보드가 올라왔을 땐 입력창 높이만큼만 확보
       if (scrollRef.current) {
-        const baseBottomPad = isKeyboardOpen ? 100 : 220;
-        scrollRef.current.style.paddingBottom = `${baseBottomPad + keyboardHeight}px`;
+        const baseBottomPad = isKeyboardOpen ? 80 : 220;
+        scrollRef.current.style.paddingBottom = `${baseBottomPad}px`;
       }
+
       setTimeout(scrollToBottom, 50);
     };
+
     handleViewport();
     vp.addEventListener('resize', handleViewport);
     vp.addEventListener('scroll', handleViewport);
