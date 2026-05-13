@@ -1875,8 +1875,11 @@ const MapContainer = ({
           // 남은 비율 * 둘레 = 보여줄 stroke 길이
           // dashoffset을 음수로 두면 시작점(12시 상단 중앙)에서부터 깎이고,
           // path가 시계 반대방향으로 그려지므로 끝점이 반시계 방향으로 후퇴한다.
-          const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
-          const spark = getCountdownRingSparkPoint(remainingRatio);
+          const elapsedRatio = 1 - remainingRatio;
+          const dashOffset = -(COUNTDOWN_RING_PERIMETER * elapsedRatio);
+          // 마커 path는 12시에서 반시계 방향으로 그려지고 dashoffset은 음수.
+          // 따라서 실제로 줄어드는 경계점은 '남은 비율'이 아니라 '경과 비율' 위치에 있다.
+          const spark = getCountdownRingSparkPoint(elapsedRatio);
           const showSpark = remainingRatio > 0.01 && remainingRatio < 0.995;
           return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
             <path class="marker-countdown-ring-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="${COUNTDOWN_TRACK_COLOR}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
@@ -1985,7 +1988,8 @@ const MapContainer = ({
 
         const spark = ring.querySelector('.marker-countdown-ring-spark') as SVGGElement | null;
         if (spark) {
-          const point = getCountdownRingSparkPoint(remainingRatio);
+          // dashoffset이 경과 비율 기준으로 적용되므로 반짝임도 동일한 위치를 따라간다.
+          const point = getCountdownRingSparkPoint(1 - remainingRatio);
           spark.setAttribute('transform', `translate(${point.x.toFixed(2)} ${point.y.toFixed(2)})`);
           spark.style.display = remainingRatio > 0.01 && remainingRatio < 0.995 ? 'block' : 'none';
         }
