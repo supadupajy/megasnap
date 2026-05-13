@@ -84,9 +84,11 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     const measure = () => {
       const r = el.getBoundingClientRect();
       setSize(prev => {
-        const nw = Math.round(r.width);
-        const nh = Math.round(r.height);
-        if (prev.w === nw && prev.h === nh) return prev;
+        // 소수점 width(예: 81.32px)를 반올림하면 SVG가 실제 버튼보다 미세하게 작아져
+        // 알약 외곽이 삐뚤어져 보인다. DOMRect의 raw 값을 그대로 사용한다.
+        const nw = r.width;
+        const nh = r.height;
+        if (Math.abs(prev.w - nw) < 0.01 && Math.abs(prev.h - nh) < 0.01) return prev;
         return { w: nw, h: nh };
       });
     };
@@ -143,11 +145,12 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
         isolation: 'isolate',
       }
     : {
-        // 인디고 배경 + 밝은 텍스트로 강조감 ↑
+        // 타이머 stroke가 버튼의 유일한 외곽선처럼 보이도록 별도 border 제거
+        // → SVG ring과 CSS border가 따로 렌더링되며 어긋나는 문제 방지
         backgroundColor: '#4f46e5',          // Tailwind indigo-600
         color: '#ffffff',
-        border: '1px solid #4338ca',         // indigo-700 — 살짝 진한 테두리
-        boxShadow: '0 1px 2px rgba(79,70,229,0.25)',
+        border: '0 solid transparent',
+        boxShadow: '0 2px 6px rgba(79,70,229,0.24)',
         isolation: 'isolate',
       };
 
