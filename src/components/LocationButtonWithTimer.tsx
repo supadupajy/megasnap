@@ -9,8 +9,8 @@ const TICK_INTERVAL_MS = 60 * 1000;
 // 알약 카운트다운 링 (지도 마커와 동일한 시각 룰)
 // 12시 방향 상단 중앙에서 시작 → 시계 반대방향으로 한 바퀴 도는 path
 const RING_HEIGHT = 36;            // 버튼 높이(h-9 = 36px)에 맞춤 — 초기값 용도
-const RING_STROKE = 2.5;           // 깔끔하고 세련된 두께
-const RING_TRACK_STROKE = 2.5;     // 트랙도 동일 두께(자연스러운 연속감)
+const RING_STROKE = 3;             // 지도 마커(4)와 시각적 무게감을 맞추기 위해 살짝 두껍게
+const RING_TRACK_STROKE = 3;       // 트랙도 동일 두께(자연스러운 연속감)
 
 // path는 padding=0으로 두어 path 중심선이 버튼 외곽선 바로 위에 오게 함.
 // → ring 반지름 = 버튼 반지름과 동일해져 곡률이 완벽히 일치한다.
@@ -23,7 +23,8 @@ const RING_PADDING = 0;
 // 지난 시간: 잘 보이도록 opacity를 충분히 올린 진한 초록
 const RING_PROGRESS_COLOR = '#39FF14';            // 형광 네온 그린 — 남은 시간
 const RING_TRACK_COLOR = 'rgba(34,197,94,0.55)';  // 진한 초록 (opacity 0.55) — 지난 시간 트랙
-const RING_GLOW = '0 0 4px rgba(57,255,20,0.7)';  // 네온 발광
+// 인디고 톤 버튼 배경(#eef2ff) 위에서도 네온이 또렷하게 보이도록 글로우를 살짝 강화
+const RING_GLOW = '0 0 5px rgba(57,255,20,0.85)'; // 네온 발광
 
 interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
