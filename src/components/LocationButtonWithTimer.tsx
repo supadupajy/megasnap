@@ -166,9 +166,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
       className="relative inline-flex h-9 items-center justify-center gap-1.5 px-3 rounded-full transition-all shrink-0 whitespace-nowrap active:scale-95 disabled:active:scale-100"
       style={baseStyle}
     >
-      {/* 카운트다운 링 (만료 전에만 표시)
-          - track(옅은 초록): 둘레 전체에 깔려 "지나간 시간"을 표현
-          - progress(짙은 초록): 남은 시간만큼만 덮어 그리며 점점 줄어듦 */}
+      {/* 카운트다운 링 (만료 전에만 표시) */}
       {showRing && (
         <svg
           width={size.w}
@@ -188,15 +186,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
           <path
             d={path}
             fill="none"
-            stroke="rgba(57,255,20,0.18)"
-            strokeWidth={RING_STROKE}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d={path}
-            fill="none"
-            stroke="rgba(57,255,20,0.95)"
+            stroke="rgba(57,255,20,0.5)"
             strokeWidth={RING_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
