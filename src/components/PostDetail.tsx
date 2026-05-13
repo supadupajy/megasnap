@@ -141,7 +141,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const contentRef = useRef<HTMLParagraphElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
-  const { targetRef: editFormRef, keyboardOffset: editKeyboardOffset } = useKeyboardSafeScroll<HTMLDivElement>(isOpen && isEditingContent);
+  const { targetRef: editFormRef } = useKeyboardSafeScroll<HTMLDivElement>(isOpen && isEditingContent);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지.
   // Flicks(ReelContentText)와 동일하게 한 줄 truncate 기반이므로 가로 overflow(scrollWidth > clientWidth)로 측정.
@@ -545,8 +545,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       return (
         <div
           ref={editFormRef}
-          className="space-y-2 transition-[padding-bottom] duration-200"
-          style={{ paddingBottom: editKeyboardOffset > 0 ? `${Math.min(editKeyboardOffset + 24, 420)}px` : undefined }}
+          className="space-y-2"
           onClick={(e) => e.stopPropagation()}
         >
           <Textarea

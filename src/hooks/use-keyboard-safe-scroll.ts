@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 const KEYBOARD_THRESHOLD = 120;
+const SAFE_TOP_MARGIN = 104;
 const SAFE_BOTTOM_MARGIN = 96;
 const CHECK_DELAYS = [60, 160, 320, 520];
 
@@ -62,7 +63,7 @@ export const useKeyboardSafeScroll = <T extends HTMLElement>(active: boolean) =>
 
       const rect = target.getBoundingClientRect();
       const bottomLimit = visibleBottom - SAFE_BOTTOM_MARGIN;
-      const topLimit = visibleTop + 24;
+      const topLimit = visibleTop + SAFE_TOP_MARGIN;
       const bottomOverflow = rect.bottom - bottomLimit;
       const topOverflow = rect.top - topLimit;
       const delta = bottomOverflow > 0 ? bottomOverflow : topOverflow < 0 ? topOverflow : 0;

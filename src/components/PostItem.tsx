@@ -79,7 +79,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  const { targetRef: editFormRef, keyboardOffset: editKeyboardOffset } = useKeyboardSafeScroll<HTMLDivElement>(isEditingContent);
+  const { targetRef: editFormRef } = useKeyboardSafeScroll<HTMLDivElement>(isEditingContent);
 
   const {
     scrollRef: imageScrollRef,
@@ -499,8 +499,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       return (
         <div
           ref={editFormRef}
-          className="space-y-2 transition-[padding-bottom] duration-200"
-          style={{ paddingBottom: editKeyboardOffset > 0 ? `${Math.min(editKeyboardOffset + 24, 420)}px` : undefined }}
+          className="space-y-2"
           onClick={(e) => e.stopPropagation()}
         >
           <Textarea
