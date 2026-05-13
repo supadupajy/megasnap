@@ -123,7 +123,7 @@ const FriendFeed = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, loading: authLoading } = useAuth();
-  const { viewedIds, initialViewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
+  const { initialViewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -309,7 +309,7 @@ const FriendFeed = () => {
                   <ViewedAwareFriendPostItem
                     key={post.id}
                     post={post}
-                    isViewed={viewedIds.has(post.id)}
+                    isViewed={dividerViewedIds.has(post.id)}
                     onVisible={markAsViewed}
                     onLikeToggle={() => handleLikeToggle(post.id)}
                     onLocationClick={handleLocationClick}

@@ -460,7 +460,7 @@ const PostListOverlay = ({
                     key={post.id}
                     post={post}
 
-                    isViewed={viewedIds.has(post.id)}
+                    isViewed={openedViewedIds.has(post.id)}
                     onVisible={markAsViewed}
                     onLikeToggle={handleLikeToggle}
                     onLocationClick={(e, lat, lng, fullPost) => {

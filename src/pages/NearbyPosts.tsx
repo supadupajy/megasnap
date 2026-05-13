@@ -126,7 +126,7 @@ const NearbyPosts = () => {
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
   const { blockedIds } = useBlockedUsers();
-  const { viewedIds, initialViewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
+  const { initialViewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
   const { scrollRef, progress } = useCollapsingHeader(80);
 
   const payload = useMemo<NearbyPostsPayload | null>(() => {
@@ -361,7 +361,7 @@ const NearbyPosts = () => {
 
                 key={post.id}
                 post={post}
-                isViewed={viewedIds.has(post.id)}
+                isViewed={dividerViewedIds.has(post.id)}
                 hideBottomBorder={index + 1 === firstHiddenMapPostIndex}
                 onVisible={markAsViewed}
                 onLikeToggle={() => handleLikeToggle(post.id)}
