@@ -143,7 +143,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     : (variant === 'dark' ? '#ffffff' : '#4f46e5');
 
   const textColor = iconColor;
-  const label = isExpired ? '위치없음' : '위치보기';
+  const label = isExpired ? '위치만료' : '위치보기';
 
   // 링은 광고/만료/createdAt 없음에서는 표시하지 않음
   const showRing = isExpirable && !isExpired && path.length > 0;
