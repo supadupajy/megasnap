@@ -15,18 +15,45 @@ interface CategoryMenuProps {
 }
 
 const CATEGORIES = [
-  { id: 'food', label: '맛집', icon: Utensils, color: 'bg-orange-500' },
-  { id: 'accident', label: '사고', icon: Car, color: 'bg-red-600' },
-  { id: 'place', label: '명소', icon: TreePine, color: 'bg-green-600' },
-  { id: 'animal', label: '동물', icon: PawPrint, color: 'bg-purple-600' },
-  { id: 'none', label: '없음', icon: Sparkles, color: 'bg-slate-500' },
+  {
+    id: 'food', label: '맛집', icon: Utensils,
+    iconClass: 'bg-orange-50 text-orange-500', selectedRowClass: 'bg-orange-50', selectedTextClass: 'text-orange-700', checkboxClass: 'data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500',
+  },
+  {
+    id: 'accident', label: '사고', icon: Car,
+    iconClass: 'bg-rose-50 text-rose-500', selectedRowClass: 'bg-rose-50', selectedTextClass: 'text-rose-700', checkboxClass: 'data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500',
+  },
+  {
+    id: 'place', label: '명소', icon: TreePine,
+    iconClass: 'bg-teal-50 text-teal-600', selectedRowClass: 'bg-teal-50', selectedTextClass: 'text-teal-700', checkboxClass: 'data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500',
+  },
+  {
+    id: 'animal', label: '동물', icon: PawPrint,
+    iconClass: 'bg-violet-50 text-violet-500', selectedRowClass: 'bg-violet-50', selectedTextClass: 'text-violet-700', checkboxClass: 'data-[state=checked]:bg-violet-500 data-[state=checked]:border-violet-500',
+  },
+  {
+    id: 'none', label: '없음', icon: Sparkles,
+    iconClass: 'bg-gray-100 text-gray-400', selectedRowClass: 'bg-gray-50', selectedTextClass: 'text-gray-700', checkboxClass: 'data-[state=checked]:bg-gray-500 data-[state=checked]:border-gray-500',
+  },
 ];
 
 const SPECIAL_FILTERS = [
-  { id: 'hot', label: 'HOT 포스팅', icon: Flame, color: 'bg-red-500' },
-  { id: 'influencer', label: 'Influencer', icon: Star, color: 'bg-yellow-400' },
-  { id: 'mine', label: '내 포스팅만 보기', icon: User, color: 'bg-blue-600' },
-  { id: 'friends', label: '내 친구 포스팅만 보기', icon: Users, color: 'bg-emerald-500' },
+  {
+    id: 'hot', label: 'HOT 포스팅', icon: Flame,
+    iconClass: 'bg-red-50 text-red-500', selectedRowClass: 'bg-red-50', selectedTextClass: 'text-red-700', checkboxClass: 'data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500',
+  },
+  {
+    id: 'influencer', label: 'Influencer', icon: Star,
+    iconClass: 'bg-amber-50 text-amber-500', selectedRowClass: 'bg-amber-50', selectedTextClass: 'text-amber-700', checkboxClass: 'data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500',
+  },
+  {
+    id: 'mine', label: '내 포스팅만 보기', icon: User,
+    iconClass: 'bg-lime-50 text-lime-600', selectedRowClass: 'bg-lime-50', selectedTextClass: 'text-lime-700', checkboxClass: 'data-[state=checked]:bg-lime-500 data-[state=checked]:border-lime-500',
+  },
+  {
+    id: 'friends', label: '내 친구 포스팅만 보기', icon: Users,
+    iconClass: 'bg-emerald-50 text-emerald-600', selectedRowClass: 'bg-emerald-50', selectedTextClass: 'text-emerald-800', checkboxClass: 'data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600',
+  },
 ];
 
 const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUserId }: CategoryMenuProps) => {
@@ -106,21 +133,28 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
                     const isChecked = selectedCategories.includes(cat.id);
                     
                     return (
-                      <div 
+                      <div
                         key={cat.id}
                         onClick={() => toggleCategory(cat.id)}
-                        className="flex items-center justify-between p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors group"
+                        className={cn(
+                          "flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors group",
+                          isChecked ? cat.selectedRowClass : "hover:bg-gray-50"
+                        )}
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", isChecked ? cat.color : "bg-gray-100 text-gray-400")}>
+                          <div className={cn(
+                            "w-7 h-7 rounded-lg flex items-center justify-center transition-all group-active:scale-90",
+                            cat.iconClass,
+                            isChecked && "ring-2 ring-white shadow-sm scale-105"
+                          )}>
                             <Icon className="w-3.5 h-3.5" />
                           </div>
-                          <span className={cn("text-xs font-bold", isChecked ? "text-gray-900" : "text-gray-500")}>{cat.label}</span>
+                          <span className={cn("text-xs font-bold", isChecked ? cat.selectedTextClass : "text-gray-600")}>{cat.label}</span>
                         </div>
-                        <Checkbox 
-                          checked={isChecked} 
+                        <Checkbox
+                          checked={isChecked}
                           onCheckedChange={() => toggleCategory(cat.id)}
-                          className="w-4 h-4 rounded border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                          className={cn("w-4 h-4 rounded border-gray-200", cat.checkboxClass)}
                         />
                       </div>
                     );
@@ -136,21 +170,28 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
                     const isChecked = selectedCategories.includes(filter.id);
                     
                     return (
-                      <div 
+                      <div
                         key={filter.id}
                         onClick={() => toggleCategory(filter.id)}
-                        className="flex items-center justify-between p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors group"
+                        className={cn(
+                          "flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition-colors group",
+                          isChecked ? filter.selectedRowClass : "hover:bg-gray-50"
+                        )}
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center text-white transition-transform group-active:scale-90", isChecked ? filter.color : "bg-gray-100 text-gray-400")}>
-                            <Icon className={cn("w-3.5 h-3.5", (filter.id === 'hot' || filter.id === 'mine') && isChecked && "fill-white")} />
+                          <div className={cn(
+                            "w-7 h-7 rounded-lg flex items-center justify-center transition-all group-active:scale-90",
+                            filter.iconClass,
+                            isChecked && "ring-2 ring-white shadow-sm scale-105"
+                          )}>
+                            <Icon className={cn("w-3.5 h-3.5", filter.id === 'influencer' && "fill-current")} />
                           </div>
-                          <span className={cn("text-xs font-bold", isChecked ? "text-gray-900" : "text-gray-500")}>{filter.label}</span>
+                          <span className={cn("text-xs font-bold", isChecked ? filter.selectedTextClass : "text-gray-600")}>{filter.label}</span>
                         </div>
-                        <Checkbox 
-                          checked={isChecked} 
+                        <Checkbox
+                          checked={isChecked}
                           onCheckedChange={() => toggleCategory(filter.id)}
-                          className="w-4 h-4 rounded border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                          className={cn("w-4 h-4 rounded border-gray-200", filter.checkboxClass)}
                         />
                       </div>
                     );
