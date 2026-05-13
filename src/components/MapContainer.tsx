@@ -1818,25 +1818,12 @@ const MapContainer = ({
           // dashoffset을 음수로 두면 시작점(12시 상단 중앙)에서부터 깎이고,
           // path가 시계 반대방향으로 그려지므로 끝점이 반시계 방향으로 후퇴한다.
           const dashOffset = -(COUNTDOWN_RING_PERIMETER * (1 - remainingRatio));
-          // [debug-ring] 진행 상황 추적
-          console.log('[debug-ring] progress', {
-            postId: post?.id,
-            elapsedMs: elapsed,
-            elapsedHours: (elapsed / (1000 * 60 * 60)).toFixed(2),
-            remainingRatio: remainingRatio.toFixed(4),
-            dashOffset: dashOffset.toFixed(2),
-            perimeter: COUNTDOWN_RING_PERIMETER.toFixed(2),
-          });
           // 두 개의 stroke를 겹침:
           //   1) 배경(track): 둘레 전체를 옅은 초록으로 깔아 "지나간 시간"을 표현
           //   2) 진행(progress): 남은 시간만큼만 짙은 초록으로 덮어 그림
           // → 시간이 흐를수록 진행 stroke가 줄어들며 옅은 배경이 드러난다.
-          // SVG 자체 크기를 viewBox보다 크게(음수 padding의 2배만큼) 잡고
-          // 음수 offset으로 끌어올려서 path 전체 좌표(-4 ~ 64)가 SVG 박스 안에 들어오게 함.
-          // → 부모 HTML element가 SVG를 클리핑해도 stroke가 잘리지 않음.
-          const overflow = -COUNTDOWN_RING_PADDING; // 4
-          return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="${COUNTDOWN_RING_PADDING} ${COUNTDOWN_RING_PADDING} ${COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2} ${COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2}" style="position:absolute;top:-${overflow}px;left:-${overflow}px;width:calc(100% + ${overflow * 2}px);height:calc(100% + ${overflow * 2}px);pointer-events:none;z-index:12;overflow:visible;">
-            <path class="marker-countdown-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(245,158,11,0.4)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+          return `<svg class="marker-countdown-ring" data-created-at="${createdAtMs}" viewBox="0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;overflow:visible;">
+            <path class="marker-countdown-track" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="rgba(245,158,11,0.25)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
             <path class="marker-countdown-progress" d="${COUNTDOWN_RING_PATH}" fill="none" stroke="#f59e0b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="${COUNTDOWN_RING_PERIMETER.toFixed(2)}" stroke-dashoffset="${dashOffset.toFixed(2)}" style="filter:drop-shadow(0 0 2px rgba(245,158,11,0.55));" />
           </svg>`;
         })()

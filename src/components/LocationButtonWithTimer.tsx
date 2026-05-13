@@ -188,7 +188,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
           <path
             d={path}
             fill="none"
-            stroke="rgba(245,158,11,0.4)"
+            stroke="rgba(245,158,11,0.25)"
             strokeWidth={RING_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
