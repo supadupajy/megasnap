@@ -188,7 +188,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
           <path
             d={path}
             fill="none"
-            stroke="rgba(57,255,20,0.18)"
+            stroke="rgba(34,197,94,0.25)"
             strokeWidth={RING_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -196,13 +196,13 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
           <path
             d={path}
             fill="none"
-            stroke="rgba(57,255,20,0.95)"
+            stroke="#16a34a"
             strokeWidth={RING_STROKE}
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={perimeter.toFixed(2)}
             strokeDashoffset={dashOffset.toFixed(2)}
-            style={{ filter: 'drop-shadow(0 0 3px rgba(57,255,20,0.55))' }}
+            style={{ filter: 'drop-shadow(0 0 2px rgba(22,163,74,0.5))' }}
           />
         </svg>
       )}
