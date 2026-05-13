@@ -26,6 +26,9 @@ const RING_TRACK_COLOR = 'rgba(34,197,94,0.55)';  // 진한 초록 (opacity 0.55
 // 인디고 톤 버튼 배경(#eef2ff) 위에서도 네온이 또렷하게 보이도록 글로우를 살짝 강화
 const RING_GLOW = '0 0 5px rgba(57,255,20,0.85)'; // 네온 발광
 
+// 🐛 디버그: 버튼 위에 측정값/계산값/시각 가이드 오버레이를 띄움. 정렬 작업 완료 후 false로.
+const RING_DEBUG = true;
+
 interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
   /** 광고는 만료 룰 적용 안 함 */
@@ -78,6 +81,13 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   // 버튼 너비를 사전에 알 수 없으므로 ResizeObserver로 측정.
   const wrapRef = useRef<HTMLButtonElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: RING_HEIGHT });
+  // 🐛 디버그용 raw 측정값
+  const [debugInfo, setDebugInfo] = useState<{
+    rawW: number; rawH: number;
+    borderRadius: string; borderTopWidth: string;
+    paddingLeft: string; paddingRight: string;
+    backgroundColor: string;
+  } | null>(null);
 
   useEffect(() => {
     const el = wrapRef.current;
@@ -90,6 +100,18 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
         if (prev.w === nw && prev.h === nh) return prev;
         return { w: nw, h: nh };
       });
+      if (RING_DEBUG) {
+        const cs = window.getComputedStyle(el);
+        setDebugInfo({
+          rawW: r.width,
+          rawH: r.height,
+          borderRadius: cs.borderRadius,
+          borderTopWidth: cs.borderTopWidth,
+          paddingLeft: cs.paddingLeft,
+          paddingRight: cs.paddingRight,
+          backgroundColor: cs.backgroundColor,
+        });
+      }
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -101,8 +123,11 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   // 버튼이 알약 형태(border-radius: 9999)이므로 좌/우 끝은 완전한 반원.
   // → 반지름 r = 높이의 절반으로 두면 좌/우 변(V 직선)이 사라지고
   //    좌우 끝이 정확한 반원이 되어 알약 외곽선과 완벽히 일치한다.
-  const { path, perimeter } = useMemo(() => {
-    if (size.w === 0) return { path: '', perimeter: 0 };
+  const { path, perimeter, geom } = useMemo(() => {
+    if (size.w === 0) return { path: '', perimeter: 0, geom: null as null | {
+      pad: number; w: number; h: number; r: number;
+      left: number; right: number; top: number; bottom: number; cx: number;
+    } };
     const pad = RING_PADDING;
     const w = size.w - pad * 2;
     const h = size.h - pad * 2;
@@ -114,10 +139,42 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
     const cx = pad + w / 2;
     // 12시(상단 중앙) → 시계 반대방향, 좌/우 끝은 180° 반원
     const d = `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
-    // 둘레 = 상·하 직선 + 좌·우 반원(=원 1개)
     const peri = 2 * (w - 2 * r) + 2 * Math.PI * r;
-    return { path: d, perimeter: peri };
+    return { path: d, perimeter: peri, geom: { pad, w, h, r, left, right, top, bottom, cx } };
   }, [size]);
+
+  // 🐛 디버그: 콘솔에 측정값 / 계산값 출력
+  useEffect(() => {
+    if (!RING_DEBUG || !debugInfo || !geom) return;
+    // border-radius computed value를 px 숫자로 추출 (가능한 경우)
+    const brMatch = debugInfo.borderRadius.match(/^([\d.]+)px/);
+    const buttonRadiusPx = brMatch ? Number(brMatch[1]) : NaN;
+    // border-radius: 9999px인 경우 시각적 반지름은 size.h / 2
+    const effectiveButtonRadius = Number.isFinite(buttonRadiusPx)
+      ? Math.min(buttonRadiusPx, size.h / 2)
+      : size.h / 2;
+    console.log('[LocationButtonWithTimer] debug', {
+      raw: { w: debugInfo.rawW, h: debugInfo.rawH },
+      rounded: { w: size.w, h: size.h },
+      computedStyle: debugInfo,
+      ring: {
+        RING_STROKE,
+        RING_PADDING,
+        pathRadius: geom.r,
+        pathCenterTopY: geom.top, // path 중심선의 상단 y
+        pathCenterBottomY: geom.bottom,
+        leftArcCenterX: geom.left + geom.r,
+        rightArcCenterX: geom.right - geom.r,
+      },
+      alignment: {
+        effectiveButtonRadius,
+        ringRadius: geom.r,
+        radiusDelta: geom.r - effectiveButtonRadius, // 0이면 곡률 일치
+        strokeOuterEdgeOffsetFromBox: RING_PADDING - RING_STROKE / 2, // 0이면 외곽선 위, 음수면 박스 밖
+        strokeInnerEdgeOffsetFromBox: RING_PADDING + RING_STROKE / 2, // 박스 안쪽으로 들어오는 거리
+      },
+    });
+  }, [debugInfo, geom, size.w, size.h]);
 
   const dashOffset = -(perimeter * (1 - remainingRatio));
 
@@ -221,7 +278,84 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
             strokeDashoffset={dashOffset.toFixed(2)}
             style={{ filter: `drop-shadow(${RING_GLOW})` }}
           />
+
+          {/* 🐛 디버그 시각 가이드 */}
+          {RING_DEBUG && geom && (
+            <g>
+              {/* 1. 버튼 박스 외곽 (getBoundingClientRect) — 빨간 점선 */}
+              <rect
+                x={0}
+                y={0}
+                width={size.w}
+                height={size.h}
+                fill="none"
+                stroke="red"
+                strokeWidth={0.6}
+                strokeDasharray="3 2"
+              />
+              {/* 2. ring path 중심선 (실제로 stroke가 그려지는 중심) — 파란 실선 */}
+              <path
+                d={path}
+                fill="none"
+                stroke="blue"
+                strokeWidth={0.6}
+                strokeOpacity={0.9}
+              />
+              {/* 3. stroke의 바깥 경계 (= 중심선에서 stroke/2 밖) — 시안 점선
+                   버튼 외곽선과 이것이 일치해야 정렬 OK */}
+              {/* 4. 좌/우 반원 중심점 — 빨간 점 */}
+              <circle cx={geom.left + geom.r} cy={geom.top + geom.r} r={1.5} fill="red" />
+              <circle cx={geom.right - geom.r} cy={geom.top + geom.r} r={1.5} fill="red" />
+              {/* 5. path 시작점 (12시) — 노란 점 */}
+              <circle cx={geom.cx} cy={geom.top} r={1.5} fill="yellow" stroke="black" strokeWidth={0.3} />
+              {/* 6. 버튼 알약 추정 외곽선 (size.h/2 반지름 + 외곽선 위) — 오렌지 점선 */}
+              <path
+                d={`M ${size.w / 2} 0 H ${size.h / 2} A ${size.h / 2} ${size.h / 2} 0 0 0 ${size.h / 2} ${size.h} H ${size.w - size.h / 2} A ${size.h / 2} ${size.h / 2} 0 0 0 ${size.w - size.h / 2} 0 Z`}
+                fill="none"
+                stroke="orange"
+                strokeWidth={0.6}
+                strokeDasharray="2 2"
+              />
+            </g>
+          )}
         </svg>
+      )}
+
+      {/* 🐛 디버그 텍스트 라벨 — 버튼 위에 측정값 표시 */}
+      {RING_DEBUG && debugInfo && geom && (
+        <div
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap"
+          style={{
+            bottom: '100%',
+            marginBottom: 4,
+            fontSize: 9,
+            lineHeight: 1.25,
+            fontFamily: 'monospace',
+            color: '#111',
+            background: 'rgba(255,255,255,0.97)',
+            border: '1px solid #f43f5e',
+            borderRadius: 4,
+            padding: '3px 5px',
+            zIndex: 99,
+            textAlign: 'left',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 1 }}>📊 LocationButton ring</div>
+          <div>raw: {debugInfo.rawW.toFixed(2)} × {debugInfo.rawH.toFixed(2)}</div>
+          <div>round: {size.w} × {size.h}</div>
+          <div>btn br: {debugInfo.borderRadius}</div>
+          <div>btn bw: {debugInfo.borderTopWidth}</div>
+          <div>btn pad: L{debugInfo.paddingLeft} R{debugInfo.paddingRight}</div>
+          <div style={{ marginTop: 2, color: '#16a34a', fontWeight: 700 }}>—— ring ——</div>
+          <div>pad: {RING_PADDING} · stroke: {RING_STROKE}</div>
+          <div>ring r: {geom.r.toFixed(2)} (btn r expected: {(size.h / 2).toFixed(2)})</div>
+          <div>arc cx L: {(geom.left + geom.r).toFixed(2)} R: {(geom.right - geom.r).toFixed(2)}</div>
+          <div>stroke outer edge offset: {(RING_PADDING - RING_STROKE / 2).toFixed(2)}px</div>
+          <div style={{ marginTop: 2, color: '#666' }}>
+            🟥 box · 🟦 path · 🟧 expected btn outline
+          </div>
+        </div>
       )}
 
       <Navigation
