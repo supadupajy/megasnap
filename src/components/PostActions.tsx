@@ -1,7 +1,8 @@
 import React from 'react';
-import { Heart, MessageCircle, Share2, Bookmark, Navigation, ShoppingBag, ExternalLink } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, ShoppingBag, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { handleShare } from '@/utils/share';
+import LocationButtonWithTimer from './LocationButtonWithTimer';
 
 interface PostActionsProps {
   postId: string;
@@ -13,6 +14,8 @@ interface PostActionsProps {
   linkUrl?: string | null;
   lat?: number;
   lng?: number;
+  /** 포스트의 생성 시각 (광고 아닌 경우 24h 만료 룰 적용) */
+  createdAt?: Date | string | number | null;
   adIcon?: 'shopping-bag' | 'external-link';
   className?: string;
   adFooterContent?: React.ReactNode;
@@ -32,6 +35,7 @@ const PostActions = ({
   linkUrl,
   lat,
   lng,
+  createdAt,
   adIcon = 'shopping-bag',
   className,
   adFooterContent,
@@ -70,15 +74,12 @@ const PostActions = ({
   ) : null;
 
   const locationButton = canShowLocation ? (
-    <button
-      type="button"
-      onClick={(e) => onLocationClick(e, lat, lng)}
-      className="inline-flex h-9 items-center justify-center gap-1.5 px-3 rounded-full active:scale-95 transition-all shrink-0 whitespace-nowrap"
-      style={{ backgroundColor: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe', isolation: 'isolate' }}
-    >
-      <Navigation className="w-3.5 h-3.5" style={{ fill: '#4f46e5', color: '#4f46e5', flexShrink: 0 }} />
-      <span style={{ fontSize: '10px', fontWeight: 900, color: '#4f46e5', lineHeight: 1 }}>위치보기</span>
-    </button>
+    <LocationButtonWithTimer
+      createdAt={createdAt}
+      isAd={isAd}
+      onClick={(e) => onLocationClick(e, lat as number, lng as number)}
+      variant="light"
+    />
   ) : null;
 
   return (

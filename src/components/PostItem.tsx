@@ -583,6 +583,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         linkUrl={post.link_url}
         lat={lat}
         lng={lng}
+        createdAt={post.createdAt}
         adIcon="shopping-bag"
         adFooterContent={adFooterContent}
         onLikeClick={handleLikeToggleLocal}

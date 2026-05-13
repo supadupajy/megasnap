@@ -696,6 +696,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         linkUrl={currentPost.link_url}
         lat={currentPost.lat}
         lng={currentPost.lng}
+        createdAt={currentPost.createdAt}
         adIcon="external-link"
         onLikeClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}
         onCommentClick={handleCommentClick}
