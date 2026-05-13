@@ -27,6 +27,7 @@ import HashtagText from './HashtagText';
 import PostItemVideo from './PostItemVideo';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
+import { useKeyboardSafeScroll } from '@/hooks/use-keyboard-safe-scroll';
 
 interface PostItemProps {
   post: Post;
@@ -78,6 +79,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const { targetRef: editFormRef, keyboardOffset: editKeyboardOffset } = useKeyboardSafeScroll<HTMLDivElement>(isEditingContent);
 
   const {
     scrollRef: imageScrollRef,
@@ -494,7 +496,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const renderContentBody = () => {
     if (isEditingContent) {
       return (
-        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={editFormRef}
+          className="space-y-2 transition-[padding-bottom] duration-200"
+          style={{ paddingBottom: editKeyboardOffset > 0 ? `${Math.min(editKeyboardOffset + 24, 420)}px` : undefined }}
+          onClick={(e) => e.stopPropagation()}
+        >
           <Textarea
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
