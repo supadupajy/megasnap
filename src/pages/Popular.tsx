@@ -99,7 +99,12 @@ const Popular = () => {
         const displayName = p.user_name;
         const displayAvatar = p.user_avatar;
         return {
-          id: p.id, isAd, isGif: false, isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+          id: p.id,
+          user_id: p.user_id,
+          owner_id: p.user_id,
+          isAd,
+          isGif: false,
+          isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
           user: { id: p.user_id, name: displayName, avatar: displayAvatar },
           content: p.content?.replace(/^\[AD\]\s*/, '') || '',
           location: p.location_name, lat: p.latitude, lng: p.longitude,
