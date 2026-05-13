@@ -58,6 +58,7 @@ const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[]
 const PILL_WIDTH = 64;
 const PILL_HEIGHT = 60;
 const FRIEND_POST_SEEN_KEY_PREFIX = 'chorasnap:friend-posts-seen-at:';
+const FRIEND_BADGE_POST_CHECK_LIMIT = 50;
 
 const BottomNav = () => {
   const location = useLocation();
@@ -104,7 +105,7 @@ const BottomNav = () => {
         return;
       }
 
-      const seenAt = localStorage.getItem(seenKey) || '1970-01-01T00:00:00.000Z';
+      const seenAt = localStorage.getItem(seenKey);
 
       const { data: followsData } = await supabase
         .from('follows')
@@ -122,16 +123,36 @@ const BottomNav = () => {
         return;
       }
 
-      const { data: recentPosts } = await supabase
+      let postsQuery = supabase
         .from('posts')
         .select('id')
         .in('user_id', followingIds)
-        .gt('created_at', seenAt)
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(FRIEND_BADGE_POST_CHECK_LIMIT);
+
+      if (seenAt) {
+        postsQuery = postsQuery.gt('created_at', seenAt);
+      }
+
+      const { data: recentPosts } = await postsQuery;
+
+      if (cancelled) return;
+
+      const recentPostIds = (recentPosts || []).map((post: any) => post.id).filter(Boolean);
+      if (recentPostIds.length === 0) {
+        setHasNewFriendPost(false);
+        return;
+      }
+
+      const { data: viewedRows } = await supabase
+        .from('viewed_posts')
+        .select('post_id')
+        .eq('user_id', authUser.id)
+        .in('post_id', recentPostIds);
 
       if (!cancelled) {
-        setHasNewFriendPost((recentPosts?.length ?? 0) > 0);
+        const viewedPostIds = new Set((viewedRows || []).map((row: any) => row.post_id));
+        setHasNewFriendPost(recentPostIds.some((postId: string) => !viewedPostIds.has(postId)));
       }
     };
 
