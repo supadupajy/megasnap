@@ -200,16 +200,18 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
             fill="none"
             stroke={RING_TRACK_COLOR}
             strokeWidth={RING_TRACK_STROKE}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             strokeLinejoin="round"
           />
-          {/* 진행 (남은 시간 — 진한 초록) */}
+          {/* 진행 (남은 시간 — 연한 초록)
+              linecap을 'butt'로 두어 dashoffset에 의해 잘린 끝점이
+              둥글게 부풀어 곡률이 달라 보이는 시각적 착시를 방지 */}
           <path
             d={path}
             fill="none"
             stroke={RING_PROGRESS_COLOR}
             strokeWidth={RING_STROKE}
-            strokeLinecap="round"
+            strokeLinecap="butt"
             strokeLinejoin="round"
             strokeDasharray={perimeter.toFixed(2)}
             strokeDashoffset={dashOffset.toFixed(2)}
