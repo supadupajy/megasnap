@@ -7,6 +7,7 @@ import { cn, getOptimizedMarkerImage, getOptimizedBannerImage } from "@/lib/util
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
+import { useAuth } from "@/components/AuthProvider";
 import HashtagText from "@/components/HashtagText";
 
 // 동영상 URL인지 판별 (mp4, mov, webm 등)
@@ -16,10 +17,83 @@ const isVideoUrl = (url: string | undefined | null): boolean => {
   return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
 };
 
-const THUMBNAIL_LIFESPAN_MS = 24 * 60 * 60 * 1000;
-const THUMBNAIL_TIMER_UPDATE_MS = 60 * 1000;
-const THUMBNAIL_TIMER_COLOR = '#39FF14';
-const THUMBNAIL_TIMER_TRACK = 'rgba(34,197,94,0.55)';
+// ── 24시간 카운트다운 링 (지도 마커와 동일 룰) ─────────────────────────
+// MapContainer.tsx의 상수/path/색상과 1:1 동일하게 유지.
+const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000;
+const COUNTDOWN_TIMER_UPDATE_MS = 60 * 1000;
+const COUNTDOWN_RING_PADDING = 2;
+const COUNTDOWN_RING_BOX = 60;
+const COUNTDOWN_RING_SIZE = COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2;
+const COUNTDOWN_RING_R = 16;
+const COUNTDOWN_PROGRESS_COLOR = '#39FF14';
+const COUNTDOWN_TRACK_COLOR = 'rgba(34,197,94,0.55)';
+const COUNTDOWN_GLOW = '0 0 4px rgba(57,255,20,0.7)';
+
+const buildCountdownRingPath = (): string => {
+  const pad = COUNTDOWN_RING_PADDING;
+  const size = COUNTDOWN_RING_SIZE;
+  const r = COUNTDOWN_RING_R;
+  const left = pad;
+  const right = pad + size;
+  const top = pad;
+  const bottom = pad + size;
+  const cx = pad + size / 2;
+  return `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left} ${top + r} V ${bottom - r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right} ${bottom - r} V ${top + r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
+};
+
+const COUNTDOWN_RING_PERIMETER =
+  4 * (COUNTDOWN_RING_SIZE - 2 * COUNTDOWN_RING_R) + 2 * Math.PI * COUNTDOWN_RING_R;
+const COUNTDOWN_RING_PATH = buildCountdownRingPath();
+
+const getCountdownRingSparkPoint = (remainingRatio: number): { x: number; y: number } => {
+  const pad = COUNTDOWN_RING_PADDING;
+  const size = COUNTDOWN_RING_SIZE;
+  const r = COUNTDOWN_RING_R;
+  const left = pad;
+  const right = pad + size;
+  const top = pad;
+  const bottom = pad + size;
+  const cx = pad + size / 2;
+
+  const halfTop = size / 2 - r;
+  const straight = size - 2 * r;
+  const arc = (Math.PI * r) / 2;
+  let d = (COUNTDOWN_RING_PERIMETER * remainingRatio) % COUNTDOWN_RING_PERIMETER;
+
+  if (d <= halfTop) return { x: cx - d, y: top };
+  d -= halfTop;
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = -Math.PI / 2 - (Math.PI / 2) * t;
+    return { x: left + r + r * Math.cos(angle), y: top + r + r * Math.sin(angle) };
+  }
+  d -= arc;
+  if (d <= straight) return { x: left, y: top + r + d };
+  d -= straight;
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = Math.PI - (Math.PI / 2) * t;
+    return { x: left + r + r * Math.cos(angle), y: bottom - r + r * Math.sin(angle) };
+  }
+  d -= arc;
+  if (d <= straight) return { x: left + r + d, y: bottom };
+  d -= straight;
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = Math.PI / 2 - (Math.PI / 2) * t;
+    return { x: right - r + r * Math.cos(angle), y: bottom - r + r * Math.sin(angle) };
+  }
+  d -= arc;
+  if (d <= straight) return { x: right, y: bottom - r - d };
+  d -= straight;
+  if (d <= arc) {
+    const t = d / arc;
+    const angle = 0 - (Math.PI / 2) * t;
+    return { x: right - r + r * Math.cos(angle), y: top + r + r * Math.sin(angle) };
+  }
+  d -= arc;
+  return { x: right - r - d, y: top };
+};
 
 const getPostCreatedAtMs = (post: Post): number | null => {
   const raw = post.createdAt;
@@ -27,6 +101,13 @@ const getPostCreatedAtMs = (post: Post): number | null => {
   if (raw instanceof Date) return raw.getTime();
   const time = new Date(raw).getTime();
   return Number.isFinite(time) ? time : null;
+};
+
+const isThumbnailExpirable = (post: Post): boolean => {
+  if (!post) return false;
+  if (post.isAd) return false;
+  if (post.isAdPending) return false;
+  return true;
 };
 
 // ── 비디오 썸네일 인메모리 캐시 ──────────────────────────────
@@ -203,49 +284,73 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
   </div>
 );
 
-const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; size?: PlayBadgeSize }> = ({ post, now, size = 'md' }) => {
-  if (post.isAd || post.isAdPending) return null;
+// 지도 마커와 1:1 동일한 24시간 카운트다운 링.
+// - 12시 방향에서 시계 반대방향으로 한 바퀴 도는 둥근 사각형 path
+// - dashoffset을 음수로 늘려 시작점부터 깎아내며 끝점이 반시계로 후퇴
+// - 끝점에는 펄스 spark (남은 시간이 1~99% 사이일 때만 표시)
+const ThumbnailCountdownRing: React.FC<{ post: Post; now: number }> = ({ post, now }) => {
+  if (!isThumbnailExpirable(post)) return null;
 
   const createdAtMs = getPostCreatedAtMs(post);
   if (createdAtMs === null) return null;
 
-  const elapsed = Math.max(0, now - createdAtMs);
-  if (elapsed >= THUMBNAIL_LIFESPAN_MS) return null;
+  const elapsed = Math.min(Math.max(now - createdAtMs, 0), MARKER_LIFESPAN_MS);
+  if (elapsed >= MARKER_LIFESPAN_MS) return null;
 
-  const remainingRatio = 1 - elapsed / THUMBNAIL_LIFESPAN_MS;
-  const dash = Math.max(0, Math.min(100, remainingRatio * 100));
-  const strokeWidth = size === 'sm' ? 3 : 3.5;
-  const inset = strokeWidth / 2 + 0.75;
-  const rectSize = 48 - inset * 2;
-  const radius = size === 'sm' ? 8 : 11;
+  const remainingRatio = 1 - elapsed / MARKER_LIFESPAN_MS;
+  const elapsedRatio = 1 - remainingRatio;
+  const dashOffset = -(COUNTDOWN_RING_PERIMETER * elapsedRatio);
+  const spark = getCountdownRingSparkPoint(elapsedRatio);
+  const showSpark = remainingRatio > 0.01 && remainingRatio < 0.995;
 
   return (
-    <svg className="absolute inset-0 z-20 pointer-events-none" viewBox="0 0 48 48" aria-hidden="true">
-      <rect
-        x={inset}
-        y={inset}
-        width={rectSize}
-        height={rectSize}
-        rx={radius}
+    <svg
+      viewBox={`0 0 ${COUNTDOWN_RING_BOX} ${COUNTDOWN_RING_BOX}`}
+      preserveAspectRatio="none"
+      style={{
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 12,
+        overflow: 'visible',
+      }}
+      aria-hidden="true"
+    >
+      <path
+        d={COUNTDOWN_RING_PATH}
         fill="none"
-        stroke={THUMBNAIL_TIMER_TRACK}
-        strokeWidth={strokeWidth}
-      />
-      <rect
-        x={inset}
-        y={inset}
-        width={rectSize}
-        height={rectSize}
-        rx={radius}
-        fill="none"
-        stroke={THUMBNAIL_TIMER_COLOR}
-        strokeWidth={strokeWidth}
+        stroke={COUNTDOWN_TRACK_COLOR}
+        strokeWidth={4}
         strokeLinecap="round"
-        pathLength={100}
-        strokeDasharray={`${dash} 100`}
-        strokeDashoffset={25}
-        style={{ filter: 'drop-shadow(0 0 3px rgba(57,255,20,0.8))' }}
+        strokeLinejoin="round"
       />
+      <path
+        d={COUNTDOWN_RING_PATH}
+        fill="none"
+        stroke={COUNTDOWN_PROGRESS_COLOR}
+        strokeWidth={4}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray={COUNTDOWN_RING_PERIMETER.toFixed(2)}
+        strokeDashoffset={dashOffset.toFixed(2)}
+        style={{ filter: `drop-shadow(${COUNTDOWN_GLOW})` }}
+      />
+      {showSpark && (
+        <g
+          transform={`translate(${spark.x.toFixed(2)} ${spark.y.toFixed(2)})`}
+          style={{ filter: 'drop-shadow(0 0 5px rgba(57,255,20,0.95))' }}
+        >
+          <circle cx="0" cy="0" r="5" fill="rgba(57,255,20,0.22)">
+            <animate attributeName="r" values="3;6;3" dur="1.15s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.15s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="0" cy="0" r="2.1" fill="#ecfccb" stroke="#39FF14" strokeWidth={1}>
+            <animate attributeName="opacity" values="1;0.45;1" dur="0.75s" repeatCount="indefinite" />
+          </circle>
+        </g>
+      )}
     </svg>
   );
 };
@@ -276,7 +381,7 @@ const PostThumbnail: React.FC<{
           onError={onImgError}
         />
         {isVideo && <PlayOverlay size={size} />}
-        <ThumbnailCountdownRing post={post} now={now} size={size} />
+        <ThumbnailCountdownRing post={post} now={now} />
       </div>
     );
   }
@@ -287,7 +392,7 @@ const PostThumbnail: React.FC<{
     return (
       <div className={cn("relative w-full h-full", className)}>
         <VideoThumbnail videoUrl={effectiveVideoUrl} size={size} />
-        <ThumbnailCountdownRing post={post} now={now} size={size} />
+        <ThumbnailCountdownRing post={post} now={now} />
       </div>
     );
   }
@@ -302,7 +407,7 @@ const PostThumbnail: React.FC<{
         className={cn("w-full h-full object-cover", imgClassName)}
         onError={onImgError}
       />
-      <ThumbnailCountdownRing post={post} now={now} size={size} />
+      <ThumbnailCountdownRing post={post} now={now} />
     </div>
   );
 };
@@ -348,31 +453,43 @@ interface TrendingPostItemProps {
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   rankChange: RankChange;
   now: number;
+  authUserId?: string | null;
 }
 
-const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange, now }) => {
+// 지도 마커와 동일한 테두리/그림자 룰을 썸네일에 그대로 적용한다.
+// 우선순위: 광고 > 내 포스팅 > popular(HOT) > diamond/gold/silver > 일반
+const getThumbnailFrameStyle = (post: Post, isMine: boolean): { border: string; boxShadow?: string } => {
+  if (post.isAd) {
+    return { border: '2.5px solid #2563eb' };
+  }
+  if (isMine) {
+    return { border: '2.5px solid #4f46e5' };
+  }
+  const borderType = post.borderType || 'none';
+  if (borderType === 'popular') {
+    return { border: '2.5px solid #ef4444', boxShadow: '0 0 12px rgba(239, 68, 68, 0.45)' };
+  }
+  if (borderType === 'diamond') {
+    return { border: '2.5px solid #22d3ee', boxShadow: '0 0 12px rgba(34, 211, 238, 0.7), inset 0 0 6px rgba(34, 211, 238, 0.45)' };
+  }
+  if (borderType === 'gold') {
+    return { border: '2.5px solid #fbbf24', boxShadow: '0 0 12px rgba(251, 191, 36, 0.55), inset 0 0 6px rgba(251, 191, 36, 0.35)' };
+  }
+  if (borderType === 'silver') {
+    return { border: '2.5px solid #94a3b8', boxShadow: '0 0 10px rgba(148, 163, 184, 0.65), inset 0 0 5px rgba(148, 163, 184, 0.25)' };
+  }
+  return { border: '2px solid #ffffff', boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)' };
+};
+
+const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, onPostClick, handleImageError, rankChange, now, authUserId }) => {
   const displayLocation = useLocationDisplay(post.location, post.lat, post.lng);
 
   const hasDisplayLocation = !!displayLocation && !['위치 정보 없음', '위치 미지정', '알 수 없는 장소'].includes(displayLocation);
   const isHot = Number(post.likes_per_hour ?? 0) >= 100;
 
   const borderType = post.borderType || 'none';
-  let borderColor = 'border-gray-100';
-  let borderThickness = 'border';
-
-  if (borderType === 'popular') {
-    borderColor = 'border-rose-500';
-    borderThickness = 'border-2';
-  } else if (borderType === 'diamond') {
-    borderColor = 'border-cyan-400';
-    borderThickness = 'border-2';
-  } else if (borderType === 'gold') {
-    borderColor = 'border-amber-400';
-    borderThickness = 'border-2';
-  } else if (borderType === 'silver') {
-    borderColor = 'border-slate-400';
-    borderThickness = 'border-2';
-  }
+  const isMine = !!(authUserId && String((post as any).owner_id || post.user_id || '') === String(authUserId));
+  const frameStyle = getThumbnailFrameStyle(post, isMine);
 
   // 순위 변동 UI 렌더
   const renderRankChange = () => {
@@ -442,16 +559,14 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
         )}
       </div>
 
-      <div className={cn(
-        "relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50",
-        borderThickness,
-        borderColor
-      )}>
+      <div
+        className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50 box-border"
+        style={frameStyle}
+      >
         <PostThumbnail post={post} onImgError={handleImageError} now={now} />
-        {borderType !== 'none' && (
+        {borderType !== 'none' && !post.isAd && !isMine && (
           <div className="absolute top-0.5 right-0.5 z-30">
             <Sparkles className={cn(
-
               "w-2.5 h-2.5",
               borderType === 'popular' ? "text-rose-500 fill-rose-500" :
               borderType === 'diamond' ? "text-cyan-400 fill-cyan-400" :
@@ -603,6 +718,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   onPostClick,
   maxHeight,
 }) => {
+  const { user: authUser } = useAuth();
+  const authUserId = authUser?.id || null;
   const listRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
@@ -628,7 +745,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, [isExpanded]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setThumbnailTimerNow(Date.now()), THUMBNAIL_TIMER_UPDATE_MS);
+    const timer = window.setInterval(() => setThumbnailTimerNow(Date.now()), COUNTDOWN_TIMER_UPDATE_MS);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -969,6 +1086,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   handleImageError={handleImageError}
                   rankChange={getRankChange(post as Post & { rank: number })}
                   now={thumbnailTimerNow}
+                  authUserId={authUserId}
                 />
 
               ))}
