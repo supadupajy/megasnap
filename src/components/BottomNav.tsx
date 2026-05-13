@@ -67,9 +67,8 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  // 키보드가 떠 있는 동안에는 BottomNav를 화면 밖으로 밀어낸다.
+  // 키보드가 떠 있는 동안에는 BottomNav를 아예 렌더링하지 않는다.
   // (안드로이드에서는 position: fixed가 layout viewport 기준이라 키보드 위에 떠 보이기 때문)
-  // 댓글 시트가 화면 맨 아래까지 덮고 있으므로 이 슬라이딩은 시트 뒤에서 일어나 사용자에게 보이지 않는다.
   const keyboardOffset = useKeyboardOffset(true);
   const isKeyboardOpen = keyboardOffset > 0;
   const navRef = useRef<HTMLDivElement>(null);
@@ -223,15 +222,15 @@ const BottomNav = () => {
     navigate(path);
   };
 
+  // 키보드가 떠있는 동안에는 BottomNav를 아예 렌더링하지 않음.
+  // (모든 입력창에서 슬라이딩 애니메이션 없이 즉시 사라지도록 처리)
+  if (isKeyboardOpen) return null;
+
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000]"
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
-        // 키보드가 올라오면 화면 밖으로 밀어내 키보드 위 노출을 방지.
-        // (댓글 시트가 이 영역을 덮고 있으면 사용자에겐 슬라이딩이 보이지 않음)
-        transform: isKeyboardOpen ? 'translateY(120%)' : 'translateY(0)',
-        transition: 'transform 200ms ease-out',
       }}
     >
       <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
