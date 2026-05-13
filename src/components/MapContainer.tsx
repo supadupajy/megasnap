@@ -264,6 +264,7 @@ const MapContainer = ({
   const [internalViewedIds, setInternalViewedIds] = useState<Set<string>>(new Set());
   const [mapInstanceState, setMapInstanceState] = useState<any>(null);
   const [userLocationPixel, setUserLocationPixel] = useState<{ x: number; y: number } | null>(null);
+  const [markerExpiryNow, setMarkerExpiryNow] = useState(() => Date.now());
 
   // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
   const [uiState, setUiState] = useState<'idle' | 'pressing' | 'hidden'>('idle');
@@ -309,14 +310,13 @@ const MapContainer = ({
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
 
-  // 히트맵 points: 좌표 시그니처가 같으면 같은 배열 참조를 유지해
-  // HeatmapOverlay의 redraw 트리거가 불필요하게 발생하지 않도록 메모화
+  // 히트맵도 실제 지도 마커와 동일한 24시간 만료 룰을 적용한다.
+  // 즉, DB에 남아 있어도 현재 지도에 표시되지 않는 만료 마커는 히트맵에서 제외한다.
   const heatmapPoints = useMemo(() => {
     return posts
-      .filter(p => p.lat != null && p.lng != null)
+      .filter(p => p.lat != null && p.lng != null && !isMarkerExpired(p, markerExpiryNow))
       .map(p => ({ lat: p.lat as number, lng: p.lng as number }));
-    // posts 자체가 변경됐을 때만 재계산
-  }, [posts]);
+  }, [posts, markerExpiryNow]);
 
   // draggable prop 변경 시 카카오맵 드래그 활성/비활성
   useEffect(() => {
@@ -1960,6 +1960,7 @@ const MapContainer = ({
 
     const tick = () => {
       const now = Date.now();
+      setMarkerExpiryNow(now);
 
       overlaysRef.current.forEach((overlay, id) => {
         const content = overlay.getContent() as HTMLElement | null;

@@ -32,6 +32,8 @@ export const fetchPostsInBounds = async (
   if (currentLevel >= 9) limit = 250;
 
   try {
+    const oneDayAgoIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
     const { data, error } = await supabase
       .from('posts')
       .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, image_url, user_id, user_name, user_avatar, images, content, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
@@ -40,6 +42,7 @@ export const fetchPostsInBounds = async (
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
       .lte('longitude', Math.max(sw.lng, ne.lng))
+      .gte('created_at', oneDayAgoIso)
       .order('likes', { ascending: false })
       .limit(limit);
 
