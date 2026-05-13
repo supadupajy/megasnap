@@ -35,8 +35,13 @@ interface LocationButtonWithTimerProps {
   createdAt?: Date | string | number | null;
   /** 광고는 만료 룰 적용 안 함 */
   isAd?: boolean;
-  /** 만료/경과 정보를 무시하고 항상 활성 (lat/lng 자체가 없는 경우는 별도 처리, 여기는 표시되는 경우만 사용) */
+  /** 만료/경과 정보를 무시하고 항상 활성 */
   forceActive?: boolean;
+  /**
+   * 위치 좌표(lat/lng) 보유 여부. false면 만료와 동일하게 비활성("위치없음") 처리.
+   * (생략 시 true로 간주 — 기존 호출처 호환)
+   */
+  hasCoords?: boolean;
   onClick: (e: React.MouseEvent) => void;
   /** light: 일반 페이지(흰 배경), dark: Reels 등 어두운 배경 */
   variant?: 'light' | 'dark';
@@ -54,6 +59,7 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   createdAt,
   isAd = false,
   forceActive = false,
+  hasCoords = true,
   onClick,
   variant = 'light',
 }) => {
@@ -77,7 +83,9 @@ const LocationButtonWithTimer: React.FC<LocationButtonWithTimerProps> = ({
   }, [isExpirable]);
 
   const elapsed = isExpirable ? now - (createdMs as number) : 0;
-  const isExpired = isExpirable && elapsed >= MARKER_LIFESPAN_MS;
+  const isTimeExpired = isExpirable && elapsed >= MARKER_LIFESPAN_MS;
+  // 좌표가 없는 경우도 비활성으로 동일 취급 (광고는 좌표 없어도 활성으로 들어오지 않음)
+  const isExpired = isTimeExpired || (!isAd && !hasCoords);
   const remainingRatio = isExpirable
     ? Math.max(0, 1 - elapsed / MARKER_LIFESPAN_MS)
     : 1;
