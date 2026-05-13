@@ -37,6 +37,7 @@ interface SwipeItemProps {
   onClose: () => void;
   onDelete: (id: string) => void;
   onClick: (notif: Notification) => void;
+  onActorClick: (notif: Notification) => void;
   getNotificationText: (notif: Notification) => string;
 }
 
@@ -47,8 +48,10 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
   onClose,
   onDelete,
   onClick,
+  onActorClick,
   getNotificationText,
 }) => {
+
   const x = useMotionValue(0);
   const isMounted = useRef(false);
 
@@ -103,12 +106,31 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
           onClick(notif);
         }}
       >
-        <Avatar className="w-11 h-11 shrink-0 border border-gray-100">
-          <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
-          <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
-        </Avatar>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onActorClick(notif);
+          }}
+          className="shrink-0 rounded-full active:scale-95 transition-transform"
+          aria-label={`${notif.actor?.nickname || '사용자'} 프로필 보기`}
+        >
+          <Avatar className="w-11 h-11 border border-gray-100">
+            <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
+            <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
+          </Avatar>
+        </button>
         <div className="flex-1 text-sm leading-tight">
-          <span className="font-bold">{notif.actor?.nickname || '알 수 없는 사용자'}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onActorClick(notif);
+            }}
+            className="font-bold text-left active:opacity-70 transition-opacity"
+          >
+            {notif.actor?.nickname || '알 수 없는 사용자'}
+          </button>
           <span className="text-gray-700"> {getNotificationText(notif)}</span>
           <span className="text-[10px] text-gray-400 ml-2 block mt-1">
             {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
@@ -253,14 +275,24 @@ const Notifications = () => {
       return;
     }
 
-    if (notif.type === 'message') navigate(`/chat/${notif.actor_id}`);
-    else if (notif.post_id) navigate('/', { state: { postId: notif.post_id, openPostDetail: true } });
+    if (notif.post_id) navigate('/', { state: { postId: notif.post_id, openPostDetail: true } });
+    else if (notif.type === 'message') navigate(`/chat/${notif.actor_id}`);
     else navigate(`/profile/${notif.actor_id}`);
+  };
+
+  const handleActorClick = (notif: Notification) => {
+    if (swipedId) {
+      setSwipedId(null);
+      return;
+    }
+
+    navigate(`/profile/${notif.actor_id}`);
   };
 
   return (
 
     <div
+
       className="h-screen min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-contain"
       style={{
         paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))',
@@ -302,8 +334,10 @@ const Notifications = () => {
                       onClose={() => setSwipedId(null)}
                       onDelete={deleteNotification}
                       onClick={handleNotifClick}
+                      onActorClick={handleActorClick}
                       getNotificationText={getNotificationText}
                     />
+
                   ))}
                 </AnimatePresence>
                 {notifications.length === 0 && (
