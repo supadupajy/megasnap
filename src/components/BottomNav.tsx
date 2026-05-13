@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Map, Flame, UsersRound, User } from 'lucide-react';
+import { MapPin, Flame, UsersRound, User } from 'lucide-react';
 
 // 둥근 모서리 플레이 아이콘 (lucide의 기본 Play는 모서리가 각져있어 직접 정의)
 const RoundedPlayIcon = ({ className }: { className?: string }) => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
+
     stroke="currentColor"
     strokeWidth={2}
     strokeLinecap="round"
@@ -35,13 +36,14 @@ const navItems: {
 }[] = [
   { icon: Flame, label: '인기', path: '/popular' },
   { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks', iconSizeClass: 'w-7 h-7' },
-  { icon: Map, label: '지도', path: '/' },
+  { icon: MapPin, label: '지도', path: '/' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
 
 // 하위 경로(예: /settings, /search 등)에 들어갔을 때도 부모 탭이 활성 상태로 유지되도록 매핑
 // path 우선순위: 첫 번째로 매치되는 것이 사용됨
+
 // 참고: 포스팅 검색(/post-search)은 더 이상 라우트가 아닌 전역 오버레이로 동작하므로
 //       BottomNav 매칭에서 제외되었다. 검색 중에도 현재 탭이 그대로 유지된다.
 
