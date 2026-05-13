@@ -171,15 +171,19 @@ const Chat = () => {
     } catch (err) {}
   }, [authUser, chatId]);
 
-  // 키보드 대응 (visualViewport) — 입력창을 키보드 바로 위에 sticky하게 붙임
+  // 키보드 대응 — 안드로이드 WebView는 키보드 띄울 때 viewport 자체를 resize함
+  // 그래서 visualViewport.height와 window.innerHeight 차이가 0이 나옴.
+  // 해결: 페이지 진입 시점의 "키보드 없는 상태"의 높이를 기준값으로 저장하고,
+  //       현재 innerHeight와의 차이를 키보드 높이로 계산.
   useEffect(() => {
     const vp = window.visualViewport;
-
-    // 디버그: visualViewport API 지원 여부 확인
     const hasVP = !!vp;
     console.log('[Chat Debug] visualViewport supported:', hasVP);
     console.log('[Chat Debug] userAgent:', navigator.userAgent);
 
+    // ✅ 기준 높이: 페이지 진입 시점의 innerHeight (키보드 없는 상태)
+    // 향후 더 큰 값이 들어오면 기준 갱신 (회전 등)
+    let baselineHeight = window.innerHeight;
     let eventCount = 0;
 
     const handleViewport = (eventType: string = 'manual') => {
@@ -192,13 +196,23 @@ const Chat = () => {
       const offsetTop = vp?.offsetTop ?? 0;
       const pageTop = vp?.pageTop ?? 0;
 
-      // 키보드가 차지하는 높이 = layout viewport 높이 - visual viewport 높이 - 상단 오프셋
-      const keyboardHeight = Math.max(0, winH - vpHeight - offsetTop);
+      // 기준 높이보다 현재 innerHeight가 크면 baseline 갱신 (회전, 주소창 변화 등)
+      if (winH > baselineHeight) {
+        baselineHeight = winH;
+      }
+
+      // ✅ 안드로이드 WebView 대응:
+      // - 표준 방식: keyboardHeight = winH - vpHeight - offsetTop (iOS Safari)
+      // - WebView 방식: keyboardHeight = baselineHeight - winH (viewport가 resize됨)
+      // 두 값 중 큰 값을 사용
+      const standardKbH = Math.max(0, winH - vpHeight - offsetTop);
+      const fallbackKbH = Math.max(0, baselineHeight - winH);
+      const keyboardHeight = Math.max(standardKbH, fallbackKbH);
       const isKeyboardOpen = keyboardHeight > 100;
 
       const inputHeight = inputRef.current?.offsetHeight ?? 0;
 
-      // 채팅 상세 헤더: 키보드가 올라와도 페이지 상단에 고정 유지
+      // 채팅 상세 헤더: visualViewport offsetTop 따라가기 (iOS용)
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
@@ -206,16 +220,27 @@ const Chat = () => {
       let appliedTop: number | string = 'auto';
       let appliedBottom = '112px';
 
-      // 입력창: visualViewport의 bottom (= offsetTop + height) 바로 아래에 위치하도록
       if (inputRef.current) {
         if (isKeyboardOpen) {
-          const inputTop = offsetTop + vpHeight - inputHeight;
-          inputRef.current.style.bottom = 'auto';
-          inputRef.current.style.top = `${inputTop}px`;
+          // ✅ 안드로이드 WebView에서는 viewport가 이미 resize되었으므로
+          // bottom: 0 으로 두면 키보드 바로 위에 자연스럽게 붙음
+          // iOS에서는 visualViewport 기반으로 top 계산
+          if (standardKbH > 100) {
+            // iOS 패턴: visual viewport 하단에 맞춤
+            const inputTop = offsetTop + vpHeight - inputHeight;
+            inputRef.current.style.bottom = 'auto';
+            inputRef.current.style.top = `${inputTop}px`;
+            appliedTop = inputTop;
+            appliedBottom = 'auto';
+          } else {
+            // 안드로이드 WebView 패턴: 그냥 bottom: 0
+            inputRef.current.style.top = 'auto';
+            inputRef.current.style.bottom = '0px';
+            appliedTop = 'auto';
+            appliedBottom = '0px';
+          }
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '8px';
-          appliedTop = inputTop;
-          appliedBottom = 'auto';
         } else {
           inputRef.current.style.top = 'auto';
           inputRef.current.style.bottom = '112px';
@@ -231,7 +256,6 @@ const Chat = () => {
         scrollRef.current.style.paddingBottom = `${baseBottomPad}px`;
       }
 
-      // 디버그 상태 업데이트
       setDebugInfo({
         windowInnerHeight: winH,
         vpHeight: Math.round(vpHeight),
@@ -243,7 +267,7 @@ const Chat = () => {
         inputBottom: appliedBottom,
         inputHeight,
         hasVisualViewport: hasVP,
-        userAgent: navigator.userAgent.substring(0, 80),
+        userAgent: `baseline:${baselineHeight} | std:${standardKbH} fb:${fallbackKbH} | ${navigator.userAgent.substring(0, 50)}`,
         docHeight: docH,
         screenHeight: screenH,
         eventType,
@@ -251,7 +275,7 @@ const Chat = () => {
       });
 
       console.log(`[Chat Debug] ${eventType}:`, {
-        winH, vpHeight, offsetTop, keyboardHeight, isKeyboardOpen, inputHeight, appliedTop, appliedBottom,
+        winH, vpHeight, offsetTop, baselineHeight, standardKbH, fallbackKbH, keyboardHeight, isKeyboardOpen,
       });
 
       setTimeout(scrollToBottom, 50);
@@ -259,26 +283,21 @@ const Chat = () => {
 
     handleViewport('init');
 
+    const onWinResize = () => handleViewport('window.resize');
+    window.addEventListener('resize', onWinResize);
+
     if (vp) {
-      const onResize = () => handleViewport('vp.resize');
-      const onScroll = () => handleViewport('vp.scroll');
-      vp.addEventListener('resize', onResize);
-      vp.addEventListener('scroll', onScroll);
-
-      // window resize도 추가로 감지 (안드로이드 일부 브라우저 fallback)
-      const onWinResize = () => handleViewport('window.resize');
-      window.addEventListener('resize', onWinResize);
-
+      const onVpResize = () => handleViewport('vp.resize');
+      const onVpScroll = () => handleViewport('vp.scroll');
+      vp.addEventListener('resize', onVpResize);
+      vp.addEventListener('scroll', onVpScroll);
       return () => {
-        vp.removeEventListener('resize', onResize);
-        vp.removeEventListener('scroll', onScroll);
+        vp.removeEventListener('resize', onVpResize);
+        vp.removeEventListener('scroll', onVpScroll);
         window.removeEventListener('resize', onWinResize);
       };
-    } else {
-      const onWinResize = () => handleViewport('window.resize');
-      window.addEventListener('resize', onWinResize);
-      return () => window.removeEventListener('resize', onWinResize);
     }
+    return () => window.removeEventListener('resize', onWinResize);
   }, [scrollToBottom]);
 
   // 입력창 포커스/블러 이벤트도 디버그
