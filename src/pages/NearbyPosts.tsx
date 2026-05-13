@@ -304,7 +304,6 @@ const NearbyPosts = () => {
   }, []);
 
   const firstHiddenMapPostIndex = displayPosts.findIndex(post => !post.isAd && !visibleMapPostIds.has(post.id));
-  const firstViewedIndex = displayPosts.findIndex(post => !post.isAd && dividerViewedIds.has(post.id));
 
   if (!payload) return null;
 
@@ -353,18 +352,6 @@ const NearbyPosts = () => {
                     아래부터는 24시간이 지나 지도에 보이지 않는 포스팅입니다.
                   </span>
                   <div className="flex-1 h-px bg-slate-200" />
-                </div>
-              );
-            }
-
-            if (firstViewedIndex !== -1 && index === firstViewedIndex) {
-              items.push(
-                <div key="viewed-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-white">
-                  <div className="flex-1 h-px bg-indigo-200" />
-                  <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-black text-indigo-600 whitespace-nowrap shrink-0 shadow-sm">
-                    아래부터는 이미 조회한 포스팅입니다.
-                  </span>
-                  <div className="flex-1 h-px bg-indigo-200" />
                 </div>
               );
             }

@@ -273,8 +273,6 @@ const FriendFeed = () => {
     setPosts(prev => prev.filter(p => p.id !== postId));
   }, []);
 
-  const firstViewedIndex = displayPosts.findIndex(post => dividerViewedIds.has(post.id));
-
   const noFollowing = followingIds !== null && followingIds.length === 0;
   const noPostsButHasFriends = !isLoading && followingIds !== null && followingIds.length > 0 && filteredPosts.length === 0;
 
@@ -306,19 +304,7 @@ const FriendFeed = () => {
               const items: React.ReactNode[] = [];
               let postCount = 0;
 
-              displayPosts.forEach((post, index) => {
-                if (firstViewedIndex !== -1 && index === firstViewedIndex) {
-                  items.push(
-                    <div key="viewed-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-white">
-                      <div className="flex-1 h-px bg-indigo-200" />
-                      <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-black text-indigo-600 whitespace-nowrap shrink-0 shadow-sm">
-                        아래부터는 이미 조회한 포스팅입니다.
-                      </span>
-                      <div className="flex-1 h-px bg-indigo-200" />
-                    </div>
-                  );
-                }
-
+              displayPosts.forEach((post) => {
                 items.push(
                   <ViewedAwareFriendPostItem
                     key={post.id}

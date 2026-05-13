@@ -575,6 +575,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     ? formatRelativeTime(new Date(post.createdAt))
     : null;
 
+  const showNewPostBadge = !isAd && isViewed === false;
+
   const renderInteractionButtons = (adFooterContent?: React.ReactNode) => {
     const commentsDisplayCount = Math.max(localComments.length, post.commentsCount || 0);
 
@@ -711,6 +713,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           >
             <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
             {renderMedia()}
+            {showNewPostBadge && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute right-3 top-3 z-30 h-4 w-4 rounded-full bg-red-500 ring-[3px] ring-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]"
+              />
+            )}
           </div>
 
           {renderInteractionButtons()}

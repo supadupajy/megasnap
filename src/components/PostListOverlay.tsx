@@ -423,9 +423,6 @@ const PostListOverlay = ({
 
   if (!isOpen) return null;
 
-  // 구분선 위치 계산: 광고는 조회 포스팅 경계 판단에서 제외합니다.
-  const firstViewedIndex = posts.findIndex(p => !p.isAd && openedViewedIds.has(p.id));
-
   return (
     <div
       ref={scrollContainerRef}
@@ -457,19 +454,6 @@ const PostListOverlay = ({
               const items: React.ReactNode[] = [];
 
               posts.forEach((post, index) => {
-
-                // 이미 본 포스팅 구분선
-                if (firstViewedIndex !== -1 && index === firstViewedIndex) {
-                  items.push(
-                    <div key="viewed-posts-divider" className="flex items-center gap-3 px-4 py-4 bg-white">
-                      <div className="flex-1 h-px bg-indigo-200" />
-                      <span className="rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-black text-indigo-600 whitespace-nowrap shrink-0 shadow-sm">
-                        아래부터는 이미 조회한 포스팅입니다.
-                      </span>
-                      <div className="flex-1 h-px bg-indigo-200" />
-                    </div>
-                  );
-                }
 
                 items.push(
                   <ObservedPostItem
