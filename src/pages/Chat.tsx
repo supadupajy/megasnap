@@ -49,6 +49,41 @@ const Chat = () => {
   const [isOnline, setIsOnline] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState(true);
 
+  // 🐛 디버그 정보
+  const [debugInfo, setDebugInfo] = useState<{
+    windowInnerHeight: number;
+    vpHeight: number;
+    vpOffsetTop: number;
+    vpPageTop: number;
+    keyboardHeight: number;
+    isKeyboardOpen: boolean;
+    inputTop: number | string;
+    inputBottom: string;
+    inputHeight: number;
+    hasVisualViewport: boolean;
+    userAgent: string;
+    docHeight: number;
+    screenHeight: number;
+    eventType: string;
+    eventCount: number;
+  }>({
+    windowInnerHeight: 0,
+    vpHeight: 0,
+    vpOffsetTop: 0,
+    vpPageTop: 0,
+    keyboardHeight: 0,
+    isKeyboardOpen: false,
+    inputTop: 'auto',
+    inputBottom: '112px',
+    inputHeight: 0,
+    hasVisualViewport: false,
+    userAgent: '',
+    docHeight: 0,
+    screenHeight: 0,
+    eventType: 'init',
+    eventCount: 0,
+  });
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const inputRef = useRef<HTMLDivElement>(null);
@@ -139,57 +174,126 @@ const Chat = () => {
   // 키보드 대응 (visualViewport) — 입력창을 키보드 바로 위에 sticky하게 붙임
   useEffect(() => {
     const vp = window.visualViewport;
-    if (!vp) return;
 
-    const handleViewport = () => {
-      const offsetTop = vp.offsetTop ?? 0;
+    // 디버그: visualViewport API 지원 여부 확인
+    const hasVP = !!vp;
+    console.log('[Chat Debug] visualViewport supported:', hasVP);
+    console.log('[Chat Debug] userAgent:', navigator.userAgent);
+
+    let eventCount = 0;
+
+    const handleViewport = (eventType: string = 'manual') => {
+      eventCount++;
+      const winH = window.innerHeight;
+      const docH = document.documentElement.clientHeight;
+      const screenH = window.screen.height;
+
+      const vpHeight = vp?.height ?? winH;
+      const offsetTop = vp?.offsetTop ?? 0;
+      const pageTop = vp?.pageTop ?? 0;
+
       // 키보드가 차지하는 높이 = layout viewport 높이 - visual viewport 높이 - 상단 오프셋
-      const keyboardHeight = Math.max(0, window.innerHeight - vp.height - offsetTop);
+      const keyboardHeight = Math.max(0, winH - vpHeight - offsetTop);
       const isKeyboardOpen = keyboardHeight > 100;
+
+      const inputHeight = inputRef.current?.offsetHeight ?? 0;
 
       // 채팅 상세 헤더: 키보드가 올라와도 페이지 상단에 고정 유지
       if (headerRef.current) {
         headerRef.current.style.transform = `translateY(${offsetTop}px)`;
       }
 
+      let appliedTop: number | string = 'auto';
+      let appliedBottom = '112px';
+
       // 입력창: visualViewport의 bottom (= offsetTop + height) 바로 아래에 위치하도록
-      // top 좌표를 직접 계산해서 키보드 바로 위에 sticky하게 붙임
       if (inputRef.current) {
         if (isKeyboardOpen) {
-          const inputHeight = inputRef.current.offsetHeight || 64;
-          // visual viewport의 하단 = offsetTop + vp.height
-          // 입력창의 top = visual viewport 하단 - 입력창 높이
-          const inputTop = offsetTop + vp.height - inputHeight;
+          const inputTop = offsetTop + vpHeight - inputHeight;
           inputRef.current.style.bottom = 'auto';
           inputRef.current.style.top = `${inputTop}px`;
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '8px';
+          appliedTop = inputTop;
+          appliedBottom = 'auto';
         } else {
-          // 키보드 닫힘: 원래대로 하단 네비게이션 위 위치로 복귀
           inputRef.current.style.top = 'auto';
           inputRef.current.style.bottom = '112px';
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '12px';
+          appliedTop = 'auto';
+          appliedBottom = '112px';
         }
       }
 
-      // 스크롤 영역 하단 패딩: 키보드가 올라왔을 땐 입력창 높이만큼만 확보
       if (scrollRef.current) {
         const baseBottomPad = isKeyboardOpen ? 80 : 220;
         scrollRef.current.style.paddingBottom = `${baseBottomPad}px`;
       }
 
+      // 디버그 상태 업데이트
+      setDebugInfo({
+        windowInnerHeight: winH,
+        vpHeight: Math.round(vpHeight),
+        vpOffsetTop: Math.round(offsetTop),
+        vpPageTop: Math.round(pageTop),
+        keyboardHeight: Math.round(keyboardHeight),
+        isKeyboardOpen,
+        inputTop: typeof appliedTop === 'number' ? Math.round(appliedTop) : appliedTop,
+        inputBottom: appliedBottom,
+        inputHeight,
+        hasVisualViewport: hasVP,
+        userAgent: navigator.userAgent.substring(0, 80),
+        docHeight: docH,
+        screenHeight: screenH,
+        eventType,
+        eventCount,
+      });
+
+      console.log(`[Chat Debug] ${eventType}:`, {
+        winH, vpHeight, offsetTop, keyboardHeight, isKeyboardOpen, inputHeight, appliedTop, appliedBottom,
+      });
+
       setTimeout(scrollToBottom, 50);
     };
 
-    handleViewport();
-    vp.addEventListener('resize', handleViewport);
-    vp.addEventListener('scroll', handleViewport);
-    return () => {
-      vp.removeEventListener('resize', handleViewport);
-      vp.removeEventListener('scroll', handleViewport);
-    };
+    handleViewport('init');
+
+    if (vp) {
+      const onResize = () => handleViewport('vp.resize');
+      const onScroll = () => handleViewport('vp.scroll');
+      vp.addEventListener('resize', onResize);
+      vp.addEventListener('scroll', onScroll);
+
+      // window resize도 추가로 감지 (안드로이드 일부 브라우저 fallback)
+      const onWinResize = () => handleViewport('window.resize');
+      window.addEventListener('resize', onWinResize);
+
+      return () => {
+        vp.removeEventListener('resize', onResize);
+        vp.removeEventListener('scroll', onScroll);
+        window.removeEventListener('resize', onWinResize);
+      };
+    } else {
+      const onWinResize = () => handleViewport('window.resize');
+      window.addEventListener('resize', onWinResize);
+      return () => window.removeEventListener('resize', onWinResize);
+    }
   }, [scrollToBottom]);
+
+  // 입력창 포커스/블러 이벤트도 디버그
+  useEffect(() => {
+    const input = inputRef.current?.querySelector('input');
+    if (!input) return;
+    const onFocus = () => console.log('[Chat Debug] input FOCUS');
+    const onBlur = () => console.log('[Chat Debug] input BLUR');
+    input.addEventListener('focus', onFocus);
+    input.addEventListener('blur', onBlur);
+    return () => {
+      input.removeEventListener('focus', onFocus);
+      input.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   // 상대방 프로필 조회
   useEffect(() => {
@@ -415,6 +519,27 @@ const Chat = () => {
             );
           })}
         </div>
+      </div>
+
+      {/* 🐛 DEBUG PANEL — 키보드/뷰포트 디버깅용 (확인 후 제거) */}
+      <div
+        className="fixed top-[140px] left-2 right-2 z-[200] bg-black/85 text-white text-[10px] font-mono p-2 rounded-lg leading-tight pointer-events-none"
+        style={{ maxWidth: '380px' }}
+      >
+        <div className="font-bold text-yellow-300 mb-1">🐛 KEYBOARD DEBUG (#{debugInfo.eventCount}) [{debugInfo.eventType}]</div>
+        <div>hasVisualViewport: <span className={debugInfo.hasVisualViewport ? 'text-green-400' : 'text-red-400'}>{String(debugInfo.hasVisualViewport)}</span></div>
+        <div>window.innerHeight: <span className="text-cyan-300">{debugInfo.windowInnerHeight}</span></div>
+        <div>doc.clientHeight: <span className="text-cyan-300">{debugInfo.docHeight}</span></div>
+        <div>screen.height: <span className="text-cyan-300">{debugInfo.screenHeight}</span></div>
+        <div>vp.height: <span className="text-cyan-300">{debugInfo.vpHeight}</span></div>
+        <div>vp.offsetTop: <span className="text-cyan-300">{debugInfo.vpOffsetTop}</span></div>
+        <div>vp.pageTop: <span className="text-cyan-300">{debugInfo.vpPageTop}</span></div>
+        <div>keyboardHeight: <span className={debugInfo.keyboardHeight > 100 ? 'text-green-400 font-bold' : 'text-red-400'}>{debugInfo.keyboardHeight}</span></div>
+        <div>isKeyboardOpen: <span className={debugInfo.isKeyboardOpen ? 'text-green-400' : 'text-red-400'}>{String(debugInfo.isKeyboardOpen)}</span></div>
+        <div>inputHeight: <span className="text-cyan-300">{debugInfo.inputHeight}</span></div>
+        <div>applied top: <span className="text-yellow-300">{String(debugInfo.inputTop)}</span></div>
+        <div>applied bottom: <span className="text-yellow-300">{debugInfo.inputBottom}</span></div>
+        <div className="text-[8px] text-gray-400 mt-1 break-all">{debugInfo.userAgent}</div>
       </div>
 
       <div
