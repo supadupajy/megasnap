@@ -541,11 +541,12 @@ const Index = () => {
   };
 
   // ── 트렌딩 fetch ─────────────────────────────────────────────
-  // [Optimized] 컬럼 축소(JOIN 제거), 60초 캐싱
+  // [Optimized] 컬럼 축소(JOIN 제거), 5분 캐싱 + 5분 주기 자동 갱신
+  const TRENDING_REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5분
   const fetchGlobalTrending = useCallback(async (force = false) => {
     const now = Date.now();
-    if (!force && now - trendingFetchedAtRef.current < 60_000 && globalTrendingPosts.length > 0) {
-      return; // 60초 이내 호출이면 스킵
+    if (!force && now - trendingFetchedAtRef.current < TRENDING_REFRESH_INTERVAL_MS && globalTrendingPosts.length > 0) {
+      return; // 5분 이내 호출이면 스킵
     }
     try {
       const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 20 });
@@ -561,7 +562,27 @@ const Index = () => {
     }
   }, [globalTrendingPosts.length]);
 
-  useEffect(() => { fetchGlobalTrending(); }, []);
+  // 마운트 시 1회 + 5분마다 자동 갱신
+  // 탭이 백그라운드였다가 다시 활성화되면 마지막 fetch가 오래된 경우 즉시 갱신
+  useEffect(() => {
+    fetchGlobalTrending();
+    const intervalId = window.setInterval(() => {
+      fetchGlobalTrending();
+    }, TRENDING_REFRESH_INTERVAL_MS);
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - trendingFetchedAtRef.current >= TRENDING_REFRESH_INTERVAL_MS) {
+        fetchGlobalTrending();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchGlobalTrending]);
 
   // ── 핵심: bounds가 바뀔 때마다 해당 영역 포스트 fetch ──────
   useEffect(() => {
