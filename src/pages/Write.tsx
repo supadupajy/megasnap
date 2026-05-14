@@ -723,6 +723,19 @@ const Write = () => {
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    clear();
+                    postDraftStore.clear();
+                    mapCache.keepPosition = true;
+                    navigate('/');
+                  }}
+                  aria-label="작성 취소하고 닫기"
+                  className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
           </div>
