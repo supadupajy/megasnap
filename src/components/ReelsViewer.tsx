@@ -2069,6 +2069,9 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
   compact = false,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const displayTimeRef = useRef<HTMLSpanElement>(null);
   const isDraggingRef = useRef(false);
   const latestTimeRef = useRef(currentTime);
 
@@ -2088,6 +2091,68 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
       el.removeEventListener("touchend", stop);
     };
   }, []);
+
+  // 비디오의 timeupdate 이벤트는 ~250ms 간격으로 들어와서 진행률이 끊기듯 보인다.
+  // 매 프레임 rAF로 진행률을 보간해서 트랙/핸들/현재시간 텍스트를 직접 업데이트한다 (스무스).
+  // - 스크럽 중에는 사용자가 지정한 위치를 즉시 반영 (보간 X).
+  // - 진행률은 DOM 직접 조작으로 처리해 React 리렌더 비용을 회피.
+  useEffect(() => {
+    if (duration <= 0) return;
+
+    let rafId = 0;
+    let smoothedTime = currentTime;
+    let lastFrame = performance.now();
+
+    const tick = (now: number) => {
+      const dt = (now - lastFrame) / 1000; // 초 단위
+      lastFrame = now;
+
+      const target = latestTimeRef.current;
+
+      if (isDraggingRef.current) {
+        // 스크럽 중에는 사용자가 지정한 위치를 즉시 반영
+        smoothedTime = target;
+      } else {
+        // 1) 영상이 정상 재생 중이라면 dt만큼 자연스럽게 흐르게 함
+        smoothedTime += dt;
+        // 2) 실제 비디오 currentTime과 너무 멀어지면 부드럽게 보정 (지수 보간)
+        const diff = target - smoothedTime;
+        if (Math.abs(diff) > 0.4) {
+          // 큰 점프(시킹 등): 즉시 맞춤
+          smoothedTime = target;
+        } else {
+          smoothedTime += diff * Math.min(1, dt * 4);
+        }
+      }
+
+      // 범위 clamp
+      if (smoothedTime < 0) smoothedTime = 0;
+      if (smoothedTime > duration) smoothedTime = duration;
+
+      const ratio = duration > 0 ? smoothedTime / duration : 0;
+      const pct = ratio * 100;
+
+      if (progressBarRef.current) {
+        progressBarRef.current.style.width = `${pct}%`;
+      }
+      if (handleRef.current) {
+        handleRef.current.style.left = `calc(12px + (100% - 24px) * ${ratio})`;
+      }
+      if (displayTimeRef.current) {
+        displayTimeRef.current.textContent = formatTime(smoothedTime);
+      }
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [duration]);
+
+  // 외부에서 들어오는 currentTime을 ref로 동기화 (rAF가 참조)
+  useEffect(() => {
+    latestTimeRef.current = currentTime;
+  }, [currentTime]);
 
   const progress =
     duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
@@ -2149,20 +2214,17 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
       >
-        {/* 시간 표시 (스크럽 중에만) */}
-        {isScrubbing && duration > 0 && (
-          <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
-            <span className="px-2 py-0.5 rounded-full bg-black/70 text-white text-[11px] font-black tabular-nums backdrop-blur-md">
-              {formatTime(currentTime)} / {formatTime(duration)}
+        {/* 시간 표시 (타임라인 우측 바로 위, 흰색 텍스트) — 현재 / 전체 */}
+        {duration > 0 && (
+          <div className="absolute -top-4 right-3 pointer-events-none flex items-baseline gap-1">
+            <span
+              ref={displayTimeRef}
+              className="text-white text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]"
+            >
+              {formatTime(currentTime)}
             </span>
-          </div>
-        )}
-
-        {/* 영상 전체 길이 (타임라인 우측 바로 위, 흰색 텍스트) — 스크럽 중에는 위 라벨로 대체 */}
-        {!isScrubbing && duration > 0 && (
-          <div className="absolute -top-4 right-3 pointer-events-none">
-            <span className="text-white text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
-              {formatTime(duration)}
+            <span className="text-white/60 text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+              / {formatTime(duration)}
             </span>
           </div>
         )}
@@ -2174,20 +2236,19 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
             isScrubbing ? "h-1.5" : "h-1"
           )}
         >
-          {/* 진행 바 */}
+          {/* 진행 바 — rAF로 매 프레임 width 업데이트 (transition 없음) */}
           <div
+            ref={progressBarRef}
             className="absolute left-0 top-0 bottom-0 bg-white rounded-full"
-            style={{
-              width: `${progress * 100}%`,
-              transition: isScrubbing ? "none" : "width 120ms linear",
-            }}
+            style={{ width: `${progress * 100}%` }}
           />
         </div>
 
-        {/* 핸들 (스크럽 중에만 크게 표시) */}
+        {/* 핸들 (스크럽 중에만 크게 표시) — rAF로 매 프레임 left 업데이트 */}
         <div
+          ref={handleRef}
           className={cn(
-            "absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-md pointer-events-none transition-all",
+            "absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-md pointer-events-none transition-[width,height,opacity] duration-150",
             isScrubbing ? "w-3.5 h-3.5 opacity-100" : "w-0 h-0 opacity-0"
           )}
           style={{
