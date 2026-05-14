@@ -1,22 +1,20 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import { MapPin, Flame, UsersRound, User } from 'lucide-react';
 
 // 둥근 모서리 플레이 아이콘 (lucide의 기본 Play는 모서리가 각져있어 직접 정의)
-const RoundedPlayIcon = ({ className }: { className?: string }) => (
+const RoundedPlayIcon = ({ className, strokeWidth = 2 }: { className?: string; strokeWidth?: number | string }) => (
   <svg
     viewBox="0 0 24 24"
     fill="none"
-
     stroke="currentColor"
-    strokeWidth={2}
+    strokeWidth={strokeWidth}
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
     aria-hidden="true"
   >
-    {/* 살짝 안쪽으로 들여 그려 둥근 코너가 자연스럽게 보이도록 함 */}
     <path d="M8.5 5.6c-.5-.3-1.1.1-1.1.7v11.4c0 .6.6 1 1.1.7l9.4-5.7c.5-.3.5-1.1 0-1.4L8.5 5.6z" />
   </svg>
 );
@@ -29,37 +27,25 @@ import { useAuth } from '@/components/AuthProvider';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 
 const navItems: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
   label: string;
   path: string;
-  iconSizeClass?: string; // 기본 w-6 h-6 외에 따로 키우거나 줄이고 싶을 때 override
+  iconSizeClass?: string;
 }[] = [
   { icon: Flame, label: '인기', path: '/popular' },
-  { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks', iconSizeClass: 'w-7 h-7' },
+  { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks', iconSizeClass: 'w-6 h-6' },
   { icon: MapPin, label: '지도', path: '/' },
   { icon: UsersRound, label: '친구', path: '/friends' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
 
-// 하위 경로(예: /settings, /search 등)에 들어갔을 때도 부모 탭이 활성 상태로 유지되도록 매핑
-// path 우선순위: 첫 번째로 매치되는 것이 사용됨
-
-// 참고: 포스팅 검색(/post-search)은 더 이상 라우트가 아닌 전역 오버레이로 동작하므로
-//       BottomNav 매칭에서 제외되었다. 검색 중에도 현재 탭이 그대로 유지된다.
-
 const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[] = [
-  // 친구 탭: /friends 하위 경로 + /search (친구 검색)
   { match: (p) => p === '/search' || p.startsWith('/friends'), tabPath: '/friends' },
-  // 인기 탭: /popular 하위 경로
   { match: (p) => p.startsWith('/popular'), tabPath: '/popular' },
-  // 내정보 탭: /profile, /settings 하위 경로
   { match: (p) => p.startsWith('/profile') || p.startsWith('/settings'), tabPath: '/profile' },
-  // Flicks 탭
   { match: (p) => p.startsWith('/flicks'), tabPath: '/flicks' },
 ];
 
-const PILL_WIDTH = 64;
-const PILL_HEIGHT = 60;
 const FRIEND_POST_SEEN_KEY_PREFIX = 'chorasnap:friend-posts-seen-at:';
 const FRIEND_BADGE_POST_CHECK_LIMIT = 50;
 
@@ -67,13 +53,11 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  // 키보드가 떠 있는 동안에는 BottomNav를 아예 렌더링하지 않는다.
-  // (안드로이드에서는 position: fixed가 layout viewport 기준이라 키보드 위에 떠 보이기 때문)
   const keyboardOffset = useKeyboardOffset(true);
   const isKeyboardOpen = keyboardOffset > 0;
   const navRef = useRef<HTMLDivElement>(null);
-  const iconRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [pillLeft, setPillLeft] = useState(0);
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [pillStyle, setPillStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
   const lastActiveTabIndexRef = useRef(0);
@@ -203,22 +187,23 @@ const BottomNav = () => {
     }
   }, [location.pathname]);
 
-  useEffect(() => {
+  // useLayoutEffect로 첫 페인트 전에 위치/너비 계산 → 깜빡임 방지
+  useLayoutEffect(() => {
     const updatePillPosition = () => {
-      const iconEl = iconRefs.current[safeIndex];
+      const itemEl = itemRefs.current[safeIndex];
       const nav = navRef.current;
-      if (iconEl && nav) {
+      if (itemEl && nav) {
         const navRect = nav.getBoundingClientRect();
-        const iconRect = iconEl.getBoundingClientRect();
-        setPillLeft(iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2);
+        const itemRect = itemEl.getBoundingClientRect();
+        setPillStyle({
+          left: itemRect.left - navRect.left,
+          width: itemRect.width,
+        });
         setReady(true);
       }
     };
 
-    // 초기 위치 계산
     updatePillPosition();
-
-    // 다음 프레임에 한 번 더 보정 (폰트 로딩이나 레이아웃 변경 대응)
     const rafId = requestAnimationFrame(updatePillPosition);
 
     const nav = navRef.current;
@@ -226,16 +211,14 @@ const BottomNav = () => {
       return () => cancelAnimationFrame(rafId);
     }
 
-    // 네비게이션 컨테이너 자체와 각 아이콘 wrapper 사이즈 변경 추적
     const resizeObserver = new ResizeObserver(() => {
       updatePillPosition();
     });
     resizeObserver.observe(nav);
-    iconRefs.current.forEach((el) => {
+    itemRefs.current.forEach((el) => {
       if (el) resizeObserver.observe(el);
     });
 
-    // 윈도우 리사이즈 / orientation 변경 대응
     window.addEventListener('resize', updatePillPosition);
     window.addEventListener('orientationchange', updatePillPosition);
 
@@ -255,29 +238,34 @@ const BottomNav = () => {
     navigate(path);
   };
 
-  // 키보드가 떠있는 동안에는 BottomNav를 아예 렌더링하지 않음.
-  // (모든 입력창에서 슬라이딩 애니메이션 없이 즉시 사라지도록 처리)
   if (isKeyboardOpen) return null;
 
+  const isMapPillActive = navItems[safeIndex]?.path === '/';
+
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 z-[20000]"
+    <div
+      className="fixed bottom-0 left-0 right-0 z-[20000] pointer-events-none"
       style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+        paddingLeft: '16px',
+        paddingRight: '16px',
       }}
     >
-      <div ref={navRef} className="relative flex items-center justify-around max-w-lg mx-auto h-16">
+      <nav
+        ref={navRef}
+        className="pointer-events-auto relative mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
+      >
         {/* Sliding pill background */}
         {ready && (
           <motion.div
             className={cn(
-              'absolute pointer-events-none transition-colors duration-200',
-              navItems[safeIndex]?.path === '/' ? 'map-pill-animated-bg' : 'bg-gray-200'
+              'absolute top-1/2 -translate-y-1/2 pointer-events-none rounded-full',
+              isMapPillActive ? 'map-pill-animated-bg' : 'bg-gray-100'
             )}
-            style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
-            animate={{ left: pillLeft }}
-            initial={{ left: pillLeft }}
-            transition={{ type: 'spring', stiffness: 1000, damping: 50 }}
+            style={{ height: 44 }}
+            animate={{ left: pillStyle.left, width: pillStyle.width }}
+            initial={{ left: pillStyle.left, width: pillStyle.width }}
+            transition={{ type: 'spring', stiffness: 500, damping: 38, mass: 0.8 }}
           />
         )}
 
@@ -289,52 +277,57 @@ const BottomNav = () => {
           return (
             <button
               key={item.path}
+              ref={(el) => { itemRefs.current[index] = el; }}
               onClick={() => handleNavClick(item.path)}
-              className="relative flex flex-col items-center gap-1 min-w-[64px]"
+              className={cn(
+                'relative flex items-center justify-center gap-1.5 h-11 rounded-full transition-[padding] duration-300 ease-out',
+                isActive ? 'px-3.5 flex-1 min-w-0' : 'px-3 flex-none'
+              )}
+              aria-label={item.label}
             >
-              {/* Icon wrapper */}
-              <div
-                ref={(el) => { iconRefs.current[index] = el; }}
-                className="relative flex items-center justify-center w-[52px] h-9"
-              >
+              {/* Icon */}
+              <div className="relative flex items-center justify-center shrink-0">
                 <Icon
                   className={cn(
-                    item.iconSizeClass || 'w-6 h-6',
-                    'transition-all duration-200',
+                    item.iconSizeClass || 'w-[22px] h-[22px]',
+                    'transition-colors duration-200',
                     isActive
                       ? isMainMapTab
-                        ? 'scale-110 text-yellow-400'
-                        : 'scale-110 text-gray-900'
-                      : 'scale-100 text-gray-400'
+                        ? 'text-yellow-400'
+                        : 'text-gray-900'
+                      : 'text-gray-400'
                   )}
+                  strokeWidth={isActive ? 2.4 : 2}
                 />
                 {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
                   <span
                     aria-label="새 친구 포스팅"
-                    className="absolute right-2 top-1 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"
+                    className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"
                   />
                 )}
-
               </div>
-              {/* Label */}
-              <span
+
+              {/* Label - 활성 탭에서만 노출 (가로 슬라이드) */}
+              <motion.span
+                initial={false}
+                animate={{
+                  width: isActive ? 'auto' : 0,
+                  opacity: isActive ? 1 : 0,
+                  marginLeft: isActive ? 0 : -2,
+                }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 className={cn(
-                  'relative text-[10px] tracking-tighter leading-none transition-all duration-200',
-                  isActive
-                    ? isMainMapTab
-                      ? 'font-bold text-amber-50'
-                      : 'font-bold text-gray-900'
-                    : 'font-medium text-gray-400'
+                  'relative overflow-hidden whitespace-nowrap text-[13px] leading-none font-bold tracking-tight',
+                  isMainMapTab ? 'text-amber-50' : 'text-gray-900'
                 )}
               >
                 {item.label}
-              </span>
+              </motion.span>
             </button>
           );
         })}
-
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 };
 
