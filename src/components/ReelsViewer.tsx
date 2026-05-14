@@ -57,6 +57,14 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
+// 초 → "M:SS" 포맷터 (영상 타임라인/시간 표시 공통 사용)
+const formatTime = (sec: number) => {
+  if (!Number.isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+};
+
 // 슬라이드 아이템 타입 (포스트 / 광고 / 끝-안내)
 type ReelItem =
   | { kind: "post"; post: Post; key: string }
@@ -1456,6 +1464,24 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             zIndexClass="z-30"
           />
 
+          {/* 영상 전체 길이 (우상단, 흰색 텍스트) — 재생 중인 영상일 때만 */}
+          {hasVideo && duration > 0 && (
+            <div className="absolute top-3 right-3 z-30 pointer-events-none">
+              <span className="px-2 py-1 rounded-full bg-black/45 backdrop-blur-md text-white text-[11px] font-black tabular-nums leading-none tracking-tight">
+                {formatTime(duration)}
+              </span>
+            </div>
+          )}
+
+          {/* 재생 오버레이 — 영상 컨테이너 정중앙에 위치 (3:4 영상의 시각적 중앙) */}
+          {hasVideo && !isPlaying && videoFirstFrameReady && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
+                <Play className="w-10 h-10 text-white fill-white ml-1" />
+              </div>
+            </div>
+          )}
+
           {/* 영상 타임라인 (현재 미디어가 영상일 때만) */}
           {hasVideo && (
             <VideoTimeline
@@ -1491,17 +1517,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           )}
         </div>
       </div>
-
-      {/* 재생 오버레이 아이콘 (비디오 일시정지 상태일 때만)
-          - 첫 프레임이 그려진 후(videoFirstFrameReady)에만 노출해서
-            로딩 중에 회색 재생 버튼이 깜빡 떠서 버그처럼 보이는 문제를 방지 */}
-      {hasVideo && !isPlaying && videoFirstFrameReady && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
-            <Play className="w-10 h-10 text-white fill-white ml-1" />
-          </div>
-        </div>
-      )}
 
       {/* 하단 그라데이션 + 액션 알약 + 정보
           순서 (위에서 아래):
@@ -2052,13 +2067,6 @@ interface VideoTimelineProps {
   // compact: 영상 가로 길이의 우측 절반에만 타임라인 표시 (닉네임/콘텐츠 오버레이와 겹치지 않도록)
   compact?: boolean;
 }
-
-const formatTime = (sec: number) => {
-  if (!Number.isFinite(sec) || sec < 0) sec = 0;
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-};
 
 const VideoTimeline: React.FC<VideoTimelineProps> = ({
   currentTime,
