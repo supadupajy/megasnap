@@ -60,7 +60,60 @@ const BottomNav = () => {
   const [pillStyle, setPillStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
   const [ready, setReady] = useState(false);
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
   const lastActiveTabIndexRef = useRef(0);
+
+  // 스크롤 방향에 따라 BottomNav를 숨기거나 보여준다.
+  // - 아래로 스크롤하면 숨김, 위로 스크롤하면 다시 보임.
+  // - 각 페이지가 자체 스크롤 컨테이너(overflow-y-auto)를 쓰기 때문에
+  //   window scroll 대신 capture 단계의 scroll 이벤트로 모든 컨테이너의 스크롤을 감지한다.
+  useEffect(() => {
+    const SCROLL_THRESHOLD = 6; // 너무 민감하지 않게
+    const TOP_THRESHOLD = 24; // 최상단 근처에서는 항상 노출
+    const lastScrollTopMap = new WeakMap<EventTarget, number>();
+
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement | Document | null;
+      if (!target) return;
+
+      // 스크롤 위치 추출 (Document인 경우 documentElement 기준)
+      let currentTop = 0;
+      if (target instanceof Document) {
+        currentTop = target.documentElement.scrollTop || (target.body?.scrollTop ?? 0);
+      } else if (target instanceof HTMLElement) {
+        currentTop = target.scrollTop;
+      } else {
+        return;
+      }
+
+      const prev = lastScrollTopMap.get(target) ?? 0;
+      const delta = currentTop - prev;
+
+      // 최상단 부근에서는 무조건 보이도록
+      if (currentTop <= TOP_THRESHOLD) {
+        setIsHidden(false);
+      } else if (delta > SCROLL_THRESHOLD) {
+        // 아래로 스크롤 → 숨김
+        setIsHidden(true);
+      } else if (delta < -SCROLL_THRESHOLD) {
+        // 위로 스크롤 → 노출
+        setIsHidden(false);
+      }
+
+      lastScrollTopMap.set(target, currentTop);
+    };
+
+    // capture: true 로 등록해야 자식 스크롤 컨테이너의 scroll 이벤트도 잡힘
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true } as any);
+    };
+  }, []);
+
+  // 경로가 바뀌면 다시 노출 (페이지 전환 시 안전)
+  useEffect(() => {
+    setIsHidden(false);
+  }, [location.pathname]);
 
   const isFriendsPage = location.pathname.startsWith('/friends');
 
@@ -249,6 +302,9 @@ const BottomNav = () => {
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
         paddingLeft: '16px',
         paddingRight: '16px',
+        transform: isHidden ? 'translateY(calc(100% + 24px))' : 'translateY(0)',
+        transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)',
+        willChange: 'transform',
       }}
     >
       <nav
