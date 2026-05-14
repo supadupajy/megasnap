@@ -1484,52 +1484,18 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         </div>
       )}
 
-      {/* 하단 그라데이션 + 정보 + 액션 알약 */}
+      {/* 하단 그라데이션 + 액션 알약 + 정보
+          순서 (위에서 아래):
+            1) 액션 버튼 줄 (좋아요/댓글/공유 + 저장/위치보기) — 이미지/영상 바로 아래
+            2) 아바타 + (닉네임/위치 세로) — 위치 정보가 닉네임 바로 밑, 모두 아바타 우측에 위치
+            3) 본문 */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
-          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-16"
+          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-10"
           style={{ paddingBottom: embedded ? "14px" : "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
         >
-          {/* 유저 + 위치 + 본문 */}
-          <div className="text-white pointer-events-auto mb-3">
-            <button
-              onClick={onUserClick}
-              className="group flex items-center gap-2 mb-2 active:opacity-70 transition-opacity"
-            >
-              <PostUserAvatar
-                name={post.user.name}
-                avatar={post.user.avatar}
-                postId={post.id}
-                userId={post.user.id}
-                size="sm"
-                activePress
-              />
-              <span className="text-sm font-black drop-shadow-md">{post.user.name}</span>
-            </button>
-
-            {(post.lat != null && post.lng != null) && (
-              <button
-                onClick={onLocationClick}
-                className="flex items-center gap-1 mb-2 text-white/90 active:opacity-70 transition-opacity"
-              >
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-bold drop-shadow-md truncate max-w-[80vw]">
-                  {post.location || "위치 보기"}
-                </span>
-              </button>
-            )}
-
-            {post.content && (
-              <ReelContentText
-                content={post.content}
-                expanded={contentExpanded}
-                onToggle={() => setContentExpanded((v) => !v)}
-              />
-            )}
-          </div>
-
-          {/* 알약 액션 버튼 (PostActions와 동일한 스타일, 다크 배경용으로 조정) */}
-          <div className="flex items-center justify-between gap-2 pointer-events-auto">
+          {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}
+          <div className="flex items-center justify-between gap-2 pointer-events-auto mb-3">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <button
                 type="button"
@@ -1586,6 +1552,58 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               )}
             </div>
           </div>
+
+          {/* 2) 아바타 + (닉네임 / 위치) — 닉네임 바로 아래에 위치 정보 */}
+          <div className="text-white pointer-events-auto mb-2 flex items-center gap-2.5">
+            <button
+              onClick={onUserClick}
+              className="shrink-0 active:opacity-70 transition-opacity"
+              aria-label={`${post.user.name}의 프로필`}
+            >
+              <PostUserAvatar
+                name={post.user.name}
+                avatar={post.user.avatar}
+                postId={post.id}
+                userId={post.user.id}
+                size="sm"
+                activePress
+              />
+            </button>
+
+            <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+              <button
+                onClick={onUserClick}
+                className="self-start text-left active:opacity-70 transition-opacity"
+              >
+                <span className="text-sm font-black drop-shadow-md leading-tight">
+                  {post.user.name}
+                </span>
+              </button>
+
+              {(post.lat != null && post.lng != null) && (
+                <button
+                  onClick={onLocationClick}
+                  className="self-start flex items-center gap-1 text-white/90 active:opacity-70 transition-opacity"
+                >
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  <span className="text-[11px] font-bold drop-shadow-md truncate max-w-[70vw] leading-tight">
+                    {post.location || "위치 보기"}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 3) 본문 */}
+          {post.content && (
+            <div className="text-white pointer-events-auto">
+              <ReelContentText
+                content={post.content}
+                expanded={contentExpanded}
+                onToggle={() => setContentExpanded((v) => !v)}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
