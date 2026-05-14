@@ -100,6 +100,24 @@ const MapLevelIndicator = ({
 
   const interactive = !!onLevelChange;
 
+  // + 버튼: 레벨 1 감소(확대), − 버튼: 레벨 1 증가(축소)
+  // 카카오맵 레벨 체계는 숫자가 작을수록 확대, 클수록 축소
+  const handleZoomIn = useCallback(() => {
+    if (!onLevelChange) return;
+    if (safeLevel <= minLevel) return;
+    const next = safeLevel - 1;
+    lastEmittedLevelRef.current = next;
+    onLevelChange(next);
+  }, [onLevelChange, safeLevel, minLevel]);
+
+  const handleZoomOut = useCallback(() => {
+    if (!onLevelChange) return;
+    if (safeLevel >= maxLevel) return;
+    const next = safeLevel + 1;
+    lastEmittedLevelRef.current = next;
+    onLevelChange(next);
+  }, [onLevelChange, safeLevel, maxLevel]);
+
   return (
     <div
       className={cn(
@@ -111,7 +129,19 @@ const MapLevelIndicator = ({
       aria-label={`지도 레벨 ${safeLevel}, ${markerVisible ? '마커 표시 중' : '마커 숨김 상태'}`}
     >
       <div className="flex h-[156px] w-9 flex-col items-center rounded-[17px] border border-white/70 bg-white/45 px-1 py-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
-        <div className="text-[12px] font-black leading-none text-slate-800">+</div>
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          disabled={!interactive || safeLevel <= minLevel}
+          aria-label="확대"
+          className={cn(
+            'flex h-5 w-7 items-center justify-center rounded-md text-[14px] font-black leading-none text-slate-800',
+            'transition-all active:scale-90 active:bg-slate-900/10',
+            (!interactive || safeLevel <= minLevel) && 'opacity-40',
+          )}
+        >
+          +
+        </button>
 
         <div
           ref={trackRef}
@@ -150,7 +180,19 @@ const MapLevelIndicator = ({
           />
         </div>
 
-        <div className="text-[12px] font-black leading-none text-slate-700">−</div>
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          disabled={!interactive || safeLevel >= maxLevel}
+          aria-label="축소"
+          className={cn(
+            'flex h-5 w-7 items-center justify-center rounded-md text-[14px] font-black leading-none text-slate-700',
+            'transition-all active:scale-90 active:bg-slate-900/10',
+            (!interactive || safeLevel >= maxLevel) && 'opacity-40',
+          )}
+        >
+          −
+        </button>
         <div className="mt-0.5 text-[9px] font-black leading-none text-slate-600">{safeLevel}</div>
         <div
           className={cn(
