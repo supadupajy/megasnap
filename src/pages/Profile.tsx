@@ -314,6 +314,12 @@ const Profile = () => {
     }
   };
 
+  const handleScrollToTop = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
   const handleScrollToPosts = () => {
     if (scrollRef.current && postListStartRef.current) {
       // 탭바 요소(postListStartRef) 다음 형제가 "지도에서 보기" 섹션을 포함한 컨텐츠 영역
@@ -430,6 +436,7 @@ const Profile = () => {
                       onLikeToggle={() => handleLikeToggle(post.id)}
                       onSaveToggle={handleSaveToggle}
                       onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
+                      onOwnUserClick={handleScrollToTop}
                     />
                   </div>
                 ))}
@@ -459,6 +466,7 @@ const Profile = () => {
                         onSaveToggle={handleSaveToggle}
                         onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
                         onDelete={() => handlePostDelete(post.id)}
+                        onOwnUserClick={handleScrollToTop}
                       />
                     </div>
                   ))}

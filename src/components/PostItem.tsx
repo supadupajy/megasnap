@@ -37,13 +37,14 @@ interface PostItemProps {
   onUpdate?: (id: string, content: string) => void;
   onSaveToggle?: (id: string, isSaved: boolean) => void;
   onMediaClick?: (post: Post) => void;
+  onOwnUserClick?: () => void;
   isViewed?: boolean;
   disablePulse?: boolean;
   autoPlayVideo?: boolean;
   isPlaying?: boolean;
 }
 
-const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, onMediaClick, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
+const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, onMediaClick, onOwnUserClick, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const [profile, setProfile] = useState<any>(null);
@@ -396,7 +397,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const handleUserClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isMine) {
-      navigate('/profile');
+      if (onOwnUserClick) {
+        onOwnUserClick();
+      } else {
+        navigate('/profile');
+      }
       return;
     }
     const targetUserId = post.owner_id || post.user_id || user.id;
