@@ -86,16 +86,14 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
     }
   }, [muted, src]);
 
-  // 댓글 다이얼로그 / 포스트 검색 오버레이가 열려있는 동안 영상 일시정지, 닫히면 재개
+  // 댓글 다이얼로그가 열려있는 동안 영상 일시정지, 닫히면 재개
   useEffect(() => {
     let commentsOpen = !!(window as any).__commentsDialogOpen;
-    let searchOpen = !!(window as any).__postSearchOverlayOpen;
 
     const apply = () => {
       const v = videoRef.current;
       if (!v) return;
-      const overlayOpen = commentsOpen || searchOpen;
-      if (overlayOpen) {
+      if (commentsOpen) {
         if (!v.paused) {
           wasPlayingBeforeOverlayRef.current = true;
           v.pause();
@@ -110,18 +108,12 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
       commentsOpen = !!(e as CustomEvent).detail?.open;
       apply();
     };
-    const handleSearch = (e: Event) => {
-      searchOpen = !!(e as CustomEvent).detail?.open;
-      apply();
-    };
 
     window.addEventListener('comments-dialog-visibility', handleComments);
-    window.addEventListener('post-search-visibility', handleSearch);
     apply();
 
     return () => {
       window.removeEventListener('comments-dialog-visibility', handleComments);
-      window.removeEventListener('post-search-visibility', handleSearch);
     };
   }, []);
 

@@ -52,7 +52,7 @@ import DeleteAccount from "./pages/DeleteAccount";
 import AuthCallback from "./pages/AuthCallback";
 import NearbyPosts from "./pages/NearbyPosts";
 import Flicks from "./pages/Flicks";
-import PostSearchOverlay from "./components/PostSearchOverlay";
+import PostSearch from "./pages/PostSearch";
 import PlaceSearchOverlay from "./components/PlaceSearchOverlay";
 
 const queryClient = new QueryClient();
@@ -104,37 +104,29 @@ const AnimatedRoutes = () => {
   // (PostListOverlay에서 isOpen 변경 시 open-post-list-overlay/close-post-list-overlay 이벤트 발생)
   const [isPostListVisible, setIsPostListVisible] = useState(false);
   const [isReelsViewerOpen, setIsReelsViewerOpen] = useState(false);
-  const [isPostSearchOpen, setIsPostSearchOpen] = useState(false);
 
   useEffect(() => {
     // 초기값 동기화 (다른 페이지에서 진입 시)
     if (typeof window !== 'undefined') {
       setIsPostListVisible((window as any).__isPostListOpen === true);
       setIsReelsViewerOpen((window as any).__isReelsViewerOpen === true);
-      setIsPostSearchOpen((window as any).__isPostSearchOpen === true);
     }
 
     const handleOpen = () => setIsPostListVisible(true);
     const handleClose = () => setIsPostListVisible(false);
     const handleReelsOpen = () => setIsReelsViewerOpen(true);
     const handleReelsClose = () => setIsReelsViewerOpen(false);
-    const handlePostSearchOpen = () => setIsPostSearchOpen(true);
-    const handlePostSearchClose = () => setIsPostSearchOpen(false);
 
     window.addEventListener('open-post-list-overlay', handleOpen);
     window.addEventListener('close-post-list-overlay', handleClose);
     window.addEventListener('open-reels-viewer', handleReelsOpen);
     window.addEventListener('close-reels-viewer', handleReelsClose);
-    window.addEventListener('open-post-search', handlePostSearchOpen);
-    window.addEventListener('close-post-search', handlePostSearchClose);
 
     return () => {
       window.removeEventListener('open-post-list-overlay', handleOpen);
       window.removeEventListener('close-post-list-overlay', handleClose);
       window.removeEventListener('open-reels-viewer', handleReelsOpen);
       window.removeEventListener('close-reels-viewer', handleReelsClose);
-      window.removeEventListener('open-post-search', handlePostSearchOpen);
-      window.removeEventListener('close-post-search', handlePostSearchClose);
     };
   }, []);
 
@@ -149,12 +141,6 @@ const AnimatedRoutes = () => {
       // 0.1순위: 트렌딩 릴스(인덱스 페이지의 임베디드 ReelsViewer)가 열려 있으면 닫기
       if ((window as any).__isTrendingReelsOpen === true) {
         window.dispatchEvent(new CustomEvent('close-trending-reels-by-back'));
-        return;
-      }
-
-      // 0.3순위: PostSearch 오버레이가 열려 있으면 닫기 (전역 검색 오버레이)
-      if ((window as any).__isPostSearchOpen === true) {
-        window.dispatchEvent(new CustomEvent('close-post-search'));
         return;
       }
 
@@ -207,7 +193,7 @@ const AnimatedRoutes = () => {
       {/* Header: hideAppChrome이 아닐 때 또는 write 페이지일 때 표시 */}
       {/* ReelsViewer 또는 PostSearch 오버레이 열림 시에는 항상 숨김 */}
 
-      {(!hideAppChrome || isWritePage) && session && !isReelsViewerOpen && !isPostSearchOpen && (
+      {(!hideAppChrome || isWritePage) && session && !isReelsViewerOpen && (
         <Header />
       )}
 
@@ -229,10 +215,8 @@ const AnimatedRoutes = () => {
               <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
               <Route path="/nearby-posts" element={<ProtectedRoute><NearbyPosts /></ProtectedRoute>} />
               <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-              {/* /post-search 와 /video-search 는 전역 PostSearchOverlay 로 대체됨.
-                  직접 URL 진입 시에는 메인으로 보내고 오버레이를 띄운다. */}
-              <Route path="/post-search" element={<Navigate to="/" replace />} />
-              <Route path="/video-search" element={<Navigate to="/" replace />} />
+              <Route path="/post-search" element={<ProtectedRoute><PostSearch /></ProtectedRoute>} />
+              <Route path="/video-search" element={<Navigate to="/post-search" replace />} />
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
               <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
@@ -272,10 +256,7 @@ const AnimatedRoutes = () => {
         </AnimatePresence>
       </main>
 
-      {(!hideBottomNav || isWritePage) && session && !isReelsViewerOpen && !isPostSearchOpen && <BottomNav />}
-
-      {/* 전역 포스팅 검색 오버레이 — 어디서든 open-post-search 이벤트로 열림 */}
-      {session && <PostSearchOverlay />}
+      {(!hideBottomNav || isWritePage) && session && !isReelsViewerOpen && <BottomNav />}
 
       {/* 전역 장소 검색 오버레이 — open-place-search 이벤트로 열림 (detail.onSelect 콜백 전달) */}
       {session && <PlaceSearchOverlay />}

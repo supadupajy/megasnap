@@ -1,15 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash, X, Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
-import { Loader2 } from 'lucide-react';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { showSuccess, showError } from '@/utils/toast';
 import { getSearchHashtag } from '@/utils/hashtags';
@@ -36,9 +34,9 @@ const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, l
 const sanitizePostgrestSearchTerm = (term: string) =>
   term.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
 
-// ── 검색 결과 클릭 시 뜨는 PostDetail 오버레이 ───────────────────────
-// 시트 위에 덮여서 검색 결과를 가린 상태로 상세를 보여준다.
-const PostDetailOverlay = ({
+// ── 검색 결과 클릭 시 뜨는 PostDetail 페이지 레이아웃 ─────────────────
+// 페이지 전체를 덮어 검색 결과를 가린 상태로 상세를 보여준다.
+const PostDetailFullPage = ({
   postId,
   searchResults,
   onClose,
@@ -135,7 +133,7 @@ const PostDetailOverlay = ({
   useEffect(() => {
     if (postId && allPosts.length > 0) {
       setTimeout(() => {
-        document.getElementById(`overlay-post-${postId}`)?.scrollIntoView({ behavior: 'auto', block: 'start' });
+        document.getElementById(`page-post-${postId}`)?.scrollIntoView({ behavior: 'auto', block: 'start' });
       }, 100);
     }
   }, [postId, allPosts]);
@@ -167,73 +165,84 @@ const PostDetailOverlay = ({
     }
   };
 
-  // 시트 내부에 absolute로 채워서 표시 (시트 바깥은 백드롭에 가려져 있음)
   return (
-    <div className="absolute inset-0 z-[2] bg-white flex flex-col overflow-hidden rounded-t-[32px] sm:rounded-[32px]">
-      <div className="shrink-0 bg-white border-b border-slate-100">
-        <div className="flex items-center px-5 py-4 relative">
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[50]">
+      {/* 고정 상단 헤더 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+        <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
             onClick={onClose}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
             aria-label="검색 결과로 돌아가기"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2">
-            <p className="text-lg font-black tracking-tight text-slate-950">검색 결과</p>
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">검색 결과</h2>
           </div>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        </div>
-      ) : allPosts.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <p className="text-slate-500 font-bold mb-4">게시물을 찾을 수 없습니다.</p>
-          <button onClick={onClose} className="text-indigo-600 font-black">뒤로 가기</button>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain">
-          {allPosts.map((p) => (
-            <div key={p.id} id={`overlay-post-${p.id}`} className="scroll-mt-4">
-              <PostItem
-                post={p}
-                disablePulse={true}
-                autoPlayVideo={true}
-                onLikeToggle={() => handleLikeToggle(p.id)}
-                onDelete={() => handlePostDelete(p.id)}
-                onLocationClick={(_e, lat, lng) =>
-                  navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })
-                }
-              />
-            </div>
-          ))}
-        </div>
-      )}
+      <div
+        className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)', paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          </div>
+        ) : allPosts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-4 py-20">
+            <p className="text-slate-500 font-bold mb-4">게시물을 찾을 수 없습니다.</p>
+            <button onClick={onClose} className="text-indigo-600 font-black">뒤로 가기</button>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {allPosts.map((p) => (
+              <div key={p.id} id={`page-post-${p.id}`} className="scroll-mt-4">
+                <PostItem
+                  post={p}
+                  disablePulse={true}
+                  autoPlayVideo={true}
+                  onLikeToggle={() => handleLikeToggle(p.id)}
+                  onDelete={() => handlePostDelete(p.id)}
+                  onLocationClick={(_e, lat, lng) =>
+                    navigate('/', { state: { center: { lat, lng }, zoom: 16, post: p } })
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-// ── 전역 PostSearchOverlay (댓글 시트와 동일한 디자인) ────────────────
-const PostSearchOverlay = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
+// ── 포스팅 검색 페이지 ─────────────────────────────────────────────
+const PostSearch = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [results, setResults] = useState<SearchPost[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
 
-  const [overlayPostId, setOverlayPostId] = useState<string | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
-  const autoSearchOnOpenRef = useRef<string | null>(null);
   const debounceInitRef = useRef(false);
-  const closeTimeoutRef = useRef<number | null>(null);
+  const initialSearchRanRef = useRef(false);
 
-  // 검색 실행
+  useEffect(() => {
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
     try { sessionStorage.setItem(CACHE_KEY_QUERY, trimmed); } catch {}
@@ -284,166 +293,51 @@ const PostSearchOverlay = () => {
       setResults(fetched);
       try { sessionStorage.setItem(CACHE_KEY_RESULTS, JSON.stringify(fetched)); } catch {}
     } catch (err) {
-      console.error('[PostSearchOverlay] search error:', err);
+      console.error('[PostSearch] search error:', err);
       setResults([]);
     } finally {
       setIsSearching(false);
     }
   }, []);
 
-  // open/close 이벤트 리스너
+  // 초기 진입: URL query(?q=...) 또는 sessionStorage 캐시 복원
   useEffect(() => {
-    const handleOpen = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {};
-      const initialQuery = typeof detail.initialQuery === 'string' ? detail.initialQuery.trim() : '';
+    if (initialSearchRanRef.current) return;
+    initialSearchRanRef.current = true;
 
-      if (initialQuery) {
-        setSearchQuery(initialQuery);
-        autoSearchOnOpenRef.current = initialQuery;
-        try {
-          sessionStorage.setItem(CACHE_KEY_QUERY, initialQuery);
-          sessionStorage.removeItem(CACHE_KEY_RESULTS);
-        } catch {}
-      } else {
-        // 마지막 쿼리/결과 복원
-        try {
-          const cachedQuery = sessionStorage.getItem(CACHE_KEY_QUERY) || '';
-          const cachedResultsRaw = sessionStorage.getItem(CACHE_KEY_RESULTS);
-          setSearchQuery(cachedQuery);
-          if (cachedQuery && cachedResultsRaw) {
-            setResults(JSON.parse(cachedResultsRaw));
-            setHasSearched(true);
-          } else {
-            setResults([]);
-            setHasSearched(false);
-          }
-        } catch {
-          setSearchQuery('');
-          setResults([]);
-          setHasSearched(false);
-        }
-      }
+    const urlQuery = searchParams.get('q')?.trim() || '';
 
-      (window as any).__isPostSearchOpen = true;
-      setIsOpen(true);
-    };
-
-    const handleClose = () => {
-      (window as any).__isPostSearchOpen = false;
-      setIsOpen(false);
-    };
-
-    window.addEventListener('open-post-search', handleOpen);
-    window.addEventListener('close-post-search', handleClose);
-    window.addEventListener('close-post-search-by-back', handleClose);
-
-    return () => {
-      window.removeEventListener('open-post-search', handleOpen);
-      window.removeEventListener('close-post-search', handleClose);
-      window.removeEventListener('close-post-search-by-back', handleClose);
-    };
-  }, []);
-
-  // mount/unmount 애니메이션 처리 (댓글 시트와 동일)
-  useEffect(() => {
-    if (closeTimeoutRef.current) {
-      window.clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-
-    if (isOpen) {
-      setShouldRender(true);
-      setIsClosing(false);
+    if (urlQuery) {
+      setSearchQuery(urlQuery);
+      try {
+        sessionStorage.setItem(CACHE_KEY_QUERY, urlQuery);
+        sessionStorage.removeItem(CACHE_KEY_RESULTS);
+      } catch {}
+      handleSearch(urlQuery);
       return;
     }
 
-    if (shouldRender) {
-      setIsClosing(true);
-      closeTimeoutRef.current = window.setTimeout(() => {
-        setShouldRender(false);
-        setIsClosing(false);
-        setOverlayPostId(null);
-        closeTimeoutRef.current = null;
-      }, 220);
-    }
-
-    return () => {
-      if (closeTimeoutRef.current) {
-        window.clearTimeout(closeTimeoutRef.current);
-        closeTimeoutRef.current = null;
+    // 캐시 복원
+    try {
+      const cachedQuery = sessionStorage.getItem(CACHE_KEY_QUERY) || '';
+      const cachedResultsRaw = sessionStorage.getItem(CACHE_KEY_RESULTS);
+      setSearchQuery(cachedQuery);
+      if (cachedQuery && cachedResultsRaw) {
+        setResults(JSON.parse(cachedResultsRaw));
+        setHasSearched(true);
       }
-    };
-  }, [isOpen, shouldRender]);
+    } catch {}
+  }, [searchParams, handleSearch]);
 
-  // 시트가 실제로 렌더링되는 동안 전역 가시성 이벤트 발송
-  // (PostItem 등의 비디오가 일시정지/재개 판단에 사용)
+  // 디바운스 검색
   useEffect(() => {
-    if (!shouldRender) return;
-
-    (window as any).__postSearchOverlayOpen = true;
-    window.dispatchEvent(
-      new CustomEvent('post-search-visibility', { detail: { open: true } }),
-    );
-
-    return () => {
-      (window as any).__postSearchOverlayOpen = false;
-      window.dispatchEvent(
-        new CustomEvent('post-search-visibility', { detail: { open: false } }),
-      );
-    };
-  }, [shouldRender]);
-
-  // 오픈 직후 initialQuery 자동 검색
-  useEffect(() => {
-    if (isOpen && autoSearchOnOpenRef.current) {
-      const q = autoSearchOnOpenRef.current;
-      autoSearchOnOpenRef.current = null;
-      handleSearch(q);
-    }
-  }, [isOpen, handleSearch]);
-
-  // 타이핑 디바운스 검색
-  useEffect(() => {
-    if (!isOpen) return;
     if (!debounceInitRef.current) {
       debounceInitRef.current = true;
       return;
     }
     const timer = setTimeout(() => handleSearch(searchQuery), 400);
     return () => clearTimeout(timer);
-  }, [searchQuery, handleSearch, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) debounceInitRef.current = false;
-  }, [isOpen]);
-
-  // ESC 키로 닫기
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
-
-  const close = useCallback((e?: React.SyntheticEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-    window.dispatchEvent(new CustomEvent('close-post-search'));
-  }, []);
-
-  const stopSheetEvent = (e: React.SyntheticEvent) => {
-    e.stopPropagation();
-  };
-
-  const openPostOverlay = useCallback((postId: string) => {
-    setOverlayPostId(postId);
-  }, []);
-
-  const closePostOverlay = useCallback(() => {
-    setOverlayPostId(null);
-  }, []);
+  }, [searchQuery, handleSearch]);
 
   const getThumbnail = (post: SearchPost) => {
     const raw = Array.isArray(post.images) && post.images.length > 0
@@ -452,85 +346,40 @@ const PostSearchOverlay = () => {
     return raw ? getOptimizedMarkerImage(raw, post.id) : getFallbackImage(post.id);
   };
 
-  if (!shouldRender) return null;
-  if (typeof document === 'undefined') return null;
-
   const activeTag = getSearchHashtag(searchQuery);
-  // 시트는 상단에서 40px(≈1cm) 여백 두고 거의 풀스크린으로 올라옴 (댓글과 동일)
-  const sheetTopPx = 40;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[30000] pointer-events-none"
-      role="dialog"
-      aria-modal="true"
-      aria-label="포스팅 검색"
-    >
-      {/* 백드롭 */}
-      <button
-        type="button"
-        className={`absolute inset-0 z-0 cursor-default bg-slate-950/60 pointer-events-auto ${
-          isClosing ? 'comment-backdrop-exit' : 'comment-backdrop-enter'
-        }`}
-        onPointerDown={close}
-        onClick={close}
-        aria-label="검색 닫기 배경"
-      />
-
-      {/* 시트 본체 */}
-      <section
-        className={`fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] pointer-events-auto sm:rounded-[32px] ${
-          isClosing ? 'comment-sheet-exit' : 'comment-sheet-enter'
-        }`}
-        style={{
-          top: `${sheetTopPx}px`,
-          bottom: '0px',
-        }}
-        onClick={stopSheetEvent}
-      >
-        {/* 상단 핸들 */}
-        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
-
-        {/* 헤더 */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-              <SearchIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-lg font-black tracking-tight text-slate-950">포스팅 검색</p>
-              <p className="text-sm font-bold text-slate-400">
-                {hasSearched
-                  ? `${results.length.toLocaleString()}개의 결과`
-                  : '키워드 또는 #해시태그'}
-              </p>
-            </div>
-          </div>
+  return (
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+      {/* 고정 상단 헤더 */}
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+        <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
-            type="button"
-            onPointerDown={close}
-            onClick={close}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
-            aria-label="검색 닫기"
+            onClick={() => navigate('/popular')}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
           >
-            <X className="h-6 w-6" />
+            <ChevronLeft className="w-6 h-6" />
           </button>
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">포스팅 검색</h2>
+          </div>
         </div>
+      </div>
 
-        {/* 검색 입력 영역 */}
-        <div className="shrink-0 border-b border-slate-100 bg-white px-4 py-3">
+      {/* 검색 입력창 */}
+      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+122px)]">
+        <div className="px-4 pb-3">
           <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-600 z-10" />
+            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
-              placeholder="키워드 또는 #해시태그로 검색해 보세요"
-              className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
+              placeholder="키워드 또는 #해시태그로 검색"
+              className="w-full pl-12 pr-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-normal placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus={!searchQuery}
             />
             {isSearching ? (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : searchQuery ? (
               <button
@@ -551,12 +400,19 @@ const PostSearchOverlay = () => {
               </p>
             </div>
           )}
+          {hasSearched && !isSearching && (
+            <p className="mt-2 px-1 text-xs font-bold text-slate-400">
+              {results.length.toLocaleString()}개의 결과
+            </p>
+          )}
         </div>
+      </div>
 
-        {/* 결과 영역 */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white">
+      {/* 결과 영역 */}
+      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
+        <div style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
           {!hasSearched ? (
-            <div className="flex h-full min-h-[260px] flex-col items-center justify-center px-6 text-center">
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
               <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
                 <SearchIcon className="h-8 w-8" />
               </div>
@@ -572,7 +428,7 @@ const PostSearchOverlay = () => {
               ))}
             </div>
           ) : results.length === 0 ? (
-            <div className="flex h-full min-h-[260px] flex-col items-center justify-center px-6 text-center">
+            <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
               <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
                 <ImageIcon className="h-8 w-8" />
               </div>
@@ -582,14 +438,11 @@ const PostSearchOverlay = () => {
               </p>
             </div>
           ) : (
-            <div
-              className="grid grid-cols-2 gap-2 px-3 pt-3"
-              style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}
-            >
+            <div className="grid grid-cols-2 gap-2 px-3 pt-3">
               {results.map((post) => (
                 <div
                   key={post.id}
-                  onClick={() => openPostOverlay(post.id)}
+                  onClick={() => setSelectedPostId(post.id)}
                   className="relative aspect-square rounded-2xl overflow-hidden bg-slate-100 cursor-pointer active:scale-[0.97] transition-transform shadow-sm"
                 >
                   <img
@@ -631,19 +484,18 @@ const PostSearchOverlay = () => {
             </div>
           )}
         </div>
+      </div>
 
-        {/* 포스트 상세 오버레이 — 시트 내부를 덮음 */}
-        {overlayPostId && (
-          <PostDetailOverlay
-            postId={overlayPostId}
-            searchResults={results}
-            onClose={closePostOverlay}
-          />
-        )}
-      </section>
-    </div>,
-    document.body,
+      {/* 포스트 상세 페이지 — 검색 결과 위를 덮음 */}
+      {selectedPostId && (
+        <PostDetailFullPage
+          postId={selectedPostId}
+          searchResults={results}
+          onClose={() => setSelectedPostId(null)}
+        />
+      )}
+    </div>
   );
 };
 
-export default PostSearchOverlay;
+export default PostSearch;

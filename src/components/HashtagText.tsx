@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { normalizeHashtag } from '@/utils/hashtags';
 
@@ -11,7 +12,7 @@ interface HashtagTextProps {
   text: string;
   /** 태그 컬러 등 커스텀 클래스 (기본: 인디고) */
   tagClassName?: string;
-  /** 태그 클릭 시 호출 (기본: 전역 PostSearchOverlay 를 열며 자동 검색) */
+  /** 태그 클릭 시 호출 (기본: 포스팅 검색 페이지로 이동하며 자동 검색) */
   onTagClick?: (tag: string) => void;
   /** 외부 컨테이너 onClick 전파 차단 여부 (기본 true) */
   stopPropagationOnTagClick?: boolean;
@@ -27,6 +28,7 @@ const HashtagText: React.FC<HashtagTextProps> = ({
   onTagClick,
   stopPropagationOnTagClick = true,
 }) => {
+  const navigate = useNavigate();
   const parts = useMemo(() => {
     if (!text) return [] as string[];
     return text.split(HASHTAG_SPLIT_REGEX);
@@ -52,10 +54,8 @@ const HashtagText: React.FC<HashtagTextProps> = ({
       sessionStorage.removeItem('postSearch_results');
     } catch {}
 
-    // 전역 PostSearchOverlay 를 띄운다 (탭 이동 없이 현재 화면 위로).
-    window.dispatchEvent(
-      new CustomEvent('open-post-search', { detail: { initialQuery: query } }),
-    );
+    // 포스팅 검색 페이지로 이동 (URL 쿼리에 검색어 전달).
+    navigate(`/post-search?q=${encodeURIComponent(query)}`);
   };
 
   if (!text) return null;

@@ -221,7 +221,7 @@ const Popular = () => {
           subtitle="Trending Now"
           ActionIcon={Search}
           actionLabel="검색"
-          onActionClick={() => window.dispatchEvent(new CustomEvent('open-post-search'))}
+          onActionClick={() => navigate('/post-search')}
         />
       </div>
 
