@@ -1503,40 +1503,64 @@ const MapContainer = ({
     const maxLng = Math.max(sw.getLng(), ne.getLng());
 
     const candidates = ghostCandidatesRef.current;
-    const selected: any[] = [];
-    for (let i = 0; i < candidates.length && selected.length < GHOST_MARKER_MAX_VISIBLE; i++) {
-      const c = candidates[i];
+
+    // viewport 안에 들어오는 후보 id 집합 (30개 제한 없음 — 우선순위 판단용)
+    const candidateInViewportIds = new Set<string>();
+    const candidatePostById = new Map<string, any>();
+    for (const c of candidates) {
       const lat = c.post.lat as number;
       const lng = c.post.lng as number;
       if (lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng) {
-        selected.push(c.post);
+        const idStr = String(c.post.id);
+        candidateInViewportIds.add(idStr);
+        candidatePostById.set(idStr, c.post);
       }
     }
 
-    const selectedIds = new Set<string>(selected.map(p => String(p.id)));
-
-    // 더 이상 선택되지 않은 ghost 오버레이 제거 (페이드아웃)
-    ghostOverlaysRef.current.forEach((overlay, id) => {
-      if (!selectedIds.has(id)) {
-        const content = overlay.getContent() as HTMLElement | null;
-        if (content && !content.classList.contains('ghost-disappear')) {
-          content.classList.add('ghost-disappear');
-          window.setTimeout(() => {
-            const cur = ghostOverlaysRef.current.get(id);
-            if (cur && cur === overlay) {
-              cur.setMap(null);
-              ghostOverlaysRef.current.delete(id);
-            }
-          }, 360);
-        } else if (!content) {
-          overlay.setMap(null);
-          ghostOverlaysRef.current.delete(id);
-        }
+    // 1) 이미 그려져 있는 ghost 중, viewport 안에 남아있는 것은 우선 유지
+    //    (부모가 ghostPosts를 새 배열로 갈아끼워도, 이미 사용자에게 보이는 ghost는
+    //    재생성하지 않아 등장 애니메이션이 다시 나오지 않는다.)
+    const keptIds = new Set<string>();
+    ghostOverlaysRef.current.forEach((_overlay, id) => {
+      if (candidateInViewportIds.has(id)) {
+        keptIds.add(id);
       }
     });
 
-    // 새로 선택된 ghost 오버레이 생성
-    selected.forEach((post) => {
+    // 2) 빈 슬롯에만 새 후보를 추가 (최신순 정렬은 candidates에서 이미 유지됨)
+    const newToAdd: any[] = [];
+    if (keptIds.size < GHOST_MARKER_MAX_VISIBLE) {
+      for (const c of candidates) {
+        const idStr = String(c.post.id);
+        if (!candidateInViewportIds.has(idStr)) continue;
+        if (keptIds.has(idStr)) continue;
+        if (ghostOverlaysRef.current.has(idStr)) continue; // 이미 disappear 중
+        newToAdd.push(c.post);
+        if (keptIds.size + newToAdd.length >= GHOST_MARKER_MAX_VISIBLE) break;
+      }
+    }
+
+    // 3) viewport를 벗어났거나 후보 목록에서 빠진 ghost만 페이드아웃 후 제거
+    ghostOverlaysRef.current.forEach((overlay, id) => {
+      if (keptIds.has(id)) return;
+      const content = overlay.getContent() as HTMLElement | null;
+      if (content && !content.classList.contains('ghost-disappear')) {
+        content.classList.add('ghost-disappear');
+        window.setTimeout(() => {
+          const cur = ghostOverlaysRef.current.get(id);
+          if (cur && cur === overlay) {
+            cur.setMap(null);
+            ghostOverlaysRef.current.delete(id);
+          }
+        }, 360);
+      } else if (!content) {
+        overlay.setMap(null);
+        ghostOverlaysRef.current.delete(id);
+      }
+    });
+
+    // 4) 새로 들어오는 ghost만 DOM 생성 (등장 애니메이션은 여기서만 발생)
+    newToAdd.forEach((post) => {
       const id = String(post.id);
       if (ghostOverlaysRef.current.has(id)) return;
 
@@ -1549,20 +1573,9 @@ const MapContainer = ({
         onMarkerClickRef.current(post);
       };
 
-      // 썸네일 결정 - 비디오 캐시 활용. 깨진/목업 URL이면 빈 회색 점.
-      let img = (post as any).image_url || (post as any).image || '';
-      const isBroken = !img || img === 'null' || img === 'undefined' || (typeof img === 'string' && img.startsWith('blob:'));
-      const lower = typeof img === 'string' ? img.toLowerCase().split('?')[0] : '';
-      const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
-      if (isBroken || isVideo) {
-        const cached = videoThumbCacheRef.current.get(id);
-        img = cached || '';
-      }
-      const optimized = img ? getOptimizedMarkerImage(img, id) : '';
-
-      content.innerHTML = `<div class="ghost-marker-dot">${
-        optimized ? `<img src="${optimized}" alt="" />` : ''
-      }</div>`;
+      // 일반 마커와 동일한 60×60 형태로 그리되, 전체를 회색 한 톤으로 칠한다.
+      // 이미지/라벨/카운트다운 링 없이 단순한 회색 박스 한 장.
+      content.innerHTML = `<div class="ghost-marker-dot"></div>`;
 
       // 롱프레스 숨김 모드면 즉시 숨김
       if (markersHiddenRef.current) {
@@ -1573,7 +1586,7 @@ const MapContainer = ({
         position: new kakao.maps.LatLng(post.lat, post.lng),
         content,
         xAnchor: 0.5,
-        yAnchor: 0.5,
+        yAnchor: 1, // 일반 마커와 동일하게 하단 중앙 기준
         zIndex: 200, // 활성 마커(300+)보다 아래
       });
       overlay.setMap(map);
