@@ -1128,8 +1128,10 @@ const Index = () => {
 
     const myToken = ++expiredCheckTokenRef.current;
 
-    // 2) 캐시 미스 — debounce 후 1회 쿼리하고 결과를 캐시에 저장
-    //    debounce 500ms: 빠른 드래그/패닝/줌 도중 과도한 호출 방지
+    // 2) 캐시 미스 — 짧은 debounce 후 1회 쿼리하고 결과를 캐시에 저장
+    //    debounce 150ms: 지도 멈춘 직후 거의 즉시 반응. 빠른 드래그 중에는
+    //    handleMapChange의 throttle(300ms)이 1차 필터, 여기 150ms가 2차 필터.
+    //    같은 영역 재방문은 캐시 히트(위 분기)로 0ms.
     const timer = window.setTimeout(async () => {
       const count = await fetchExpiredOnlyCountInBounds(bounds, {
         categories: selectedCategoriesRef.current,
@@ -1145,7 +1147,7 @@ const Index = () => {
         if (oldestKey !== undefined) mapCache.expiredCountCache.delete(oldestKey);
       }
       setExpiredOnlyCount(count);
-    }, 500);
+    }, 150);
 
     return () => window.clearTimeout(timer);
   }, [mapData?.bounds, currentZoom, displayedPostCount, selectedCategories, authUser?.id, followingIds]);
