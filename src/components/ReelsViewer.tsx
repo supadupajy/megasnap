@@ -1382,8 +1382,14 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         onPointerUp={handlePointerUp}
       >
         <div
-          className="relative w-full overflow-hidden bg-black"
-          style={{ aspectRatio: "3 / 4", maxHeight: "100%" }}
+          className="relative overflow-hidden bg-black"
+          style={{
+            aspectRatio: "3 / 4",
+            height: "100%",
+            width: "auto",
+            maxWidth: "100%",
+            maxHeight: "100%",
+          }}
         >
           {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용)
               순위 뱃지가 있을 때는 음소거 버튼을 뱃지 옆으로 옮긴다. */}
