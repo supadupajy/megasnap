@@ -102,7 +102,12 @@ const getRingSparkPoint = (geo: RingGeometry, remainingRatio: number): { x: numb
 // 썸네일 박스 사이즈별 ring geometry (Tailwind 클래스와 일치시켜야 함)
 // - 펼친 리스트: w-12 h-12 (48px), rounded-xl (12px), border 2.5px
 // - 접힌 헤더:   w-6  h-6  (24px), rounded-lg (8px),  border 1.5px
-const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 12, 3);
+//
+// stroke 두께는 지도 마커 기준(60x60 박스에 stroke-width 4 → 비율 4/60 ≈ 0.0667)
+// 과 동일하게 보이도록 박스 크기에 비례시켜 산출한다.
+//   md: 48 × 4 / 60 = 3.2  → 시각적 균형을 위해 3.6으로 살짝 굵게
+//   sm: 24 × 4 / 60 = 1.6  → 작은 박스에서 가독성 확보를 위해 1.8로 살짝 굵게
+const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 12, 3.6);
 const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 8, 1.8);
 
 const getPostCreatedAtMs = (post: Post): number | null => {
