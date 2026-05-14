@@ -576,7 +576,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
             그 위에 떠 있는 Header(z=12600)는 이 컨테이너 밖으로 빠져나간 자식을 자동으로 가려준다.
           - 따라서 클리핑 박스는 두지 않고, motion.div가 음수 y로 자유롭게 빠질 수 있게 한다. */}
       {embedded && isRankedMode && (
-        <div className="absolute top-3 left-6 z-40 pointer-events-none">
+        <div className="absolute top-5 left-6 z-40 pointer-events-none">
           <AnimatePresence initial={false} mode="popLayout" custom={swipeDir}>
             <motion.div
               key={`rank-${activeIndex + 1}`}
@@ -624,7 +624,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       )}
 
       {embedded && showInlineCloseButton && (
-        <div className="absolute top-3 right-6 z-40 pointer-events-none">
+        <div className="absolute top-5 right-6 z-40 pointer-events-none">
           <button
             type="button"
             onClick={onClose}
