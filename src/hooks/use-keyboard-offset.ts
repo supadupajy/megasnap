@@ -35,7 +35,13 @@ export const useKeyboardOffset = (active = true) => {
       const viewportTop = viewport?.offsetTop ?? 0;
       const activeElementIsEditable = isEditableElement(document.activeElement);
 
-      if (!activeElementIsEditable || viewportHeight > globalViewportBaseHeight) {
+      // editable이 아니면(키보드 없음 확정) 현재 시점의 가장 큰 높이를 baseline으로 재설정.
+      // 이렇게 안 하면 한 번 키보드가 떠서 baseline이 커진 뒤, 안드로이드 WebView가
+      // window.innerHeight 자체를 줄여서 baseline이 회복 안 되는 경우 BottomNav가
+      // 영영 사라지는 버그가 생긴다.
+      if (!activeElementIsEditable) {
+        globalViewportBaseHeight = Math.max(window.innerHeight, viewportHeight);
+      } else if (viewportHeight > globalViewportBaseHeight) {
         globalViewportBaseHeight = Math.max(globalViewportBaseHeight, window.innerHeight, viewportHeight);
       }
 
