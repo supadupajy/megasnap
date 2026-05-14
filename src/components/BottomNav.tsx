@@ -105,25 +105,8 @@ const BottomNav = () => {
 
     // capture: true 로 등록해야 자식 스크롤 컨테이너의 scroll 이벤트도 잡힘
     window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
-
-    // Flicks/Reels처럼 transform 기반 슬라이더는 실제 scroll 이벤트가 발생하지 않으므로
-    // 커스텀 이벤트로 BottomNav 숨김/노출을 제어한다.
-    //  - direction: 'next' (위로 스와이프, 다음 영상)  → 숨김
-    //  - direction: 'prev' (아래로 스와이프, 이전 영상) → 노출
-    //  - direction: 'reset' → 강제 노출 (페이지 진입 등)
-    const handleReelsNav = (e: Event) => {
-      const detail = (e as CustomEvent).detail || {};
-      if (detail.direction === 'next') {
-        setIsHidden(true);
-      } else if (detail.direction === 'prev' || detail.direction === 'reset') {
-        setIsHidden(false);
-      }
-    };
-    window.addEventListener('bottom-nav-visibility', handleReelsNav as EventListener);
-
     return () => {
       window.removeEventListener('scroll', handleScroll, { capture: true } as any);
-      window.removeEventListener('bottom-nav-visibility', handleReelsNav as EventListener);
     };
   }, []);
 

@@ -485,32 +485,14 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   // (useEffect 기반 비교는 빠른 연속 스와이프 시 batching/순서 꼬임으로
   //  방향이 가끔 반대로 잡히는 버그가 있었음 → 그 자리에서 즉시 set)
   const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
-  const setActiveIndexWithDir = useCallback(
-    (next: number | ((prev: number) => number)) => {
-      setActiveIndex((prev) => {
-        const resolved = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
-        if (resolved > prev) {
-          setSwipeDir(1);
-          // embedded(Flicks 페이지)에서는 위로 스와이프 시 BottomNav를 숨김
-          if (embedded) {
-            window.dispatchEvent(
-              new CustomEvent("bottom-nav-visibility", { detail: { direction: "next" } })
-            );
-          }
-        } else if (resolved < prev) {
-          setSwipeDir(-1);
-          // 아래로 스와이프 시 BottomNav를 다시 노출
-          if (embedded) {
-            window.dispatchEvent(
-              new CustomEvent("bottom-nav-visibility", { detail: { direction: "prev" } })
-            );
-          }
-        }
-        return resolved;
-      });
-    },
-    [embedded]
-  );
+  const setActiveIndexWithDir = useCallback((next: number | ((prev: number) => number)) => {
+    setActiveIndex((prev) => {
+      const resolved = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
+      if (resolved > prev) setSwipeDir(1);
+      else if (resolved < prev) setSwipeDir(-1);
+      return resolved;
+    });
+  }, []);
 
   // ── 내 포스팅 수정/삭제 핸들러 ───────────────────────────────
   const isPostMine = useCallback(

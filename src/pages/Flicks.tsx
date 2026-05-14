@@ -143,18 +143,6 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
-  // Flicks 페이지를 떠날 때(또는 진입 시) BottomNav가 숨겨진 상태로 남지 않도록 reset.
-  useEffect(() => {
-    window.dispatchEvent(
-      new CustomEvent('bottom-nav-visibility', { detail: { direction: 'reset' } })
-    );
-    return () => {
-      window.dispatchEvent(
-        new CustomEvent('bottom-nav-visibility', { detail: { direction: 'reset' } })
-      );
-    };
-  }, []);
-
   // 사용되지 않는 닫기 콜백(embedded에서는 호출되지 않지만 prop 시그니처 충족용)
   const handleClose = useCallback(() => {
     navigate(-1);
