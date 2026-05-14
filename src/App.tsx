@@ -150,22 +150,6 @@ const AnimatedRoutes = () => {
   const isWritePage = location.pathname === "/write";
   const showIndex = shouldShowIndex(location.pathname);
 
-  // DEBUG: showIndex 변경 시점에 ghost 마커 DOM 상태 추적
-  React.useEffect(() => {
-    console.log('[GHOST/App] showIndex changed', { showIndex, pathname: location.pathname });
-    // display 토글 전후의 ghost 마커 DOM 상태를 다음 프레임에서 확인
-    requestAnimationFrame(() => {
-      const ghosts = document.querySelectorAll('.ghost-marker-container');
-      console.log('[GHOST/App] ghost count in DOM (rAF after toggle)=', ghosts.length);
-      ghosts.forEach((el, i) => {
-        if (i < 3) {
-          const cs = window.getComputedStyle(el);
-          console.log('[GHOST/App] ghost[' + i + '] class=', el.className, 'computed opacity=', cs.opacity, 'transition=', cs.transition);
-        }
-      });
-    });
-  }, [showIndex, location.pathname]);
-
   // App 레벨 Header를 숨길 페이지 (login/splash만)
   const hideAppChrome =
     location.pathname === "/login" ||
