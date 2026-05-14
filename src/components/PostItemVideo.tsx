@@ -219,14 +219,16 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         }}
       />
 
-      {/* 좌측 상단 음소거 토글 버튼 */}
+      {/* 좌측 상단 음소거 토글 버튼
+          - z-index는 영상 내부 다른 오버레이(poster z-10, 일시정지 z-20, 진행바 z-30)보다 위에 있되,
+            페이지의 sticky/fixed 헤더(보통 z-40~z-50)보다는 낮아야 스크롤 시 헤더 뒤로 자연스럽게 가려진다. */}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
           setMuted((m) => !m);
         }}
-        className="absolute top-3 left-3 z-40 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform border border-white/10"
+        className="absolute top-3 left-3 z-30 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center active:scale-95 transition-transform border border-white/10"
         aria-label={muted ? '음소거 해제' : '음소거'}
       >
         {muted ? (
