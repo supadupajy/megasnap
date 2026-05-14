@@ -204,7 +204,10 @@ const BottomNav = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    const updatePillPosition = () => {
+    let callCount = 0;
+    const updatePillPosition = (trigger: string) => {
+      callCount += 1;
+      const myCall = callCount;
       const iconEl = iconRefs.current[safeIndex];
       const nav = navRef.current;
       if (iconEl && nav) {
@@ -212,57 +215,63 @@ const BottomNav = () => {
         const iconRect = iconEl.getBoundingClientRect();
         const computedLeft = iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2;
 
-        // [DEBUG] pill 좌표 계산 검증
-        console.log('[BottomNav] updatePillPosition', {
-          safeIndex,
-          activeTabPath: navItems[safeIndex]?.path,
-          activeTabLabel: navItems[safeIndex]?.label,
-          navRect: { left: navRect.left, width: navRect.width },
-          iconRect: { left: iconRect.left, width: iconRect.width, centerX: iconRect.left + iconRect.width / 2 },
-          PILL_WIDTH,
-          computedLeft,
-          allIconRects: iconRefs.current.map((el, i) => {
-            if (!el) return { i, missing: true };
-            const r = el.getBoundingClientRect();
-            return { i, label: navItems[i]?.label, left: r.left, width: r.width, centerX: r.left + r.width / 2 };
-          }),
+        // 모든 아이콘 좌표를 표 형태로 출력 (펼치지 않아도 보임)
+        const allRects = iconRefs.current.map((el, i) => {
+          if (!el) return { i, label: navItems[i]?.label, missing: true } as const;
+          const r = el.getBoundingClientRect();
+          return {
+            i,
+            label: navItems[i]?.label,
+            left: Math.round(r.left * 100) / 100,
+            width: Math.round(r.width * 100) / 100,
+            centerX: Math.round((r.left + r.width / 2) * 100) / 100,
+          };
         });
+
+        // eslint-disable-next-line no-console
+        console.log(`[BottomNav][call#${myCall}][${trigger}] safeIndex=${safeIndex}(${navItems[safeIndex]?.label}) computedLeft=${computedLeft.toFixed(2)} iconCenterX=${(iconRect.left + iconRect.width / 2).toFixed(2)} ready=${ready} prevPillLeft=${pillLeft.toFixed(2)}`);
+        // eslint-disable-next-line no-console
+        console.table(allRects);
 
         setPillLeft(computedLeft);
         setReady(true);
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn(`[BottomNav][call#${myCall}][${trigger}] SKIP - iconEl=${!!iconEl} nav=${!!nav} safeIndex=${safeIndex}`);
       }
     };
 
-    // 초기 위치 계산
-    updatePillPosition();
+    // 원래 호출
+    updatePillPosition('initial');
 
-    // 다음 프레임에 한 번 더 보정 (폰트 로딩이나 레이아웃 변경 대응)
-    const rafId = requestAnimationFrame(updatePillPosition);
+    // 다음 프레임에 한 번 더 보정
+    const rafId = requestAnimationFrame(() => updatePillPosition('raf'));
 
     const nav = navRef.current;
     if (!nav) {
       return () => cancelAnimationFrame(rafId);
     }
 
-    // 네비게이션 컨테이너 자체와 각 아이콘 wrapper 사이즈 변경 추적
     const resizeObserver = new ResizeObserver(() => {
-      updatePillPosition();
+      updatePillPosition('resize-observer');
     });
     resizeObserver.observe(nav);
     iconRefs.current.forEach((el) => {
       if (el) resizeObserver.observe(el);
     });
 
-    // 윈도우 리사이즈 / orientation 변경 대응
-    window.addEventListener('resize', updatePillPosition);
-    window.addEventListener('orientationchange', updatePillPosition);
+    const onResize = () => updatePillPosition('window-resize');
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
 
     return () => {
       cancelAnimationFrame(rafId);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', updatePillPosition);
-      window.removeEventListener('orientationchange', updatePillPosition);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
     };
+    // 일부러 ready/pillLeft를 deps에서 제외 (기존 동작 유지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeIndex]);
 
   const handleNavClick = (path: string) => {
