@@ -427,9 +427,16 @@ const PostListOverlay = ({
     <div
       ref={scrollContainerRef}
       style={{
-        bottom: keyboardOffset > 0 ? '0px' : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
-        paddingBottom: keyboardOffset > 0 ? '12px' : '24px',
-        transition: 'bottom 160ms ease-out, padding-bottom 160ms ease-out',
+        // 화면 바닥까지 흰색 배경이 꽉 차도록 bottom: 0 으로 변경.
+        // (이전엔 BottomNav 높이만큼 띄워두어서 알약 주변으로 지도가 비치는 문제가 있었음)
+        bottom: 0,
+        // 콘텐츠가 BottomNav 알약과 겹치지 않도록 충분한 하단 패딩 확보.
+        // 알약 높이(약 60px) + 외부 여백(12px) + safe-area + 약간의 여유.
+        paddingBottom:
+          keyboardOffset > 0
+            ? '12px'
+            : 'calc(5rem + env(safe-area-inset-bottom, 0px))',
+        transition: 'padding-bottom 160ms ease-out',
       }}
       className="post-list-overlay-enter fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+64px)] z-[90] overflow-y-auto overflow-x-hidden bg-white no-scrollbar shadow-none overscroll-x-none"
     >
