@@ -1356,13 +1356,13 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       className="relative h-full w-full bg-black overflow-hidden"
       style={{ height: embedded ? "100%" : "100dvh" }}
     >
-      {/* 배경 블러 (시각적 여유) */}
+      {/* 배경 블러 — 3:4 메인 영상의 좌우 여백을 자연스럽게 채워주는 레이어 */}
       {fallbackImage && (
         <img
           src={fallbackImage}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40 pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover blur-3xl scale-125 opacity-100 pointer-events-none"
         />
       )}
 
