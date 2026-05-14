@@ -1084,95 +1084,22 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   );
 };
 
-// ─── 본문 텍스트 (1줄 클램프 + 우측 "더 보기") ──────────────
-// 본문이 1줄을 초과해 잘리면 우측 끝에 "... 더 보기" 버튼을 표시.
-// 펼치기 전: 한 줄(line-clamp-1)로만 노출.
-// 펼치면: 모든 내용 표시 + 버튼 사라짐.
+// ─── 본문 텍스트 (1줄 truncate 고정) ────────────────────────
+// 본문은 항상 한 줄로만 노출되며, 1줄을 초과하면 자동으로 "..." 처리된다.
+// (펼치기/더 보기 기능 없음 — Flicks 페이지 정책)
 interface ReelContentTextProps {
   content: string;
-  expanded: boolean;
-  onToggle: () => void;
 }
 
-const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, onToggle }) => {
-  const measureRef = useRef<HTMLSpanElement>(null);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-
-  // 본문이 한 줄에 들어가는지 측정.
-  // expanded 상태에서는 측정 노드가 마운트되지 않으므로 측정을 건너뛰고,
-  // 직전 collapsed 상태에서 계산한 isOverflowing 값을 그대로 사용한다.
-  // (측정 노드가 unmount 되며 ResizeObserver가 0×0으로 한 번 더 콜백을
-  //  호출해 isOverflowing이 false로 덮어써지던 문제를 방지)
-  useEffect(() => {
-    if (expanded) return;
-    const el = measureRef.current;
-    if (!el) return;
-    const check = () => {
-      // 노드가 DOM에서 분리(또는 디스플레이 없음)되면 측정 결과를 무시
-      if (!el.isConnected || el.clientWidth === 0) return;
-      const overflow = el.scrollWidth > el.clientWidth + 1;
-      setIsOverflowing((prev) => (prev === overflow ? prev : overflow));
-    };
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [content, expanded]);
-
+const ReelContentText: React.FC<ReelContentTextProps> = ({ content }) => {
   return (
     <div className="text-sm leading-snug font-medium drop-shadow-md pr-2">
-      {expanded ? (
-        <div>
-          <p className="inline">
-            <HashtagText
-              text={content}
-              tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
-            />
-          </p>
-          {isOverflowing && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle();
-              }}
-              className="ml-2 inline-flex items-center align-baseline text-xs font-black text-white hover:text-white/90"
-            >
-              {'... <닫기>'}
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="relative">
-          {/* 측정용/표시용 — 항상 truncate로 한 줄 처리.
-              우측 패딩은 두지 않고, "더 보기" 버튼은 우측에 절대 위치로 오버레이. */}
-          <span
-            ref={measureRef}
-            className="block truncate leading-snug"
-          >
-            <HashtagText
-              text={content}
-              tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
-            />
-          </span>
-          {isOverflowing && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggle();
-              }}
-              className="absolute bottom-0 right-0 pl-3 text-xs font-bold text-white/90 hover:text-white transition-colors"
-              style={{
-                background:
-                  'linear-gradient(to right, transparent, rgba(0,0,0,0.7) 25%, rgba(0,0,0,0.8) 100%)',
-              }}
-            >
-              ... 더 보기
-            </button>
-          )}
-        </div>
-      )}
+      <span className="block truncate leading-snug">
+        <HashtagText
+          text={content}
+          tagClassName="font-black text-indigo-300 hover:text-indigo-200 active:text-indigo-100"
+        />
+      </span>
     </div>
   );
 };
@@ -1293,7 +1220,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   // video 첫 프레임이 그려진 이후에만 큰 "재생/일시정지" 오버레이를 노출
   // (로딩 중에 회색 재생 버튼이 떠서 버그처럼 보이는 문제 방지)
   const [videoFirstFrameReady, setVideoFirstFrameReady] = useState(false);
-  const [contentExpanded, setContentExpanded] = useState(false);
   const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
 
   // 영상 타임라인 상태
@@ -1820,15 +1746,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </div>
           </div>
 
-          {/* 3) 본문 — 항상 일반 표시. 편집 UI는 별도 오버레이(아래 absolute)로 띄워
-              infoRef 실측 높이에 영향을 주지 않도록 한다 → 영상 컨테이너 크기 고정. */}
+          {/* 3) 본문 — 항상 한 줄로만 표시 (1줄 초과 시 자동 truncate "...").
+              편집 UI는 별도 오버레이(아래 absolute)로 띄워 infoRef 실측 높이에
+              영향을 주지 않도록 한다 → 영상 컨테이너 크기 고정. */}
           {displayContent && (
             <div className="text-white pointer-events-auto">
-              <ReelContentText
-                content={displayContent}
-                expanded={contentExpanded}
-                onToggle={() => setContentExpanded((v) => !v)}
-              />
+              <ReelContentText content={displayContent} />
             </div>
           )}
         </div>
