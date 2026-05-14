@@ -289,7 +289,7 @@ const FriendFeed = () => {
           subtitle="Friends Feed"
           ActionIcon={Search}
           actionLabel="친구 검색"
-          onActionClick={() => window.dispatchEvent(new CustomEvent('open-friend-search'))}
+          onActionClick={() => navigate('/search')}
         />
       </div>
 
@@ -339,7 +339,7 @@ const FriendFeed = () => {
                   친구를 팔로우하면 이곳에서<br />친구들의 포스팅을 볼 수 있어요!
                 </p>
                 <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-friend-search'))}
+                  onClick={() => navigate('/search')}
                   className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm active:scale-95 transition-transform shadow-md"
                 >
                   <Search className="w-4 h-4" />

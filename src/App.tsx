@@ -53,7 +53,6 @@ import AuthCallback from "./pages/AuthCallback";
 import NearbyPosts from "./pages/NearbyPosts";
 import Flicks from "./pages/Flicks";
 import PostSearchOverlay from "./components/PostSearchOverlay";
-import FriendSearchOverlay from "./components/FriendSearchOverlay";
 import PlaceSearchOverlay from "./components/PlaceSearchOverlay";
 
 const queryClient = new QueryClient();
@@ -162,12 +161,6 @@ const AnimatedRoutes = () => {
       // 0.5순위: PlaceSearch가 열려 있으면 닫기 (지도 위 최상단 오버레이)
       if ((window as any).__isPlaceSearchOpen === true) {
         window.dispatchEvent(new CustomEvent('close-place-search-by-back'));
-        return;
-      }
-
-      // 0.6순위: FriendSearch 오버레이가 열려 있으면 닫기
-      if ((window as any).__isFriendSearchOpen === true) {
-        window.dispatchEvent(new CustomEvent('close-friend-search-by-back'));
         return;
       }
 
@@ -283,9 +276,6 @@ const AnimatedRoutes = () => {
 
       {/* 전역 포스팅 검색 오버레이 — 어디서든 open-post-search 이벤트로 열림 */}
       {session && <PostSearchOverlay />}
-
-      {/* 전역 친구 검색 오버레이 — open-friend-search 이벤트로 열림 */}
-      {session && <FriendSearchOverlay />}
 
       {/* 전역 장소 검색 오버레이 — open-place-search 이벤트로 열림 (detail.onSelect 콜백 전달) */}
       {session && <PlaceSearchOverlay />}
