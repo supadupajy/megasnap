@@ -22,12 +22,24 @@ export const mapCache = {
   // 키: 양자화된 bounds + 필터 시그니처, 값: { count, timestamp }
   // 같은 영역에서 페이지 재진입/미세 이동 시 DB 재쿼리를 막아 부하를 줄임.
   expiredCountCache: new Map<string, { count: number; timestamp: number }>(),
+  // 고스트(만료) 마커 데이터 캐시
+  // 키: 양자화된 bounds + 필터 시그니처, 값: { posts, timestamp }
+  // 같은 영역에서 탭 전환/페이지 재진입 시 DB 재쿼리와 마커 재렌더를 방지한다.
+  ghostPostsCache: new Map<string, { posts: any[]; timestamp: number }>(),
+  // 현재 표시 중인 고스트 마커 데이터 (Index 컴포넌트가 unmount되지 않으므로
+  // 이 필드는 사실상 사용되지 않지만, 안전망 차원에서 유지)
+  lastGhostPosts: [] as any[],
 };
 
 /** 캐시 TTL (ms) — 이 시간 안에는 같은 영역에 대해 DB를 재쿼리하지 않음 */
 export const EXPIRED_COUNT_CACHE_TTL_MS = 60_000;
 /** 캐시 최대 엔트리 수 — 메모리 보호용 */
 export const EXPIRED_COUNT_CACHE_MAX = 50;
+
+/** 고스트 마커 데이터 캐시 TTL (ms) */
+export const GHOST_POSTS_CACHE_TTL_MS = 5 * 60_000; // 5분
+/** 고스트 마커 캐시 최대 엔트리 수 */
+export const GHOST_POSTS_CACHE_MAX = 50;
 
 /**
  * bounds를 소수점 3자리(~100m)로 양자화한 키 + 필터 시그니처를 만든다.

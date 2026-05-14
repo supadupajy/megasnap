@@ -19,7 +19,7 @@ import { cn, getFallbackImage } from '@/lib/utils';
 
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
-import { mapCache, makeExpiredCountKey, EXPIRED_COUNT_CACHE_TTL_MS, EXPIRED_COUNT_CACHE_MAX } from '@/utils/map-cache';
+import { mapCache, makeExpiredCountKey, EXPIRED_COUNT_CACHE_TTL_MS, EXPIRED_COUNT_CACHE_MAX, GHOST_POSTS_CACHE_TTL_MS, GHOST_POSTS_CACHE_MAX } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, fetchExpiredOnlyCountInBounds, fetchExpiredPostsInBounds, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
@@ -1108,15 +1108,40 @@ const Index = () => {
 
   // ── 고스트(만료) 마커: 현재 bounds 안의 24시간 지난 포스트 상위 30개 ──
   // MapContainer는 회색 작은 점("잔상")으로 표시한다. 정상 마커와 공존.
-  const [ghostPosts, setGhostPosts] = useState<any[]>([]);
+  //
+  // 캐싱 정책: 양자화된 bounds + 필터 시그니처를 키로 결과를 메모리에 저장한다.
+  // 같은 영역에서 다시 effect가 실행되면(탭 전환 후 재진입, 미세 패닝 등)
+  // DB 쿼리 없이 캐시된 동일한 데이터(같은 객체 참조)를 그대로 사용해
+  // 마커 재렌더/재로딩이 발생하지 않도록 한다.
+  const [ghostPosts, setGhostPosts] = useState<any[]>(mapCache.lastGhostPosts);
   const ghostFetchTokenRef = useRef(0);
 
   useEffect(() => {
     if (currentZoom >= 7 || !mapData?.bounds) {
-      setGhostPosts([]);
+      if (ghostPosts.length > 0) {
+        setGhostPosts([]);
+        mapCache.lastGhostPosts = [];
+      }
       return;
     }
     const bounds = mapData.bounds;
+    const cacheKey = makeExpiredCountKey(bounds, {
+      categories: selectedCategoriesRef.current,
+      userId: authUserIdRef.current,
+      followingIds: Array.from(followingIds),
+    });
+
+    // 1) 캐시 히트 — DB 쿼리 없이 동일한 배열 참조를 즉시 사용 (마커 재렌더 방지)
+    const cached = mapCache.ghostPostsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < GHOST_POSTS_CACHE_TTL_MS) {
+      // 참조가 같으면 setState가 리렌더를 트리거하지 않도록 비교
+      if (ghostPosts !== cached.posts) {
+        setGhostPosts(cached.posts);
+        mapCache.lastGhostPosts = cached.posts;
+      }
+      return;
+    }
+
     const myToken = ++ghostFetchTokenRef.current;
     // 100ms 디바운스 — 빠른 패닝/줌 중 과도한 호출은 막되, 정상 표시 지연은 최소화
     const timer = window.setTimeout(async () => {
@@ -1127,6 +1152,14 @@ const Index = () => {
         followingIds: Array.from(followingIds),
       });
       if (myToken !== ghostFetchTokenRef.current) return;
+
+      // 캐시에 저장 + LRU-ish eviction
+      mapCache.ghostPostsCache.set(cacheKey, { posts: list, timestamp: Date.now() });
+      if (mapCache.ghostPostsCache.size > GHOST_POSTS_CACHE_MAX) {
+        const oldestKey = mapCache.ghostPostsCache.keys().next().value;
+        if (oldestKey !== undefined) mapCache.ghostPostsCache.delete(oldestKey);
+      }
+      mapCache.lastGhostPosts = list;
       setGhostPosts(list);
     }, 100);
     return () => window.clearTimeout(timer);
