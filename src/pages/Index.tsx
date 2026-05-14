@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
 import MarkerExpiryNotice from '@/components/MarkerExpiryNotice';
-import GhostMarkersHint from '@/components/GhostMarkersHint';
+import ExpiredOnlyNotice from '@/components/ExpiredOnlyNotice';
 import ReelsViewer from '@/components/ReelsViewer';
 import PostDetail from '@/components/PostDetail';
 // PlaceSearch는 PlaceSearchOverlay로 대체되어 App.tsx에 전역 마운트됨
@@ -1092,21 +1092,20 @@ const Index = () => {
   const displayedPostCount = mapVisibleMarkers.length;
 
   // ── "지도엔 안 보이지만 24h 지난 포스트가 있는" 영역 감지 ───────
-  // displayedPostCount === 0 일 때만 가벼운 head count 쿼리로 확인.
-  // 같은 bounds 키에서는 세션당 1회만 힌트를 띄워 시각 노이즈를 줄인다.
+  // 조건:
+  // 1) 화면에 24h 내 신규 마커가 하나라도 있으면 토스트를 띄우지 않는다.
+  // 2) 신규 마커가 0개이고 24h 지난 포스트가 화면 영역 안에 있으면
+  //    그 상태가 유지되는 동안 토스트를 계속 노출한다 (사용자가 다른 영역으로 이동/줌하면 자동 해제).
   const [expiredOnlyCount, setExpiredOnlyCount] = useState(0);
-  const [ghostHintActive, setGhostHintActive] = useState(false);
-  const ghostHintShownBoundsRef = useRef<Set<string>>(new Set());
   const expiredCheckTokenRef = useRef(0);
 
   useEffect(() => {
     // 검사 트리거 조건:
     // - 지도가 마커 표시 레벨일 때만 (zoom < 7)
-    // - 화면에 보이는 마커가 0개일 때만
+    // - 화면에 보이는 신규 마커가 0개일 때만
     // - bounds 정보가 있을 때만
     if (currentZoom >= 7 || !mapData?.bounds || displayedPostCount > 0) {
       setExpiredOnlyCount(0);
-      setGhostHintActive(false);
       return;
     }
 
@@ -1121,17 +1120,7 @@ const Index = () => {
         followingIds: Array.from(followingIds),
       });
       if (myToken !== expiredCheckTokenRef.current) return;
-
       setExpiredOnlyCount(count);
-
-      if (count > 0) {
-        // 동일 bounds(소수점 4자리 기준)에서는 세션당 1회만 힌트 재생
-        const key = `${bounds.sw.lat.toFixed(4)},${bounds.sw.lng.toFixed(4)},${bounds.ne.lat.toFixed(4)},${bounds.ne.lng.toFixed(4)}`;
-        if (!ghostHintShownBoundsRef.current.has(key)) {
-          ghostHintShownBoundsRef.current.add(key);
-          setGhostHintActive(true);
-        }
-      }
     }, 350);
 
     return () => window.clearTimeout(timer);
@@ -1873,15 +1862,6 @@ const Index = () => {
               toastTopOffset={indicatorTopOffset}
             />
 
-            {/* "여기엔 시간이 지난 추억이 있어요" 힌트 — 회색 점선 마커가 스르륵 나타났다 사라짐 */}
-            {!isSelectingLocation && !isSelectingAdLocation && !isPostListOpen && !isSearchOpen && (
-              <GhostMarkersHint
-                active={ghostHintActive}
-                topOffset={indicatorTopOffset ? indicatorTopOffset + 80 : 180}
-                bottomOffset={180}
-                onComplete={() => setGhostHintActive(false)}
-              />
-            )}
           </div>
 
 
@@ -2185,6 +2165,23 @@ const Index = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* "신규 마커는 없지만 24h 지난 추억이 있어요" 안내 — 조건이 유지되는 동안 계속 노출 */}
+      <ExpiredOnlyNotice
+        visible={
+          !isSelectingLocation &&
+          !isSelectingAdLocation &&
+          !isPostListOpen &&
+          !isSearchOpen &&
+          !trendingReelsInitialPost &&
+          !isTrendingExpanded &&
+          currentZoom < 7 &&
+          displayedPostCount === 0 &&
+          expiredOnlyCount > 0
+        }
+        count={expiredOnlyCount}
+        topPx={indicatorTopOffset + 56}
+      />
 
       {!isPostListOpen && !isSearchOpen && !trendingReelsInitialPost && (
         <div
