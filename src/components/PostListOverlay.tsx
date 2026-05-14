@@ -425,18 +425,15 @@ const PostListOverlay = ({
 
   return (
     <>
-      {/* BottomNav(z=20000) 뒤에 깔리는 흰색 배경 마스크.
-          - 지도 페이지에서 PostListOverlay가 열렸을 때, BottomNav 알약 좌·우/아래로
-            지도가 비치는 문제를 해결.
-          - z-index를 BottomNav보다 1 낮게(19999) 두어 알약은 그대로 floating으로 보이되,
-            그 주변 padding/safe-area 영역은 흰색으로 자연스럽게 채워진다. */}
+      {/* [DEBUG] 마스크를 빨강+굵은 outline으로 임시 표시. 위치/크기 확인용. */}
       <div
         aria-hidden="true"
-        className="fixed inset-x-0 bottom-0 bg-white pointer-events-none"
+        className="fixed inset-x-0 bottom-0 pointer-events-none"
         style={{
-          // 알약 높이(60px) + safe-area + 외부 여백을 모두 덮을 만큼 충분히 높게
           height: 'calc(60px + max(env(safe-area-inset-bottom, 0px), 12px) + 12px)',
           zIndex: 19999,
+          backgroundColor: 'red',
+          outline: '4px solid magenta',
         }}
       />
     <div
