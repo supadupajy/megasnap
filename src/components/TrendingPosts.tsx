@@ -524,10 +524,14 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
   // 순위 변동 UI 렌더
   const renderRankChange = () => {
     if (rankChange === null) {
-      // NEW
+      // NEW — PostItem의 새 포스팅 배지와 동일한 디자인 (노란 알약 + 흰 테두리)
       return (
         <div className="flex items-center justify-center shrink-0 w-9">
-          <span className="inline-flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 px-1.5 rounded-md tracking-wide" style={{ height: '18px', lineHeight: '18px' }}>
+          <span
+            aria-label="새 포스팅"
+            className="inline-flex items-center justify-center rounded-full border-2 border-white bg-yellow-400 px-1.5 text-[9px] font-black leading-none tracking-[0.08em] text-amber-950 shadow-[0_4px_10px_rgba(234,179,8,0.38)]"
+            style={{ height: '18px' }}
+          >
             NEW
           </span>
         </div>
@@ -1029,7 +1033,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   {(() => {
                     const rc = currentPost ? getRankChange(currentPost) : undefined;
                     if (rc === null) return (
-                      <span className="inline-flex items-center justify-center text-[9px] font-black text-white bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 px-1.5 rounded-md tracking-wide shrink-0" style={{ height: '18px', lineHeight: '18px' }}>NEW</span>
+                      <span
+                        aria-label="새 포스팅"
+                        className="inline-flex items-center justify-center rounded-full border-2 border-white bg-yellow-400 px-1.5 text-[9px] font-black leading-none tracking-[0.08em] text-amber-950 shadow-[0_4px_10px_rgba(234,179,8,0.38)] shrink-0"
+                        style={{ height: '18px' }}
+                      >NEW</span>
                     );
                     if (rc !== undefined && rc > 0) return (
                       <div className="flex items-center gap-0.5 shrink-0">
