@@ -9,40 +9,41 @@ interface ExpiredOnlyNoticeProps {
   visible: boolean;
   /** 화면 안에 남아있는 24h 지난 포스트 수 */
   count: number;
-  /** 트렌딩 패널 아래쪽에 배치되도록 부모에서 top 좌표를 전달 */
-  topPx: number;
+  /** 화면 하단에서부터의 거리 (px). 하단 인디케이터/주소 배지와 겹치지 않게. */
+  bottomPx: number;
 }
 
 /**
  * "신규 마커는 없지만 24h 지난 추억이 있어요" 안내 토스트.
- * 조건이 유지되는 동안 계속 노출되며, 조건이 깨지면 fade out.
+ * - sonner 토스트와 동일한 톤(흰 배경, 보더, 그림자)을 사용
+ * - 조건이 유지되는 동안 계속 하단에 노출되며, 조건이 깨지면 fade out
  */
-const ExpiredOnlyNotice: React.FC<ExpiredOnlyNoticeProps> = ({ visible, count, topPx }) => {
+const ExpiredOnlyNotice: React.FC<ExpiredOnlyNoticeProps> = ({ visible, count, bottomPx }) => {
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
           key="expired-only-notice"
-          initial={{ opacity: 0, y: -6, scale: 0.96 }}
+          initial={{ opacity: 0, y: 8, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -6, scale: 0.96 }}
+          exit={{ opacity: 0, y: 8, scale: 0.96 }}
           transition={{ duration: 0.22, ease: 'easeOut' }}
           className="fixed left-1/2 z-[26] pointer-events-none"
           style={{
-            top: `${topPx}px`,
+            bottom: `${bottomPx}px`,
             transform: 'translateX(-50%)',
           }}
         >
-          <div
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-3.5 py-1.5 shadow-[0_10px_28px_rgba(15,23,42,0.12)] backdrop-blur-xl"
-          >
-            <span className="relative flex h-5 w-5 items-center justify-center rounded-full bg-slate-100">
-              <Clock className="h-3 w-3 text-slate-600" strokeWidth={2.5} />
-              <span className="absolute inset-0 rounded-full ring-2 ring-slate-300/40 animate-ping" />
+          {/* sonner 기본 톤: bg-background + border-border + shadow-lg */}
+          <div className="flex items-center gap-2.5 rounded-lg border border-border bg-background px-4 py-3 shadow-lg">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100">
+              <Clock className="h-3.5 w-3.5 text-slate-600" strokeWidth={2.5} />
             </span>
-            <span className="text-[11px] font-black tracking-[-0.01em] text-slate-700">
+            <span className="text-[13px] font-semibold tracking-[-0.01em] text-foreground whitespace-nowrap">
               여긴 지금 비어있지만,{' '}
-              <span className="text-slate-900">시간이 지난 추억 {count > 99 ? '99+' : count}개</span>
+              <span className="text-slate-900 font-extrabold">
+                시간이 지난 추억 {count > 99 ? '99+' : count}개
+              </span>
               가 있어요
             </span>
           </div>

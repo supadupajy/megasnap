@@ -2166,7 +2166,8 @@ const Index = () => {
         )}
       </AnimatePresence>
 
-      {/* "신규 마커는 없지만 24h 지난 추억이 있어요" 안내 — 조건이 유지되는 동안 계속 노출 */}
+      {/* "신규 마커는 없지만 24h 지난 추억이 있어요" 안내 — 조건이 유지되는 동안 계속 노출
+          하단 인디케이터(주소 배지/지금 여기 버튼)와 겹치지 않게 indicatorBottomOffset + 8px 위에 띄움 */}
       <ExpiredOnlyNotice
         visible={
           !isSelectingLocation &&
@@ -2180,7 +2181,7 @@ const Index = () => {
           expiredOnlyCount > 0
         }
         count={expiredOnlyCount}
-        topPx={indicatorTopOffset + 56}
+        bottomPx={indicatorBottomOffset + 8}
       />
 
       {!isPostListOpen && !isSearchOpen && !trendingReelsInitialPost && (
