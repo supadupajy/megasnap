@@ -863,7 +863,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                             <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                               {!isAd && <PostCategoryBadge category={currentPost.category} />}
                               {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
-                              {renderDropdownMenu()}
+                              {/* 광고 포스트는 신고/차단 대상이 아니므로 더보기(···) 메뉴를 숨긴다. */}
+                              {!isAd && renderDropdownMenu()}
                               <button
                                 onClick={onClose}
                                 className="w-9 h-9 bg-gray-600 hover:bg-gray-700 rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
