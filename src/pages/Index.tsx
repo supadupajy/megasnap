@@ -2119,7 +2119,7 @@ const Index = () => {
                   >
                     <span className="text-[9px] font-black tracking-widest relative z-10 leading-none text-gray-900/60">ALL</span>
                     <span className="text-[11px] font-black relative z-10 leading-tight">
-                      {displayedPostCount === 0 && expiredOnlyCount > 0 ? '지난 기록' : '지금 여기'}
+                      지금 여기
                     </span>
                     <div className="flex flex-col items-center gap-[3px] mt-0.5 relative z-10">
                       <div className="w-8 h-[2px] rounded-full bg-gray-900/40" />
