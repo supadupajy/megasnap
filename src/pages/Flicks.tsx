@@ -59,6 +59,19 @@ const CONTENT_FIXED_STYLE: React.CSSProperties = {
   bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
 
+// Floating BottomNav 뒤로 비치는 흰색 배경을 가리기 위한 풀스크린 검은 레이어.
+// Flicks 페이지의 분위기와 자연스럽게 이어지도록 헤더 아래부터 화면 끝까지 검정으로 채운다.
+const BACKDROP_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  left: 0,
+  right: 0,
+  top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+  bottom: 0,
+  backgroundColor: '#000',
+  zIndex: 0,
+  pointerEvents: 'none',
+};
+
 const Flicks = () => {
   const navigate = useNavigate();
   const { user: authUser, loading: authLoading } = useAuth();
@@ -137,43 +150,52 @@ const Flicks = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
-          <Clapperboard className="w-10 h-10 text-white/80" />
-          <Loader2 className="w-6 h-6 animate-spin text-white/80" />
-          <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+      <>
+        <div style={BACKDROP_STYLE} aria-hidden />
+        <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
+            <Clapperboard className="w-10 h-10 text-white/80" />
+            <Loader2 className="w-6 h-6 animate-spin text-white/80" />
+            <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (videoPool.length === 0) {
     return (
-      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
-          <Clapperboard className="w-12 h-12 text-white/70" />
-          <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
-          <p className="text-xs font-bold text-white/60 leading-relaxed">
-            인기 포스팅에 영상이 등록되면<br />여기서 풀스크린으로 즐길 수 있어요.
-          </p>
+      <>
+        <div style={BACKDROP_STYLE} aria-hidden />
+        <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
+            <Clapperboard className="w-12 h-12 text-white/70" />
+            <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
+            <p className="text-xs font-bold text-white/60 leading-relaxed">
+              인기 포스팅에 영상이 등록되면<br />여기서 풀스크린으로 즐길 수 있어요.
+            </p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="bg-black" style={CONTENT_FIXED_STYLE}>
-      <ReelsViewer
-        isOpen={true}
-        initialPost={videoPool[0]}
-        pool={videoPool}
-        onClose={handleClose}
-        noRepeat
-        embedded
-        endMessage="더 이상 표시할 영상이 없습니다"
-        endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
-      />
-    </div>
+    <>
+      <div style={BACKDROP_STYLE} aria-hidden />
+      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+        <ReelsViewer
+          isOpen={true}
+          initialPost={videoPool[0]}
+          pool={videoPool}
+          onClose={handleClose}
+          noRepeat
+          embedded
+          endMessage="더 이상 표시할 영상이 없습니다"
+          endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
+        />
+      </div>
+    </>
   );
 };
 
