@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Camera, Mail, Lock, Loader2, Eye, EyeOff, AlertCircle, ChevronRight } from 'lucide-react';
+import { Mail, Lock, Loader2, Eye, EyeOff, AlertCircle, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,13 +42,15 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as any)?.redirectTo || '/';
+  // 약관/개인정보 페이지에서 뒤로가기로 돌아왔을 때 회원가입 모드로 복귀
+  const initialIsSignUp = !!(location.state as any)?.isSignUp;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [agreedToAll, setAgreedToAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(initialIsSignUp);
 
   useEffect(() => {
     const savedEmail = localStorage.getItem('chora_remembered_email');
@@ -197,7 +199,7 @@ const Login = () => {
                   placeholder="example@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-14 pl-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
+                  className="h-14 pl-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-yellow-400 font-bold"
                 />
               </div>
             </div>
@@ -211,12 +213,12 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-14 pl-12 pr-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 font-bold"
+                  className="h-14 pl-12 pr-12 rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-yellow-400 font-bold"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-amber-600 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -231,11 +233,11 @@ const Login = () => {
             {!isSignUp && (
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
-                  <Checkbox 
-                    id="remember" 
+                  <Checkbox
+                    id="remember"
                     checked={rememberMe}
                     onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                    className="w-5 h-5 rounded-lg border-gray-200 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                    className="w-5 h-5 rounded-lg border-gray-200 data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400"
                   />
                   <label htmlFor="remember" className="text-xs font-bold text-gray-500 cursor-pointer select-none">
                     로그인 정보 저장하기
@@ -264,7 +266,7 @@ const Login = () => {
                         id="agree-all"
                         checked={agreedToAll}
                         onCheckedChange={(checked) => setAgreedToAll(checked as boolean)}
-                        className="w-5 h-5 rounded-lg border-gray-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600 shrink-0"
+                        className="w-5 h-5 rounded-lg border-gray-300 data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400 shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       />
                       <label htmlFor="agree-all" className="text-[13px] font-black text-gray-800 cursor-pointer select-none">
@@ -276,13 +278,13 @@ const Login = () => {
                       {/* 이용약관 링크 */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${agreedToAll ? 'bg-indigo-500' : 'bg-gray-300'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${agreedToAll ? 'bg-amber-500' : 'bg-gray-300'}`} />
                           <span className="text-[11px] font-medium text-gray-500">서비스 이용약관 (필수)</span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => navigate('/terms')}
-                          className="flex items-center gap-0.5 text-[11px] font-bold text-indigo-500 active:opacity-70"
+                          onClick={() => navigate('/terms', { state: { isSignUp: true } })}
+                          className="flex items-center gap-0.5 text-[11px] font-bold text-amber-600 active:opacity-70"
                         >
                           보기 <ChevronRight className="w-3 h-3" />
                         </button>
@@ -291,13 +293,13 @@ const Login = () => {
                       {/* 개인정보 처리방침 링크 */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${agreedToAll ? 'bg-indigo-500' : 'bg-gray-300'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${agreedToAll ? 'bg-amber-500' : 'bg-gray-300'}`} />
                           <span className="text-[11px] font-medium text-gray-500">개인정보 처리방침 (필수)</span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => navigate('/privacy-policy')}
-                          className="flex items-center gap-0.5 text-[11px] font-bold text-indigo-500 active:opacity-70"
+                          onClick={() => navigate('/privacy-policy', { state: { isSignUp: true } })}
+                          className="flex items-center gap-0.5 text-[11px] font-bold text-amber-600 active:opacity-70"
                         >
                           보기 <ChevronRight className="w-3 h-3" />
                         </button>
@@ -314,10 +316,10 @@ const Login = () => {
               )}
             </AnimatePresence>
 
-            <Button 
+            <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-lg font-black shadow-xl shadow-indigo-100 active:scale-95 transition-all"
+              className="w-full h-14 bg-yellow-400 hover:bg-yellow-500 text-gray-900 rounded-2xl text-lg font-black shadow-xl shadow-yellow-200/60 active:scale-95 transition-all"
             >
               {isLoading ? (
                 <Loader2 className="w-6 h-6 animate-spin" />
@@ -330,9 +332,9 @@ const Login = () => {
           <div className="mt-8 pt-6 border-t border-gray-50 text-center">
             <p className="text-sm text-gray-500 font-medium">
               {isSignUp ? '이미 계정이 있으신가요?' : '아직 계정이 없으신가요?'}
-              <button 
+              <button
                 onClick={() => setIsSignUp(!isSignUp)}
-                className="ml-2 text-indigo-600 font-black hover:underline"
+                className="ml-2 text-amber-600 font-black hover:underline"
               >
                 {isSignUp ? '로그인하기' : '회원가입하기'}
               </button>

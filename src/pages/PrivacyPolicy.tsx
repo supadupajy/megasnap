@@ -264,13 +264,16 @@ const PrivacyPolicy = ({ fromSignup = false }: { fromSignup?: boolean }) => {
   const navigate = useNavigate();
 
   return (
-    <div className={fromSignup ? "flex flex-col h-full" : "h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col"}>
-      <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
+    <div className={fromSignup ? "fixed inset-0 bg-gray-50 flex flex-col z-[120]" : "h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col"}>
+      <div
+        className="flex-none relative z-10 bg-white flex items-center px-4 border-b border-gray-100"
+        style={{ paddingTop: fromSignup ? 'env(safe-area-inset-top, 0px)' : undefined, height: fromSignup ? 'calc(56px + env(safe-area-inset-top, 0px))' : '56px' }}
+      >
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (fromSignup) navigate(-1);
+            if (fromSignup) navigate('/login', { state: { isSignUp: true }, replace: true });
             else navigate('/settings');
           }}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
@@ -285,8 +288,8 @@ const PrivacyPolicy = ({ fromSignup = false }: { fromSignup?: boolean }) => {
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="px-4 pt-5">
-          <div className="bg-indigo-50 rounded-2xl p-4 mb-5">
-            <p className="text-[12px] text-indigo-700 font-medium leading-relaxed">
+          <div className="bg-amber-50 rounded-2xl p-4 mb-5 border border-amber-100">
+            <p className="text-[12px] text-amber-800 font-medium leading-relaxed">
               시행일: 2026년 5월 1일<br />
               TocaToca(이하 "회사")는 이용자의 개인정보를 중요시하며, 「개인정보 보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 등 관련 법령을 준수합니다. 본 방침은 회사가 제공하는 서비스 이용과 관련하여 이용자의 개인정보가 어떻게 수집·이용·보관·파기되는지 알려드립니다.
             </p>

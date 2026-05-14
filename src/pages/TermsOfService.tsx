@@ -178,13 +178,16 @@ const TermsOfService = ({ fromSignup = false }: { fromSignup?: boolean }) => {
   const navigate = useNavigate();
 
   return (
-    <div className={fromSignup ? "flex flex-col h-full" : "h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col"}>
-      <div className="flex-none relative z-10 h-14 bg-white flex items-center px-4 border-b border-gray-100">
+    <div className={fromSignup ? "fixed inset-0 bg-gray-50 flex flex-col z-[120]" : "h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col"}>
+      <div
+        className="flex-none relative z-10 bg-white flex items-center px-4 border-b border-gray-100"
+        style={{ paddingTop: fromSignup ? 'env(safe-area-inset-top, 0px)' : undefined, height: fromSignup ? 'calc(56px + env(safe-area-inset-top, 0px))' : '56px' }}
+      >
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (fromSignup) navigate(-1);
+            if (fromSignup) navigate('/login', { state: { isSignUp: true }, replace: true });
             else navigate('/settings');
           }}
           className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-2xl active:scale-95 transition-all cursor-pointer relative z-[110]"
@@ -199,8 +202,8 @@ const TermsOfService = ({ fromSignup = false }: { fromSignup?: boolean }) => {
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
         <div className="px-4 pt-5">
-          <div className="bg-amber-50 rounded-2xl p-4 mb-5">
-            <p className="text-[12px] text-amber-700 font-medium leading-relaxed">
+          <div className="bg-amber-50 rounded-2xl p-4 mb-5 border border-amber-100">
+            <p className="text-[12px] text-amber-800 font-medium leading-relaxed">
               시행일: 2026년 5월 1일<br />
               서비스를 이용하시기 전에 이용약관을 주의 깊게 읽어 주시기 바랍니다. 본 약관은 TocaToca 서비스 이용에 관한 회사와 이용자 간의 권리, 의무 및 책임 사항을 규정합니다.
             </p>

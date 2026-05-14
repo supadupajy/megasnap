@@ -235,8 +235,8 @@ const AnimatedRoutes = () => {
               <Routes location={location}>
                 <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService fromSignup />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy fromSignup />} />
                 <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
                 <Route path="/nearby-posts" element={<ProtectedRoute><NearbyPosts /></ProtectedRoute>} />
                 <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
