@@ -910,60 +910,62 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 /* =============================================
-   지도 탭 활성 Pill - 지도 격자 + 빛나는 교차점 패턴
+   지도 탭 활성 Pill - 빛나는 도트(원) 패턴 + Glow
    - 우상단(top-right) → 좌하단(bottom-left)으로 천천히 흐름
    - 베이스: 다크 그레이
-   - 레이어1: 가는 격자선 (지도 좌표 느낌)
-   - 레이어2: 격자 교차점의 빛나는 도트 (노란 glow)
-   - 레이어3: 중앙 펄스 글로우 (살아있는 느낌)
+   - 레이어1: 큰 도트 (밝은 노란 코어 + glow halo)
+   - 레이어2: 작은 도트 (촘촘하게, 깊이감)
+   - ::before : 중앙 펄스 글로우
+   - ::after  : 부드러운 빛 번짐
    ============================================= */
-@keyframes map-pill-grid-flow {
-  /* 격자 셀 크기와 동일한 거리만큼 이동해야 끊김 없이 반복됨.
-     우상단(+x, -y) → 좌하단(-x, +y) 방향으로 흐름 */
+@keyframes map-pill-dots-flow {
+  /* 두 레이어 셀 크기(20px, 12px)만큼 이동 → 끊김 없이 반복.
+     우상단(+x, -y) → 좌하단(-x, +y) 방향 */
   0% {
     background-position:
-      16px -16px,  /* 빛나는 도트 (16px 셀) */
-      16px -16px,  /* 가는 격자선 */
-      0 0;         /* 중앙 글로우 (정적) */
+      20px -20px,   /* 큰 도트 */
+      12px -12px;   /* 작은 도트 */
   }
   100% {
     background-position:
       0px 0px,
-      0px 0px,
-      0 0;
+      0px 0px;
   }
 }
 
 @keyframes map-pill-center-pulse {
   0%, 100% { opacity: 0.55; transform: scale(1); }
-  50%      { opacity: 1;    transform: scale(1.15); }
+  50%      { opacity: 1;    transform: scale(1.18); }
 }
 
 .map-pill-animated-bg {
   position: relative;
   overflow: hidden;
-  /* 베이스 다크 그레이 (기존 bg-gray-700 톤과 매칭) */
   background-color: rgb(55, 65, 81);
   background-image:
-    /* 1) 빛나는 교차점 도트 (노란 glow) - 격자 모서리에 위치 */
+    /* 큰 도트 - 밝은 노란 코어에서 부드러운 halo로 퍼지는 glow */
     radial-gradient(
-      circle at 0 0,
-      rgba(250, 204, 21, 0.85) 0px,
-      rgba(250, 204, 21, 0.4) 1px,
-      rgba(250, 204, 21, 0) 2.5px
+      circle at 50% 50%,
+      rgba(253, 224, 71, 0.95) 0px,
+      rgba(250, 204, 21, 0.55) 1.2px,
+      rgba(250, 204, 21, 0.18) 2.4px,
+      rgba(250, 204, 21, 0) 4px
     ),
-    /* 2) 가는 격자선 - 지도 좌표 느낌 */
-    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    /* 작은 도트 - 사이사이를 채워 깊이감 */
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.45) 0px,
+      rgba(255, 255, 255, 0.15) 0.8px,
+      rgba(255, 255, 255, 0) 1.6px
+    );
   background-size:
-    16px 16px,
-    16px 16px,
-    16px 16px;
-  background-repeat: repeat, repeat, repeat;
-  animation: map-pill-grid-flow 7s linear infinite;
+    20px 20px,
+    12px 12px;
+  background-repeat: repeat, repeat;
+  animation: map-pill-dots-flow 7s linear infinite;
 }
 
-/* 중앙 펄스 글로우 - pseudo element로 분리해 자체 펄스 애니메이션 */
+/* 중앙 펄스 글로우 - 호흡하는 빛 */
 .map-pill-animated-bg::before {
   content: '';
   position: absolute;
@@ -971,15 +973,15 @@ video.post-item-video::-webkit-media-text-track-container {
   pointer-events: none;
   background: radial-gradient(
     ellipse at 50% 50%,
-    rgba(250, 204, 21, 0.35) 0%,
-    rgba(250, 204, 21, 0.12) 35%,
+    rgba(250, 204, 21, 0.38) 0%,
+    rgba(250, 204, 21, 0.14) 35%,
     rgba(250, 204, 21, 0) 70%
   );
   animation: map-pill-center-pulse 2.4s ease-in-out infinite;
   mix-blend-mode: screen;
 }
 
-/* 추가 글로우 오버레이 - 패턴 위에 부드러운 빛 번짐 */
+/* 좌상단 부드러운 빛 번짐 - 입체감 */
 .map-pill-animated-bg::after {
   content: '';
   position: absolute;
