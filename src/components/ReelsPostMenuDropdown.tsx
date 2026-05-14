@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,13 +34,14 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
           onPointerDown={(e) => e.stopPropagation()}
           onPointerUp={(e) => e.stopPropagation()}
           className={cn(
-            'w-9 h-9 rounded-full bg-black/45 backdrop-blur-md',
+            // 가로형 3-dot, 둥근 사각형(rounded-2xl), 다크 톤
+            'w-9 h-9 rounded-2xl bg-black/55 backdrop-blur-md',
             'flex items-center justify-center border border-white/10',
             'active:scale-95 transition-transform',
             className
           )}
         >
-          <MoreVertical className="w-4 h-4 text-white" />
+          <MoreHorizontal className="w-5 h-5 text-white/80" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
