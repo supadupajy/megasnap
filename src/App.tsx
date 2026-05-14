@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,27 +6,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { App as CapApp } from '@capacitor/app';
+
+// ─────────────────────────────────────────────────────────────
+// [Optimized] 라우트 코드 스플리팅
+// Index/Login만 즉시 import, 나머지는 lazy 로딩으로 초기 번들 크기를 크게 줄임.
+// 카카오맵/leaflet/mapbox 같은 무거운 라이브러리들이 첫 진입에 함께 번들되던 문제 해결.
+// ─────────────────────────────────────────────────────────────
 import Index from "./pages/Index";
-import Profile from "./pages/Profile";
-import PostDetail from "./pages/PostDetail";
-import UserProfile from "./pages/UserProfile";
-import Follow from "./pages/Follow";
-import Popular from "./pages/Popular";
-import Search from "./pages/Search";
-import Notifications from "./pages/Notifications";
-import Messages from "./pages/Messages";
-import Chat from "./pages/Chat";
-import WritePage from "./pages/Write";
-import FriendList from "./pages/FriendList";
-import FriendFeed from "./pages/FriendFeed";
 import Login from "./pages/Login";
-import Settings from "./pages/Settings";
-import PasswordSecurity from "./pages/PasswordSecurity";
-import NotificationSettings from "./pages/NotificationSettings";
-import LanguageSettings from "./pages/LanguageSettings";
-import PrivacySettings from "./pages/PrivacySettings";
-import AdInquiry from "./pages/AdInquiry";
-import AdminAds from "./pages/AdminAds";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
@@ -35,27 +22,64 @@ import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { NotificationProvider } from "./components/NotificationProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
-import ConnectedAccounts from "./pages/ConnectedAccounts";
-import DeviceManagement from "./pages/DeviceManagement";
-import Subscription from "./pages/Subscription";
-import BillingHistory from "./pages/BillingHistory";
-import Notices from "./pages/Notices";
-import FAQ from "./pages/FAQ";
-import Inquiry from "./pages/Inquiry";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import CompanyInfo from "./pages/CompanyInfo";
-import AppearanceSettings from "./pages/AppearanceSettings";
-import StorageSettings from "./pages/StorageSettings";
-import DBImageCompression from "./pages/DBImageCompression";
-import DeleteAccount from "./pages/DeleteAccount";
-import AuthCallback from "./pages/AuthCallback";
-import NearbyPosts from "./pages/NearbyPosts";
-import Flicks from "./pages/Flicks";
-import PostSearch from "./pages/PostSearch";
 import PlaceSearchOverlay from "./components/PlaceSearchOverlay";
 
-const queryClient = new QueryClient();
+// Lazy-loaded routes (초기 로드 후 필요할 때만 fetch)
+const Profile = lazy(() => import("./pages/Profile"));
+const PostDetail = lazy(() => import("./pages/PostDetail"));
+const UserProfile = lazy(() => import("./pages/UserProfile"));
+const Follow = lazy(() => import("./pages/Follow"));
+const Popular = lazy(() => import("./pages/Popular"));
+const Search = lazy(() => import("./pages/Search"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Chat = lazy(() => import("./pages/Chat"));
+const WritePage = lazy(() => import("./pages/Write"));
+const FriendList = lazy(() => import("./pages/FriendList"));
+const FriendFeed = lazy(() => import("./pages/FriendFeed"));
+const Settings = lazy(() => import("./pages/Settings"));
+const PasswordSecurity = lazy(() => import("./pages/PasswordSecurity"));
+const NotificationSettings = lazy(() => import("./pages/NotificationSettings"));
+const LanguageSettings = lazy(() => import("./pages/LanguageSettings"));
+const PrivacySettings = lazy(() => import("./pages/PrivacySettings"));
+const AdInquiry = lazy(() => import("./pages/AdInquiry"));
+const AdminAds = lazy(() => import("./pages/AdminAds"));
+const ConnectedAccounts = lazy(() => import("./pages/ConnectedAccounts"));
+const DeviceManagement = lazy(() => import("./pages/DeviceManagement"));
+const Subscription = lazy(() => import("./pages/Subscription"));
+const BillingHistory = lazy(() => import("./pages/BillingHistory"));
+const Notices = lazy(() => import("./pages/Notices"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const Inquiry = lazy(() => import("./pages/Inquiry"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const CompanyInfo = lazy(() => import("./pages/CompanyInfo"));
+const AppearanceSettings = lazy(() => import("./pages/AppearanceSettings"));
+const StorageSettings = lazy(() => import("./pages/StorageSettings"));
+const DBImageCompression = lazy(() => import("./pages/DBImageCompression"));
+const DeleteAccount = lazy(() => import("./pages/DeleteAccount"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
+const NearbyPosts = lazy(() => import("./pages/NearbyPosts"));
+const Flicks = lazy(() => import("./pages/Flicks"));
+const PostSearch = lazy(() => import("./pages/PostSearch"));
+
+// React Query 기본 설정 강화 (불필요한 refetch 줄이기)
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,        // 1분간은 캐시를 fresh로 간주
+      gcTime: 5 * 60 * 1000,        // 5분간 메모리에 보관
+      refetchOnWindowFocus: false,  // 창 포커스 시 자동 refetch 비활성
+      retry: 1,                     // 실패 시 1회만 재시도
+    },
+  },
+});
+
+const RouteFallback = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+  </div>
+);
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
@@ -207,51 +231,53 @@ const AnimatedRoutes = () => {
             transition={{ duration: 0 }}
             className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
           >
-            <Routes location={location}>
-              <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-              <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
-              <Route path="/nearby-posts" element={<ProtectedRoute><NearbyPosts /></ProtectedRoute>} />
-              <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-              <Route path="/post-search" element={<ProtectedRoute><PostSearch /></ProtectedRoute>} />
-              <Route path="/video-search" element={<Navigate to="/post-search" replace />} />
-              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-              <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-              <Route path="/friends" element={<ProtectedRoute><FriendFeed /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/post/:id" element={<PostDetail />} />
-              <Route path="/profile/follow/:userId" element={<Follow />} />
-              <Route path="/profile/friends" element={<FriendList />} />
-              <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-              <Route path="/user-profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/password" element={<ProtectedRoute><PasswordSecurity /></ProtectedRoute>} />
-              <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
-              <Route path="/settings/language" element={<ProtectedRoute><LanguageSettings /></ProtectedRoute>} />
-              <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
-              <Route path="/settings/ad" element={<ProtectedRoute><AdInquiry /></ProtectedRoute>} />
-              <Route path="/settings/admin-ads" element={<ProtectedRoute><AdminAds /></ProtectedRoute>} />
-              <Route path="/settings/connected-accounts" element={<ProtectedRoute><ConnectedAccounts /></ProtectedRoute>} />
-              <Route path="/settings/devices" element={<ProtectedRoute><DeviceManagement /></ProtectedRoute>} />
-              <Route path="/settings/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
-              <Route path="/settings/billing" element={<ProtectedRoute><BillingHistory /></ProtectedRoute>} />
-              <Route path="/settings/notices" element={<ProtectedRoute><Notices /></ProtectedRoute>} />
-              <Route path="/settings/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
-              <Route path="/settings/inquiry" element={<ProtectedRoute><Inquiry /></ProtectedRoute>} />
-              <Route path="/settings/privacy-policy" element={<ProtectedRoute><PrivacyPolicy /></ProtectedRoute>} />
-              <Route path="/settings/terms" element={<ProtectedRoute><TermsOfService /></ProtectedRoute>} />
-              <Route path="/settings/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
-              <Route path="/settings/appearance" element={<ProtectedRoute><AppearanceSettings /></ProtectedRoute>} />
-              <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
-              <Route path="/settings/db-image-compression" element={<ProtectedRoute><DBImageCompression /></ProtectedRoute>} />
-              <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
-              <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
-              <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
-              <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-            </Routes>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes location={location}>
+                <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
+                <Route path="/nearby-posts" element={<ProtectedRoute><NearbyPosts /></ProtectedRoute>} />
+                <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+                <Route path="/post-search" element={<ProtectedRoute><PostSearch /></ProtectedRoute>} />
+                <Route path="/video-search" element={<Navigate to="/post-search" replace />} />
+                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                <Route path="/friends" element={<ProtectedRoute><FriendFeed /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/post/:id" element={<PostDetail />} />
+                <Route path="/profile/follow/:userId" element={<Follow />} />
+                <Route path="/profile/friends" element={<FriendList />} />
+                <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/user-profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                <Route path="/settings/password" element={<ProtectedRoute><PasswordSecurity /></ProtectedRoute>} />
+                <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+                <Route path="/settings/language" element={<ProtectedRoute><LanguageSettings /></ProtectedRoute>} />
+                <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
+                <Route path="/settings/ad" element={<ProtectedRoute><AdInquiry /></ProtectedRoute>} />
+                <Route path="/settings/admin-ads" element={<ProtectedRoute><AdminAds /></ProtectedRoute>} />
+                <Route path="/settings/connected-accounts" element={<ProtectedRoute><ConnectedAccounts /></ProtectedRoute>} />
+                <Route path="/settings/devices" element={<ProtectedRoute><DeviceManagement /></ProtectedRoute>} />
+                <Route path="/settings/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+                <Route path="/settings/billing" element={<ProtectedRoute><BillingHistory /></ProtectedRoute>} />
+                <Route path="/settings/notices" element={<ProtectedRoute><Notices /></ProtectedRoute>} />
+                <Route path="/settings/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+                <Route path="/settings/inquiry" element={<ProtectedRoute><Inquiry /></ProtectedRoute>} />
+                <Route path="/settings/privacy-policy" element={<ProtectedRoute><PrivacyPolicy /></ProtectedRoute>} />
+                <Route path="/settings/terms" element={<ProtectedRoute><TermsOfService /></ProtectedRoute>} />
+                <Route path="/settings/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
+                <Route path="/settings/appearance" element={<ProtectedRoute><AppearanceSettings /></ProtectedRoute>} />
+                <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
+                <Route path="/settings/db-image-compression" element={<ProtectedRoute><DBImageCompression /></ProtectedRoute>} />
+                <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
+                <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
+                <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
+                <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              </Routes>
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>
