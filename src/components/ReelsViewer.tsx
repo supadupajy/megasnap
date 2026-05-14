@@ -1464,15 +1464,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             zIndexClass="z-30"
           />
 
-          {/* 영상 전체 길이 (우상단, 흰색 텍스트) — 재생 중인 영상일 때만 */}
-          {hasVideo && duration > 0 && (
-            <div className="absolute top-3 right-3 z-30 pointer-events-none">
-              <span className="px-2 py-1 rounded-full bg-black/45 backdrop-blur-md text-white text-[11px] font-black tabular-nums leading-none tracking-tight">
-                {formatTime(duration)}
-              </span>
-            </div>
-          )}
-
           {/* 재생 오버레이 — 영상 컨테이너 정중앙에 위치 (3:4 영상의 시각적 중앙) */}
           {hasVideo && !isPlaying && videoFirstFrameReady && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -2163,6 +2154,15 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
           <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
             <span className="px-2 py-0.5 rounded-full bg-black/70 text-white text-[11px] font-black tabular-nums backdrop-blur-md">
               {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
+          </div>
+        )}
+
+        {/* 영상 전체 길이 (타임라인 우측 바로 위, 흰색 텍스트) — 스크럽 중에는 위 라벨로 대체 */}
+        {!isScrubbing && duration > 0 && (
+          <div className="absolute -top-4 right-3 pointer-events-none">
+            <span className="text-white text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+              {formatTime(duration)}
             </span>
           </div>
         )}
