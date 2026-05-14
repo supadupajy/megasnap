@@ -16,6 +16,8 @@ import {
   Play,
   ChevronUp,
   Clapperboard,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { Post } from "@/types";
 import { useAuth } from "@/components/AuthProvider";
@@ -30,8 +32,8 @@ import HashtagText from "@/components/HashtagText";
 import ImageSliderDots from "@/components/ImageSliderDots";
 import AdMobInterstitialPlaceholder from "@/components/AdMobInterstitialPlaceholder";
 import ReelsPostMenuDropdown from "@/components/ReelsPostMenuDropdown";
-import ReelsEditPostDialog from "@/components/ReelsEditPostDialog";
 import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import { Textarea } from "@/components/ui/textarea";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 import { useVideoMuted } from "@/hooks/use-video-muted";
 import { showSuccess, showError } from "@/utils/toast";
@@ -139,8 +141,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   // 내 포스팅 수정 후 즉시 슬라이드에 반영하기 위한 로컬 content 덮어쓰기 맵
   const [contentMap, setContentMap] = useState<Record<string, string>>({});
 
-  // 수정/삭제 다이얼로그 상태
-  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  // 삭제 확인 다이얼로그 상태 (수정은 각 ReelSlide 내부에서 인라인으로 처리)
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   // 다음 라운드용 풀 (셔플된 후속 포스트)
@@ -759,7 +760,8 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 onClose={onClose}
                 inlineRank={embedded && isRankedMode ? index + 1 : undefined}
                 isMine={isPostMine(item.post)}
-                onRequestEdit={() => setEditingPost(item.post)}
+                authUserId={authUser?.id}
+                onContentSaved={handleEditSaved}
                 onRequestDelete={() => setDeletingPostId(item.post.id)}
               />
             ) : item.kind === "ad" ? (
@@ -789,18 +791,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         profile={null}
         onCommentsChange={() => {}}
       />
-
-      {/* 내 포스팅 수정 다이얼로그 */}
-      {editingPost && (
-        <ReelsEditPostDialog
-          isOpen={!!editingPost}
-          postId={editingPost.id}
-          authUserId={authUser?.id}
-          initialContent={contentMap[editingPost.id] ?? editingPost.content ?? ""}
-          onClose={() => setEditingPost(null)}
-          onSaved={handleEditSaved}
-        />
-      )}
 
       {/* 내 포스팅 삭제 확인 다이얼로그 */}
       <DeleteConfirmDialog
@@ -1214,7 +1204,10 @@ interface ReelSlideProps {
   inlineRank?: number;
   // 내 포스팅 여부 — true일 때만 우상단 3-dot 메뉴(수정/삭제) 노출
   isMine?: boolean;
-  onRequestEdit?: () => void;
+  // 본문 저장 시 사용할 인증 사용자 ID
+  authUserId?: string;
+  // 수정 저장 완료 시 부모에게 알림 (contentMap/외부 리스트 동기화용)
+  onContentSaved?: (postId: string, nextContent: string) => void;
   onRequestDelete?: () => void;
 }
 
@@ -1238,11 +1231,63 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   onClose,
   inlineRank,
   isMine = false,
-  onRequestEdit,
+  authUserId,
+  onContentSaved,
   onRequestDelete,
 }) => {
   // 본문 표시는 부모의 수정 결과(contentOverride)를 우선
   const displayContent = contentOverride ?? post.content ?? "";
+
+  // ── 본문 인라인 편집 상태 (다른 포스팅 카드와 일관된 UX) ─────────
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [editContent, setEditContent] = useState(displayContent);
+  const [isSavingContent, setIsSavingContent] = useState(false);
+
+  const startContentEdit = useCallback(() => {
+    setEditContent(displayContent);
+    setIsEditingContent(true);
+  }, [displayContent]);
+
+  const cancelContentEdit = useCallback(() => {
+    setEditContent(displayContent);
+    setIsEditingContent(false);
+  }, [displayContent]);
+
+  const saveContentEdit = useCallback(async () => {
+    if (!authUserId) {
+      showError("로그인이 필요합니다.");
+      return;
+    }
+    const next = editContent.trim();
+    if (!next) {
+      showError("내용을 입력해주세요.");
+      return;
+    }
+    setIsSavingContent(true);
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .update({ content: next })
+        .eq("id", post.id)
+        .eq("user_id", authUserId);
+      if (error) throw error;
+      onContentSaved?.(post.id, next);
+      setIsEditingContent(false);
+      showSuccess("포스팅이 수정되었습니다.");
+    } catch (err) {
+      console.error("[ReelsViewer] update error:", err);
+      showError("수정 중 오류가 발생했습니다.");
+    } finally {
+      setIsSavingContent(false);
+    }
+  }, [authUserId, editContent, post.id, onContentSaved]);
+
+  // 슬라이드가 비활성화되거나 다른 포스트로 바뀌면 편집 모드 종료
+  useEffect(() => {
+    if (!isActive) {
+      setIsEditingContent(false);
+    }
+  }, [isActive, post.id]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   // video 첫 프레임이 그려진 이후에만 큰 "재생/일시정지" 오버레이를 노출
@@ -1556,7 +1601,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               음소거 버튼의 반대편(우상단)에 배치. 트렌딩 X 버튼은
               미디어 컨테이너 바깥(상위 absolute 컨테이너의 top-5 right-6)에
               위치하므로 위치가 겹치지 않는다. */}
-          {isMine && onRequestEdit && onRequestDelete && (
+          {isMine && onRequestDelete && (
             <div
               className="absolute top-3 right-3 z-40"
               onClick={(e) => e.stopPropagation()}
@@ -1564,7 +1609,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               onPointerUp={(e) => e.stopPropagation()}
             >
               <ReelsPostMenuDropdown
-                onEdit={onRequestEdit}
+                onEdit={startContentEdit}
                 onDelete={onRequestDelete}
               />
             </div>
@@ -1760,15 +1805,56 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </div>
           </div>
 
-          {/* 3) 본문 */}
-          {displayContent && (
-            <div className="text-white pointer-events-auto">
-              <ReelContentText
-                content={displayContent}
-                expanded={contentExpanded}
-                onToggle={() => setContentExpanded((v) => !v)}
+          {/* 3) 본문 — 인라인 편집 모드일 때는 Textarea + ✓/✗ 버튼, 아니면 일반 표시 */}
+          {isEditingContent ? (
+            <div
+              className="pointer-events-auto space-y-2"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                disabled={isSavingContent}
+                autoFocus
+                placeholder="이 영상에 대한 이야기를 들려주세요..."
+                className="min-h-[88px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/95 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
               />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={saveContentEdit}
+                  disabled={isSavingContent || !editContent.trim()}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
+                  aria-label="수정 저장"
+                >
+                  {isSavingContent ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Check className="h-5 w-5" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelContentEdit}
+                  disabled={isSavingContent}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
+                  aria-label="수정 취소"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
+          ) : (
+            displayContent && (
+              <div className="text-white pointer-events-auto">
+                <ReelContentText
+                  content={displayContent}
+                  expanded={contentExpanded}
+                  onToggle={() => setContentExpanded((v) => !v)}
+                />
+              </div>
+            )
           )}
         </div>
       </div>
