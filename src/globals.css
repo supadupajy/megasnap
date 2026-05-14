@@ -942,9 +942,6 @@ video.post-item-video::-webkit-media-text-track-container {
 .map-pill-animated-bg {
   position: relative;
   overflow: hidden;
-  /* contain: 자식/pseudo가 박스 밖으로 페인트되지 않도록 보장
-     → 다른 메뉴 영역으로 글로우가 새어나가지 않음 */
-  contain: layout paint;
   background-color: rgb(55, 65, 81);
   background-image:
     /* 큰 네모칸 - 노란빛 테두리 */
