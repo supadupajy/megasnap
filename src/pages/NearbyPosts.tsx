@@ -353,7 +353,7 @@ const NearbyPosts = () => {
           Icon={LayoutGrid}
           iconBgClass="bg-indigo-100"
           iconColorClass="text-indigo-600"
-          title="지금 여기"
+          title="여기 보기"
           subtitle={
             isExpiredOnly && isInitialLoading
               ? '시간이 지난 추억을 불러오는 중…'
