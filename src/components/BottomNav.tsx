@@ -323,7 +323,7 @@ const BottomNav = () => {
             style={{ height: 44 }}
             animate={{ left: pillStyle.left, width: pillStyle.width }}
             initial={{ left: pillStyle.left, width: pillStyle.width }}
-            transition={{ type: 'spring', stiffness: 500, damping: 38, mass: 0.8 }}
+            transition={{ type: 'spring', stiffness: 700, damping: 35, mass: 0.5 }}
           />
         )}
 
@@ -375,7 +375,7 @@ const BottomNav = () => {
                   opacity: isActive ? 1 : 0,
                   marginLeft: isActive ? 0 : -2,
                 }}
-                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ type: 'spring', stiffness: 700, damping: 35, mass: 0.5 }}
                 className={cn(
                   'relative overflow-hidden whitespace-nowrap text-[13px] leading-[1.3] py-0.5 font-bold tracking-tight',
                   isMainMapTab ? 'text-amber-50' : 'text-gray-900'
