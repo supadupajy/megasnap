@@ -10,6 +10,12 @@ import HeatmapOverlay from '@/components/HeatmapOverlay';
 
 interface MapContainerProps {
   posts: any[];
+  /**
+   * 24시간이 지나 활성 마커에선 사라졌지만 DB엔 남아있는 포스트들.
+   * 회색 작은 점("고스트 마커")으로 표시한다.
+   * 부모에서 viewport 안의 최신순 N개만 fetch해서 전달.
+   */
+  ghostPosts?: any[];
   viewedPostIds: Set<any>;
   onMarkerClick: (post: any) => void;
   onMapChange: (data: any) => void;
@@ -193,6 +199,7 @@ const isMarkerExpired = (post: any, now: number = Date.now()): boolean => {
 
 const MapContainer = ({
   posts,
+  ghostPosts,
   viewedPostIds,
   onMarkerClick,
   onMapChange,
@@ -272,18 +279,19 @@ const MapContainer = ({
       .map(p => ({ lat: p.lat as number, lng: p.lng as number }));
   }, [posts, markerExpiryNow]);
 
-  // 고스트(만료) 후보: 24시간이 지난 일반 포스트들. 광고는 제외.
-  // 최신순(생성일 내림차순)으로 우선순위 정렬해두고,
-  // 실제 표시는 viewport 안에 들어온 것 중 상위 N개만 추린다.
+  // 고스트(만료) 후보: 부모(Index.tsx)가 viewport 안의 만료 포스트를 별도 fetch해서
+  // ghostPosts prop으로 넘겨준다. 여기서는 좌표 유효성만 다시 한 번 거른다.
+  // 최신순(생성일 내림차순)으로 정렬해 viewport 진입 시 가장 최근 것부터 표시.
   const ghostCandidates = useMemo(() => {
-    return posts
-      .filter(p => p && p.lat != null && p.lng != null && isMarkerExpired(p, markerExpiryNow))
+    const list = ghostPosts ?? [];
+    return list
+      .filter(p => p && p.lat != null && p.lng != null)
       .map(p => ({
         post: p,
         createdMs: getPostCreatedAtMs(p) ?? 0,
       }))
       .sort((a, b) => b.createdMs - a.createdMs);
-  }, [posts, markerExpiryNow]);
+  }, [ghostPosts]);
 
   const ghostCandidatesRef = useRef(ghostCandidates);
   useEffect(() => { ghostCandidatesRef.current = ghostCandidates; }, [ghostCandidates]);

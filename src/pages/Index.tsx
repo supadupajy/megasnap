@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
 import MarkerExpiryNotice from '@/components/MarkerExpiryNotice';
-import ExpiredOnlyNotice from '@/components/ExpiredOnlyNotice';
 import ReelsViewer from '@/components/ReelsViewer';
 import PostDetail from '@/components/PostDetail';
 // PlaceSearch는 PlaceSearchOverlay로 대체되어 App.tsx에 전역 마운트됨
@@ -22,7 +21,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache, makeExpiredCountKey, EXPIRED_COUNT_CACHE_TTL_MS, EXPIRED_COUNT_CACHE_MAX } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, fetchExpiredOnlyCountInBounds, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, fetchExpiredOnlyCountInBounds, fetchExpiredPostsInBounds, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
@@ -1107,6 +1106,32 @@ const Index = () => {
   const [expiredOnlyCount, setExpiredOnlyCount] = useState(0);
   const expiredCheckTokenRef = useRef(0);
 
+  // ── 고스트(만료) 마커: 현재 bounds 안의 24시간 지난 포스트 상위 30개 ──
+  // MapContainer는 회색 작은 점("잔상")으로 표시한다. 정상 마커와 공존.
+  const [ghostPosts, setGhostPosts] = useState<any[]>([]);
+  const ghostFetchTokenRef = useRef(0);
+
+  useEffect(() => {
+    if (currentZoom >= 7 || !mapData?.bounds) {
+      setGhostPosts([]);
+      return;
+    }
+    const bounds = mapData.bounds;
+    const myToken = ++ghostFetchTokenRef.current;
+    // 250ms 디바운스 — 빠른 패닝/줌 중 과도한 호출 방지
+    const timer = window.setTimeout(async () => {
+      const list = await fetchExpiredPostsInBounds(bounds, {
+        limit: 30,
+        categories: selectedCategoriesRef.current,
+        userId: authUserIdRef.current,
+        followingIds: Array.from(followingIds),
+      });
+      if (myToken !== ghostFetchTokenRef.current) return;
+      setGhostPosts(list);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [mapData?.bounds, currentZoom, selectedCategories, authUser?.id, followingIds]);
+
   useEffect(() => {
     // 줌 아웃이거나 bounds가 없으면 즉시 0으로 리셋
     if (currentZoom >= 7 || !mapData?.bounds) {
@@ -1886,6 +1911,7 @@ const Index = () => {
           <div className="absolute inset-0 isolate">
             <MapContainer
               posts={displayedMarkers}
+              ghostPosts={ghostPosts}
               viewedPostIds={viewedIds}
               onMarkerClick={handleMarkerClick}
               onMapChange={handleMapChange}
@@ -2194,24 +2220,6 @@ const Index = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* "신규 마커는 없지만 24h 지난 추억이 있어요" 안내 — 조건이 유지되는 동안 계속 노출
-          하단 주소 배지(56px) 위로 충분히 띄워 인디케이터와 겹치지 않게 함 */}
-      <ExpiredOnlyNotice
-        visible={
-          !isSelectingLocation &&
-          !isSelectingAdLocation &&
-          !isPostListOpen &&
-          !isSearchOpen &&
-          !trendingReelsInitialPost &&
-          !isTrendingExpanded &&
-          currentZoom < 7 &&
-          displayedPostCount === 0 &&
-          expiredOnlyCount > 0
-        }
-        count={expiredOnlyCount}
-        bottomPx={indicatorBottomOffset + 56}
-      />
 
       {!isPostListOpen && !isSearchOpen && !trendingReelsInitialPost && (
         <div

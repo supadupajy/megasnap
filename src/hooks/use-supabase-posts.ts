@@ -257,6 +257,63 @@ export const fetchOffScreenCounts = async (
 };
 
 /**
+ * 현재 bounds 안에서 24시간이 지난(만료된) 포스트들을 최신순으로 가져온다.
+ * 지도에 "고스트(회색) 마커"로 잔상을 표시하기 위함이며,
+ * 부하를 줄이기 위해 작은 limit (기본 30) + 마커에 필요한 최소 컬럼만 조회.
+ */
+export const fetchExpiredPostsInBounds = async (
+  bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
+  options?: { limit?: number; categories?: string[]; userId?: string | null; followingIds?: string[] }
+): Promise<any[]> => {
+  const { sw, ne } = bounds;
+  const limit = options?.limit ?? 30;
+  try {
+    const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000;
+    const oneDayAgoIso = new Date(Date.now() - MARKER_LIFESPAN_MS).toISOString();
+
+    let query = supabase
+      .from('posts')
+      .select('id, latitude, longitude, image_url, video_url, created_at, user_id, category')
+      .gte('latitude', Math.min(sw.lat, ne.lat))
+      .lte('latitude', Math.max(sw.lat, ne.lat))
+      .gte('longitude', Math.min(sw.lng, ne.lng))
+      .lte('longitude', Math.max(sw.lng, ne.lng))
+      .lt('created_at', oneDayAgoIso)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    const cats = options?.categories || [];
+    if (cats.includes('mine') && options?.userId) {
+      query = query.eq('user_id', options.userId);
+    } else if (cats.includes('friends') && options?.followingIds && options.followingIds.length > 0) {
+      query = query.in('user_id', options.followingIds);
+    } else if (!cats.includes('all') && cats.length > 0 && !cats.includes('friends') && !cats.includes('mine')) {
+      const dbCats = cats.filter(c => ['food', 'accident', 'place', 'animal'].includes(c));
+      if (dbCats.length > 0) {
+        query = query.in('category', dbCats);
+      }
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    // MapContainer가 사용하는 필드명으로 정규화 (lat, lng, image_url, videoUrl, createdAt)
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      lat: row.latitude,
+      lng: row.longitude,
+      image_url: row.image_url,
+      videoUrl: row.video_url,
+      created_at: row.created_at,
+      user_id: row.user_id,
+      category: row.category,
+    }));
+  } catch (err) {
+    console.error('[SupabasePosts] fetchExpiredPostsInBounds error:', err);
+    return [];
+  }
+};
+
+/**
  * 현재 bounds 안에 "24시간이 지나서 지도엔 안 보이지만 DB엔 남아있는" 포스트가
  * 하나라도 있는지 카운트한다. head: true + limit(1) 로 가장 가벼운 형태로 조회.
  *
