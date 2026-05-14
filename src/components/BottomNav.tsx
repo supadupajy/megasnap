@@ -228,8 +228,18 @@ const BottomNav = () => {
           };
         });
 
+        // [DEBUG-2] nav 컨테이너 자체의 viewport 좌표 & 크기도 출력
+        const navParent = nav.parentElement;
+        const navParentRect = navParent?.getBoundingClientRect();
         // eslint-disable-next-line no-console
-        console.log(`[BottomNav][call#${myCall}][${trigger}] safeIndex=${safeIndex}(${navItems[safeIndex]?.label}) computedLeft=${computedLeft.toFixed(2)} iconCenterX=${(iconRect.left + iconRect.width / 2).toFixed(2)} ready=${ready} prevPillLeft=${pillLeft.toFixed(2)}`);
+        console.log(
+          `[BottomNav][call#${myCall}][${trigger}] safeIndex=${safeIndex}(${navItems[safeIndex]?.label}) ` +
+          `computedLeft=${computedLeft.toFixed(2)} iconCenterX=${(iconRect.left + iconRect.width / 2).toFixed(2)} ` +
+          `navRect.left=${navRect.left.toFixed(2)} navRect.width=${navRect.width.toFixed(2)} ` +
+          `navParent.left=${navParentRect?.left.toFixed(2)} navParent.width=${navParentRect?.width.toFixed(2)} ` +
+          `window.innerWidth=${window.innerWidth} documentElement.clientWidth=${document.documentElement.clientWidth} ` +
+          `body.clientWidth=${document.body.clientWidth}`
+        );
         // eslint-disable-next-line no-console
         console.table(allRects);
 
