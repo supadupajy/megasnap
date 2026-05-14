@@ -276,7 +276,10 @@ const BottomNav = () => {
                   )}
                 />
                 {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
-                  <span className="absolute right-2 top-1 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white shadow-sm" />
+                  <span
+                    aria-label="새 친구 포스팅"
+                    className="absolute right-2 top-1 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"
+                  />
                 )}
 
               </div>
