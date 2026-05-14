@@ -910,15 +910,33 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 /* =============================================
-   지도 탭 활성 Pill - 게임풍 사선 패턴 스크롤 배경
+   지도 탭 활성 Pill - 지도 격자 + 빛나는 교차점 패턴
    - 우상단(top-right) → 좌하단(bottom-left)으로 천천히 흐름
-   - 베이스: 다크 그레이 / 위에 미세한 사선 줄무늬 + 도트 그리드
+   - 베이스: 다크 그레이
+   - 레이어1: 가는 격자선 (지도 좌표 느낌)
+   - 레이어2: 격자 교차점의 빛나는 도트 (노란 glow)
+   - 레이어3: 중앙 펄스 글로우 (살아있는 느낌)
    ============================================= */
-@keyframes map-pill-pattern-flow {
-  /* 우상단에서 좌하단으로 흐르려면 background-position의
-     x는 양수 → 0(왼쪽으로 이동), y는 음수 → 0(아래로 이동) 방향 */
-  0%   { background-position:  56px -56px,   28px -28px,  0 0; }
-  100% { background-position:   0px   0px,    0px   0px,  0 0; }
+@keyframes map-pill-grid-flow {
+  /* 격자 셀 크기와 동일한 거리만큼 이동해야 끊김 없이 반복됨.
+     우상단(+x, -y) → 좌하단(-x, +y) 방향으로 흐름 */
+  0% {
+    background-position:
+      16px -16px,  /* 빛나는 도트 (16px 셀) */
+      16px -16px,  /* 가는 격자선 */
+      0 0;         /* 중앙 글로우 (정적) */
+  }
+  100% {
+    background-position:
+      0px 0px,
+      0px 0px,
+      0 0;
+  }
+}
+
+@keyframes map-pill-center-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.15); }
 }
 
 .map-pill-animated-bg {
@@ -926,33 +944,53 @@ video.post-item-video::-webkit-media-text-track-container {
   overflow: hidden;
   /* 베이스 다크 그레이 (기존 bg-gray-700 톤과 매칭) */
   background-color: rgb(55, 65, 81);
-  /* 3개 레이어:
-     1) 굵은 사선 줄무늬 (45deg) - 흐르는 핵심 패턴
-     2) 가는 사선 줄무늬 (45deg, 더 촘촘) - 깊이감
-     3) 노란 글로우 (정적) - 활성 강조 */
   background-image:
-    repeating-linear-gradient(
-      -45deg,
-      rgba(250, 204, 21, 0.10) 0px,
-      rgba(250, 204, 21, 0.10) 2px,
-      transparent 2px,
-      transparent 14px
-    ),
-    repeating-linear-gradient(
-      -45deg,
-      rgba(255, 255, 255, 0.05) 0px,
-      rgba(255, 255, 255, 0.05) 1px,
-      transparent 1px,
-      transparent 7px
-    ),
+    /* 1) 빛나는 교차점 도트 (노란 glow) - 격자 모서리에 위치 */
     radial-gradient(
-      circle at 50% 50%,
-      rgba(250, 204, 21, 0.18) 0%,
-      rgba(250, 204, 21, 0) 70%
-    );
-  background-size: 56px 56px, 28px 28px, 100% 100%;
-  background-repeat: repeat, repeat, no-repeat;
-  animation: map-pill-pattern-flow 6s linear infinite;
+      circle at 0 0,
+      rgba(250, 204, 21, 0.85) 0px,
+      rgba(250, 204, 21, 0.4) 1px,
+      rgba(250, 204, 21, 0) 2.5px
+    ),
+    /* 2) 가는 격자선 - 지도 좌표 느낌 */
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size:
+    16px 16px,
+    16px 16px,
+    16px 16px;
+  background-repeat: repeat, repeat, repeat;
+  animation: map-pill-grid-flow 7s linear infinite;
+}
+
+/* 중앙 펄스 글로우 - pseudo element로 분리해 자체 펄스 애니메이션 */
+.map-pill-animated-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(250, 204, 21, 0.35) 0%,
+    rgba(250, 204, 21, 0.12) 35%,
+    rgba(250, 204, 21, 0) 70%
+  );
+  animation: map-pill-center-pulse 2.4s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+/* 추가 글로우 오버레이 - 패턴 위에 부드러운 빛 번짐 */
+.map-pill-animated-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(253, 224, 71, 0.18) 0%,
+    rgba(253, 224, 71, 0) 55%
+  );
+  mix-blend-mode: screen;
 }
 
 /* =============================================
