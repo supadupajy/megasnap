@@ -189,7 +189,7 @@ const Settings = () => {
             <SettingItem
               icon={Megaphone}
               label="광고 문의"
-              sublabel="ChoraSnap에 광고를 게재하세요"
+              sublabel="TocaToca에 광고를 게재하세요"
               iconBg="bg-pink-50"
               iconColor="text-pink-500"
               onClick={() => navigate('/settings/ad')}
@@ -411,7 +411,7 @@ const Settings = () => {
             />
           </div>
           <p className="text-center text-[10px] text-gray-300 font-bold mt-8 uppercase tracking-tighter">
-            ChoraSnap Version 1.0.0
+            TocaToca Version 1.0.0
           </p>
         </div>
       </div>

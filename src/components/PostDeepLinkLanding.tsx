@@ -155,10 +155,10 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
       {/* 앱 브랜딩 헤더 */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-indigo-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center">
-            <MapPin className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-xl overflow-hidden">
+            <img src="/tocatoca-logo.png" alt="TocaToca" className="w-full h-full object-cover" />
           </div>
-          <span className="font-black text-gray-900 text-lg tracking-tight">ChoraSnap</span>
+          <span className="font-black text-gray-900 text-lg tracking-tight">TocaToca</span>
         </div>
         <button
           onClick={handleLoginAndView}
@@ -235,7 +235,7 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
         <div className="bg-white rounded-3xl shadow-lg p-5 border border-gray-100 space-y-4">
           <div className="text-center space-y-1">
             <h2 className="text-lg font-black text-gray-900">
-              ChoraSnap에서 전체 내용 보기
+              TocaToca에서 전체 내용 보기
             </h2>
             <p className="text-sm text-gray-500">
               지도 기반 여행 포스팅 앱 · 내 주변 여행지 발견

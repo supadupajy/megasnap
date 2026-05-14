@@ -56,7 +56,7 @@ serve(async (req) => {
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;margin:0;padding:20px;">
   <div style="max-width:560px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
     <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px 28px;">
-      <p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">ChoraSnap Support</p>
+      <p style="color:rgba(255,255,255,0.7);font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 8px;">TocaToca Support</p>
       <h1 style="color:white;font-size:22px;font-weight:900;margin:0;">새로운 1:1 문의가 접수되었습니다</h1>
     </div>
     <div style="padding:28px;">
@@ -80,7 +80,7 @@ serve(async (req) => {
       </table>
     </div>
     <div style="background:#f9fafb;padding:16px 28px;border-top:1px solid #f0f0f0;">
-      <p style="font-size:11px;color:#9ca3af;margin:0;text-align:center;">이 메일은 ChoraSnap 앱의 1:1 문의 폼을 통해 자동 발송되었습니다.</p>
+      <p style="font-size:11px;color:#9ca3af;margin:0;text-align:center;">이 메일은 TocaToca 앱의 1:1 문의 폼을 통해 자동 발송되었습니다.</p>
     </div>
   </div>
 </body>
@@ -99,10 +99,10 @@ serve(async (req) => {
     console.log('[send-inquiry] 이메일 전송 시작...');
 
     await transporter.sendMail({
-      from: `"ChoraSnap Support" <${gmailUser}>`,
+      from: `"TocaToca Support" <${gmailUser}>`,
       to: "chorasnap@gmail.com",
       replyTo: user.email,
-      subject: `[ChoraSnap 문의] [${category}] ${title}`,
+      subject: `[TocaToca 문의] [${category}] ${title}`,
       html: htmlBody,
     });
 

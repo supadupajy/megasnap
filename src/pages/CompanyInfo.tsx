@@ -30,10 +30,10 @@ const CompanyInfo = () => {
         <div className="px-4 pt-5">
           {/* 로고 영역 */}
           <div className="flex flex-col items-center py-6 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center mb-3 shadow-lg shadow-indigo-100">
-              <span className="text-white font-black text-xl">C</span>
+            <div className="w-16 h-16 rounded-2xl overflow-hidden mb-3 shadow-lg shadow-yellow-200/60">
+              <img src="/tocatoca-logo.png" alt="TocaToca" className="w-full h-full object-cover" />
             </div>
-            <h2 className="text-lg font-black text-gray-900">ChoraSnap</h2>
+            <h2 className="text-lg font-black text-gray-900">TocaToca</h2>
             <p className="text-[12px] text-gray-400 font-medium mt-1">위치 기반 소셜 플랫폼</p>
           </div>
 
@@ -58,7 +58,7 @@ const CompanyInfo = () => {
           </div>
 
           <p className="text-center text-[11px] text-gray-300 font-medium mt-6 leading-relaxed">
-            ChoraSnap은 통신판매중개자로서 거래 당사자가 아니며,<br />
+            TocaToca는 통신판매중개자로서 거래 당사자가 아니며,<br />
             판매자가 등록한 상품 정보 및 거래에 대한 책임은 판매자에게 있습니다.
           </p>
         </div>

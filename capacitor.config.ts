@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.chorasnap.chorasnap',
-  appName: 'ChoraSnap',
+  appName: 'TocaToca',
   webDir: 'dist',
   server: {
     hostname: 'localhost',

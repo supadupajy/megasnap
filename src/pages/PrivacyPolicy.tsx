@@ -288,7 +288,7 @@ const PrivacyPolicy = ({ fromSignup = false }: { fromSignup?: boolean }) => {
           <div className="bg-indigo-50 rounded-2xl p-4 mb-5">
             <p className="text-[12px] text-indigo-700 font-medium leading-relaxed">
               시행일: 2026년 5월 1일<br />
-              ChoraSnap(이하 "회사")은 이용자의 개인정보를 중요시하며, 「개인정보 보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 등 관련 법령을 준수합니다. 본 방침은 회사가 제공하는 서비스 이용과 관련하여 이용자의 개인정보가 어떻게 수집·이용·보관·파기되는지 알려드립니다.
+              TocaToca(이하 "회사")는 이용자의 개인정보를 중요시하며, 「개인정보 보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 등 관련 법령을 준수합니다. 본 방침은 회사가 제공하는 서비스 이용과 관련하여 이용자의 개인정보가 어떻게 수집·이용·보관·파기되는지 알려드립니다.
             </p>
           </div>
 

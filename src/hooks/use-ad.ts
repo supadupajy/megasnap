@@ -53,7 +53,7 @@ export const RECRUITMENT_SLOT: AdSlot = {
   title: '광고 문의',
   subtitle: 'chorasnap@gmail.com',
   link_url: 'mailto:chorasnap@gmail.com',
-  brand_name: 'ChoraSnap',
+  brand_name: 'TocaToca',
   brand_logo_url: '',
   isNext: false,
   isRecruitment: true,

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Camera, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
 
@@ -25,15 +25,15 @@ const SplashScreen = () => {
 
       <div className="relative w-full flex flex-col items-center">
         {/* Background Glow */}
-        <motion.div 
+        <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1.2, opacity: 0.15 }}
-          transition={{ 
-            duration: 2, 
-            repeat: Infinity, 
-            repeatType: "reverse" 
+          animate={{ scale: 1.2, opacity: 0.25 }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            repeatType: "reverse"
           }}
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-indigo-600 blur-3xl rounded-full"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-yellow-400 blur-3xl rounded-full"
         />
 
         <div className="relative flex flex-col items-center gap-6 w-full">
@@ -47,9 +47,13 @@ const SplashScreen = () => {
               damping: 20,
               delay: 0.4
             }}
-            className="w-20 h-20 bg-indigo-600 rounded-[28px] flex items-center justify-center shadow-2xl shadow-indigo-200"
+            className="w-24 h-24 rounded-[28px] overflow-hidden shadow-2xl shadow-yellow-300/60"
           >
-            <Camera className="w-10 h-10 text-white" strokeWidth={2.5} />
+            <img
+              src="/tocatoca-logo.png"
+              alt="TocaToca"
+              className="w-full h-full object-cover"
+            />
           </motion.div>
 
           {/* Brand Name */}
@@ -61,7 +65,7 @@ const SplashScreen = () => {
               className="text-4xl font-black text-gray-900 tracking-tighter"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              Chora<span className="text-indigo-600">Snap</span>
+              Toca<span className="text-yellow-500">Toca</span>
             </motion.h1>
             
             <motion.p
@@ -70,7 +74,7 @@ const SplashScreen = () => {
               transition={{ delay: 0.8, duration: 0.8 }}
               className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase"
             >
-              Be here. Be seen.
+              Tap, Talk, Together.
             </motion.p>
           </div>
 
@@ -143,11 +147,11 @@ const SplashScreen = () => {
 
       {/* Loading Bar */}
       <div className="absolute bottom-20 w-40 h-1 bg-gray-100 rounded-full overflow-hidden">
-        <motion.div 
+        <motion.div
           initial={{ x: "-100%" }}
           animate={{ x: "0%" }}
           transition={{ duration: 2.5, ease: "easeInOut", delay: 0.5 }}
-          className="w-full h-full bg-indigo-600"
+          className="w-full h-full bg-yellow-400"
         />
       </div>
     </motion.div>
