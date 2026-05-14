@@ -122,7 +122,7 @@ const PasswordSecurity = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* 비밀번호 변경 */}
         <div className="px-4 pt-5">

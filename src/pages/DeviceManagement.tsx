@@ -48,7 +48,7 @@ const DeviceManagement = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="px-4 pt-5 space-y-4">
           <p className="text-[13px] text-gray-400 font-medium px-1">
             현재 계정에 로그인된 기기 목록입니다. 실제 세션 데이터가 연결되면 이 화면에 표시됩니다.

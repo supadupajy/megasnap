@@ -190,7 +190,7 @@ const DBImageCompression = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         <div className="mx-4 mt-5 rounded-3xl bg-orange-500 p-5 text-white shadow-xl shadow-orange-100">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center">

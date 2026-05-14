@@ -84,7 +84,7 @@ const AdInquiry = () => {
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-6">
             <CheckCircle2 className="w-10 h-10 text-indigo-600" />
           </div>
@@ -114,7 +114,7 @@ const AdInquiry = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* 히어로 배너 */}
         <div className="mx-4 mt-5 bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400 rounded-3xl p-6 text-gray-900 shadow-xl shadow-amber-200">

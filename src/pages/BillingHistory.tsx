@@ -16,7 +16,7 @@ const BillingHistory = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="px-4 pt-5">
           <div className="bg-white rounded-[28px] border border-gray-100 shadow-sm p-8 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center mb-4">

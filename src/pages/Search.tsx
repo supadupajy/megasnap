@@ -190,7 +190,7 @@ const Search = () => {
 
       {/* 유저 리스트 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className="px-4" style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="px-4" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
           <div className="space-y-1">
             {isLoading ? (
               // 초기 로딩 스켈레톤

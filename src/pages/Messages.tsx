@@ -334,7 +334,7 @@ const Messages = () => {
     <div
       className="h-screen min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-contain"
       style={{
-        paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))',
+        paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
         WebkitOverflowScrolling: 'touch',
       }}
       onClick={() => setSwipedId(null)}

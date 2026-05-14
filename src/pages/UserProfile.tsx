@@ -315,7 +315,7 @@ const UserProfile = () => {
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)', paddingBottom: 'calc(7rem + env(safe-area-inset-bottom, 0px))' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)', paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {loading ? (
           <ProfileSkeleton />

@@ -140,7 +140,7 @@ const Follow = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div className="min-h-screen bg-white no-scrollbar" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
       {/* 글로벌 헤더(64px) + safe area 아래에 서브 헤더 배치 */}
       <div className="pt-[64px]">
         {/* 서브 헤더: 뒤로가기 + 중앙 타이틀 */}

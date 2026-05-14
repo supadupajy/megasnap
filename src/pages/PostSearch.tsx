@@ -188,7 +188,7 @@ const PostDetailFullPage = ({
 
       <div
         className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)', paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 120px)', paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -417,7 +417,7 @@ const PostSearch = () => {
 
       {/* 결과 영역 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div style={{ paddingBottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
           {!hasSearched ? (
             <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
               <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">

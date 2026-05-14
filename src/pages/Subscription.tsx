@@ -64,7 +64,7 @@ const Subscription = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="px-4 pt-5 space-y-3">
           <p className="text-[13px] text-gray-400 font-medium px-1 mb-4">
             현재 플랜: <span className="text-indigo-600 font-black">Free</span>

@@ -68,7 +68,7 @@ const ConnectedAccounts = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="px-4 pt-5">
           <p className="text-[13px] text-gray-400 font-medium mb-4 px-1">
             소셜 계정을 연결하면 해당 계정으로 간편하게 로그인할 수 있습니다.
