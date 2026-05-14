@@ -2048,7 +2048,7 @@ const Index = () => {
                     className={cn("w-16 h-16 bg-amber-400 rounded-[24px] flex flex-col items-center justify-center text-gray-900 shadow-[0_15px_30px_rgba(251,191,36,0.45)] active:scale-95 transition-all border-2 border-white/30 overflow-hidden relative gap-0.5", (currentZoom >= 7 || displayedPostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none text-white")}
                   >
                     <span className="text-[9px] font-black tracking-widest text-gray-900/60 relative z-10 leading-none">ALL</span>
-                    <span className="text-[11px] font-black relative z-10 leading-tight">여기보기</span>
+                    <span className="text-[11px] font-black relative z-10 leading-tight">지금 여기</span>
                     <div className="flex flex-col items-center gap-[3px] mt-0.5 relative z-10">
                       <div className="w-8 h-[2px] bg-gray-900/40 rounded-full" />
                       <div className="w-5 h-[2px] bg-gray-900/25 rounded-full" />
