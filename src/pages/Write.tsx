@@ -718,11 +718,6 @@ const Write = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {currentPage === 2 && (
-                  <button onClick={() => setCurrentPage(1)} className="p-2 bg-white rounded-full shadow-sm border border-gray-100 text-gray-800 active:scale-95 transition-all">
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -934,6 +929,17 @@ const Write = () => {
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">(선택)</span>
+                    <div className="ml-auto flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(1)}
+                        aria-label="이전 단계로"
+                        className="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-indigo-500 text-white shadow-md shadow-indigo-200 active:scale-90"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <span className="text-sm font-bold text-gray-900">뒤로</span>
+                    </div>
                   </div>
                   <div
                     onClick={() => navigate('/', { state: { startSelection: true } })}
