@@ -204,84 +204,47 @@ const BottomNav = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    let callCount = 0;
-    const updatePillPosition = (trigger: string) => {
-      callCount += 1;
-      const myCall = callCount;
+    const updatePillPosition = () => {
       const iconEl = iconRefs.current[safeIndex];
       const nav = navRef.current;
       if (iconEl && nav) {
         const navRect = nav.getBoundingClientRect();
         const iconRect = iconEl.getBoundingClientRect();
-        const computedLeft = iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2;
-
-        // 모든 아이콘 좌표를 표 형태로 출력 (펼치지 않아도 보임)
-        const allRects = iconRefs.current.map((el, i) => {
-          if (!el) return { i, label: navItems[i]?.label, missing: true } as const;
-          const r = el.getBoundingClientRect();
-          return {
-            i,
-            label: navItems[i]?.label,
-            left: Math.round(r.left * 100) / 100,
-            width: Math.round(r.width * 100) / 100,
-            centerX: Math.round((r.left + r.width / 2) * 100) / 100,
-          };
-        });
-
-        // [DEBUG-2] nav 컨테이너 자체의 viewport 좌표 & 크기도 출력
-        const navParent = nav.parentElement;
-        const navParentRect = navParent?.getBoundingClientRect();
-        // eslint-disable-next-line no-console
-        console.log(
-          `[BottomNav][call#${myCall}][${trigger}] safeIndex=${safeIndex}(${navItems[safeIndex]?.label}) ` +
-          `computedLeft=${computedLeft.toFixed(2)} iconCenterX=${(iconRect.left + iconRect.width / 2).toFixed(2)} ` +
-          `navRect.left=${navRect.left.toFixed(2)} navRect.width=${navRect.width.toFixed(2)} ` +
-          `navParent.left=${navParentRect?.left.toFixed(2)} navParent.width=${navParentRect?.width.toFixed(2)} ` +
-          `window.innerWidth=${window.innerWidth} documentElement.clientWidth=${document.documentElement.clientWidth} ` +
-          `body.clientWidth=${document.body.clientWidth}`
-        );
-        // eslint-disable-next-line no-console
-        console.table(allRects);
-
-        setPillLeft(computedLeft);
+        setPillLeft(iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2);
         setReady(true);
-      } else {
-        // eslint-disable-next-line no-console
-        console.warn(`[BottomNav][call#${myCall}][${trigger}] SKIP - iconEl=${!!iconEl} nav=${!!nav} safeIndex=${safeIndex}`);
       }
     };
 
-    // 원래 호출
-    updatePillPosition('initial');
+    // 초기 위치 계산
+    updatePillPosition();
 
-    // 다음 프레임에 한 번 더 보정
-    const rafId = requestAnimationFrame(() => updatePillPosition('raf'));
+    // 다음 프레임에 한 번 더 보정 (폰트 로딩이나 레이아웃 변경 대응)
+    const rafId = requestAnimationFrame(updatePillPosition);
 
     const nav = navRef.current;
     if (!nav) {
       return () => cancelAnimationFrame(rafId);
     }
 
+    // 네비게이션 컨테이너 자체와 각 아이콘 wrapper 사이즈 변경 추적
     const resizeObserver = new ResizeObserver(() => {
-      updatePillPosition('resize-observer');
+      updatePillPosition();
     });
     resizeObserver.observe(nav);
     iconRefs.current.forEach((el) => {
       if (el) resizeObserver.observe(el);
     });
 
-    const onResize = () => updatePillPosition('window-resize');
-    window.addEventListener('resize', onResize);
-    window.addEventListener('orientationchange', onResize);
+    // 윈도우 리사이즈 / orientation 변경 대응
+    window.addEventListener('resize', updatePillPosition);
+    window.addEventListener('orientationchange', updatePillPosition);
 
     return () => {
       cancelAnimationFrame(rafId);
       resizeObserver.disconnect();
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('orientationchange', onResize);
+      window.removeEventListener('resize', updatePillPosition);
+      window.removeEventListener('orientationchange', updatePillPosition);
     };
-    // 일부러 ready/pillLeft를 deps에서 제외 (기존 동작 유지)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeIndex]);
 
   const handleNavClick = (path: string) => {
@@ -307,9 +270,6 @@ const BottomNav = () => {
         {/* Sliding pill background */}
         {ready && (
           <motion.div
-            data-debug-pill="true"
-            data-debug-pill-left={pillLeft}
-            data-debug-pill-tab={navItems[safeIndex]?.label}
             className={cn(
               'absolute pointer-events-none transition-colors duration-200',
               navItems[safeIndex]?.path === '/' ? 'map-pill-animated-bg' : 'bg-gray-200'
@@ -318,23 +278,6 @@ const BottomNav = () => {
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 1000, damping: 50 }}
-            onAnimationComplete={() => {
-              // [DEBUG] 애니메이션 후 실제 pill의 화면 좌표 확인
-              const pillEl = document.querySelector('[data-debug-pill="true"]') as HTMLElement | null;
-              const iconEl = iconRefs.current[safeIndex];
-              if (pillEl && iconEl) {
-                const pillRect = pillEl.getBoundingClientRect();
-                const iconRect = iconEl.getBoundingClientRect();
-                console.log('[BottomNav] pill animation complete', {
-                  activeTab: navItems[safeIndex]?.label,
-                  pillCenterX: pillRect.left + pillRect.width / 2,
-                  iconCenterX: iconRect.left + iconRect.width / 2,
-                  diff: (pillRect.left + pillRect.width / 2) - (iconRect.left + iconRect.width / 2),
-                  pillLeftProp: pillLeft,
-                  pillActualLeft: pillRect.left,
-                });
-              }
-            }}
           />
         )}
 

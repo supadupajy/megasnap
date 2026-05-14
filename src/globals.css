@@ -940,7 +940,9 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 .map-pill-animated-bg {
-  position: relative;
+  /* position 선언 제거: 부모 motion.div의 'absolute' 클래스를 덮어쓰면
+     flex 레이아웃에 끼어들어 다른 아이콘들이 밀려나는 문제 발생함.
+     pseudo-element(::before/::after)는 부모가 absolute여도 정상 동작. */
   overflow: hidden;
   background-color: rgb(55, 65, 81);
   background-image:
