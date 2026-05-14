@@ -323,7 +323,7 @@ const BottomNav = () => {
             style={{ height: 44 }}
             animate={{ left: pillStyle.left, width: pillStyle.width }}
             initial={{ left: pillStyle.left, width: pillStyle.width }}
-            transition={{ type: 'spring', stiffness: 1000, damping: 50, mass: 0.5 }}
+            transition={{ type: 'spring', stiffness: 1000, damping: 20, mass: 0.5 }}
           />
         )}
 
