@@ -38,6 +38,11 @@ const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그
 const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000; // 24시간
 const MARKER_EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // 1분마다 만료/타이머 갱신
 
+// ── 고스트(만료) 마커 관련 상수 ────────────────────────────────────────
+// 24시간이 지나 활성 마커에서 사라진 포스트들을 회색 잔상으로 표시.
+// DB에 수천개가 있어도 한 화면에는 아래 개수까지만 그려서 부하를 최소화한다.
+const GHOST_MARKER_MAX_VISIBLE = 30;
+
 // 카운트다운 링 사각 둥근 테두리 파라미터 (60×60 마커 inner box 안쪽)
 // inner box: width=60, height=60, border-radius=20, border=4.5px
 // 외곽 테두리 바로 안쪽에 딱 붙도록 padding을 최소화 → 좋아요 카운트 가리지 않음
@@ -225,6 +230,8 @@ const MapContainer = ({
   const pressStartTimeRef = useRef<number>(0);
 
   const overlaysRef = useRef<Map<string, any>>(new Map());
+  // 고스트(만료) 마커 전용 오버레이 맵 - 활성 마커와 분리 관리
+  const ghostOverlaysRef = useRef<Map<string, any>>(new Map());
   const cachedMarkerIdsOnMountRef = useRef<Set<string>>(new Set(mapCache.posts.map(post => String(post.id))));
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   const searchOverlayRef = useRef<any>(null);
@@ -264,6 +271,26 @@ const MapContainer = ({
       .filter(p => p.lat != null && p.lng != null && !isMarkerExpired(p, markerExpiryNow))
       .map(p => ({ lat: p.lat as number, lng: p.lng as number }));
   }, [posts, markerExpiryNow]);
+
+  // 고스트(만료) 후보: 24시간이 지난 일반 포스트들. 광고는 제외.
+  // 좋아요 수 + 최신순(생성일 내림차순) 가중치로 우선순위 정렬해두고,
+  // 실제 표시는 viewport 안에 들어온 것 중 상위 N개만 추린다.
+  const ghostCandidates = useMemo(() => {
+    return posts
+      .filter(p => p && p.lat != null && p.lng != null && isMarkerExpired(p, markerExpiryNow))
+      .map(p => ({
+        post: p,
+        likes: Number((p as any).likes ?? 0),
+        createdMs: getPostCreatedAtMs(p) ?? 0,
+      }))
+      .sort((a, b) => {
+        if (b.likes !== a.likes) return b.likes - a.likes;
+        return b.createdMs - a.createdMs;
+      });
+  }, [posts, markerExpiryNow]);
+
+  const ghostCandidatesRef = useRef(ghostCandidates);
+  useEffect(() => { ghostCandidatesRef.current = ghostCandidates; }, [ghostCandidates]);
 
   // draggable prop 변경 시 카카오맵 드래그 활성/비활성
   useEffect(() => {
@@ -416,6 +443,14 @@ const MapContainer = ({
         if (badge) badge.style.opacity = '0';
       }
     });
+    // 고스트 마커도 함께 숨김
+    ghostOverlaysRef.current.forEach((overlay) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (content) {
+        content.classList.remove('markers-revealing');
+        content.classList.add('markers-hidden');
+      }
+    });
     if (searchOverlayRef.current) {
       const c = searchOverlayRef.current.getContent() as HTMLElement;
       if (c) { c.style.transition = 'opacity 0.25s ease-out'; c.style.opacity = '0'; }
@@ -431,6 +466,14 @@ const MapContainer = ({
         // 배지 복원
         const badge = content.querySelector('.overlap-badge') as HTMLElement | null;
         if (badge) badge.style.opacity = '1';
+      }
+    });
+    // 고스트 마커도 함께 복원
+    ghostOverlaysRef.current.forEach((overlay) => {
+      const content = overlay.getContent() as HTMLElement;
+      if (content) {
+        content.classList.remove('markers-hidden');
+        content.classList.add('markers-revealing');
       }
     });
     if (searchOverlayRef.current) {
@@ -1180,6 +1223,9 @@ const MapContainer = ({
         removalTimeoutsRef.current.clear();
         viewportAnimationTimersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
         viewportAnimationTimersRef.current.clear();
+        // 고스트 마커도 함께 즉시 제거
+        ghostOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
+        ghostOverlaysRef.current.clear();
       }
 
       if (level === MIN_LEVEL) {
@@ -1418,6 +1464,159 @@ const MapContainer = ({
       searchOverlayRef.current = overlay;
     }
   }, [searchResultLocation, isMapReady]);
+
+  // ── 고스트(만료) 마커 동기화 ──────────────────────────────────────────
+  // viewport 안에 들어온 만료 후보 중 우선순위 상위 GHOST_MARKER_MAX_VISIBLE 개만
+  // 회색 작은 점으로 표시. 줌 레벨 7 이상이거나 마커 숨김 모드일 때는 모두 제거.
+  const syncGhostMarkers = useCallback(() => {
+    const kakao = (window as any).kakao;
+    const map = mapInstance.current;
+    if (!isMapReady || !map || !kakao?.maps?.CustomOverlay) return;
+
+    // 줌 레벨 7 이상이면 고스트 마커도 모두 제거 (활성 마커와 동일 정책)
+    if (map.getLevel() >= 7) {
+      if (ghostOverlaysRef.current.size > 0) {
+        ghostOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
+        ghostOverlaysRef.current.clear();
+      }
+      return;
+    }
+
+    // viewport 안에 있는 후보만 추리고 상위 N개 선택
+    let bounds: any;
+    let sw: any;
+    let ne: any;
+    try {
+      bounds = map.getBounds();
+      sw = bounds.getSouthWest();
+      ne = bounds.getNorthEast();
+    } catch {
+      return;
+    }
+    const minLat = Math.min(sw.getLat(), ne.getLat());
+    const maxLat = Math.max(sw.getLat(), ne.getLat());
+    const minLng = Math.min(sw.getLng(), ne.getLng());
+    const maxLng = Math.max(sw.getLng(), ne.getLng());
+
+    const candidates = ghostCandidatesRef.current;
+    const selected: any[] = [];
+    for (let i = 0; i < candidates.length && selected.length < GHOST_MARKER_MAX_VISIBLE; i++) {
+      const c = candidates[i];
+      const lat = c.post.lat as number;
+      const lng = c.post.lng as number;
+      if (lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng) {
+        selected.push(c.post);
+      }
+    }
+
+    const selectedIds = new Set<string>(selected.map(p => String(p.id)));
+
+    // 더 이상 선택되지 않은 ghost 오버레이 제거 (페이드아웃)
+    ghostOverlaysRef.current.forEach((overlay, id) => {
+      if (!selectedIds.has(id)) {
+        const content = overlay.getContent() as HTMLElement | null;
+        if (content && !content.classList.contains('ghost-disappear')) {
+          content.classList.add('ghost-disappear');
+          window.setTimeout(() => {
+            const cur = ghostOverlaysRef.current.get(id);
+            if (cur && cur === overlay) {
+              cur.setMap(null);
+              ghostOverlaysRef.current.delete(id);
+            }
+          }, 360);
+        } else if (!content) {
+          overlay.setMap(null);
+          ghostOverlaysRef.current.delete(id);
+        }
+      }
+    });
+
+    // 새로 선택된 ghost 오버레이 생성
+    selected.forEach((post) => {
+      const id = String(post.id);
+      if (ghostOverlaysRef.current.has(id)) return;
+
+      const content = document.createElement('div');
+      content.className = 'ghost-marker-container';
+      // 클릭 시 일반 마커처럼 onMarkerClick 호출
+      content.onclick = (e) => {
+        e.stopPropagation();
+        if (isDragging.current) return;
+        onMarkerClickRef.current(post);
+      };
+
+      // 썸네일 결정 - 비디오 캐시 활용. 깨진/목업 URL이면 빈 회색 점.
+      let img = (post as any).image_url || (post as any).image || '';
+      const isBroken = !img || img === 'null' || img === 'undefined' || (typeof img === 'string' && img.startsWith('blob:'));
+      const lower = typeof img === 'string' ? img.toLowerCase().split('?')[0] : '';
+      const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
+      if (isBroken || isVideo) {
+        const cached = videoThumbCacheRef.current.get(id);
+        img = cached || '';
+      }
+      const optimized = img ? getOptimizedMarkerImage(img, id) : '';
+
+      content.innerHTML = `<div class="ghost-marker-dot">${
+        optimized ? `<img src="${optimized}" alt="" />` : ''
+      }</div>`;
+
+      // 롱프레스 숨김 모드면 즉시 숨김
+      if (markersHiddenRef.current) {
+        content.classList.add('markers-hidden');
+      }
+
+      const overlay = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(post.lat, post.lng),
+        content,
+        xAnchor: 0.5,
+        yAnchor: 0.5,
+        zIndex: 200, // 활성 마커(300+)보다 아래
+      });
+      overlay.setMap(map);
+      ghostOverlaysRef.current.set(id, overlay);
+    });
+  }, [isMapReady]);
+
+  const ghostUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleGhostMarkerUpdate = useCallback(() => {
+    if (ghostUpdateTimerRef.current) clearTimeout(ghostUpdateTimerRef.current);
+    ghostUpdateTimerRef.current = setTimeout(() => {
+      ghostUpdateTimerRef.current = null;
+      syncGhostMarkers();
+    }, 180);
+  }, [syncGhostMarkers]);
+
+  // 후보 목록이 바뀌거나 지도가 준비되면 즉시 한번, 그리고 이후 지도 이동 이벤트에 묶음
+  useEffect(() => {
+    if (!isMapReady) return;
+    scheduleGhostMarkerUpdate();
+  }, [isMapReady, ghostCandidates, scheduleGhostMarkerUpdate]);
+
+  useEffect(() => {
+    if (!isMapReady || !mapInstance.current) return;
+    const kakao = (window as any).kakao;
+    if (!kakao?.maps) return;
+    const map = mapInstance.current;
+    kakao.maps.event.addListener(map, 'idle', scheduleGhostMarkerUpdate);
+    kakao.maps.event.addListener(map, 'zoom_changed', scheduleGhostMarkerUpdate);
+    kakao.maps.event.addListener(map, 'dragend', scheduleGhostMarkerUpdate);
+    return () => {
+      kakao.maps.event.removeListener(map, 'idle', scheduleGhostMarkerUpdate);
+      kakao.maps.event.removeListener(map, 'zoom_changed', scheduleGhostMarkerUpdate);
+      kakao.maps.event.removeListener(map, 'dragend', scheduleGhostMarkerUpdate);
+    };
+  }, [isMapReady, scheduleGhostMarkerUpdate]);
+
+  // 언마운트 시 ghost 오버레이 정리
+  useEffect(() => {
+    return () => {
+      if (ghostUpdateTimerRef.current) clearTimeout(ghostUpdateTimerRef.current);
+      ghostOverlaysRef.current.forEach((o) => {
+        try { o.setMap(null); } catch {}
+      });
+      ghostOverlaysRef.current.clear();
+    };
+  }, []);
 
   // ── 마커 겹침 배지 업데이트 ──────────────────────────────────────────
   const updateOverlapBadges = useCallback(() => {
