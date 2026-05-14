@@ -210,7 +210,25 @@ const BottomNav = () => {
       if (iconEl && nav) {
         const navRect = nav.getBoundingClientRect();
         const iconRect = iconEl.getBoundingClientRect();
-        setPillLeft(iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2);
+        const computedLeft = iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2;
+
+        // [DEBUG] pill 좌표 계산 검증
+        console.log('[BottomNav] updatePillPosition', {
+          safeIndex,
+          activeTabPath: navItems[safeIndex]?.path,
+          activeTabLabel: navItems[safeIndex]?.label,
+          navRect: { left: navRect.left, width: navRect.width },
+          iconRect: { left: iconRect.left, width: iconRect.width, centerX: iconRect.left + iconRect.width / 2 },
+          PILL_WIDTH,
+          computedLeft,
+          allIconRects: iconRefs.current.map((el, i) => {
+            if (!el) return { i, missing: true };
+            const r = el.getBoundingClientRect();
+            return { i, label: navItems[i]?.label, left: r.left, width: r.width, centerX: r.left + r.width / 2 };
+          }),
+        });
+
+        setPillLeft(computedLeft);
         setReady(true);
       }
     };
@@ -270,6 +288,9 @@ const BottomNav = () => {
         {/* Sliding pill background */}
         {ready && (
           <motion.div
+            data-debug-pill="true"
+            data-debug-pill-left={pillLeft}
+            data-debug-pill-tab={navItems[safeIndex]?.label}
             className={cn(
               'absolute pointer-events-none transition-colors duration-200',
               navItems[safeIndex]?.path === '/' ? 'map-pill-animated-bg' : 'bg-gray-200'
@@ -278,6 +299,23 @@ const BottomNav = () => {
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 1000, damping: 50 }}
+            onAnimationComplete={() => {
+              // [DEBUG] 애니메이션 후 실제 pill의 화면 좌표 확인
+              const pillEl = document.querySelector('[data-debug-pill="true"]') as HTMLElement | null;
+              const iconEl = iconRefs.current[safeIndex];
+              if (pillEl && iconEl) {
+                const pillRect = pillEl.getBoundingClientRect();
+                const iconRect = iconEl.getBoundingClientRect();
+                console.log('[BottomNav] pill animation complete', {
+                  activeTab: navItems[safeIndex]?.label,
+                  pillCenterX: pillRect.left + pillRect.width / 2,
+                  iconCenterX: iconRect.left + iconRect.width / 2,
+                  diff: (pillRect.left + pillRect.width / 2) - (iconRect.left + iconRect.width / 2),
+                  pillLeftProp: pillLeft,
+                  pillActualLeft: pillRect.left,
+                });
+              }
+            }}
           />
         )}
 
