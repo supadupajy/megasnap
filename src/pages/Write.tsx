@@ -927,7 +927,7 @@ const Write = () => {
               <div className="space-y-5">
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 px-1">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-widest">장소 정보</p>
                     <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">(선택)</span>
                     <div className="ml-auto flex items-center gap-2">
                       <button
