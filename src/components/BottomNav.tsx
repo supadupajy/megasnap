@@ -277,7 +277,7 @@ const BottomNav = () => {
             style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
-            transition={{ type: 'spring', stiffness: 700, damping: 38 }}
+            transition={{ type: 'spring', stiffness: 1000, damping: 38 }}
           />
         )}
 
