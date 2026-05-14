@@ -1097,17 +1097,25 @@ const Index = () => {
   // 2) 신규 마커가 0개이고 24h 지난 포스트가 화면 영역 안에 있으면
   //    그 상태가 유지되는 동안 토스트를 계속 노출한다 (사용자가 다른 영역으로 이동/줌하면 자동 해제).
   //
+  // ⚠ 깜빡임 방지: mapData.bounds(throttled)와 visibleMarkerIds(즉시) 두 state가
+  //    독립적으로 업데이트되어 짧은 순간 displayedPostCount===0이 잘못 평가되는
+  //    구간이 생긴다. 그래서 displayedPostCount===0 상태를 곧바로 신뢰하지 않고
+  //    400ms 동안 유지될 때에만 쿼리/표시를 진행한다.
+  //
   // ⚠ DB 부하 방어: 같은 영역(양자화된 bounds + 필터 시그니처)은 60초 TTL 캐시로
   //   재쿼리를 막는다. 페이지 재진입/미세 패닝 시 DB hit을 거의 0으로 만든다.
   const [expiredOnlyCount, setExpiredOnlyCount] = useState(0);
   const expiredCheckTokenRef = useRef(0);
 
   useEffect(() => {
-    // 검사 트리거 조건:
-    // - 지도가 마커 표시 레벨일 때만 (zoom < 7)
-    // - 화면에 보이는 신규 마커가 0개일 때만
-    // - bounds 정보가 있을 때만
-    if (currentZoom >= 7 || !mapData?.bounds || displayedPostCount > 0) {
+    // 줌 아웃이거나 bounds가 없으면 즉시 0으로 리셋
+    if (currentZoom >= 7 || !mapData?.bounds) {
+      setExpiredOnlyCount(0);
+      return;
+    }
+
+    // 신규 마커가 보이면 즉시 0으로 리셋 (깜빡임 없이 토스트 사라짐)
+    if (displayedPostCount > 0) {
       setExpiredOnlyCount(0);
       return;
     }
@@ -1120,18 +1128,22 @@ const Index = () => {
     });
 
     // 1) 캐시 히트 — DB 쿼리 없이 즉시 반환
+    //    단, '마커 0개' 상태가 진짜인지 확신하기 어려운 시점일 수 있어 짧은 grace period(200ms)를 둠
     const cached = mapCache.expiredCountCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < EXPIRED_COUNT_CACHE_TTL_MS) {
-      setExpiredOnlyCount(cached.count);
-      return;
+      const myToken = ++expiredCheckTokenRef.current;
+      const t = window.setTimeout(() => {
+        if (myToken !== expiredCheckTokenRef.current) return;
+        setExpiredOnlyCount(cached.count);
+      }, 200);
+      return () => window.clearTimeout(t);
     }
 
     const myToken = ++expiredCheckTokenRef.current;
 
-    // 2) 캐시 미스 — 짧은 debounce 후 1회 쿼리하고 결과를 캐시에 저장
-    //    debounce 150ms: 지도 멈춘 직후 거의 즉시 반응. 빠른 드래그 중에는
-    //    handleMapChange의 throttle(300ms)이 1차 필터, 여기 150ms가 2차 필터.
-    //    같은 영역 재방문은 캐시 히트(위 분기)로 0ms.
+    // 2) 캐시 미스 — 400ms grace period 후에도 여전히 displayedPostCount===0이면
+    //    그제서야 DB 쿼리. 짧은 깜빡임 0 상태는 자동으로 무시됨.
+    //    같은 영역 재방문은 캐시 히트(위 분기)로 처리.
     const timer = window.setTimeout(async () => {
       const count = await fetchExpiredOnlyCountInBounds(bounds, {
         categories: selectedCategoriesRef.current,
@@ -1147,7 +1159,7 @@ const Index = () => {
         if (oldestKey !== undefined) mapCache.expiredCountCache.delete(oldestKey);
       }
       setExpiredOnlyCount(count);
-    }, 150);
+    }, 400);
 
     return () => window.clearTimeout(timer);
   }, [mapData?.bounds, currentZoom, displayedPostCount, selectedCategories, authUser?.id, followingIds]);
