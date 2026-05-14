@@ -370,13 +370,14 @@ const ThumbnailCountdownRing: React.FC<{ post: Post; now: number; geometry: Ring
       {showSpark && (
         <g
           transform={`translate(${spark.x.toFixed(2)} ${spark.y.toFixed(2)})`}
-          style={{ filter: 'drop-shadow(0 0 5px rgba(57,255,20,0.95))' }}
+          style={{ filter: 'drop-shadow(0 0 3px rgba(57,255,20,0.95))' }}
         >
-          <circle cx="0" cy="0" r={geometry.strokeWidth * 1.4} fill="rgba(57,255,20,0.22)">
-            <animate attributeName="r" values={`${geometry.strokeWidth};${geometry.strokeWidth * 1.9};${geometry.strokeWidth}`} dur="1.15s" repeatCount="indefinite" />
+          {/* 닷의 지름이 stroke 두께와 동일하도록 반지름을 strokeWidth / 2 로 맞춤 */}
+          <circle cx="0" cy="0" r={geometry.strokeWidth * 0.7} fill="rgba(57,255,20,0.22)">
+            <animate attributeName="r" values={`${geometry.strokeWidth * 0.5};${geometry.strokeWidth * 0.9};${geometry.strokeWidth * 0.5}`} dur="1.15s" repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.25;0.75;0.25" dur="1.15s" repeatCount="indefinite" />
           </circle>
-          <circle cx="0" cy="0" r={geometry.strokeWidth * 0.7} fill="#ecfccb" stroke="#39FF14" strokeWidth={geometry.strokeWidth * 0.35}>
+          <circle cx="0" cy="0" r={geometry.strokeWidth * 0.5} fill="#ecfccb" stroke="#39FF14" strokeWidth={geometry.strokeWidth * 0.18}>
             <animate attributeName="opacity" values="1;0.45;1" dur="0.75s" repeatCount="indefinite" />
           </circle>
         </g>
