@@ -100,7 +100,7 @@ serve(async (req) => {
 
     await transporter.sendMail({
       from: `"TocaToca Support" <${gmailUser}>`,
-      to: "chorasnap@gmail.com",
+      to: "tocatoca@gmail.com",
       replyTo: user.email,
       subject: `[TocaToca 문의] [${category}] ${title}`,
       html: htmlBody,

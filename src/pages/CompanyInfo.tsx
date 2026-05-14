@@ -7,7 +7,7 @@ const info = [
   { icon: Building2, label: '사업자등록번호', value: '123-45-67890' },
   { icon: Building2, label: '통신판매업 신고번호', value: '제2025-서울강남-0001호' },
   { icon: MapPin, label: '주소', value: '서울특별시 강남구 테헤란로 123, 4층' },
-  { icon: Mail, label: '이메일', value: 'chorasnap@gmail.com' },
+  { icon: Mail, label: '이메일', value: 'tocatoca@gmail.com' },
   { icon: Phone, label: '고객센터', value: '02-1234-5678' },
   { icon: Globe, label: '웹사이트', value: 'www.chorasnap.com' },
 ];
