@@ -712,7 +712,7 @@ const Write = () => {
                 </div>
                 <div>
                   <h2 className="text-lg font-black text-gray-900 tracking-tight">
-                    {currentPage === 1 ? '새 게시물 작성' : '상세 정보 입력'}
+                    새 게시물 작성
                   </h2>
                   <p className="text-[10px] text-gray-400 font-medium leading-none uppercase tracking-widest">Leave your trace</p>
                 </div>
