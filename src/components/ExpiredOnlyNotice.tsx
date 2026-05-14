@@ -47,7 +47,7 @@ const ExpiredOnlyNotice: React.FC<ExpiredOnlyNoticeProps> = ({ visible, count, b
           >
             <Clock className="h-3.5 w-3.5 text-amber-300 shrink-0" strokeWidth={2.6} />
             <span className="text-[12px] font-bold tracking-[-0.01em] text-white/90">
-              여긴 지금 비어있지만, 시간이 지난 추억{' '}
+              시간이 지난 추억{' '}
               <span className="text-amber-300 font-black">{count > 99 ? '99+' : count}개</span>
               가 있어요
             </span>
