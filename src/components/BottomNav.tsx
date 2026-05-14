@@ -272,7 +272,7 @@ const BottomNav = () => {
           <motion.div
             className={cn(
               'absolute pointer-events-none transition-colors duration-200',
-              navItems[safeIndex]?.path === '/' ? 'bg-gray-700' : 'bg-gray-200'
+              navItems[safeIndex]?.path === '/' ? 'bg-amber-400' : 'bg-gray-200'
             )}
             style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
@@ -303,7 +303,7 @@ const BottomNav = () => {
                     'transition-all duration-200',
                     isActive
                       ? isMainMapTab
-                        ? 'scale-110 text-yellow-400'
+                        ? 'scale-110 text-gray-900'
                         : 'scale-110 text-gray-900'
                       : 'scale-100 text-gray-400'
                   )}
@@ -322,7 +322,7 @@ const BottomNav = () => {
                   'relative text-[10px] tracking-tighter leading-none transition-all duration-200',
                   isActive
                     ? isMainMapTab
-                      ? 'font-bold text-amber-50'
+                      ? 'font-bold text-gray-900'
                       : 'font-bold text-gray-900'
                     : 'font-medium text-gray-400'
                 )}
