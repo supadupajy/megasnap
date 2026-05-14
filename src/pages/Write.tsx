@@ -746,7 +746,7 @@ const Write = () => {
           <div
             className={cn(
               "px-5 space-y-6",
-              currentPage === 1 ? "pt-3" : "pt-6"
+              "pt-3"
             )}
             style={{
               paddingBottom: keyboardHeight > 0
