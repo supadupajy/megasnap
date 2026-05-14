@@ -29,8 +29,12 @@ import LocationButtonWithTimer from "@/components/LocationButtonWithTimer";
 import HashtagText from "@/components/HashtagText";
 import ImageSliderDots from "@/components/ImageSliderDots";
 import AdMobInterstitialPlaceholder from "@/components/AdMobInterstitialPlaceholder";
+import ReelsPostMenuDropdown from "@/components/ReelsPostMenuDropdown";
+import ReelsEditPostDialog from "@/components/ReelsEditPostDialog";
+import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 import { useVideoMuted } from "@/hooks/use-video-muted";
+import { showSuccess, showError } from "@/utils/toast";
 
 // 광고 삽입 주기 (포스팅 3개마다 광고 1개)
 const AD_INSERT_INTERVAL = 3;
@@ -92,6 +96,10 @@ interface ReelsViewerProps {
   embedded?: boolean;
   // embedded 모드에서 영상/이미지 우상단에 닫기(X) 버튼을 표시 (트렌딩 릴스 뷰어용)
   showInlineCloseButton?: boolean;
+  // 내 포스팅 삭제 후 호출 (부모가 리스트에서 제거하도록)
+  onDelete?: (postId: string) => void;
+  // 내 포스팅 본문 수정 후 호출 (부모가 캐시된 content를 갱신하도록)
+  onUpdate?: (postId: string, content: string) => void;
 }
 
 const ReelsViewer: React.FC<ReelsViewerProps> = ({
@@ -106,6 +114,8 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   endSubMessage = "처음으로 돌아가거나 닫아주세요.",
   embedded = false,
   showInlineCloseButton = false,
+  onDelete,
+  onUpdate,
 }) => {
   const isRankedMode = mode === "ranked";
   // 풀이 모두 소진되었는지 (noRepeat 모드 전용)
@@ -126,6 +136,12 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   // 포스트별 좋아요/저장 로컬 상태
   const [likeMap, setLikeMap] = useState<Record<string, { liked: boolean; count: number }>>({});
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
+  // 내 포스팅 수정 후 즉시 슬라이드에 반영하기 위한 로컬 content 덮어쓰기 맵
+  const [contentMap, setContentMap] = useState<Record<string, string>>({});
+
+  // 수정/삭제 다이얼로그 상태
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   // 다음 라운드용 풀 (셔플된 후속 포스트)
   const queueRef = useRef<Post[]>([]);
@@ -477,6 +493,62 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     });
   }, []);
 
+  // ── 내 포스팅 수정/삭제 핸들러 ───────────────────────────────
+  const isPostMine = useCallback(
+    (post: Post): boolean => {
+      if (!authUser?.id) return false;
+      const ownerId = post.owner_id || post.user_id || post.user?.id;
+      return ownerId === authUser.id;
+    },
+    [authUser?.id]
+  );
+
+  const handleEditSaved = useCallback(
+    (postId: string, nextContent: string) => {
+      setContentMap((prev) => ({ ...prev, [postId]: nextContent }));
+      onUpdate?.(postId, nextContent);
+    },
+    [onUpdate]
+  );
+
+  const confirmDelete = useCallback(async () => {
+    const postId = deletingPostId;
+    if (!postId || !authUser?.id) {
+      setDeletingPostId(null);
+      return;
+    }
+    // 다이얼로그 먼저 닫기
+    setDeletingPostId(null);
+
+    // 슬라이드 목록에서 해당 포스트 제거 (다음 슬라이드로 자연스럽게 이동)
+    setItems((prev) => {
+      const idx = prev.findIndex((it) => it.kind === "post" && it.post.id === postId);
+      if (idx < 0) return prev;
+      const next = [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+      // 만약 삭제된 인덱스가 마지막이었다면 activeIndex가 범위를 벗어날 수 있음 → clamp
+      setActiveIndex((cur) => {
+        if (next.length === 0) return 0;
+        if (cur >= next.length) return next.length - 1;
+        return cur;
+      });
+      return next;
+    });
+
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .delete()
+        .eq("id", postId)
+        .eq("user_id", authUser.id);
+      if (error) throw error;
+      showSuccess("포스팅이 삭제되었습니다.");
+      onDelete?.(postId);
+    } catch (err) {
+      console.error("[ReelsViewer] delete error:", err);
+      showError("삭제 중 오류가 발생했습니다.");
+    }
+  }, [deletingPostId, authUser?.id, onDelete]);
+
   if (!isOpen) return null;
 
   // 슬라이드 트랙 + 끝 슬라이드 콜백 (embedded 모드에서는 닫기 동작이 없음 → onClose는 페이지 뒤로가기로 위임)
@@ -658,6 +730,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
             {item.kind === "post" ? (
               <ReelSlide
                 post={item.post}
+                contentOverride={contentMap[item.post.id]}
                 isActive={index === activeIndex}
                 muted={muted}
                 liked={likeMap[item.post.id]?.liked ?? !!item.post.isLiked}
@@ -685,6 +758,9 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 showInlineCloseButton={embedded && showInlineCloseButton}
                 onClose={onClose}
                 inlineRank={embedded && isRankedMode ? index + 1 : undefined}
+                isMine={isPostMine(item.post)}
+                onRequestEdit={() => setEditingPost(item.post)}
+                onRequestDelete={() => setDeletingPostId(item.post.id)}
               />
             ) : item.kind === "ad" ? (
               <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
@@ -712,6 +788,25 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         authUser={authUser}
         profile={null}
         onCommentsChange={() => {}}
+      />
+
+      {/* 내 포스팅 수정 다이얼로그 */}
+      {editingPost && (
+        <ReelsEditPostDialog
+          isOpen={!!editingPost}
+          postId={editingPost.id}
+          authUserId={authUser?.id}
+          initialContent={contentMap[editingPost.id] ?? editingPost.content ?? ""}
+          onClose={() => setEditingPost(null)}
+          onSaved={handleEditSaved}
+        />
+      )}
+
+      {/* 내 포스팅 삭제 확인 다이얼로그 */}
+      <DeleteConfirmDialog
+        isOpen={!!deletingPostId}
+        onClose={() => setDeletingPostId(null)}
+        onConfirm={confirmDelete}
       />
     </>
   );
@@ -1095,6 +1190,8 @@ const ReelContentText: React.FC<ReelContentTextProps> = ({ content, expanded, on
 // ─── 개별 슬라이드 (포스트) ────────────────────────────────
 interface ReelSlideProps {
   post: Post;
+  // 부모가 들고 있는 \"수정된 본문\"을 우선 표시할 때 사용. 없으면 post.content 사용.
+  contentOverride?: string;
   isActive: boolean;
   muted: boolean;
   liked: boolean;
@@ -1115,10 +1212,15 @@ interface ReelSlideProps {
   onClose?: () => void;
   // 미디어 좌상단에 표시할 순위 뱃지 (값이 있으면 표시; embedded ranked 모드 전용)
   inlineRank?: number;
+  // 내 포스팅 여부 — true일 때만 우상단 3-dot 메뉴(수정/삭제) 노출
+  isMine?: boolean;
+  onRequestEdit?: () => void;
+  onRequestDelete?: () => void;
 }
 
 const ReelSlide: React.FC<ReelSlideProps> = ({
   post,
+  contentOverride,
   isActive,
   muted,
   liked,
@@ -1135,7 +1237,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   showInlineCloseButton = false,
   onClose,
   inlineRank,
+  isMine = false,
+  onRequestEdit,
+  onRequestDelete,
 }) => {
+  // 본문 표시는 부모의 수정 결과(contentOverride)를 우선
+  const displayContent = contentOverride ?? post.content ?? "";
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   // video 첫 프레임이 그려진 이후에만 큰 "재생/일시정지" 오버레이를 노출
@@ -1445,6 +1552,24 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </button>
           )}
 
+          {/* 영상 내부 우상단 3-dot 메뉴 (내 포스팅일 때만)
+              음소거 버튼의 반대편(우상단)에 배치. 트렌딩 X 버튼은
+              미디어 컨테이너 바깥(상위 absolute 컨테이너의 top-5 right-6)에
+              위치하므로 위치가 겹치지 않는다. */}
+          {isMine && onRequestEdit && onRequestDelete && (
+            <div
+              className="absolute top-3 right-3 z-40"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onPointerUp={(e) => e.stopPropagation()}
+            >
+              <ReelsPostMenuDropdown
+                onEdit={onRequestEdit}
+                onDelete={onRequestDelete}
+              />
+            </div>
+          )}
+
           {/* 가로 슬라이더 — 다중 미디어면 좌우 스와이프로 이동, 단일이면 그냥 표시 */}
           <MediaCarousel
             mediaList={mediaList}
@@ -1636,10 +1761,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           </div>
 
           {/* 3) 본문 */}
-          {post.content && (
+          {displayContent && (
             <div className="text-white pointer-events-auto">
               <ReelContentText
-                content={post.content}
+                content={displayContent}
                 expanded={contentExpanded}
                 onToggle={() => setContentExpanded((v) => !v)}
               />

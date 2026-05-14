@@ -148,6 +148,14 @@ const Flicks = () => {
     navigate(-1);
   }, [navigate]);
 
+  // ReelsViewer 내부에서 내 포스팅 삭제/수정이 일어났을 때 풀 갱신
+  const handlePostDeleted = useCallback((postId: string) => {
+    setVideoPool((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
+  const handlePostUpdated = useCallback((postId: string, content: string) => {
+    setVideoPool((prev) => prev.map((p) => (p.id === postId ? { ...p, content } : p)));
+  }, []);
+
   if (isLoading) {
     return (
       <>
@@ -189,6 +197,8 @@ const Flicks = () => {
           initialPost={videoPool[0]}
           pool={videoPool}
           onClose={handleClose}
+          onDelete={handlePostDeleted}
+          onUpdate={handlePostUpdated}
           noRepeat
           embedded
           endMessage="더 이상 표시할 영상이 없습니다"

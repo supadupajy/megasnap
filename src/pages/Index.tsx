@@ -1569,6 +1569,8 @@ const Index = () => {
     setTimeout(() => {
       setAllPosts(prev => { const f = prev.filter(p => p.id !== id); mapCache.posts = f; return f; });
     }, 400);
+    // 실시간 인기 포스팅 리스트에서도 즉시 제거
+    setGlobalTrendingPosts(prev => prev.filter(p => p.id !== id));
   }, []);
 
   const handlePostUpdated = useCallback((id: string, content: string) => {
@@ -2338,6 +2340,8 @@ const Index = () => {
             mode="ranked"
             rankedPosts={globalTrendingPosts}
             onClose={handleCloseTrendingReels}
+            onDelete={handlePostDeleted}
+            onUpdate={handlePostUpdated}
             embedded
             showInlineCloseButton
           />
