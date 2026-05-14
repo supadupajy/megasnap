@@ -76,6 +76,13 @@ const BottomNav = () => {
       const target = e.target as HTMLElement | Document | null;
       if (!target) return;
 
+      // 특정 스크롤 컨테이너는 BottomNav 숨김에서 제외 (data-bottom-nav-keep="true")
+      // 예: 실시간 인기 포스팅 패널(TrendingPosts) — 패널 내부 리스트를 스크롤해도
+      //     항상 메뉴바가 보여야 한다.
+      if (target instanceof HTMLElement && target.dataset.bottomNavKeep === 'true') {
+        return;
+      }
+
       // 스크롤 위치 추출 (Document인 경우 documentElement 기준)
       let currentTop = 0;
       if (target instanceof Document) {

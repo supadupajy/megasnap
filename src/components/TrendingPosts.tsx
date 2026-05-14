@@ -1120,10 +1120,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
             )}
 
             {/* 스크롤 가능한 포스팅 리스트 */}
+            {/* data-bottom-nav-keep: 이 컨테이너의 스크롤 이벤트는 BottomNav 숨김 로직에서 무시됨
+                → 실시간 인기 패널을 스크롤해도 하단 알약 메뉴바가 사라지지 않는다. */}
             <div
               ref={listRef}
               className="flex-1 overflow-y-scroll no-scrollbar pb-2 px-3 space-y-2 relative"
               data-trending-scroll="true"
+              data-bottom-nav-keep="true"
               style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y', contain: 'layout paint' }}
             >
               {/* 상단 스톱바 (1위 위) */}
