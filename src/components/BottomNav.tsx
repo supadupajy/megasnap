@@ -270,7 +270,7 @@ const BottomNav = () => {
                     'transition-all duration-200',
                     isActive
                       ? isMainMapTab
-                        ? 'scale-110 text-orange-400'
+                        ? 'scale-110 text-yellow-400'
                         : 'scale-110 text-gray-900'
                       : 'scale-100 text-gray-400'
                   )}
