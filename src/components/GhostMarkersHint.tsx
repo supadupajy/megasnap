@@ -167,7 +167,7 @@ const GhostMarkersHint: React.FC<GhostMarkersHintProps> = ({
 
       <div className="ghost-hint-caption">
         <span className="ghost-hint-dot" />
-        <span>이 영역엔 시간이 지난 추억이 있어요</span>
+        <span>여기에는 시간이 지난 추억이 있어요</span>
       </div>
     </div>
   );
