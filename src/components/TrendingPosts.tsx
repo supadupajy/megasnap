@@ -103,12 +103,18 @@ const getRingSparkPoint = (geo: RingGeometry, remainingRatio: number): { x: numb
 // - 펼친 리스트: w-12 h-12 (48px), rounded-xl (12px), border 2.5px
 // - 접힌 헤더:   w-6  h-6  (24px), rounded-lg (8px),  border 1.5px
 //
-// stroke 두께는 지도 마커 기준(60x60 박스에 stroke-width 4 → 비율 4/60 ≈ 0.0667)
-// 과 동일하게 보이도록 박스 크기에 비례시켜 산출한다.
-//   md: 48 × 4 / 60 = 3.2  → 시각적 균형을 위해 3.6으로 살짝 굵게
-//   sm: 24 × 4 / 60 = 1.6  → 작은 박스에서 가독성 확보를 위해 1.8로 살짝 굵게
-const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 12, 3.6);
-const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 8, 1.8);
+// stroke 두께는 지도 마커(60x60 박스에 stroke-width 4 → 비율 4/60 ≈ 0.0667)와
+// 시각적으로 동일하게 보이도록 산출한다.
+// ⚠️ 인기 리스트 썸네일은 부모(.rounded-xl overflow-hidden) 안에서 그려지기 때문에
+//    SVG stroke의 바깥쪽 절반이 클리핑되어 실제 보이는 두께가 절반 가까이로 줄어든다.
+//    지도 마커는 SVG가 inner box 위 레이어에 overflow:visible로 그려져 stroke 전체가
+//    보인다. 두 환경에서 "보이는 두께"를 맞추려면 인기 리스트 쪽 stroke 를
+//    지도 마커 비율의 두 배로 키워, 클리핑 후 안쪽으로 남는 절반이 지도와
+//    동일한 두께가 되도록 한다.
+//   md: 2 × (4/60) × 48 = 6.4
+//   sm: 2 × (4/60) × 24 = 3.2
+const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 12, 6.4);
+const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 8, 3.2);
 
 const getPostCreatedAtMs = (post: Post): number | null => {
   const raw = post.createdAt;
