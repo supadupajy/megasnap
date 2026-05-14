@@ -700,6 +700,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     const commentsDisplayCount = Math.max(localComments.length, currentPost.commentsCount || 0);
     const hasUserCommented = !!authUser?.id && localComments.some(comment => comment.userId === authUser.id);
 
+    // 광고 포스트: 본문(닉네임 + 컨텐츠)을 PostActions의 adFooterContent로 넘겨서
+    // - 1줄: [좋아요/댓글/공유 + 저장]   ...   [위치보기]
+    // - 2줄: [닉네임 + 본문]              ...   [보러가기]
+    // 형태로 정렬한다. 그러면 본문이 BottomNav 알약 뒤로 숨지 않고
+    // "보러가기" 버튼 왼쪽에 자연스럽게 배치된다.
+    const adFooterContent = isAd ? (
+      <div className="cursor-pointer" onClick={onClose}>
+        <div className="flex gap-2 items-start">
+          <span
+            className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors"
+            onClick={(e) => { e.stopPropagation(); handleUserClick(e); }}
+          >
+            {postDisplayName}
+          </span>
+          <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+            {renderContentBody()}
+          </div>
+        </div>
+      </div>
+    ) : undefined;
+
     return (
       <PostActions
         postId={currentPost.id}
@@ -714,6 +735,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         lng={currentPost.lng}
         createdAt={currentPost.createdAt}
         adIcon="external-link"
+        adFooterContent={adFooterContent}
         onLikeClick={(e) => { e.stopPropagation(); onLikeToggle?.(currentPost.id); }}
         onCommentClick={handleCommentClick}
         onSaveClick={handleSaveToggle}
@@ -869,14 +891,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                             }}
                           >
                             {renderActionButtons()}
-                            <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
-                              <div className="flex gap-2 items-start">
-                                <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
-                                <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
-                                  {renderContentBody()}
+                            {/* 광고 포스트는 본문(닉네임 + 컨텐츠)이 PostActions의 adFooterContent 영역으로
+                                이동되어 "보러가기" 버튼 왼쪽에 렌더링되므로 여기서는 중복 렌더링하지 않는다. */}
+                            {!isAd && (
+                              <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
+                                <div className="flex gap-2 items-start">
+                                  <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{postDisplayName}</span>
+                                  <div className="flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                                    {renderContentBody()}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         </div>
                       </div>
