@@ -1508,19 +1508,20 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             1) 액션 버튼 줄 (좋아요/댓글/공유 + 저장/위치보기) — 이미지/영상 바로 아래
             2) 아바타 + (닉네임/위치 세로) — 위치 정보가 닉네임 바로 밑, 모두 아바타 우측에 위치
             3) 본문 */}
-      {/* 정보 영역 위로 길게 솟아나는 그라데이션 페이드.
-          - 별도 레이어로 두어 정보 영역(infoRef) 높이 측정값에는 포함되지 않는다.
-          - 영상 끝 부근(투명)에서 시작해 아이콘 줄 위로 천천히 어두워져서
-            blur 배경이 액션 아이콘까지 자연스럽게 흘러내린다. */}
+      {/* 하단 그라데이션 — 영상 끝 위쪽(투명)에서 시작해서 본문 아래까지
+          한 줄기로 자연스럽게 어두워진다.
+          - 별도 레이어로 두어 정보 영역(infoRef) 높이 측정값에는 포함되지 않음
+            → blur 배경이 아이콘 영역까지 잘리지 않고 자연스럽게 비친다.
+          - 정보 영역 본체는 배경 없이 콘텐츠만 올린다. */}
       <div
-        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/55 via-black/25 to-transparent"
-        style={{ bottom: `${infoHeight - 56}px`, height: "120px" }}
+        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/95 via-black/55 to-transparent"
+        style={{ bottom: 0, height: `${infoHeight + 100}px` }}
         aria-hidden
       />
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
-          className="bg-gradient-to-t from-black/95 via-black/85 to-black/55 px-4"
+          className="px-4"
           style={{
             paddingTop: "12px",
             paddingBottom: embedded ? "12px" : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
