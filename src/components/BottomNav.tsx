@@ -307,19 +307,8 @@ const BottomNav = () => {
           ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)'
           : 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
         willChange: 'transform',
-        outline: '2px solid blue', // [DEBUG] BottomNav 외부 컨테이너 경계
       }}
     >
-      {/* [DEBUG] 하단 safe-area 영역 마스크 — 빨강으로 임시 표시해서 위치/크기 확인 */}
-      <div
-        aria-hidden="true"
-        className="absolute left-0 right-0 bottom-0 pointer-events-none"
-        style={{
-          height: 'max(env(safe-area-inset-bottom, 0px), 12px)',
-          backgroundColor: 'red',
-          outline: '2px solid red',
-        }}
-      />
       <nav
         ref={navRef}
         className="pointer-events-auto relative mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
