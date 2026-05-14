@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, LayoutGrid, Loader2, X } from 'lucide-react';
+import { LayoutGrid, Loader2, X } from 'lucide-react';
 import { Post } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { getTierFromFollowers } from '@/hooks/use-supabase-posts';
@@ -350,15 +350,13 @@ const NearbyPosts = () => {
       <div className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={progress}
-          Icon={isExpiredOnly ? Clock : LayoutGrid}
-          iconBgClass={isExpiredOnly ? "bg-slate-100" : "bg-indigo-100"}
-          iconColorClass={isExpiredOnly ? "text-slate-600" : "text-indigo-600"}
-          title={isExpiredOnly ? "지난 기록" : "여기 보기"}
+          Icon={LayoutGrid}
+          iconBgClass="bg-indigo-100"
+          iconColorClass="text-indigo-600"
+          title="지금 여기"
           subtitle={
-            isExpiredOnly
-              ? (isInitialLoading
-                ? '시간이 지난 추억을 불러오는 중…'
-                : `Total ${posts.length} ${posts.length === 1 ? 'Memory' : 'Memories'}`)
+            isExpiredOnly && isInitialLoading
+              ? '시간이 지난 추억을 불러오는 중…'
               : `Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`
           }
           ActionIcon={X}
