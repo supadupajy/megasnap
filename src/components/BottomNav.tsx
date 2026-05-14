@@ -309,6 +309,18 @@ const BottomNav = () => {
         willChange: 'transform',
       }}
     >
+      {/* 하단 safe-area 영역을 흰색으로 가리는 마스크.
+          - 지도 페이지에서 알약 아래로 지도 타일이 비쳐 보이는 문제를 해결.
+          - 좌우는 알약의 floating 느낌을 살리기 위해 그대로 두고, 아래쪽만 가린다.
+          - 알약과 자연스럽게 이어지도록 화면 좌우 끝까지 채우되,
+            위쪽으로는 살짝 페이드 처리해 알약 그림자를 가리지 않게 한다. */}
+      <div
+        aria-hidden="true"
+        className="absolute left-0 right-0 bottom-0 bg-white pointer-events-none"
+        style={{
+          height: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+        }}
+      />
       <nav
         ref={navRef}
         className="pointer-events-auto relative mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
