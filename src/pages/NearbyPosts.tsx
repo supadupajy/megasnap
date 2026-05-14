@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, Loader2, X } from 'lucide-react';
+import { Clock, LayoutGrid, Loader2, X } from 'lucide-react';
 import { Post } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { getTierFromFollowers } from '@/hooks/use-supabase-posts';
@@ -24,6 +24,12 @@ interface NearbyPostsPayload {
   selectedCategories: string[];
   openedViewedIds: string[];
   zoom?: number;
+  /**
+   * true일 때: 지도에는 24h 만료로 보이지 않지만 영원히 남아있는 추억을 보여주는 모드.
+   * - initialPosts는 비어있고 마운트 직후 첫 페이지를 자동 fetch
+   * - 헤더 타이틀/서브타이틀이 expired 톤으로 바뀜
+   */
+  expiredOnly?: boolean;
 }
 
 const STORAGE_KEY = 'nearby-posts-payload';
@@ -147,7 +153,11 @@ const NearbyPosts = () => {
   const [posts, setPosts] = useState<Post[]>(payload?.initialPosts || []);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(!!payload?.expiredOnly);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const didInitialFetchRef = useRef(false);
+
+  const isExpiredOnly = !!payload?.expiredOnly;
 
   useEffect(() => {
     if (!payload) navigate('/', { replace: true });
@@ -206,9 +216,15 @@ const NearbyPosts = () => {
     setIsLoadingMore(true);
     try {
       const lastPost = posts[posts.length - 1];
+      const expiredOnly = !!payload.expiredOnly;
+
+      // expired-only 모드: 첫 페이지는 (now - 24h)부터 거꾸로, 이후 페이지는 마지막 포스트의 created_at부터
+      // 일반 모드: 첫 페이지는 now부터, 이후는 마지막 포스트부터
       const lastPostDate = lastPost
         ? new Date(lastPost.createdAt).toISOString()
-        : new Date().toISOString();
+        : expiredOnly
+          ? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+          : new Date().toISOString();
 
       const bounds = payload.currentBounds;
       const latMin = Math.min(bounds.sw.lat, bounds.ne.lat);
@@ -251,8 +267,17 @@ const NearbyPosts = () => {
       showError('포스팅을 불러오는 중 오류가 발생했습니다.');
     } finally {
       setIsLoadingMore(false);
+      setIsInitialLoading(false);
     }
   }, [payload, isLoadingMore, hasMore, posts]);
+
+  // expired-only 모드: 마운트 직후 첫 페이지 자동 fetch
+  useEffect(() => {
+    if (!payload?.expiredOnly) return;
+    if (didInitialFetchRef.current) return;
+    didInitialFetchRef.current = true;
+    loadMorePosts();
+  }, [payload?.expiredOnly, loadMorePosts]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -325,11 +350,17 @@ const NearbyPosts = () => {
       <div className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={progress}
-          Icon={LayoutGrid}
-          iconBgClass="bg-indigo-100"
-          iconColorClass="text-indigo-600"
-          title="여기 보기"
-          subtitle={`Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`}
+          Icon={isExpiredOnly ? Clock : LayoutGrid}
+          iconBgClass={isExpiredOnly ? "bg-slate-100" : "bg-indigo-100"}
+          iconColorClass={isExpiredOnly ? "text-slate-600" : "text-indigo-600"}
+          title={isExpiredOnly ? "지난 기록" : "여기 보기"}
+          subtitle={
+            isExpiredOnly
+              ? (isInitialLoading
+                ? '시간이 지난 추억을 불러오는 중…'
+                : `Total ${posts.length} ${posts.length === 1 ? 'Memory' : 'Memories'}`)
+              : `Total ${posts.length} ${posts.length === 1 ? 'Post' : 'Posts'}`
+          }
           ActionIcon={X}
           actionLabel="닫기"
           onActionClick={handleClose}
@@ -383,9 +414,16 @@ const NearbyPosts = () => {
           return items;
         })()}
 
-        {filteredPosts.length === 0 && (
+        {filteredPosts.length === 0 && !isInitialLoading && (
           <div className="text-center py-20 text-gray-400 font-medium px-10">
-            표시할 포스팅이 없습니다.
+            {isExpiredOnly ? '이 영역엔 남아있는 기록이 없습니다.' : '표시할 포스팅이 없습니다.'}
+          </div>
+        )}
+
+        {isInitialLoading && filteredPosts.length === 0 && (
+          <div className="text-center py-20 flex flex-col items-center gap-3">
+            <Loader2 className="w-6 h-6 text-slate-500 animate-spin" />
+            <span className="text-xs text-slate-500 font-semibold">시간이 지난 추억을 모으는 중…</span>
           </div>
         )}
 

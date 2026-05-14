@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import MapContainer from '@/components/MapContainer';
 import TrendingPosts from '@/components/TrendingPosts';
 import MarkerExpiryNotice from '@/components/MarkerExpiryNotice';
+import GhostMarkersHint from '@/components/GhostMarkersHint';
 import ReelsViewer from '@/components/ReelsViewer';
 import PostDetail from '@/components/PostDetail';
 // PlaceSearch는 PlaceSearchOverlay로 대체되어 App.tsx에 전역 마운트됨
@@ -21,7 +22,7 @@ import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { mapCache } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
+import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, fetchExpiredOnlyCountInBounds, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Geolocation } from '@capacitor/geolocation';
@@ -1090,6 +1091,52 @@ const Index = () => {
 
   const displayedPostCount = mapVisibleMarkers.length;
 
+  // ── "지도엔 안 보이지만 24h 지난 포스트가 있는" 영역 감지 ───────
+  // displayedPostCount === 0 일 때만 가벼운 head count 쿼리로 확인.
+  // 같은 bounds 키에서는 세션당 1회만 힌트를 띄워 시각 노이즈를 줄인다.
+  const [expiredOnlyCount, setExpiredOnlyCount] = useState(0);
+  const [ghostHintActive, setGhostHintActive] = useState(false);
+  const ghostHintShownBoundsRef = useRef<Set<string>>(new Set());
+  const expiredCheckTokenRef = useRef(0);
+
+  useEffect(() => {
+    // 검사 트리거 조건:
+    // - 지도가 마커 표시 레벨일 때만 (zoom < 7)
+    // - 화면에 보이는 마커가 0개일 때만
+    // - bounds 정보가 있을 때만
+    if (currentZoom >= 7 || !mapData?.bounds || displayedPostCount > 0) {
+      setExpiredOnlyCount(0);
+      setGhostHintActive(false);
+      return;
+    }
+
+    const myToken = ++expiredCheckTokenRef.current;
+    const bounds = mapData.bounds;
+
+    // 약간의 debounce: idle 직후 즉시 쿼리하면 빠른 드래그 시 과도하게 호출됨
+    const timer = window.setTimeout(async () => {
+      const count = await fetchExpiredOnlyCountInBounds(bounds, {
+        categories: selectedCategoriesRef.current,
+        userId: authUserIdRef.current,
+        followingIds: Array.from(followingIds),
+      });
+      if (myToken !== expiredCheckTokenRef.current) return;
+
+      setExpiredOnlyCount(count);
+
+      if (count > 0) {
+        // 동일 bounds(소수점 4자리 기준)에서는 세션당 1회만 힌트 재생
+        const key = `${bounds.sw.lat.toFixed(4)},${bounds.sw.lng.toFixed(4)},${bounds.ne.lat.toFixed(4)},${bounds.ne.lng.toFixed(4)}`;
+        if (!ghostHintShownBoundsRef.current.has(key)) {
+          ghostHintShownBoundsRef.current.add(key);
+          setGhostHintActive(true);
+        }
+      }
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [mapData?.bounds, currentZoom, displayedPostCount, selectedCategories, authUser?.id, followingIds]);
+
   const handleVisibleMarkerIdsChange = useCallback((ids: string[]) => {
     setVisibleMarkerIds(prev => {
       if (prev && prev.size === ids.length && ids.every(id => prev.has(id))) return prev;
@@ -1826,6 +1873,15 @@ const Index = () => {
               toastTopOffset={indicatorTopOffset}
             />
 
+            {/* "여기엔 시간이 지난 추억이 있어요" 힌트 — 회색 점선 마커가 스르륵 나타났다 사라짐 */}
+            {!isSelectingLocation && !isSelectingAdLocation && !isPostListOpen && !isSearchOpen && (
+              <GhostMarkersHint
+                active={ghostHintActive}
+                topOffset={indicatorTopOffset ? indicatorTopOffset + 80 : 180}
+                bottomOffset={180}
+                onComplete={() => setGhostHintActive(false)}
+              />
+            )}
           </div>
 
 
@@ -1996,7 +2052,35 @@ const Index = () => {
                   <button
                     ref={viewAllBtnRef}
                     onClick={() => {
-                      if (displayedPostCount > 0 && currentZoom < 7) {
+                      // 케이스 A: 화면에 마커가 있음 → 기존 동작
+                      // 케이스 B: 화면 마커는 0이지만 24h 지난 포스트가 있음 → NearbyPosts를 expired-only 모드로 진입
+                      if (currentZoom >= 7) return;
+
+                      if (displayedPostCount === 0 && expiredOnlyCount > 0) {
+                        const latestMapData = mapDataRef.current || mapData;
+                        const returnCenter = latestMapData?.center || mapCache.lastCenter || mapCenter || { lat: 37.5665, lng: 126.9780 };
+                        const returnZoom = currentZoomRef.current || currentZoom;
+                        mapCache.lastCenter = returnCenter;
+                        mapCache.lastZoom = returnZoom;
+                        mapCache.keepPosition = true;
+
+                        sessionStorage.setItem('nearby-posts-payload', JSON.stringify({
+                          initialPosts: [],
+                          mapCenter: returnCenter,
+                          currentBounds: latestMapData?.bounds || mapData?.bounds || { sw: { lat: 33, lng: 124 }, ne: { lat: 39, lng: 132 } },
+                          selectedCategories,
+                          openedViewedIds: Array.from(viewedIds),
+                          zoom: returnZoom,
+                          expiredOnly: true,
+                        }));
+
+                        shutterRef.current?.trigger(() => {
+                          navigate('/nearby-posts');
+                        });
+                        return;
+                      }
+
+                      if (displayedPostCount > 0) {
                         // 포스트 목록 미리 계산
                         const adIds = mapVisibleMarkers.filter(p => p.isAd).map(p => p.id);
                         setPostListOpenedViewedIds(new Set([...viewedIds, ...adIds]));
@@ -2044,16 +2128,34 @@ const Index = () => {
                         });
                       }
                     }}
-                    disabled={currentZoom >= 7 || displayedPostCount === 0}
-                    className={cn("w-16 h-16 bg-amber-400 rounded-[24px] flex flex-col items-center justify-center text-gray-900 shadow-[0_15px_30px_rgba(251,191,36,0.45)] active:scale-95 transition-all border-2 border-white/30 overflow-hidden relative gap-0.5", (currentZoom >= 7 || displayedPostCount === 0) && "opacity-50 grayscale bg-slate-800/40 shadow-none text-white")}
+                    disabled={currentZoom >= 7 || (displayedPostCount === 0 && expiredOnlyCount === 0)}
+                    className={cn(
+                      "w-16 h-16 bg-amber-400 rounded-[24px] flex flex-col items-center justify-center text-gray-900 shadow-[0_15px_30px_rgba(251,191,36,0.45)] active:scale-95 transition-all border-2 border-white/30 overflow-hidden relative gap-0.5",
+                      // 완전 비활성화 (어떤 포스트도 없음)
+                      (currentZoom >= 7 || (displayedPostCount === 0 && expiredOnlyCount === 0)) && "opacity-50 grayscale bg-slate-800/40 shadow-none text-white",
+                      // expired-only 모드: 차분한 슬레이트 톤으로 전환 + 펄스로 시선 유도
+                      displayedPostCount === 0 && expiredOnlyCount > 0 && currentZoom < 7 && "bg-slate-200 text-slate-700 shadow-[0_8px_24px_rgba(100,116,139,0.35)] now-here-expired-pulse",
+                    )}
                   >
-                    <span className="text-[9px] font-black tracking-widest text-gray-900/60 relative z-10 leading-none">ALL</span>
-                    <span className="text-[11px] font-black relative z-10 leading-tight">지금 여기</span>
+                    <span className={cn(
+                      "text-[9px] font-black tracking-widest relative z-10 leading-none",
+                      displayedPostCount === 0 && expiredOnlyCount > 0 ? "text-slate-500" : "text-gray-900/60",
+                    )}>ALL</span>
+                    <span className="text-[11px] font-black relative z-10 leading-tight">
+                      {displayedPostCount === 0 && expiredOnlyCount > 0 ? '지난 기록' : '지금 여기'}
+                    </span>
                     <div className="flex flex-col items-center gap-[3px] mt-0.5 relative z-10">
-                      <div className="w-8 h-[2px] bg-gray-900/40 rounded-full" />
-                      <div className="w-5 h-[2px] bg-gray-900/25 rounded-full" />
+                      <div className={cn(
+                        "w-8 h-[2px] rounded-full",
+                        displayedPostCount === 0 && expiredOnlyCount > 0 ? "bg-slate-500/40" : "bg-gray-900/40",
+                      )} />
+                      <div className={cn(
+                        "w-5 h-[2px] rounded-full",
+                        displayedPostCount === 0 && expiredOnlyCount > 0 ? "bg-slate-500/25" : "bg-gray-900/25",
+                      )} />
                     </div>
                   </button>
+                  {/* 뱃지: 항상 24h 내 표시되는 마커 수만 카운팅 (expiredOnly는 절대 카운트하지 않음) */}
                   {displayedPostCount > 0 && currentZoom < 7 && (
                     <div className="absolute -top-2 -right-2 bg-amber-300 text-gray-900 text-[11px] font-black px-2 py-0.5 rounded-full border-2 border-white shadow-lg animate-in zoom-in duration-300 z-20">
                       {displayedPostCount}

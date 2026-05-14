@@ -257,6 +257,52 @@ export const fetchOffScreenCounts = async (
 };
 
 /**
+ * 현재 bounds 안에 "24시간이 지나서 지도엔 안 보이지만 DB엔 남아있는" 포스트가
+ * 하나라도 있는지 카운트한다. head: true + limit(1) 로 가장 가벼운 형태로 조회.
+ *
+ * "지금 여기" 버튼이 displayedPostCount === 0 일 때도, 이 카운트가 > 0 이면
+ * "이 영역엔 시간이 지난 추억이 있다"는 힌트를 띄울 수 있다.
+ */
+export const fetchExpiredOnlyCountInBounds = async (
+  bounds: { sw: { lat: number; lng: number }; ne: { lat: number; lng: number } },
+  options?: { categories?: string[]; userId?: string | null; followingIds?: string[] }
+): Promise<number> => {
+  const { sw, ne } = bounds;
+  try {
+    const MARKER_LIFESPAN_MS = 24 * 60 * 60 * 1000;
+    const oneDayAgoIso = new Date(Date.now() - MARKER_LIFESPAN_MS).toISOString();
+
+    let query = supabase
+      .from('posts')
+      .select('id', { count: 'exact', head: true })
+      .gte('latitude', Math.min(sw.lat, ne.lat))
+      .lte('latitude', Math.max(sw.lat, ne.lat))
+      .gte('longitude', Math.min(sw.lng, ne.lng))
+      .lte('longitude', Math.max(sw.lng, ne.lng))
+      .lt('created_at', oneDayAgoIso);
+
+    const cats = options?.categories || [];
+    if (cats.includes('mine') && options?.userId) {
+      query = query.eq('user_id', options.userId);
+    } else if (cats.includes('friends') && options?.followingIds && options.followingIds.length > 0) {
+      query = query.in('user_id', options.followingIds);
+    } else if (!cats.includes('all') && cats.length > 0 && !cats.includes('friends') && !cats.includes('mine')) {
+      const dbCats = cats.filter(c => ['food', 'accident', 'place', 'animal'].includes(c));
+      if (dbCats.length > 0) {
+        query = query.in('category', dbCats);
+      }
+    }
+
+    const { count, error } = await query;
+    if (error) throw error;
+    return count || 0;
+  } catch (err) {
+    console.error('[SupabasePosts] fetchExpiredOnlyCountInBounds error:', err);
+    return 0;
+  }
+};
+
+/**
  * 특정 방향(화면 밖)에서 현재 지도 중심에 가장 가까운 포스팅 좌표를 가져옵니다.
  */
 export const fetchNearestInDirection = async (
