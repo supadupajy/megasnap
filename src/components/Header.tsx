@@ -54,8 +54,8 @@ const Header = () => {
           onClick={() => navigate('/')}
         >
           <h1 className="text-2xl font-black tracking-tighter" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-gray-900">Chora</span>
-            <span className="text-indigo-600">Snap</span>
+            <span className="text-gray-900">Toca</span>
+            <span className="text-yellow-500">Toca</span>
           </h1>
         </div>
 

@@ -154,22 +154,26 @@ const Login = () => {
         className="w-full max-w-[400px] space-y-8"
       >
         <div className="flex flex-col items-center gap-4">
-          <motion.div 
+          <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-20 h-20 bg-indigo-600 rounded-[28px] flex items-center justify-center shadow-2xl shadow-indigo-100"
+            className="w-24 h-24 rounded-[28px] overflow-hidden shadow-2xl shadow-yellow-200/60"
           >
-            <Camera className="w-10 h-10 text-white" strokeWidth={2.5} />
+            <img
+              src="/tocatoca-logo.png"
+              alt="TocaToca"
+              className="w-full h-full object-cover"
+            />
           </motion.div>
           <div className="text-center">
             <h1
               className="text-4xl font-black text-gray-900 tracking-tighter"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              Chora<span className="text-indigo-600">Snap</span>
+              Toca<span className="text-yellow-500">Toca</span>
             </h1>
             <p className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
-              Be here. Be seen.
+              Tap, Talk, Together.
             </p>
           </div>
         </div>
