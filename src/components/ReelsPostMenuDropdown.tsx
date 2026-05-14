@@ -25,12 +25,7 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
   className,
 }) => {
   return (
-    <DropdownMenu
-      modal={false}
-      onOpenChange={(open) =>
-        console.log('[ReelsPostMenuDropdown] onOpenChange:', open)
-      }
-    >
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
