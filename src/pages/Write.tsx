@@ -758,7 +758,7 @@ const Write = () => {
               <div className="space-y-6">
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 px-1">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                     {mediaFiles.length > 0 && currentMedia?.type === 'image' && (
                       <span className="ml-1 rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600">드래그로 위치 조정</span>
