@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -150,23 +150,11 @@ const AnimatedRoutes = () => {
   const isWritePage = location.pathname === "/write";
   const showIndex = shouldShowIndex(location.pathname);
 
-  // Index가 display:none → block으로 다시 보일 때 카카오맵에 relayout 요청
-  const prevShowIndexRef = useRef(showIndex);
-  useEffect(() => {
-    console.log('[GHOST/App showIndex effect]', {
-      prev: prevShowIndexRef.current,
-      next: showIndex,
-      pathname: location.pathname,
-    });
-    if (!prevShowIndexRef.current && showIndex) {
-      console.log('[GHOST/App] Index showing again -> dispatching map-relayout-request');
-      // 다음 프레임에서 relayout 요청 (DOM이 display:block으로 반영된 후)
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('map-relayout-request'));
-      });
-    }
-    prevShowIndexRef.current = showIndex;
-  }, [showIndex, location.pathname]);
+  // NOTE: Index가 display:none → block으로 다시 보일 때 카카오맵 relayout은
+  // 일부러 호출하지 않는다. 컨테이너의 픽셀 크기 자체는 display 토글로
+  // 변하지 않으므로 relayout이 불필요하고, 호출 시 카카오맵이 모든
+  // CustomOverlay의 DOM을 일시적으로 detach/attach 하면서 CSS 트랜지션이
+  // 재생되어 ghost 마커가 다시 페이드 인되는 것처럼 보이는 부작용이 있다.
 
   // App 레벨 Header를 숨길 페이지 (login/splash만)
   const hideAppChrome =

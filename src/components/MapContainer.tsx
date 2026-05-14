@@ -284,19 +284,13 @@ const MapContainer = ({
   // 최신순(생성일 내림차순)으로 정렬해 viewport 진입 시 가장 최근 것부터 표시.
   const ghostCandidates = useMemo(() => {
     const list = ghostPosts ?? [];
-    const result = list
+    return list
       .filter(p => p && p.lat != null && p.lng != null)
       .map(p => ({
         post: p,
         createdMs: getPostCreatedAtMs(p) ?? 0,
       }))
       .sort((a, b) => b.createdMs - a.createdMs);
-    console.log('[GHOST/useMemo ghostCandidates] recomputed', {
-      ghostPostsLen: list.length,
-      ghostPostsRef: list,
-      resultLen: result.length,
-    });
-    return result;
   }, [ghostPosts]);
 
   const ghostCandidatesRef = useRef(ghostCandidates);
@@ -308,16 +302,14 @@ const MapContainer = ({
     mapInstance.current.setDraggable(draggable);
   }, [draggable, isMapReady]);
 
-  // Index가 persistent하게 마운트되어 있어 다른 라우트에서 돌아왔을 때,
-  // 부모 컨테이너의 display 토글로 인해 카카오맵의 크기 계산이 어긋날 수 있다.
-  // 'map-relayout-request' 이벤트를 받으면 relayout()을 호출해 정상 표시 보장.
+  // 'map-relayout-request' 이벤트 핸들러 — 외부에서 명시적으로 relayout이
+  // 필요할 때를 위해 유지. (현재는 App.tsx의 display 토글 케이스에서는 호출하지 않음:
+  // relayout이 CustomOverlay DOM을 일시 재배치하면서 CSS 트랜지션이 재생되는 부작용이 있다.)
   useEffect(() => {
     const handleRelayout = () => {
-      console.log('[GHOST/relayout-request] received', { hasMap: !!mapInstance.current });
       if (!mapInstance.current) return;
       try {
         mapInstance.current.relayout();
-        console.log('[GHOST/relayout-request] relayout() called');
       } catch (e) {}
     };
     window.addEventListener('map-relayout-request', handleRelayout);
@@ -1485,20 +1477,11 @@ const MapContainer = ({
   const syncGhostMarkers = useCallback(() => {
     const kakao = (window as any).kakao;
     const map = mapInstance.current;
-    console.log('[GHOST/sync] called', {
-      isMapReady,
-      hasMap: !!map,
-      hasOverlayClass: !!kakao?.maps?.CustomOverlay,
-      candidatesLen: ghostCandidatesRef.current.length,
-      existingOverlays: ghostOverlaysRef.current.size,
-      mapLevel: map?.getLevel?.(),
-    });
     if (!isMapReady || !map || !kakao?.maps?.CustomOverlay) return;
 
     // 줌 레벨 7 이상이면 고스트 마커도 모두 제거 (활성 마커와 동일 정책).
     // 단, 페이드아웃 애니메이션을 재생한 뒤 setMap(null)로 정리한다.
     if (map.getLevel() >= 7) {
-      console.log('[GHOST/sync] zoom>=7, removing all ghosts with fade');
       ghostOverlaysRef.current.forEach((overlay, id) => {
         const content = overlay.getContent() as HTMLElement | null;
         if (content && !content.classList.contains('ghost-disappear')) {
@@ -1540,13 +1523,10 @@ const MapContainer = ({
     const keptIds = new Set<string>(kept.map(p => String(p.id)));
 
     // 후보에서 빠진 ghost 오버레이는 페이드아웃 애니메이션 후 제거
-    let removedCount = 0;
     ghostOverlaysRef.current.forEach((overlay, id) => {
       if (!keptIds.has(id)) {
-        removedCount++;
         const content = overlay.getContent() as HTMLElement | null;
         if (content && !content.classList.contains('ghost-disappear')) {
-          console.log('[GHOST/sync] REMOVING ghost id=', id);
           content.classList.add('ghost-disappear');
           window.setTimeout(() => {
             const cur = ghostOverlaysRef.current.get(id);
@@ -1592,20 +1572,13 @@ const MapContainer = ({
     });
 
     // 새로 추가된 ghost 마커 오버레이 생성 (viewport 안/밖 모두)
-    let createdCount = 0;
-    let skippedCount = 0;
     kept.forEach((post) => {
       const id = String(post.id);
-      if (ghostOverlaysRef.current.has(id)) {
-        skippedCount++;
-        return;
-      }
-      createdCount++;
+      if (ghostOverlaysRef.current.has(id)) return;
 
       const inViewport =
         post.lat >= minLat && post.lat <= maxLat &&
         post.lng >= minLng && post.lng <= maxLng;
-      console.log('[GHOST/sync] CREATING ghost id=', id, ' inViewport=', inViewport);
 
       const content = document.createElement('div');
       // viewport 안에서 새로 생성되는 마커는 일반 마커의 marker-appear-animation과
@@ -1651,13 +1624,6 @@ const MapContainer = ({
       overlay.setMap(map);
       ghostOverlaysRef.current.set(id, overlay);
     });
-
-    console.log('[GHOST/sync] DONE', {
-      removed: removedCount,
-      created: createdCount,
-      skipped: skippedCount,
-      totalOverlays: ghostOverlaysRef.current.size,
-    });
   }, [isMapReady]);
 
   const ghostUpdateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1672,7 +1638,6 @@ const MapContainer = ({
   // 후보 목록이 바뀌거나 지도가 준비되면 즉시 sync (디바운스 없이 바로 표시 →
   // 일반 마커와 동일한 타이밍에 등장하도록).
   useEffect(() => {
-    console.log('[GHOST/useEffect candidates] fire', { isMapReady, candidatesRef: ghostCandidates });
     if (!isMapReady) return;
     if (ghostUpdateTimerRef.current) {
       clearTimeout(ghostUpdateTimerRef.current);

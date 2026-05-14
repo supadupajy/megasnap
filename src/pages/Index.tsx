@@ -1117,16 +1117,8 @@ const Index = () => {
   const ghostFetchTokenRef = useRef(0);
 
   useEffect(() => {
-    console.log('[GHOST/effect] fire', {
-      hasBounds: !!mapData?.bounds,
-      currentZoom,
-      boundsRef: mapData?.bounds,
-      cacheSize: mapCache.ghostPostsCache.size,
-      ghostPostsLen: ghostPosts.length,
-    });
     if (currentZoom >= 7 || !mapData?.bounds) {
       if (ghostPosts.length > 0) {
-        console.log('[GHOST/effect] clearing ghosts (zoom>=7 or no bounds)');
         setGhostPosts([]);
         mapCache.lastGhostPosts = [];
       }
@@ -1138,43 +1130,28 @@ const Index = () => {
       userId: authUserIdRef.current,
       followingIds: Array.from(followingIds),
     });
-    console.log('[GHOST/effect] cacheKey=', cacheKey);
 
     // 1) 캐시 히트 — DB 쿼리 없이 동일한 배열 참조를 즉시 사용 (마커 재렌더 방지)
     const cached = mapCache.ghostPostsCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < GHOST_POSTS_CACHE_TTL_MS) {
-      console.log('[GHOST/effect] CACHE HIT', {
-        cachedLen: cached.posts.length,
-        sameRef: ghostPosts === cached.posts,
-        ageMs: Date.now() - cached.timestamp,
-      });
       // 참조가 같으면 setState가 리렌더를 트리거하지 않도록 비교
       if (ghostPosts !== cached.posts) {
-        console.log('[GHOST/effect] -> setGhostPosts(cached) (different ref)');
         setGhostPosts(cached.posts);
         mapCache.lastGhostPosts = cached.posts;
-      } else {
-        console.log('[GHOST/effect] -> skip setState (same ref)');
       }
       return;
     }
 
-    console.log('[GHOST/effect] CACHE MISS -> will fetch in 100ms');
     const myToken = ++ghostFetchTokenRef.current;
     // 100ms 디바운스 — 빠른 패닝/줌 중 과도한 호출은 막되, 정상 표시 지연은 최소화
     const timer = window.setTimeout(async () => {
-      console.log('[GHOST/effect] fetching from DB...', { token: myToken });
       const list = await fetchExpiredPostsInBounds(bounds, {
         limit: 30,
         categories: selectedCategoriesRef.current,
         userId: authUserIdRef.current,
         followingIds: Array.from(followingIds),
       });
-      if (myToken !== ghostFetchTokenRef.current) {
-        console.log('[GHOST/effect] fetch cancelled (token mismatch)');
-        return;
-      }
-      console.log('[GHOST/effect] DB fetch done, len=', list.length, ' -> setGhostPosts');
+      if (myToken !== ghostFetchTokenRef.current) return;
 
       // 캐시에 저장 + LRU-ish eviction
       mapCache.ghostPostsCache.set(cacheKey, { posts: list, timestamp: Date.now() });
@@ -1257,18 +1234,11 @@ const Index = () => {
   const mapChangeCalledRef = useRef(false);
 
   const handleMapChange = useCallback((data: any) => {
-    console.log('[GHOST/handleMapChange] called', {
-      level: data?.level,
-      hasBounds: !!data?.bounds,
-      boundsRef: data?.bounds,
-      center: data?.center,
-    });
     if (
       !isSelectingLocationRef.current &&
       !isSelectingAdLocationRef.current &&
       (isMapFrozenByCommentsRef.current || isPostDetailOpenRef.current || isPostListOverlayOpenRef.current || Date.now() < suppressMapChangesUntilRef.current)
     ) {
-      console.log('[GHOST/handleMapChange] SUPPRESSED');
       return;
     }
 
@@ -1293,7 +1263,6 @@ const Index = () => {
     // 최초 호출은 throttle 없이 즉시 처리 → 앱 시작 시 마커 즉시 로딩
     if (!mapChangeCalledRef.current) {
       mapChangeCalledRef.current = true;
-      console.log('[GHOST/handleMapChange] FIRST CALL -> setMapData immediately');
       if (data.level !== undefined) setCurrentZoom(data.level);
       setMapData(data);
       return;
@@ -1301,10 +1270,6 @@ const Index = () => {
 
     if (throttleTimer.current) clearTimeout(throttleTimer.current);
     throttleTimer.current = setTimeout(() => {
-      console.log('[GHOST/handleMapChange] throttled -> setMapData', {
-        level: data?.level,
-        boundsRef: data?.bounds,
-      });
       // currentZoom과 mapData를 동시에 업데이트하여 bounds 불일치 방지
       if (data.level !== undefined) {
         setCurrentZoom(data.level);
