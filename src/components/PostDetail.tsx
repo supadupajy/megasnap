@@ -809,96 +809,48 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                             PostItem(여기보기 페이지)과 동일한 레이아웃: 구분선 없이 헤더 → 미디어가 자연스럽게 이어짐.
                             상단/하단 여백 밸런스를 위해 헤더 상단 패딩을 살짝 줄여 콘텐츠 전체를 위로 당김.
                           */}
-                          {isAd ? (
-                            // ===== 광고 포스트 전용 2-row 헤더 =====
-                            // 1줄: 우측에 시간 / 더보기(···) / 닫기(X) 아이콘들을 모아 노출
-                            // 2줄: 아바타 + 닉네임(AD 배지) + 위치 정보
-                            // 광고주명(BMW Korea 등)이 길거나 'AD' 배지가 들어가도
-                            // 우측 컨트롤이 잘리지 않도록 행을 분리한다.
-                            <div className="pt-2 px-4 pb-3 bg-white" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-2.5">
-                                {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
-                                {renderDropdownMenu()}
-                                <button
-                                  onClick={onClose}
-                                  className="w-9 h-9 bg-gray-600 hover:bg-gray-700 rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
-                                  aria-label="닫기"
+                          <div className="flex items-center justify-between pt-2 px-4 pb-3 bg-white" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-3 cursor-pointer group min-w-0 flex-1" onClick={handleUserClick}>
+                              <PostUserAvatar
+                                name={postDisplayName}
+                                avatar={currentPost.user.avatar}
+                                postId={currentPost.id}
+                                userId={currentPost.user.id}
+                                isAd={isAd}
+                                size="md"
+                                optimize
+                                activePress
+                              />
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors truncate">{postDisplayName}</p>
+                                  {isAd && <div className="ad-badge-fancy shrink-0"><span>AD</span></div>}
+                                </div>
+                                <div
+                                  className={cn(
+                                    "flex items-center gap-0.5 mt-1 min-w-0",
+                                    isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
+                                  )}
+                                  onClick={handleLocationClick}
                                 >
-                                  <X className="w-5 h-5" strokeWidth={2.25} />
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-3 cursor-pointer group mt-2" onClick={handleUserClick}>
-                                <PostUserAvatar
-                                  name={postDisplayName}
-                                  avatar={currentPost.user.avatar}
-                                  postId={currentPost.id}
-                                  userId={currentPost.user.id}
-                                  isAd={isAd}
-                                  size="md"
-                                  optimize
-                                  activePress
-                                />
-                                <div className="flex flex-col min-w-0 flex-1">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors truncate">{postDisplayName}</p>
-                                    <div className="ad-badge-fancy shrink-0"><span>AD</span></div>
-                                  </div>
-                                  <div
-                                    className={cn(
-                                      "flex items-center gap-0.5 mt-1 min-w-0",
-                                      isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
-                                    )}
-                                    onClick={handleLocationClick}
-                                  >
-                                    <MapPin className="w-3 h-3 shrink-0" />
-                                    <span className="text-[10px] font-medium truncate">{displayLocation || '알 수 없는 장소'}</span>
-                                  </div>
+                                  <MapPin className="w-3 h-3 shrink-0" />
+                                  <span className="text-[10px] font-medium truncate">{displayLocation || '알 수 없는 장소'}</span>
                                 </div>
                               </div>
                             </div>
-                          ) : (
-                            <div className="flex items-center justify-between pt-2 px-4 pb-3 bg-white" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
-                                <PostUserAvatar
-                                  name={postDisplayName}
-                                  avatar={currentPost.user.avatar}
-                                  postId={currentPost.id}
-                                  userId={currentPost.user.id}
-                                  isAd={isAd}
-                                  size="md"
-                                  optimize
-                                  activePress
-                                />
-                                <div className="flex flex-col">
-                                  <div className="flex items-center gap-1.5">
-                                    <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">{postDisplayName}</p>
-                                  </div>
-                                  <div
-                                    className={cn(
-                                      "flex items-center gap-0.5 mt-1",
-                                      isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
-                                    )}
-                                    onClick={handleLocationClick}
-                                  >
-                                    <MapPin className="w-3 h-3" />
-                                    <span className="text-[10px] font-medium">{displayLocation || '알 수 없는 장소'}</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                <PostCategoryBadge category={currentPost.category} />
-                                {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
-                                {renderDropdownMenu()}
-                                <button
-                                  onClick={onClose}
-                                  className="w-9 h-9 bg-gray-600 hover:bg-gray-700 rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
-                                  aria-label="닫기"
-                                >
-                                  <X className="w-5 h-5" strokeWidth={2.25} />
-                                </button>
-                              </div>
+                            <div className="flex items-center gap-2.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              {!isAd && <PostCategoryBadge category={currentPost.category} />}
+                              {formattedDate && <span className="text-[11px] font-medium text-gray-500 shrink-0">{formattedDate}</span>}
+                              {renderDropdownMenu()}
+                              <button
+                                onClick={onClose}
+                                className="w-9 h-9 bg-gray-600 hover:bg-gray-700 rounded-xl flex items-center justify-center text-white active:scale-90 transition-all"
+                                aria-label="닫기"
+                              >
+                                <X className="w-5 h-5" strokeWidth={2.25} />
+                              </button>
                             </div>
-                          )}
+                          </div>
 
                           {/* 미디어 영역 — 헤더 아래에 별도 마진 없이 이어지도록 (PostItem과 동일) */}
                           <div className="px-4">
