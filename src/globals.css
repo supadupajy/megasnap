@@ -909,81 +909,9 @@ video.post-item-video::-webkit-media-text-track-container {
   transition: opacity 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
 
-/* =============================================
-   지도 탭 활성 Pill - 네모칸(타일) 패턴 + Glow
-   - 우상단(top-right) → 좌하단(bottom-left)으로 천천히 흐름
-   - 베이스: 다크 그레이
-   - 레이어1: 큰 네모칸 (노란 테두리 + 미세한 내부 채움)
-   - 레이어2: 작은 네모칸 (촘촘하게, 깊이감)
-   - ::before : 중앙 펄스 글로우
-   - ::after  : 부드러운 빛 번짐
-   ============================================= */
-@keyframes map-pill-squares-flow {
-  /* 두 레이어 셀 크기(18px, 9px)만큼 이동 → 끊김 없이 반복.
-     우상단(+x, -y) → 좌하단(-x, +y) 방향 */
-  0% {
-    background-position:
-      18px -18px, 18px -18px,   /* 큰 네모칸 (가로선 + 세로선) */
-      9px -9px,   9px -9px;     /* 작은 네모칸 (가로선 + 세로선) */
-  }
-  100% {
-    background-position:
-      0px 0px, 0px 0px,
-      0px 0px, 0px 0px;
-  }
-}
-
-@keyframes map-pill-center-pulse {
-  /* transform 사용 금지 - opacity만 변경해야 pill 박스 크기/주변 레이아웃에 영향 없음 */
-  0%, 100% { opacity: 0.5; }
-  50%      { opacity: 1;   }
-}
-
+/* 지도 탭 활성 Pill 배경 - 단순 다크 그레이 */
 .map-pill-animated-bg {
-  /* position 선언 제거: 부모 motion.div의 'absolute' 클래스를 덮어쓰면
-     flex 레이아웃에 끼어들어 다른 아이콘들이 밀려나는 문제 발생함.
-     pseudo-element(::before/::after)는 부모가 absolute여도 정상 동작. */
-  overflow: hidden;
   background-color: rgb(55, 65, 81);
-  background-image:
-    /* 큰 네모칸 - 노란빛 테두리 */
-    linear-gradient(to right,  rgba(250, 204, 21, 0.28) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(250, 204, 21, 0.28) 1px, transparent 1px),
-    /* 작은 네모칸 - 흰빛 테두리 (깊이감) */
-    linear-gradient(to right,  rgba(255, 255, 255, 0.10) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.10) 1px, transparent 1px);
-  background-size:
-    18px 18px, 18px 18px,
-    9px 9px,   9px 9px;
-  background-repeat: repeat;
-}
-
-/* 중앙 펄스 글로우 - 호흡하는 빛 (opacity만 변경, 박스 크기 영향 없음) */
-.map-pill-animated-bg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse at 50% 50%,
-    rgba(250, 204, 21, 0.32) 0%,
-    rgba(250, 204, 21, 0.10) 40%,
-    rgba(250, 204, 21, 0) 70%
-  );
-  animation: map-pill-center-pulse 2.4s ease-in-out infinite;
-}
-
-/* 좌상단 부드러운 빛 번짐 - 입체감 */
-.map-pill-animated-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    circle at 30% 30%,
-    rgba(253, 224, 71, 0.16) 0%,
-    rgba(253, 224, 71, 0) 55%
-  );
 }
 
 /* =============================================
