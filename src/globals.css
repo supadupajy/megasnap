@@ -259,29 +259,17 @@
   animation: ad-marker-disappear 0.5s cubic-bezier(0.55, 0, 1, 0.45) forwards;
 }
 
+/* 한 번 지도에 나타난 마커는 viewport를 들락거려도 등장 애니메이션을
+   재생하지 않고, opacity 페이드 transition만으로 자연스럽게 보였다 사라진다.
+   (실제로 마커 DOM이 새로 생성되거나 제거될 때는 marker-appear-animation /
+   marker-disappear-animation 가 별도로 처리한다.) */
+.marker-container {
+  transition: opacity 0.25s ease-out;
+}
+
 .marker-viewport-hidden {
   opacity: 0 !important;
   pointer-events: none !important;
-}
-
-.marker-viewport-appearing .marker-content-wrapper {
-  animation: marker-appear 0.4s ease-out forwards;
-}
-
-.marker-viewport-appearing.is-ad .marker-content-wrapper {
-  animation: ad-marker-appear 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
-}
-
-.marker-viewport-disappearing {
-  pointer-events: none !important;
-}
-
-.marker-viewport-disappearing .marker-content-wrapper {
-  animation: marker-disappear 0.4s ease-in forwards;
-}
-
-.marker-viewport-disappearing.is-ad .marker-content-wrapper {
-  animation: ad-marker-disappear 0.5s cubic-bezier(0.55, 0, 1, 0.45) forwards;
 }
 
 .marker-container img {

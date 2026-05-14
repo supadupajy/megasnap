@@ -356,7 +356,12 @@ const MapContainer = ({
     }
   }, []);
 
-  const applyMarkerViewportState = useCallback((id: string, overlay: any, isVisible: boolean, animate = true) => {
+  // viewport 안팎으로 들어오고 나가는 마커는 keyframe 등장 애니메이션을
+  // 다시 재생하지 않는다 (overlay DOM이 그대로 유지되므로 한 번 등장한
+  // 마커는 사라지기 전까지 추가 애니메이션 없이 단순 페이드만 처리).
+  // CSS의 .marker-viewport-hidden { opacity: 0; transition: ... } 가
+  // 부드러운 시각 전환을 담당한다.
+  const applyMarkerViewportState = useCallback((id: string, overlay: any, isVisible: boolean, _animate = true) => {
     const content = overlay.getContent() as HTMLElement | null;
     if (!content || content.classList.contains('marker-disappear-animation')) return;
 
@@ -365,31 +370,11 @@ const MapContainer = ({
 
     viewportVisibilityRef.current.set(id, isVisible);
     clearViewportAnimationTimer(id);
+    // 혹시 남아있을 수 있는 과거 진입/이탈 keyframe 클래스를 정리
     content.classList.remove('marker-viewport-appearing', 'marker-viewport-disappearing');
 
     if (isVisible) {
       content.classList.remove('marker-viewport-hidden');
-      if (animate && !markersHiddenRef.current) {
-        void content.offsetWidth;
-        content.classList.add('marker-viewport-appearing');
-        const timer = window.setTimeout(() => {
-          content.classList.remove('marker-viewport-appearing');
-          viewportAnimationTimersRef.current.delete(id);
-        }, 680);
-        viewportAnimationTimersRef.current.set(id, timer);
-      }
-      return;
-    }
-
-    if (animate && !markersHiddenRef.current) {
-      void content.offsetWidth;
-      content.classList.add('marker-viewport-disappearing');
-      const timer = window.setTimeout(() => {
-        content.classList.remove('marker-viewport-disappearing');
-        content.classList.add('marker-viewport-hidden');
-        viewportAnimationTimersRef.current.delete(id);
-      }, content.classList.contains('is-ad') ? 520 : 420);
-      viewportAnimationTimersRef.current.set(id, timer);
     } else {
       content.classList.add('marker-viewport-hidden');
     }
