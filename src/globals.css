@@ -823,6 +823,7 @@ video.post-item-video::-webkit-media-text-track-container {
   opacity: 0.7;
   /* 일반 마커(.marker-container)와 동일한 페이드 트랜지션 */
   transition: opacity 0.25s ease-out;
+  transform-origin: 50% 50%;
 }
 
 /* viewport 밖으로 나간 고스트 마커는 일반 마커와 동일하게 opacity로만 숨긴다.
@@ -830,6 +831,17 @@ video.post-item-video::-webkit-media-text-track-container {
 .ghost-marker-container.ghost-marker-viewport-hidden {
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+/* 고스트 마커 등장 애니메이션 — 일반 마커의 marker-appear와 동일한 타이밍/이징.
+   최종 opacity가 0.7이라는 점만 다름. */
+@keyframes ghost-marker-appear {
+  0%   { opacity: 0;   transform: scale(0.85) translateY(8px); }
+  100% { opacity: 0.7; transform: scale(1)    translateY(0); }
+}
+
+.ghost-marker-container.ghost-marker-appear-animation {
+  animation: ghost-marker-appear 0.4s ease-out forwards;
 }
 
 @keyframes ghost-marker-disappear {

@@ -1529,7 +1529,7 @@ const MapContainer = ({
       }
     });
 
-    // 기존 ghost 오버레이의 viewport 진입/이탈에 따른 opacity 토글
+    // 기존 ghost 오버레이의 viewport 진입/이탈에 따른 처리
     ghostOverlaysRef.current.forEach((overlay, id) => {
       if (!keptIds.has(id)) return;
       const content = overlay.getContent() as HTMLElement | null;
@@ -1541,9 +1541,19 @@ const MapContainer = ({
       const inViewport =
         post.lat >= minLat && post.lat <= maxLat &&
         post.lng >= minLng && post.lng <= maxLng;
+      const wasHidden = content.classList.contains('ghost-marker-viewport-hidden');
       if (inViewport) {
-        content.classList.remove('ghost-marker-viewport-hidden');
+        if (wasHidden) {
+          // viewport 밖 → 안: 일반 마커의 등장 애니메이션과 동일하게 keyframe 재생
+          content.classList.remove('ghost-marker-viewport-hidden');
+          content.classList.remove('ghost-marker-appear-animation');
+          // reflow 후 재추가해야 애니메이션이 재시작됨
+          void content.offsetWidth;
+          content.classList.add('ghost-marker-appear-animation');
+        }
       } else {
+        // viewport 안 → 밖: opacity로 부드럽게 페이드 아웃
+        content.classList.remove('ghost-marker-appear-animation');
         content.classList.add('ghost-marker-viewport-hidden');
       }
     });
@@ -1558,11 +1568,11 @@ const MapContainer = ({
         post.lng >= minLng && post.lng <= maxLng;
 
       const content = document.createElement('div');
-      // viewport 밖이면 처음부터 hidden 클래스를 달아 두고, 나중에 viewport 안으로
-      // 들어올 때 트랜지션으로 0 → 0.7 페이드 인이 자연스럽게 일어나도록 함.
-      // viewport 안이면 일반 마커처럼 즉시 표시 (별도 초기 페이드 단계 없음).
+      // viewport 안에서 새로 생성되는 마커는 일반 마커의 marker-appear-animation과
+      // 동일한 keyframe 등장 애니메이션(스케일+페이드)을 재생한다.
+      // viewport 밖이면 hidden 상태로 두고, 나중에 안으로 들어올 때 등장 애니메이션 재생.
       content.className = inViewport
-        ? 'ghost-marker-container'
+        ? 'ghost-marker-container ghost-marker-appear-animation'
         : 'ghost-marker-container ghost-marker-viewport-hidden';
       // 클릭 시 일반 마커처럼 onMarkerClick 호출
       content.onclick = (e) => {
@@ -1609,14 +1619,19 @@ const MapContainer = ({
     ghostUpdateTimerRef.current = setTimeout(() => {
       ghostUpdateTimerRef.current = null;
       syncGhostMarkers();
-    }, 180);
+    }, 60);
   }, [syncGhostMarkers]);
 
-  // 후보 목록이 바뀌거나 지도가 준비되면 즉시 한번, 그리고 이후 지도 이동 이벤트에 묶음
+  // 후보 목록이 바뀌거나 지도가 준비되면 즉시 sync (디바운스 없이 바로 표시 →
+  // 일반 마커와 동일한 타이밍에 등장하도록).
   useEffect(() => {
     if (!isMapReady) return;
-    scheduleGhostMarkerUpdate();
-  }, [isMapReady, ghostCandidates, scheduleGhostMarkerUpdate]);
+    if (ghostUpdateTimerRef.current) {
+      clearTimeout(ghostUpdateTimerRef.current);
+      ghostUpdateTimerRef.current = null;
+    }
+    syncGhostMarkers();
+  }, [isMapReady, ghostCandidates, syncGhostMarkers]);
 
   useEffect(() => {
     if (!isMapReady || !mapInstance.current) return;

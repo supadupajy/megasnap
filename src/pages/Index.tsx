@@ -1118,7 +1118,7 @@ const Index = () => {
     }
     const bounds = mapData.bounds;
     const myToken = ++ghostFetchTokenRef.current;
-    // 250ms 디바운스 — 빠른 패닝/줌 중 과도한 호출 방지
+    // 100ms 디바운스 — 빠른 패닝/줌 중 과도한 호출은 막되, 정상 표시 지연은 최소화
     const timer = window.setTimeout(async () => {
       const list = await fetchExpiredPostsInBounds(bounds, {
         limit: 30,
@@ -1128,7 +1128,7 @@ const Index = () => {
       });
       if (myToken !== ghostFetchTokenRef.current) return;
       setGhostPosts(list);
-    }, 250);
+    }, 100);
     return () => window.clearTimeout(timer);
   }, [mapData?.bounds, currentZoom, selectedCategories, authUser?.id, followingIds]);
 
