@@ -818,8 +818,8 @@ video.post-item-video::-webkit-media-text-track-container {
   cursor: pointer;
   position: relative;
   z-index: 5;
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
   opacity: 0.7;
   /* 일반 마커(.marker-container)와 동일한 페이드 트랜지션 */
   transition: opacity 0.25s ease-out;
@@ -855,13 +855,13 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 .ghost-marker-dot {
-  width: 30px;
-  height: 30px;
-  /* 일반 마커(border-radius:20px on 60px box)와 동일 비율 → 30px 박스에선 10px */
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  /* 일반 마커(border-radius:20px on 60px box)와 동일 비율 → 42px 박스에선 14px */
+  border-radius: 14px;
   background: #cbd5e1;
-  /* 일반 마커는 3px 흰 border on 60px → 30px에선 비례해서 1.5px */
-  border: 1.5px solid #f1f5f9;
+  /* 일반 마커는 3px 흰 border on 60px → 42px에선 비례해서 2px */
+  border: 2px solid #f1f5f9;
   box-shadow: 0 2px 6px rgba(71, 85, 105, 0.25);
   overflow: hidden;
   display: flex;
@@ -886,7 +886,7 @@ video.post-item-video::-webkit-media-text-track-container {
   inset: 0;
   background: rgba(148, 163, 184, 0.25);
   /* 부모 박스의 둥근 모서리에 맞춰 안쪽 오버레이도 동일 radius */
-  border-radius: 10px;
+  border-radius: 14px;
   pointer-events: none;
 }
 
