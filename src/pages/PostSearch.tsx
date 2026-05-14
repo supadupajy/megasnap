@@ -199,7 +199,11 @@ const PostDetailFullPage = ({
         ) : (
           <div className="flex flex-col">
             {allPosts.map((p) => (
-              <div key={p.id} id={`page-post-${p.id}`} className="scroll-mt-4">
+              <div
+                key={p.id}
+                id={`page-post-${p.id}`}
+                style={{ scrollMarginTop: 'calc(env(safe-area-inset-top, 0px) + 120px)' }}
+              >
                 <PostItem
                   post={p}
                   disablePulse={true}
