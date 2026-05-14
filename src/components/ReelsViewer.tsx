@@ -624,7 +624,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       )}
 
       {embedded && showInlineCloseButton && (
-        <div className="absolute top-3 right-3 z-40 pointer-events-none">
+        <div className="absolute top-3 right-6 z-40 pointer-events-none">
           <button
             type="button"
             onClick={onClose}
