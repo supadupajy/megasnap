@@ -36,6 +36,13 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
   const [scrubTime, setScrubTime] = useState(0);
   const wasPlayingBeforeScrubRef = useRef(false);
 
+  // rAF 기반 스무스 보간을 위한 DOM refs
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const currentTimeTextRef = useRef<HTMLSpanElement>(null);
+  const videoCurrentTimeRef = useRef(0);
+  const isDraggingForRafRef = useRef(false);
+
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
@@ -45,7 +52,9 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
       setDuration(Number.isFinite(el.duration) ? el.duration : 0);
     };
     const handleTimeUpdate = () => {
-      setCurrentTime(el.currentTime || 0);
+      const t = el.currentTime || 0;
+      videoCurrentTimeRef.current = t;
+      setCurrentTime(t);
     };
     el.addEventListener('playing', handlePlaying);
     el.addEventListener('loadedmetadata', handleLoadedMeta);
@@ -122,6 +131,47 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
   const isDraggingRef = useRef(false);
   const latestScrubRef = useRef(0);
 
+  // rAF로 진행률을 매 프레임 보간 — 비디오 timeupdate(~250ms)의 끊김을 제거.
+  useEffect(() => {
+    if (duration <= 0) return;
+    let rafId = 0;
+    let smoothed = videoCurrentTimeRef.current;
+    let lastFrame = performance.now();
+
+    const tick = (now: number) => {
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      const target = isDraggingForRafRef.current ? latestScrubRef.current : videoCurrentTimeRef.current;
+
+      if (isDraggingForRafRef.current) {
+        smoothed = target;
+      } else {
+        smoothed += dt;
+        const diff = target - smoothed;
+        if (Math.abs(diff) > 0.4) smoothed = target;
+        else smoothed += diff * Math.min(1, dt * 4);
+      }
+
+      if (smoothed < 0) smoothed = 0;
+      if (smoothed > duration) smoothed = duration;
+
+      const ratio = duration > 0 ? smoothed / duration : 0;
+      const pct = ratio * 100;
+
+      if (progressBarRef.current) progressBarRef.current.style.width = `${pct}%`;
+      if (handleRef.current) {
+        handleRef.current.style.left = `calc(12px + (100% - 24px) * ${ratio})`;
+      }
+      if (currentTimeTextRef.current) currentTimeTextRef.current.textContent = formatTime(smoothed);
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [duration]);
+
   const computeTimeFromClientX = useCallback(
     (clientX: number): number => {
       const el = trackRef.current;
@@ -139,6 +189,7 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
     e.preventDefault();
     (e.target as Element).setPointerCapture?.(e.pointerId);
     isDraggingRef.current = true;
+    isDraggingForRafRef.current = true;
     const v = videoRef.current;
     if (v) {
       wasPlayingBeforeScrubRef.current = !v.paused;
@@ -163,10 +214,12 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
     if (!isDraggingRef.current) return;
     e.stopPropagation();
     isDraggingRef.current = false;
+    isDraggingForRafRef.current = false;
     const t = latestScrubRef.current;
     const v = videoRef.current;
     if (v) {
       try { v.currentTime = t; } catch {}
+      videoCurrentTimeRef.current = t;
       setCurrentTime(t);
       if (wasPlayingBeforeScrubRef.current) {
         v.play().catch(() => {});
@@ -232,11 +285,17 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
-          {/* 시간 표시 (스크럽 중에만) */}
-          {isScrubbing === 1 && duration > 0 && (
-            <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
-              <span className="px-2 py-0.5 rounded-full bg-black/70 text-white text-[11px] font-black tabular-nums backdrop-blur-md">
-                {formatTime(displayTime)} / {formatTime(duration)}
+          {/* 시간 표시 (타임라인 우측 상단) — 현재 / 전체 */}
+          {duration > 0 && (
+            <div className="absolute -top-4 right-3 pointer-events-none flex items-baseline gap-1">
+              <span
+                ref={currentTimeTextRef}
+                className="text-white text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]"
+              >
+                {formatTime(displayTime)}
+              </span>
+              <span className="text-white/60 text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                / {formatTime(duration)}
               </span>
             </div>
           )}
@@ -248,20 +307,19 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
               isScrubbing === 1 ? 'h-1.5' : 'h-1'
             )}
           >
-            {/* 진행 바 */}
+            {/* 진행 바 — rAF로 매 프레임 width 업데이트 */}
             <div
+              ref={progressBarRef}
               className="absolute left-0 top-0 bottom-0 bg-white rounded-full"
-              style={{
-                width: `${progress * 100}%`,
-                transition: isScrubbing === 1 ? 'none' : 'width 120ms linear',
-              }}
+              style={{ width: `${progress * 100}%` }}
             />
           </div>
 
-          {/* 핸들 (스크럽 중에만 표시) */}
+          {/* 핸들 (스크럽 중에만 표시) — rAF로 매 프레임 left 업데이트 */}
           <div
+            ref={handleRef}
             className={cn(
-              'absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-md pointer-events-none transition-all',
+              'absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-md pointer-events-none transition-[width,height,opacity] duration-150',
               isScrubbing === 1 ? 'w-3.5 h-3.5 opacity-100' : 'w-0 h-0 opacity-0'
             )}
             style={{

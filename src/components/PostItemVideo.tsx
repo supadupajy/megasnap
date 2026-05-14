@@ -54,6 +54,13 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   const isDraggingRef = useRef(false);
   const latestTimeRef = useRef(0);
 
+  // rAF 기반 스무스 보간을 위한 DOM refs
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const currentTimeTextRef = useRef<HTMLSpanElement>(null);
+  // 외부 timeupdate를 ref로도 추적 (rAF가 참조)
+  const videoCurrentTimeRef = useRef(0);
+
   // 전역 muted 상태를 video 요소에 적용
   useEffect(() => {
     const v = videoRef.current;
@@ -67,7 +74,9 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     if (!v) return;
 
     const onTimeUpdate = () => {
-      if (!isDraggingRef.current) setCurrentTime(v.currentTime || 0);
+      const t = v.currentTime || 0;
+      videoCurrentTimeRef.current = t;
+      if (!isDraggingRef.current) setCurrentTime(t);
     };
     const onLoadedMeta = () => {
       setDuration(Number.isFinite(v.duration) ? v.duration : 0);
@@ -103,6 +112,48 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     setUserPaused(false);
     setFirstFrameReady(false);
   }, [src]);
+
+  // rAF로 진행률을 매 프레임 보간 — 비디오 timeupdate(~250ms)의 끊김을 제거.
+  // 진행 바 width, 핸들 left, 현재 시간 텍스트를 DOM 직접 조작으로 업데이트해
+  // React 리렌더 없이 60fps로 부드럽게 흐른다.
+  useEffect(() => {
+    if (duration <= 0) return;
+    let rafId = 0;
+    let smoothed = videoCurrentTimeRef.current;
+    let lastFrame = performance.now();
+
+    const tick = (now: number) => {
+      const dt = (now - lastFrame) / 1000;
+      lastFrame = now;
+
+      const target = isDraggingRef.current ? latestTimeRef.current : videoCurrentTimeRef.current;
+
+      if (isDraggingRef.current) {
+        smoothed = target;
+      } else {
+        // 비디오 재생 속도(=1)로 자연스럽게 흐르게 한 뒤, 실제 currentTime과 부드럽게 보정.
+        smoothed += dt;
+        const diff = target - smoothed;
+        if (Math.abs(diff) > 0.4) smoothed = target;
+        else smoothed += diff * Math.min(1, dt * 4);
+      }
+
+      if (smoothed < 0) smoothed = 0;
+      if (smoothed > duration) smoothed = duration;
+
+      const ratio = duration > 0 ? smoothed / duration : 0;
+      const pct = ratio * 100;
+
+      if (progressBarRef.current) progressBarRef.current.style.width = `${pct}%`;
+      if (handleRef.current) handleRef.current.style.left = `${pct}%`;
+      if (currentTimeTextRef.current) currentTimeTextRef.current.textContent = formatTime(smoothed);
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [duration]);
 
   // 사용자가 영상 영역을 탭한 경우에만 명시적으로 일시정지/재생을 토글.
   // 이때만 userPaused가 true가 되어 큰 플레이 아이콘 오버레이가 노출된다.
@@ -267,11 +318,17 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
           onPointerUp={handlePointerEnd}
           onPointerCancel={handlePointerEnd}
         >
-          {/* 스크럽 중 시간 표시 */}
-          {isScrubbing && duration > 0 && (
-            <div className="absolute -top-7 left-0 right-0 flex justify-center pointer-events-none">
-              <span className="px-2 py-0.5 rounded-full bg-black/70 text-white text-[11px] font-black tabular-nums backdrop-blur-md">
-                {formatTime(displayTime)} / {formatTime(duration)}
+          {/* 시간 표시 (타임라인 우측 상단) — 현재 / 전체 */}
+          {duration > 0 && (
+            <div className="absolute -top-4 right-3 pointer-events-none flex items-baseline gap-1">
+              <span
+                ref={currentTimeTextRef}
+                className="text-white text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]"
+              >
+                {formatTime(displayTime)}
+              </span>
+              <span className="text-white/60 text-[11px] font-black tabular-nums leading-none tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                / {formatTime(duration)}
               </span>
             </div>
           )}
@@ -283,26 +340,26 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
               isScrubbing ? 'h-1.5' : 'h-1'
             )}
           >
-            {/* 진행 바 */}
+            {/* 진행 바 — rAF로 매 프레임 width 업데이트 */}
             <div
+              ref={progressBarRef}
               className="absolute left-0 top-0 bottom-0 bg-white rounded-full"
-              style={{
-                width: `${progress * 100}%`,
-                transition: isScrubbing ? 'none' : 'width 120ms linear',
-              }}
+              style={{ width: `${progress * 100}%` }}
             />
           </div>
 
-          {/* 스크럽 핸들 */}
-          {isScrubbing && (
-            <div
-              className="absolute top-1/2 w-3 h-3 rounded-full bg-white shadow-md pointer-events-none"
-              style={{
-                left: `calc(${progress * 100}% )`,
-                transform: 'translate(-50%, -50%)',
-              }}
-            />
-          )}
+          {/* 스크럽 핸들 — rAF로 매 프레임 left 업데이트 */}
+          <div
+            ref={handleRef}
+            className={cn(
+              'absolute top-1/2 -translate-y-1/2 rounded-full bg-white shadow-md pointer-events-none transition-[width,height,opacity] duration-150',
+              isScrubbing ? 'w-3 h-3 opacity-100' : 'w-0 h-0 opacity-0'
+            )}
+            style={{
+              left: `${progress * 100}%`,
+              transform: 'translate(-50%, -50%)',
+            }}
+          />
         </div>
       </div>
     </div>
