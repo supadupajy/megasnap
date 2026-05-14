@@ -1580,6 +1580,8 @@ const MapContainer = ({
         post.lat >= minLat && post.lat <= maxLat &&
         post.lng >= minLng && post.lng <= maxLng;
 
+      console.log('[GHOST/sync] CREATE id=', id, 'inViewport=', inViewport);
+
       const content = document.createElement('div');
       // viewport 안에서 새로 생성되는 마커는 일반 마커의 marker-appear-animation과
       // 동일한 keyframe 등장 애니메이션(스케일+페이드)을 재생한다.
@@ -1623,6 +1625,34 @@ const MapContainer = ({
       });
       overlay.setMap(map);
       ghostOverlaysRef.current.set(id, overlay);
+
+      // DEBUG: 이 ghost DOM의 클래스 변경, 애니메이션 재생, 트랜지션 재생을 모두 추적
+      try {
+        const classObserver = new MutationObserver((mutations) => {
+          mutations.forEach((m) => {
+            if (m.type === 'attributes' && m.attributeName === 'class') {
+              console.log('[GHOST/DOM-class]', id, 'class=', content.className);
+            }
+          });
+        });
+        classObserver.observe(content, { attributes: true, attributeFilter: ['class'] });
+        (content as any).__classObserver = classObserver;
+
+        content.addEventListener('animationstart', (e: any) => {
+          console.log('[GHOST/animationstart]', id, 'name=', e.animationName);
+        });
+        content.addEventListener('animationend', (e: any) => {
+          console.log('[GHOST/animationend]', id, 'name=', e.animationName);
+        });
+        content.addEventListener('transitionstart', (e: any) => {
+          console.log('[GHOST/transitionstart]', id, 'prop=', e.propertyName, 'from=', window.getComputedStyle(content).opacity);
+        });
+        content.addEventListener('transitionend', (e: any) => {
+          console.log('[GHOST/transitionend]', id, 'prop=', e.propertyName, 'to=', window.getComputedStyle(content).opacity);
+        });
+      } catch (e) {
+        console.error('[GHOST/DOM-observer] error', e);
+      }
     });
   }, [isMapReady]);
 

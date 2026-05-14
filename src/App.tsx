@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -150,11 +150,21 @@ const AnimatedRoutes = () => {
   const isWritePage = location.pathname === "/write";
   const showIndex = shouldShowIndex(location.pathname);
 
-  // NOTE: Index가 display:none → block으로 다시 보일 때 카카오맵 relayout은
-  // 일부러 호출하지 않는다. 컨테이너의 픽셀 크기 자체는 display 토글로
-  // 변하지 않으므로 relayout이 불필요하고, 호출 시 카카오맵이 모든
-  // CustomOverlay의 DOM을 일시적으로 detach/attach 하면서 CSS 트랜지션이
-  // 재생되어 ghost 마커가 다시 페이드 인되는 것처럼 보이는 부작용이 있다.
+  // DEBUG: showIndex 변경 시점에 ghost 마커 DOM 상태 추적
+  React.useEffect(() => {
+    console.log('[GHOST/App] showIndex changed', { showIndex, pathname: location.pathname });
+    // display 토글 전후의 ghost 마커 DOM 상태를 다음 프레임에서 확인
+    requestAnimationFrame(() => {
+      const ghosts = document.querySelectorAll('.ghost-marker-container');
+      console.log('[GHOST/App] ghost count in DOM (rAF after toggle)=', ghosts.length);
+      ghosts.forEach((el, i) => {
+        if (i < 3) {
+          const cs = window.getComputedStyle(el);
+          console.log('[GHOST/App] ghost[' + i + '] class=', el.className, 'computed opacity=', cs.opacity, 'transition=', cs.transition);
+        }
+      });
+    });
+  }, [showIndex, location.pathname]);
 
   // App 레벨 Header를 숨길 페이지 (login/splash만)
   const hideAppChrome =
