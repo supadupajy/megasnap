@@ -424,18 +424,6 @@ const PostListOverlay = ({
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* [DEBUG] 마스크를 빨강+굵은 outline으로 임시 표시. 위치/크기 확인용. */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-x-0 bottom-0 pointer-events-none"
-        style={{
-          height: 'calc(60px + max(env(safe-area-inset-bottom, 0px), 12px) + 12px)',
-          zIndex: 19999,
-          backgroundColor: 'red',
-          outline: '4px solid magenta',
-        }}
-      />
     <div
       ref={scrollContainerRef}
       style={{
@@ -526,7 +514,6 @@ const PostListOverlay = ({
           </div>
         )}
     </div>
-    </>
   );
 };
 

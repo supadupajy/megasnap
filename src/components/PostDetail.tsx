@@ -774,10 +774,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
               left: 0,
               right: 0,
-              bottom: keyboardOffset > 0
-                ? '0px'
-                : 'calc(64px + max(env(safe-area-inset-bottom, 0px), 0px))',
-              transition: 'bottom 160ms ease-out',
+              // 화면 바닥까지 흰 배경이 꽉 차도록 bottom: 0.
+              // (이전엔 BottomNav 높이만큼 띄워두어서 알약 좌·우/아래로 지도가 비치는 문제가 있었음)
+              bottom: 0,
             }}
           >
             <VisuallyHidden.Root>
@@ -858,7 +857,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                             {renderMediaArea()}
                           </div>
 
-                          <div className="px-4 pt-2 pb-4" onClick={(e) => e.stopPropagation()}>
+                          <div
+                            className="px-4 pt-2"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              // BottomNav 알약(약 60px) + 외부 여백(12px) + safe-area + 약간의 여유.
+                              // 콘텐츠가 알약 뒤로 숨지 않도록 충분한 하단 패딩 확보.
+                              paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
+                            }}
+                          >
                             {renderActionButtons()}
                             <div className="space-y-1.5 mb-4 mt-3 cursor-pointer" onClick={onClose}>
                               <div className="flex gap-2 items-start">
