@@ -274,7 +274,19 @@ const BottomNav = () => {
               'absolute pointer-events-none transition-colors duration-200',
               navItems[safeIndex]?.path === '/' ? 'map-pill-animated-bg' : 'bg-gray-200'
             )}
-            style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
+            style={{
+              top: '50%',
+              y: '-44%',
+              height: PILL_HEIGHT,
+              width: PILL_WIDTH,
+              minWidth: PILL_WIDTH,
+              maxWidth: PILL_WIDTH,
+              minHeight: PILL_HEIGHT,
+              maxHeight: PILL_HEIGHT,
+              boxSizing: 'border-box',
+              flexShrink: 0,
+              borderRadius: 18,
+            }}
             animate={{ left: pillLeft }}
             initial={{ left: pillLeft }}
             transition={{ type: 'spring', stiffness: 1000, damping: 50 }}
