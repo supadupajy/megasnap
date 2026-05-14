@@ -173,7 +173,7 @@ const Login = () => {
               Toca<span className="text-yellow-500">Toca</span>
             </h1>
             <p className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
-              Tap, Talk, Together.
+              Be here, Be seen.
             </p>
           </div>
         </div>
