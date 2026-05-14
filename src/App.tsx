@@ -153,14 +153,20 @@ const AnimatedRoutes = () => {
   // Index가 display:none → block으로 다시 보일 때 카카오맵에 relayout 요청
   const prevShowIndexRef = useRef(showIndex);
   useEffect(() => {
+    console.log('[GHOST/App showIndex effect]', {
+      prev: prevShowIndexRef.current,
+      next: showIndex,
+      pathname: location.pathname,
+    });
     if (!prevShowIndexRef.current && showIndex) {
+      console.log('[GHOST/App] Index showing again -> dispatching map-relayout-request');
       // 다음 프레임에서 relayout 요청 (DOM이 display:block으로 반영된 후)
       requestAnimationFrame(() => {
         window.dispatchEvent(new Event('map-relayout-request'));
       });
     }
     prevShowIndexRef.current = showIndex;
-  }, [showIndex]);
+  }, [showIndex, location.pathname]);
 
   // App 레벨 Header를 숨길 페이지 (login/splash만)
   const hideAppChrome =
