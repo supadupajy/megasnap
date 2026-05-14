@@ -1374,8 +1374,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         className="absolute left-0 right-0 top-0 flex items-end justify-center"
         style={{
           bottom: embedded
-            ? "160px"
-            : "calc(env(safe-area-inset-bottom, 0px) + 160px)",
+            ? "140px"
+            : "calc(env(safe-area-inset-bottom, 0px) + 140px)",
           cursor: "pointer",
         }}
         onPointerDown={handlePointerDown}
@@ -1491,11 +1491,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             3) 본문 */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
-          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-10"
-          style={{ paddingBottom: embedded ? "14px" : "calc(env(safe-area-inset-bottom, 0px) + 14px)" }}
+          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-6"
+          style={{ paddingBottom: embedded ? "10px" : "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
         >
           {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}
-          <div className="flex items-center justify-between gap-2 pointer-events-auto mb-3">
+          <div className="flex items-center justify-between gap-2 pointer-events-auto mb-2.5">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <button
                 type="button"
@@ -1554,7 +1554,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           </div>
 
           {/* 2) 아바타 + (닉네임 / 위치) — 닉네임 바로 아래에 위치 정보 */}
-          <div className="text-white pointer-events-auto mb-2 flex items-center gap-2.5">
+          <div className="text-white pointer-events-auto mb-1.5 flex items-center gap-2.5">
             <button
               onClick={onUserClick}
               className="shrink-0 active:opacity-70 transition-opacity"
