@@ -22,12 +22,17 @@ export const mapCache = {
   // 키: 양자화된 bounds + 필터 시그니처, 값: { count, timestamp }
   // 같은 영역에서 페이지 재진입/미세 이동 시 DB 재쿼리를 막아 부하를 줄임.
   expiredCountCache: new Map<string, { count: number; timestamp: number }>(),
+  // 고스트(만료) 포스트 목록 캐시 — 같은 영역을 다시 보거나 미세 이동 시 DB hit 0으로 만듦
+  expiredPostsCache: new Map<string, { posts: any[]; timestamp: number }>(),
 };
 
 /** 캐시 TTL (ms) — 이 시간 안에는 같은 영역에 대해 DB를 재쿼리하지 않음 */
 export const EXPIRED_COUNT_CACHE_TTL_MS = 60_000;
 /** 캐시 최대 엔트리 수 — 메모리 보호용 */
 export const EXPIRED_COUNT_CACHE_MAX = 50;
+/** 고스트 포스트 목록 캐시 TTL/최대 — count 캐시와 동일 정책 */
+export const EXPIRED_POSTS_CACHE_TTL_MS = 60_000;
+export const EXPIRED_POSTS_CACHE_MAX = 50;
 
 /**
  * bounds를 소수점 3자리(~100m)로 양자화한 키 + 필터 시그니처를 만든다.

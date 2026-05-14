@@ -19,7 +19,7 @@ import { cn, getFallbackImage } from '@/lib/utils';
 
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
-import { mapCache, makeExpiredCountKey, EXPIRED_COUNT_CACHE_TTL_MS, EXPIRED_COUNT_CACHE_MAX } from '@/utils/map-cache';
+import { mapCache, makeExpiredCountKey, EXPIRED_COUNT_CACHE_TTL_MS, EXPIRED_COUNT_CACHE_MAX, EXPIRED_POSTS_CACHE_TTL_MS, EXPIRED_POSTS_CACHE_MAX } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, fetchExpiredOnlyCountInBounds, fetchExpiredPostsInBounds, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
@@ -1117,6 +1117,20 @@ const Index = () => {
       return;
     }
     const bounds = mapData.bounds;
+    const cacheKey = makeExpiredCountKey(bounds, {
+      categories: selectedCategoriesRef.current,
+      userId: authUserIdRef.current,
+      followingIds: Array.from(followingIds),
+    });
+
+    // 캐시 히트 — 같은 영역(양자화된 bounds + 필터)이면 60초 동안 DB 재쿼리 없음
+    const cached = mapCache.expiredPostsCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < EXPIRED_POSTS_CACHE_TTL_MS) {
+      // 동일한 reference면 setState 스킵 → MapContainer의 ghostCandidates effect 재실행 방지
+      setGhostPosts(prev => prev === cached.posts ? prev : cached.posts);
+      return;
+    }
+
     const myToken = ++ghostFetchTokenRef.current;
     // 250ms 디바운스 — 빠른 패닝/줌 중 과도한 호출 방지
     const timer = window.setTimeout(async () => {
@@ -1127,6 +1141,11 @@ const Index = () => {
         followingIds: Array.from(followingIds),
       });
       if (myToken !== ghostFetchTokenRef.current) return;
+      mapCache.expiredPostsCache.set(cacheKey, { posts: list, timestamp: Date.now() });
+      if (mapCache.expiredPostsCache.size > EXPIRED_POSTS_CACHE_MAX) {
+        const oldestKey = mapCache.expiredPostsCache.keys().next().value;
+        if (oldestKey !== undefined) mapCache.expiredPostsCache.delete(oldestKey);
+      }
       setGhostPosts(list);
     }, 250);
     return () => window.clearTimeout(timer);

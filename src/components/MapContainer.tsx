@@ -239,6 +239,8 @@ const MapContainer = ({
   const overlaysRef = useRef<Map<string, any>>(new Map());
   // 고스트(만료) 마커 전용 오버레이 맵 - 활성 마커와 분리 관리
   const ghostOverlaysRef = useRef<Map<string, any>>(new Map());
+ // 한번이라도 화면에 등장한 적이 있는 고스트 마커 id (재등장 애니메이션 억제용)
+ const ghostEverShownIdsRef = useRef<Set<string>>(new Set());
   const cachedMarkerIdsOnMountRef = useRef<Set<string>>(new Set(mapCache.posts.map(post => String(post.id))));
   const removalTimeoutsRef = useRef<Map<string, number>>(new Map());
   const searchOverlayRef = useRef<any>(null);
@@ -1515,19 +1517,23 @@ const MapContainer = ({
 
     const selectedIds = new Set<string>(selected.map(p => String(p.id)));
 
-    // 더 이상 선택되지 않은 ghost 오버레이 제거 (페이드아웃)
+    // 더 이상 선택되지 않은 ghost 오버레이 제거 (일반 마커와 동일한 disappear 애니메이션)
     ghostOverlaysRef.current.forEach((overlay, id) => {
       if (!selectedIds.has(id)) {
         const content = overlay.getContent() as HTMLElement | null;
-        if (content && !content.classList.contains('ghost-disappear')) {
-          content.classList.add('ghost-disappear');
+        if (content && !content.classList.contains('marker-disappear-animation')) {
+          content.classList.remove('marker-appear-animation');
+          content.classList.add('marker-disappear-animation');
+          content.style.pointerEvents = 'none';
           window.setTimeout(() => {
             const cur = ghostOverlaysRef.current.get(id);
             if (cur && cur === overlay) {
               cur.setMap(null);
               ghostOverlaysRef.current.delete(id);
+              // 다시 화면에 들어오면 등장 애니메이션 없이 즉시 표시되도록
+              // ghostEverShownIdsRef는 유지(삭제하지 않음).
             }
-          }, 360);
+          }, 420);
         } else if (!content) {
           overlay.setMap(null);
           ghostOverlaysRef.current.delete(id);
@@ -1541,7 +1547,12 @@ const MapContainer = ({
       if (ghostOverlaysRef.current.has(id)) return;
 
       const content = document.createElement('div');
-      content.className = 'ghost-marker-container';
+      // 일반 마커와 동일한 .marker-container 클래스를 사용해
+      // 크기/줌 스케일링/숨김 정책을 그대로 공유한다.
+      // is-ghost 클래스로 회색 단색 모양만 별도 지정.
+      // 한 번이라도 본 적 있는 마커는 등장 애니메이션을 다시 재생하지 않는다.
+      const everShown = ghostEverShownIdsRef.current.has(id);
+      content.className = `marker-container kakao-overlay is-ghost${everShown ? '' : ' marker-appear-animation'}`;
       // 클릭 시 일반 마커처럼 onMarkerClick 호출
       content.onclick = (e) => {
         e.stopPropagation();
@@ -1549,20 +1560,11 @@ const MapContainer = ({
         onMarkerClickRef.current(post);
       };
 
-      // 썸네일 결정 - 비디오 캐시 활용. 깨진/목업 URL이면 빈 회색 점.
-      let img = (post as any).image_url || (post as any).image || '';
-      const isBroken = !img || img === 'null' || img === 'undefined' || (typeof img === 'string' && img.startsWith('blob:'));
-      const lower = typeof img === 'string' ? img.toLowerCase().split('?')[0] : '';
-      const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
-      if (isBroken || isVideo) {
-        const cached = videoThumbCacheRef.current.get(id);
-        img = cached || '';
-      }
-      const optimized = img ? getOptimizedMarkerImage(img, id) : '';
-
-      content.innerHTML = `<div class="ghost-marker-dot">${
-        optimized ? `<img src="${optimized}" alt="" />` : ''
-      }</div>`;
+      content.innerHTML = `<div class="marker-content-wrapper">
+        <div class="marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
+          <div style="width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:3px solid #ffffff;box-shadow:0 6px 16px rgba(0,0,0,0.12);background-color:#cbd5e1;box-sizing:border-box;overflow:hidden;"></div>
+        </div>
+      </div>`;
 
       // 롱프레스 숨김 모드면 즉시 숨김
       if (markersHiddenRef.current) {
@@ -1573,11 +1575,12 @@ const MapContainer = ({
         position: new kakao.maps.LatLng(post.lat, post.lng),
         content,
         xAnchor: 0.5,
-        yAnchor: 0.5,
+        yAnchor: 1, // 일반 마커와 동일하게 하단 중앙 기준
         zIndex: 200, // 활성 마커(300+)보다 아래
       });
       overlay.setMap(map);
       ghostOverlaysRef.current.set(id, overlay);
+      ghostEverShownIdsRef.current.add(id);
     });
   }, [isMapReady]);
 
