@@ -1622,7 +1622,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               {(post.lat != null && post.lng != null) && (
                 <button
                   onClick={onLocationClick}
-                  className="self-start flex items-center gap-1 text-white/90 active:opacity-70 transition-opacity"
+                  className="self-start flex items-center gap-1 text-indigo-600 active:opacity-70 transition-opacity"
                 >
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
                   <span className="text-[11px] font-bold drop-shadow-md truncate max-w-[70vw] leading-tight">
