@@ -861,9 +861,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                             className="px-4 pt-2"
                             onClick={(e) => e.stopPropagation()}
                             style={{
-                              // BottomNav 알약(약 60px) + 외부 여백(12px) + safe-area + 약간의 여유.
-                              // 콘텐츠가 알약 뒤로 숨지 않도록 충분한 하단 패딩 확보.
-                              paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
+                              // BottomNav 알약(약 64px) + 알약 외부 여백(12px) +
+                              // 알약 위로 떠 있는 보조 버튼(위치보기/보러가기 등, 약 96px) +
+                              // safe-area + 여유.
+                              // 콘텐츠 텍스트가 알약 / 보조 버튼 뒤로 숨지 않도록 충분히 확보.
+                              paddingBottom: 'calc(11rem + env(safe-area-inset-bottom, 0px))',
                             }}
                           >
                             {renderActionButtons()}
