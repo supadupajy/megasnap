@@ -222,6 +222,7 @@ const Popular = () => {
           ActionIcon={Search}
           actionLabel="검색"
           onActionClick={() => navigate('/post-search')}
+          collapseActionToIcon
         />
       </div>
 

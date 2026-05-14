@@ -290,6 +290,7 @@ const FriendFeed = () => {
           ActionIcon={Search}
           actionLabel="친구 검색"
           onActionClick={() => navigate('/search')}
+          collapseActionToIcon
         />
       </div>
 
