@@ -932,14 +932,14 @@ video.post-item-video::-webkit-media-text-track-container {
      3) 노란 글로우 (정적) - 활성 강조 */
   background-image:
     repeating-linear-gradient(
-      45deg,
+      -45deg,
       rgba(250, 204, 21, 0.10) 0px,
       rgba(250, 204, 21, 0.10) 2px,
       transparent 2px,
       transparent 14px
     ),
     repeating-linear-gradient(
-      45deg,
+      -45deg,
       rgba(255, 255, 255, 0.05) 0px,
       rgba(255, 255, 255, 0.05) 1px,
       transparent 1px,
