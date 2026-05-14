@@ -809,6 +809,10 @@ video.post-item-video::-webkit-media-text-track-container {
    - 24시간 지난 포스트를 회색조로 작게 표시
    - 화면 안에 너무 많이 누적되지 않도록 상위 N개만 표시
    ============================================= */
+/* 고스트(만료) 마커는 한 번 화면에 그려진 뒤로는 viewport 밖으로 나가거나
+   탭 전환 등으로 다시 마운트되더라도 등장 keyframe 애니메이션을 재생하지 않는다.
+   대신 opacity transition으로 부드럽게 페이드 인 — 첫 등장도 자연스럽게 보이고,
+   재진입 시에는 번쩍이는 애니메이션 없이 그대로 유지된 듯한 느낌을 준다. */
 .ghost-marker-container {
   pointer-events: auto;
   cursor: pointer;
@@ -816,15 +820,8 @@ video.post-item-video::-webkit-media-text-track-container {
   z-index: 5;
   width: 30px;
   height: 30px;
-  will-change: transform, opacity;
-  transform-origin: 50% 100%;
-  opacity: 0;
-  animation: ghost-marker-appear 0.45s ease-out forwards;
-}
-
-@keyframes ghost-marker-appear {
-  0%   { opacity: 0; transform: scale(0.6) translateY(4px); }
-  100% { opacity: 0.7; transform: scale(1) translateY(0); }
+  opacity: 0.7;
+  transition: opacity 0.25s ease-out;
 }
 
 @keyframes ghost-marker-disappear {
