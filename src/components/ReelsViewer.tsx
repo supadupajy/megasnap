@@ -1389,12 +1389,15 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       {/* 하단을 충분히 띄워 닉네임/위치/본문/액션 알약 영역이 영상과 겹치지 않도록 함.
           embedded 모드에서는 페이지 자체가 헤더/BottomNav 사이로 한정되어 있어
           safe-area 추가 패딩이 필요 없으나, 액션 영역의 실측 높이만큼은 여유가 필요. */}
+      {/* 미디어 컨테이너: 영상이 정보 영역 위로 살짝 침범하도록 bottom을 정보 영역보다
+          OVERLAP만큼 작게 설정. 그 위에 그라데이션이 덮여 영상 아래 모서리가 자연스럽게
+          페이드아웃되어 보인다. */}
       <div
         className="absolute left-0 right-0 top-0 flex items-end justify-center"
         style={{
           bottom: embedded
-            ? `${infoHeight}px`
-            : `calc(env(safe-area-inset-bottom, 0px) + ${infoHeight}px)`,
+            ? `${Math.max(0, infoHeight - 64)}px`
+            : `calc(env(safe-area-inset-bottom, 0px) + ${Math.max(0, infoHeight - 64)}px)`,
           cursor: "pointer",
         }}
         onPointerDown={handlePointerDown}
@@ -1510,17 +1513,19 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             3) 본문 */}
       {/* 정보 영역 위로 길게 솟아나는 그라데이션 페이드.
           - 별도 레이어로 두어 정보 영역(infoRef) 높이 측정값에는 포함되지 않는다.
-          - 영상 끝 부근(투명)에서 시작해 아이콘 줄 위로 천천히 어두워져서
-            blur 배경이 액션 아이콘까지 자연스럽게 흘러내린다. */}
+          - 영상 끝 한참 위에서 시작해 아이콘 줄 위로 천천히 어두워져서
+            blur 배경이 액션 아이콘까지 자연스럽게 흘러내린다.
+          - 영상이 OVERLAP(64px) 만큼 침범해 있으므로 그라데이션의 진한 끝부분이
+            영상 아래 모서리를 부드럽게 가린다. */}
       <div
-        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/55 via-black/25 to-transparent"
-        style={{ bottom: `${infoHeight - 56}px`, height: "120px" }}
+        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black via-black/60 to-transparent"
+        style={{ bottom: `${infoHeight}px`, height: "140px" }}
         aria-hidden
       />
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
-          className="bg-gradient-to-t from-black/95 via-black/85 to-black/55 px-4"
+          className="bg-gradient-to-t from-black/95 via-black/90 to-black/85 px-4"
           style={{
             paddingTop: "12px",
             paddingBottom: embedded ? "12px" : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
