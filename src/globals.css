@@ -910,6 +910,52 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 /* =============================================
+   지도 탭 활성 Pill - 게임풍 사선 패턴 스크롤 배경
+   - 우상단(top-right) → 좌하단(bottom-left)으로 천천히 흐름
+   - 베이스: 다크 그레이 / 위에 미세한 사선 줄무늬 + 도트 그리드
+   ============================================= */
+@keyframes map-pill-pattern-flow {
+  /* 우상단에서 좌하단으로 흐르려면 background-position의
+     x는 양수 → 0(왼쪽으로 이동), y는 음수 → 0(아래로 이동) 방향 */
+  0%   { background-position:  56px -56px,   28px -28px,  0 0; }
+  100% { background-position:   0px   0px,    0px   0px,  0 0; }
+}
+
+.map-pill-animated-bg {
+  position: relative;
+  overflow: hidden;
+  /* 베이스 다크 그레이 (기존 bg-gray-700 톤과 매칭) */
+  background-color: rgb(55, 65, 81);
+  /* 3개 레이어:
+     1) 굵은 사선 줄무늬 (45deg) - 흐르는 핵심 패턴
+     2) 가는 사선 줄무늬 (45deg, 더 촘촘) - 깊이감
+     3) 노란 글로우 (정적) - 활성 강조 */
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      rgba(250, 204, 21, 0.10) 0px,
+      rgba(250, 204, 21, 0.10) 2px,
+      transparent 2px,
+      transparent 14px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.05) 0px,
+      rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(250, 204, 21, 0.18) 0%,
+      rgba(250, 204, 21, 0) 70%
+    );
+  background-size: 56px 56px, 28px 28px, 100% 100%;
+  background-repeat: repeat, repeat, no-repeat;
+  animation: map-pill-pattern-flow 6s linear infinite;
+}
+
+/* =============================================
    영상 화질 보존 (High-Quality Video Rendering)
    - 영상은 원본 그대로 업로드되지만, 화면에 그려질 때 브라우저가
      컨테이너 크기에 맞게 다운스케일하면서 흐릿해 보이는 현상을 줄인다.

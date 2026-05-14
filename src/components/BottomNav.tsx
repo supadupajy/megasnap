@@ -272,7 +272,7 @@ const BottomNav = () => {
           <motion.div
             className={cn(
               'absolute pointer-events-none transition-colors duration-200',
-              navItems[safeIndex]?.path === '/' ? 'bg-gray-700' : 'bg-gray-200'
+              navItems[safeIndex]?.path === '/' ? 'map-pill-animated-bg' : 'bg-gray-200'
             )}
             style={{ top: '50%', y: '-44%', height: PILL_HEIGHT, width: PILL_WIDTH, borderRadius: 18 }}
             animate={{ left: pillLeft }}
