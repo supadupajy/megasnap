@@ -1510,17 +1510,17 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             3) 본문 */}
       {/* 정보 영역 위로 길게 솟아나는 그라데이션 페이드.
           - 별도 레이어로 두어 정보 영역(infoRef) 높이 측정값에는 포함되지 않는다.
-          - 영상 끝 한참 위(투명)에서 시작해 정보 영역 시작점까지 천천히 어두워져서
-            blur 배경과 자연스럽게 어우러진다. */}
+          - 영상 끝 부근(투명)에서 시작해 아이콘 줄 위로 천천히 어두워져서
+            blur 배경이 액션 아이콘까지 자연스럽게 흘러내린다. */}
       <div
-        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/85 via-black/40 to-transparent"
-        style={{ bottom: `${infoHeight}px`, height: "120px" }}
+        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/55 via-black/25 to-transparent"
+        style={{ bottom: `${infoHeight - 56}px`, height: "120px" }}
         aria-hidden
       />
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
-          className="bg-gradient-to-t from-black/90 to-black/80 px-4"
+          className="bg-gradient-to-t from-black/95 via-black/85 to-black/55 px-4"
           style={{
             paddingTop: "12px",
             paddingBottom: embedded ? "12px" : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
