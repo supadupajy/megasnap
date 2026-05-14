@@ -1469,8 +1469,11 @@ const MapContainer = ({
   }, [searchResultLocation, isMapReady]);
 
   // ── 고스트(만료) 마커 동기화 ──────────────────────────────────────────
-  // viewport 안에 들어온 만료 후보 중 우선순위 상위 GHOST_MARKER_MAX_VISIBLE 개만
-  // 회색 작은 점으로 표시. 줌 레벨 7 이상이거나 마커 숨김 모드일 때는 모두 제거.
+  // 일반 마커와 동일하게:
+  //   - 후보(ghostCandidates)에 포함된 마커는 오버레이를 유지하고,
+  //     viewport 진입/이탈은 opacity 클래스 토글로만 처리해 부드러운 페이드 인/아웃을 보여준다.
+  //   - 후보에서 빠진 마커(만료 데이터 새로고침으로 사라진 경우)는 기존처럼 페이드아웃 후 제거.
+  //   - 줌 레벨 7 이상이거나 마커 숨김 모드일 때는 모두 제거.
   const syncGhostMarkers = useCallback(() => {
     const kakao = (window as any).kakao;
     const map = mapInstance.current;
@@ -1485,7 +1488,8 @@ const MapContainer = ({
       return;
     }
 
-    // viewport 안에 있는 후보만 추리고 상위 N개 선택
+    // 후보 우선순위 상위 N개를 "유지 대상"으로 선정 (viewport 무관).
+    // viewport 밖 마커도 오버레이로 유지해 두고, 재진입 시 페이드 인 효과를 살린다.
     let bounds: any;
     let sw: any;
     let ne: any;
@@ -1502,21 +1506,12 @@ const MapContainer = ({
     const maxLng = Math.max(sw.getLng(), ne.getLng());
 
     const candidates = ghostCandidatesRef.current;
-    const selected: any[] = [];
-    for (let i = 0; i < candidates.length && selected.length < GHOST_MARKER_MAX_VISIBLE; i++) {
-      const c = candidates[i];
-      const lat = c.post.lat as number;
-      const lng = c.post.lng as number;
-      if (lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng) {
-        selected.push(c.post);
-      }
-    }
+    const kept = candidates.slice(0, GHOST_MARKER_MAX_VISIBLE).map(c => c.post);
+    const keptIds = new Set<string>(kept.map(p => String(p.id)));
 
-    const selectedIds = new Set<string>(selected.map(p => String(p.id)));
-
-    // 더 이상 선택되지 않은 ghost 오버레이 제거 (페이드아웃)
+    // 후보에서 빠진 ghost 오버레이는 페이드아웃 후 제거
     ghostOverlaysRef.current.forEach((overlay, id) => {
-      if (!selectedIds.has(id)) {
+      if (!keptIds.has(id)) {
         const content = overlay.getContent() as HTMLElement | null;
         if (content && !content.classList.contains('ghost-disappear')) {
           content.classList.add('ghost-disappear');
@@ -1534,13 +1529,39 @@ const MapContainer = ({
       }
     });
 
-    // 새로 선택된 ghost 오버레이 생성
-    selected.forEach((post) => {
+    // 기존 ghost 오버레이의 viewport 진입/이탈에 따른 opacity 토글
+    ghostOverlaysRef.current.forEach((overlay, id) => {
+      if (!keptIds.has(id)) return;
+      const content = overlay.getContent() as HTMLElement | null;
+      if (!content) return;
+      // 후보에서 빠지는 페이드아웃 중인 마커는 건드리지 않음
+      if (content.classList.contains('ghost-disappear')) return;
+      const post = kept.find(p => String(p.id) === id);
+      if (!post) return;
+      const inViewport =
+        post.lat >= minLat && post.lat <= maxLat &&
+        post.lng >= minLng && post.lng <= maxLng;
+      if (inViewport) {
+        content.classList.remove('ghost-marker-viewport-hidden');
+      } else {
+        content.classList.add('ghost-marker-viewport-hidden');
+      }
+    });
+
+    // 새로 추가된 ghost 마커 오버레이 생성 (viewport 안/밖 모두)
+    kept.forEach((post) => {
       const id = String(post.id);
       if (ghostOverlaysRef.current.has(id)) return;
 
+      const inViewport =
+        post.lat >= minLat && post.lat <= maxLat &&
+        post.lng >= minLng && post.lng <= maxLng;
+
       const content = document.createElement('div');
-      content.className = 'ghost-marker-container';
+      content.className = 'ghost-marker-container ghost-marker-initial';
+      if (!inViewport) {
+        content.classList.add('ghost-marker-viewport-hidden');
+      }
       // 클릭 시 일반 마커처럼 onMarkerClick 호출
       content.onclick = (e) => {
         e.stopPropagation();
@@ -1577,6 +1598,14 @@ const MapContainer = ({
       });
       overlay.setMap(map);
       ghostOverlaysRef.current.set(id, overlay);
+
+      // 다음 프레임에 초기 opacity:0 클래스를 제거해 페이드 인 트랜지션 트리거
+      // (viewport 밖이면 ghost-marker-viewport-hidden이 있어 어차피 opacity:0 유지)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          content.classList.remove('ghost-marker-initial');
+        });
+      });
     });
   }, [isMapReady]);
 
