@@ -204,14 +204,47 @@ const BottomNav = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    const iconEl = iconRefs.current[safeIndex];
+    const updatePillPosition = () => {
+      const iconEl = iconRefs.current[safeIndex];
+      const nav = navRef.current;
+      if (iconEl && nav) {
+        const navRect = nav.getBoundingClientRect();
+        const iconRect = iconEl.getBoundingClientRect();
+        setPillLeft(iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2);
+        setReady(true);
+      }
+    };
+
+    // 초기 위치 계산
+    updatePillPosition();
+
+    // 다음 프레임에 한 번 더 보정 (폰트 로딩이나 레이아웃 변경 대응)
+    const rafId = requestAnimationFrame(updatePillPosition);
+
     const nav = navRef.current;
-    if (iconEl && nav) {
-      const navRect = nav.getBoundingClientRect();
-      const iconRect = iconEl.getBoundingClientRect();
-      setPillLeft(iconRect.left - navRect.left + iconRect.width / 2 - PILL_WIDTH / 2);
-      setReady(true);
+    if (!nav) {
+      return () => cancelAnimationFrame(rafId);
     }
+
+    // 네비게이션 컨테이너 자체와 각 아이콘 wrapper 사이즈 변경 추적
+    const resizeObserver = new ResizeObserver(() => {
+      updatePillPosition();
+    });
+    resizeObserver.observe(nav);
+    iconRefs.current.forEach((el) => {
+      if (el) resizeObserver.observe(el);
+    });
+
+    // 윈도우 리사이즈 / orientation 변경 대응
+    window.addEventListener('resize', updatePillPosition);
+    window.addEventListener('orientationchange', updatePillPosition);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updatePillPosition);
+      window.removeEventListener('orientationchange', updatePillPosition);
+    };
   }, [safeIndex]);
 
   const handleNavClick = (path: string) => {
