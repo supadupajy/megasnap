@@ -20,7 +20,7 @@ import { cn, getFallbackImage } from '@/lib/utils';
 
 import { useViewedPosts } from '@/hooks/use-viewed-posts';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
-import { mapCache } from '@/utils/map-cache';
+import { mapCache, makeExpiredCountKey, EXPIRED_COUNT_CACHE_TTL_MS, EXPIRED_COUNT_CACHE_MAX } from '@/utils/map-cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchPostsInBounds, fetchNearestInDirection, fetchOffScreenCounts, fetchExpiredOnlyCountInBounds, DirectionCounts, MarkerCluster } from '@/hooks/use-supabase-posts';
 import { useAuth } from '@/components/AuthProvider';
@@ -1096,6 +1096,9 @@ const Index = () => {
   // 1) 화면에 24h 내 신규 마커가 하나라도 있으면 토스트를 띄우지 않는다.
   // 2) 신규 마커가 0개이고 24h 지난 포스트가 화면 영역 안에 있으면
   //    그 상태가 유지되는 동안 토스트를 계속 노출한다 (사용자가 다른 영역으로 이동/줌하면 자동 해제).
+  //
+  // ⚠ DB 부하 방어: 같은 영역(양자화된 bounds + 필터 시그니처)은 60초 TTL 캐시로
+  //   재쿼리를 막는다. 페이지 재진입/미세 패닝 시 DB hit을 거의 0으로 만든다.
   const [expiredOnlyCount, setExpiredOnlyCount] = useState(0);
   const expiredCheckTokenRef = useRef(0);
 
@@ -1109,10 +1112,24 @@ const Index = () => {
       return;
     }
 
-    const myToken = ++expiredCheckTokenRef.current;
     const bounds = mapData.bounds;
+    const cacheKey = makeExpiredCountKey(bounds, {
+      categories: selectedCategoriesRef.current,
+      userId: authUserIdRef.current,
+      followingIds: Array.from(followingIds),
+    });
 
-    // 약간의 debounce: idle 직후 즉시 쿼리하면 빠른 드래그 시 과도하게 호출됨
+    // 1) 캐시 히트 — DB 쿼리 없이 즉시 반환
+    const cached = mapCache.expiredCountCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < EXPIRED_COUNT_CACHE_TTL_MS) {
+      setExpiredOnlyCount(cached.count);
+      return;
+    }
+
+    const myToken = ++expiredCheckTokenRef.current;
+
+    // 2) 캐시 미스 — debounce 후 1회 쿼리하고 결과를 캐시에 저장
+    //    debounce 500ms: 빠른 드래그/패닝/줌 도중 과도한 호출 방지
     const timer = window.setTimeout(async () => {
       const count = await fetchExpiredOnlyCountInBounds(bounds, {
         categories: selectedCategoriesRef.current,
@@ -1120,8 +1137,15 @@ const Index = () => {
         followingIds: Array.from(followingIds),
       });
       if (myToken !== expiredCheckTokenRef.current) return;
+
+      // 캐시 저장 + LRU-ish eviction
+      mapCache.expiredCountCache.set(cacheKey, { count, timestamp: Date.now() });
+      if (mapCache.expiredCountCache.size > EXPIRED_COUNT_CACHE_MAX) {
+        const oldestKey = mapCache.expiredCountCache.keys().next().value;
+        if (oldestKey !== undefined) mapCache.expiredCountCache.delete(oldestKey);
+      }
       setExpiredOnlyCount(count);
-    }, 350);
+    }, 500);
 
     return () => window.clearTimeout(timer);
   }, [mapData?.bounds, currentZoom, displayedPostCount, selectedCategories, authUser?.id, followingIds]);
