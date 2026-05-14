@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -81,6 +81,42 @@ const RouteFallback = () => (
   </div>
 );
 
+// ─────────────────────────────────────────────────────────────
+// Index 페이지(지도)를 라우트 밖에 항상 마운트해 두고, 다른 라우트로
+// 이동해도 unmount되지 않도록 한다. 이렇게 하면 지도 인스턴스/마커/
+// 고스트 마커/카메라 위치/실시간 인기 패널이 그대로 유지되어
+// 탭 전환 시 재로딩이나 마커 entrance 애니메이션 재생이 일어나지 않는다.
+//
+// 명시된 다른 라우트 prefix들은 아래 목록으로 관리하며, 그 외 경로는
+// Index가 표시되어야 한다 (기존 catch-all 라우트 동작과 동일).
+// ─────────────────────────────────────────────────────────────
+const NON_INDEX_ROUTE_PREFIXES = [
+  '/login',
+  '/auth/',
+  '/terms',
+  '/privacy-policy',
+  '/popular',
+  '/nearby-posts',
+  '/search',
+  '/post-search',
+  '/video-search',
+  '/notifications',
+  '/messages',
+  '/chat',
+  '/friends',
+  '/profile',
+  '/post/',
+  '/user-profile',
+  '/settings',
+  '/write',
+  '/flicks',
+];
+
+const shouldShowIndex = (pathname: string): boolean => {
+  if (pathname === '/') return true;
+  return !NON_INDEX_ROUTE_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/') || pathname.startsWith(p));
+};
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { session, loading } = useAuth();
   
@@ -112,6 +148,19 @@ const AnimatedRoutes = () => {
   
   const isChatPage = location.pathname.startsWith("/chat");
   const isWritePage = location.pathname === "/write";
+  const showIndex = shouldShowIndex(location.pathname);
+
+  // Index가 display:none → block으로 다시 보일 때 카카오맵에 relayout 요청
+  const prevShowIndexRef = useRef(showIndex);
+  useEffect(() => {
+    if (!prevShowIndexRef.current && showIndex) {
+      // 다음 프레임에서 relayout 요청 (DOM이 display:block으로 반영된 후)
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('map-relayout-request'));
+      });
+    }
+    prevShowIndexRef.current = showIndex;
+  }, [showIndex]);
 
   // App 레벨 Header를 숨길 페이지 (login/splash만)
   const hideAppChrome =
@@ -222,64 +271,85 @@ const AnimatedRoutes = () => {
       )}
 
       <main className={isChatPage ? "h-full" : ""}>
-        <AnimatePresence mode="popLayout" initial={false}>
-          <motion.div
-            key={location.pathname === '/write' ? '/' : location.pathname}
-            initial={false}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 1 }}
-            transition={{ duration: 0 }}
-            className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
+        {/* Persistent Index: 한 번 마운트되면 다른 라우트로 가도 unmount되지 않고
+            CSS로만 숨겨진다. 지도/마커/고스트 마커가 그대로 메모리에 유지된다.
+            세션이 있을 때만 마운트 (비세션 시에는 /login으로 redirect 됨). */}
+        {session && (
+          <div
+            aria-hidden={!showIndex}
+            style={{ display: showIndex ? 'block' : 'none' }}
+            className="w-full"
           >
-            <Suspense fallback={<RouteFallback />}>
-              <Routes location={location}>
-                <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
-                <Route path="/auth/callback" element={<AuthCallback />} />
-                <Route path="/terms" element={<TermsOfService fromSignup />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy fromSignup />} />
-                <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
-                <Route path="/nearby-posts" element={<ProtectedRoute><NearbyPosts /></ProtectedRoute>} />
-                <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-                <Route path="/post-search" element={<ProtectedRoute><PostSearch /></ProtectedRoute>} />
-                <Route path="/video-search" element={<Navigate to="/post-search" replace />} />
-                <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-                <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-                <Route path="/friends" element={<ProtectedRoute><FriendFeed /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/post/:id" element={<PostDetail />} />
-                <Route path="/profile/follow/:userId" element={<Follow />} />
-                <Route path="/profile/friends" element={<FriendList />} />
-                <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-                <Route path="/user-profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                <Route path="/settings/password" element={<ProtectedRoute><PasswordSecurity /></ProtectedRoute>} />
-                <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
-                <Route path="/settings/language" element={<ProtectedRoute><LanguageSettings /></ProtectedRoute>} />
-                <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
-                <Route path="/settings/ad" element={<ProtectedRoute><AdInquiry /></ProtectedRoute>} />
-                <Route path="/settings/admin-ads" element={<ProtectedRoute><AdminAds /></ProtectedRoute>} />
-                <Route path="/settings/connected-accounts" element={<ProtectedRoute><ConnectedAccounts /></ProtectedRoute>} />
-                <Route path="/settings/devices" element={<ProtectedRoute><DeviceManagement /></ProtectedRoute>} />
-                <Route path="/settings/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
-                <Route path="/settings/billing" element={<ProtectedRoute><BillingHistory /></ProtectedRoute>} />
-                <Route path="/settings/notices" element={<ProtectedRoute><Notices /></ProtectedRoute>} />
-                <Route path="/settings/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
-                <Route path="/settings/inquiry" element={<ProtectedRoute><Inquiry /></ProtectedRoute>} />
-                <Route path="/settings/privacy-policy" element={<ProtectedRoute><PrivacyPolicy /></ProtectedRoute>} />
-                <Route path="/settings/terms" element={<ProtectedRoute><TermsOfService /></ProtectedRoute>} />
-                <Route path="/settings/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
-                <Route path="/settings/appearance" element={<ProtectedRoute><AppearanceSettings /></ProtectedRoute>} />
-                <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
-                <Route path="/settings/db-image-compression" element={<ProtectedRoute><DBImageCompression /></ProtectedRoute>} />
-                <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
-                <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
-                <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
-                <Route path="/*" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              </Routes>
-            </Suspense>
-          </motion.div>
-        </AnimatePresence>
+            <Index />
+          </div>
+        )}
+
+        {/* 비세션 상태에서 Index가 보여야 하는 경로로 진입한 경우 /login으로 보냄 */}
+        {!session && showIndex && location.pathname !== '/login' && (
+          <Navigate to="/login" replace />
+        )}
+
+        {/* 그 외 라우트들. showIndex이고 session이 있을 때는 Routes를 렌더하지 않아
+            지도 위에 겹치지 않게 한다. */}
+        {(!showIndex || !session) && (
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={location.pathname === '/write' ? '/' : location.pathname}
+              initial={false}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 1 }}
+              transition={{ duration: 0 }}
+              className={`w-full ${isChatPage ? "h-full overflow-hidden" : ""}`}
+            >
+              <Suspense fallback={<RouteFallback />}>
+                <Routes location={location}>
+                  <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/terms" element={<TermsOfService fromSignup />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy fromSignup />} />
+                  <Route path="/popular" element={<ProtectedRoute><Popular /></ProtectedRoute>} />
+                  <Route path="/nearby-posts" element={<ProtectedRoute><NearbyPosts /></ProtectedRoute>} />
+                  <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+                  <Route path="/post-search" element={<ProtectedRoute><PostSearch /></ProtectedRoute>} />
+                  <Route path="/video-search" element={<Navigate to="/post-search" replace />} />
+                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                  <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
+                  <Route path="/friends" element={<ProtectedRoute><FriendFeed /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/post/:id" element={<PostDetail />} />
+                  <Route path="/profile/follow/:userId" element={<Follow />} />
+                  <Route path="/profile/friends" element={<FriendList />} />
+                  <Route path="/profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                  <Route path="/user-profile/:userId" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                  <Route path="/settings/password" element={<ProtectedRoute><PasswordSecurity /></ProtectedRoute>} />
+                  <Route path="/settings/notifications" element={<ProtectedRoute><NotificationSettings /></ProtectedRoute>} />
+                  <Route path="/settings/language" element={<ProtectedRoute><LanguageSettings /></ProtectedRoute>} />
+                  <Route path="/settings/privacy" element={<ProtectedRoute><PrivacySettings /></ProtectedRoute>} />
+                  <Route path="/settings/ad" element={<ProtectedRoute><AdInquiry /></ProtectedRoute>} />
+                  <Route path="/settings/admin-ads" element={<ProtectedRoute><AdminAds /></ProtectedRoute>} />
+                  <Route path="/settings/connected-accounts" element={<ProtectedRoute><ConnectedAccounts /></ProtectedRoute>} />
+                  <Route path="/settings/devices" element={<ProtectedRoute><DeviceManagement /></ProtectedRoute>} />
+                  <Route path="/settings/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
+                  <Route path="/settings/billing" element={<ProtectedRoute><BillingHistory /></ProtectedRoute>} />
+                  <Route path="/settings/notices" element={<ProtectedRoute><Notices /></ProtectedRoute>} />
+                  <Route path="/settings/faq" element={<ProtectedRoute><FAQ /></ProtectedRoute>} />
+                  <Route path="/settings/inquiry" element={<ProtectedRoute><Inquiry /></ProtectedRoute>} />
+                  <Route path="/settings/privacy-policy" element={<ProtectedRoute><PrivacyPolicy /></ProtectedRoute>} />
+                  <Route path="/settings/terms" element={<ProtectedRoute><TermsOfService /></ProtectedRoute>} />
+                  <Route path="/settings/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
+                  <Route path="/settings/appearance" element={<ProtectedRoute><AppearanceSettings /></ProtectedRoute>} />
+                  <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
+                  <Route path="/settings/db-image-compression" element={<ProtectedRoute><DBImageCompression /></ProtectedRoute>} />
+                  <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
+                  <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
+                  <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
+                </Routes>
+              </Suspense>
+            </motion.div>
+          </AnimatePresence>
+        )}
       </main>
 
       {(!hideBottomNav || isWritePage) && session && !isReelsViewerOpen && <BottomNav />}

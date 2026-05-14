@@ -302,6 +302,20 @@ const MapContainer = ({
     mapInstance.current.setDraggable(draggable);
   }, [draggable, isMapReady]);
 
+  // Index가 persistent하게 마운트되어 있어 다른 라우트에서 돌아왔을 때,
+  // 부모 컨테이너의 display 토글로 인해 카카오맵의 크기 계산이 어긋날 수 있다.
+  // 'map-relayout-request' 이벤트를 받으면 relayout()을 호출해 정상 표시 보장.
+  useEffect(() => {
+    const handleRelayout = () => {
+      if (!mapInstance.current) return;
+      try {
+        mapInstance.current.relayout();
+      } catch (e) {}
+    };
+    window.addEventListener('map-relayout-request', handleRelayout);
+    return () => window.removeEventListener('map-relayout-request', handleRelayout);
+  }, []);
+
   const { user: authUser } = useAuth();
 
   const onMapChangeRef = useRef(onMapChange);

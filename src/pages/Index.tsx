@@ -1643,6 +1643,13 @@ const Index = () => {
   useEffect(() => {
     const routeState = location.state as any;
     if (!routeState) return;
+    // Index가 화면에 보이는 경로일 때만 routeState를 처리한다.
+    // (Index가 persistent하게 마운트되어 있어 다른 페이지의 location 변화로도
+    //  이 effect가 트리거되기 때문에, 다른 페이지의 state가 잘못 소비되지 않도록 가드.)
+    const pathIsIndex =
+      location.pathname === '/' ||
+      !/^\/(login|auth|terms|privacy-policy|popular|nearby-posts|search|post-search|video-search|notifications|messages|chat|friends|profile|post|user-profile|settings|write|flicks)(\/|$)/.test(location.pathname);
+    if (!pathIsIndex) return;
     if (routeState.triggerConfetti) setTimeout(() => triggerConfetti(), 800);
 
     if (routeState.filterUserId === 'me') {
