@@ -88,25 +88,25 @@ const SplashScreen = () => {
               onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank', 'noopener,noreferrer')}
             >
               {slot.isRecruitment ? (
-                <div className="w-full aspect-[16/9] bg-gradient-to-br from-indigo-100 via-blue-50 to-violet-100 rounded-2xl shadow-lg shadow-indigo-100 border border-indigo-200/50 relative overflow-hidden p-5 flex flex-col justify-between">
+                <div className="w-full aspect-[16/9] bg-gradient-to-br from-yellow-100 via-amber-50 to-orange-100 rounded-2xl shadow-lg shadow-amber-100 border border-amber-200/60 relative overflow-hidden p-5 flex flex-col justify-between">
                   {/* 장식 원형 */}
-                  <div className="absolute -top-8 -right-8 w-32 h-32 bg-indigo-200/30 rounded-full" />
-                  <div className="absolute -top-3 -right-3 w-20 h-20 bg-violet-200/30 rounded-full" />
+                  <div className="absolute -top-8 -right-8 w-32 h-32 bg-yellow-300/30 rounded-full" />
+                  <div className="absolute -top-3 -right-3 w-20 h-20 bg-amber-300/30 rounded-full" />
                   {/* 상단 레이블 */}
-                  <span className="text-[11px] font-bold text-indigo-400 tracking-wide">광고 문의</span>
+                  <span className="text-[11px] font-bold text-amber-600 tracking-wide">광고 문의</span>
                   {/* 메인 카피 */}
                   <div className="flex flex-col gap-1">
-                    <h2 className="text-[22px] font-black text-indigo-800 leading-tight tracking-tight">
+                    <h2 className="text-[22px] font-black text-gray-900 leading-tight tracking-tight">
                       좋은 브랜드를<br />기다리고 있어요.
                     </h2>
-                    <p className="text-[12px] font-medium text-indigo-500">광고 문의는 언제든 환영이에요.</p>
+                    <p className="text-[12px] font-medium text-amber-700">광고 문의는 언제든 환영이에요.</p>
                   </div>
                   {/* 이메일 버튼 */}
-                  <div className="flex items-center gap-3 bg-white/60 rounded-xl px-3 py-2.5 border border-indigo-200/50">
-                    <Mail className="w-4 h-4 text-indigo-500 shrink-0" />
-                    <span className="flex-1 text-[13px] font-bold text-indigo-700 tracking-tight">chorasnap@gmail.com</span>
-                    <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-3 h-3 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  <div className="flex items-center gap-3 bg-white/70 rounded-xl px-3 py-2.5 border border-amber-200/60">
+                    <Mail className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span className="flex-1 text-[13px] font-bold text-gray-900 tracking-tight">chorasnap@gmail.com</span>
+                    <div className="w-6 h-6 bg-yellow-200 rounded-lg flex items-center justify-center">
+                      <svg className="w-3 h-3 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </div>
                   </div>
                 </div>

@@ -117,17 +117,17 @@ const AdInquiry = () => {
       <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}>
 
         {/* 히어로 배너 */}
-        <div className="mx-4 mt-5 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl p-6 text-white shadow-xl shadow-indigo-200">
+        <div className="mx-4 mt-5 bg-gradient-to-br from-yellow-300 via-amber-400 to-orange-400 rounded-3xl p-6 text-gray-900 shadow-xl shadow-amber-200">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Megaphone className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 bg-white/40 rounded-2xl flex items-center justify-center">
+              <Megaphone className="w-5 h-5 text-gray-900" />
             </div>
             <div>
-              <p className="text-xs font-bold text-white/70 uppercase tracking-widest">TocaToca Ads</p>
+              <p className="text-xs font-bold text-gray-900/70 uppercase tracking-widest">TocaToca Ads</p>
               <p className="text-lg font-black leading-tight">지도 위에서 브랜드를 알리세요</p>
             </div>
           </div>
-          <p className="text-sm text-white/80 font-medium leading-relaxed">
+          <p className="text-sm text-gray-900/80 font-medium leading-relaxed">
             실시간 위치 기반 플랫폼 TocaToca에서 타겟 고객에게 정확하게 도달하세요.
           </p>
           {/* 일단 아래 광고 수치 관련 내용은 주석 처리 */}
@@ -259,7 +259,7 @@ const AdInquiry = () => {
             </div>
             <div>
               <p className="text-[11px] text-gray-400 font-bold">직접 이메일 문의</p>
-              <p className="text-sm font-black text-indigo-600">chorasnap@gmail.com</p>
+              <p className="text-sm font-black text-amber-600">chorasnap@gmail.com</p>
             </div>
           </div>
 

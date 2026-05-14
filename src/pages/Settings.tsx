@@ -185,13 +185,13 @@ const Settings = () => {
         {/* ── 광고 ── */}
         <div className="px-4 pt-5 pb-1">
           <SectionHeader title="광고" />
-          <div className="bg-white rounded-2xl border-2 border-pink-300 overflow-hidden shadow-sm">
+          <div className="bg-white rounded-2xl border-2 border-amber-300 overflow-hidden shadow-sm">
             <SettingItem
               icon={Megaphone}
               label="광고 문의"
               sublabel="TocaToca에 광고를 게재하세요"
-              iconBg="bg-pink-50"
-              iconColor="text-pink-500"
+              iconBg="bg-yellow-50"
+              iconColor="text-amber-500"
               onClick={() => navigate('/settings/ad')}
             />
           </div>
