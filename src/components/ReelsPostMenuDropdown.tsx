@@ -25,13 +25,16 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
   className,
 }) => {
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu
+      modal={false}
+      onOpenChange={(open) =>
+        console.log('[ReelsPostMenuDropdown] onOpenChange:', open)
+      }
+    >
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           aria-label="포스팅 메뉴"
-          onClick={() => console.log('[ReelsPostMenuDropdown] trigger click')}
-          onPointerDown={() => console.log('[ReelsPostMenuDropdown] trigger pointerdown')}
           // Radix가 자식 button에 pointerdown/click 핸들러를 합성한다.
           // 여기서 stopPropagation을 호출하면 Radix 자체 핸들러가 정상 동작은 하지만,
           // 부모 영역(ReelsSlideTrack 등) 차단은 바깥 wrapper에서 처리하도록 한다.
@@ -55,6 +58,21 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
           // Header(z=12600), BottomNav(z=20000) 모두 위에 떠야 함.
           'z-[30000]'
         )}
+        // 영상 영역에서 native touch listener가 pointerdown 이벤트를 가로채면서
+        // 메뉴가 \"열림 → 즉시 외부 클릭으로 닫힘\" 사이클이 발생하는 것을 방지.
+        // 일반적으로 트리거 버튼/메뉴 외 영역을 탭하면 자동으로 닫혀야 하지만,
+        // 여기서는 명시적으로 \"메뉴 항목 선택\" 또는 \"트리거 재탭\" 으로만 닫히도록 한다.
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          // 트리거 버튼을 다시 탭한 경우는 정상적으로 닫히도록 둠
+          if (target?.closest('[aria-label="포스팅 메뉴"]')) return;
+          e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[aria-label="포스팅 메뉴"]')) return;
+          e.preventDefault();
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <DropdownMenuItem
