@@ -74,7 +74,7 @@ const SplashScreen = () => {
               transition={{ delay: 0.8, duration: 0.8 }}
               className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase"
             >
-              Tap, Talk, Together.
+              Be here, Be seen.
             </motion.p>
           </div>
 
