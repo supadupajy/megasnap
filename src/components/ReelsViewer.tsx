@@ -1511,8 +1511,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
-          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-3"
-          style={{ paddingBottom: embedded ? "10px" : "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
+          className="bg-gradient-to-t from-black/95 via-black/85 to-black/70 px-4"
+          style={{
+            paddingTop: "12px",
+            paddingBottom: embedded ? "12px" : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+          }}
         >
           {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}
           <div className="flex items-center justify-between gap-2 pointer-events-auto mb-2.5">
