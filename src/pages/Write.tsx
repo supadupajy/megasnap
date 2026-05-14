@@ -956,7 +956,7 @@ const Write = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center gap-1.5 px-1">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">카테고리</p>
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-widest">카테고리</p>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                   </div>
                   <div className="grid grid-cols-5 gap-2">
@@ -980,7 +980,7 @@ const Write = () => {
 
                 <div className="space-y-4">
                   <div className="flex items-center gap-1.5 px-1">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내용 입력</p>
+                    <p className="text-sm font-black text-gray-400 uppercase tracking-widest">내용 입력</p>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
                     <span
                       className={cn(
