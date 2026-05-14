@@ -1374,8 +1374,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         className="absolute left-0 right-0 top-0 flex items-end justify-center"
         style={{
           bottom: embedded
-            ? "140px"
-            : "calc(env(safe-area-inset-bottom, 0px) + 140px)",
+            ? "150px"
+            : "calc(env(safe-area-inset-bottom, 0px) + 150px)",
           cursor: "pointer",
         }}
         onPointerDown={handlePointerDown}
@@ -1491,7 +1491,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             3) 본문 */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
-          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-6"
+          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-2.5"
           style={{ paddingBottom: embedded ? "10px" : "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
         >
           {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}
