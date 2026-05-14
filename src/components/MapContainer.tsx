@@ -1558,10 +1558,12 @@ const MapContainer = ({
         post.lng >= minLng && post.lng <= maxLng;
 
       const content = document.createElement('div');
-      content.className = 'ghost-marker-container ghost-marker-initial';
-      if (!inViewport) {
-        content.classList.add('ghost-marker-viewport-hidden');
-      }
+      // viewport 밖이면 처음부터 hidden 클래스를 달아 두고, 나중에 viewport 안으로
+      // 들어올 때 트랜지션으로 0 → 0.7 페이드 인이 자연스럽게 일어나도록 함.
+      // viewport 안이면 일반 마커처럼 즉시 표시 (별도 초기 페이드 단계 없음).
+      content.className = inViewport
+        ? 'ghost-marker-container'
+        : 'ghost-marker-container ghost-marker-viewport-hidden';
       // 클릭 시 일반 마커처럼 onMarkerClick 호출
       content.onclick = (e) => {
         e.stopPropagation();
@@ -1598,14 +1600,6 @@ const MapContainer = ({
       });
       overlay.setMap(map);
       ghostOverlaysRef.current.set(id, overlay);
-
-      // 다음 프레임에 초기 opacity:0 클래스를 제거해 페이드 인 트랜지션 트리거
-      // (viewport 밖이면 ghost-marker-viewport-hidden이 있어 어차피 opacity:0 유지)
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          content.classList.remove('ghost-marker-initial');
-        });
-      });
     });
   }, [isMapReady]);
 
