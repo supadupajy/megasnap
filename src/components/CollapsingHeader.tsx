@@ -77,7 +77,8 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
   const actionGap = collapseActionToIcon ? lerp(6, 0, progress) : 6;
   const actionLabelProgress = Math.min(1, progress * 1.5);
   const actionLabelOpacity = collapseActionToIcon ? Math.max(0, 1 - progress * 1.8) : 1;
-  const actionLabelMaxWidth = collapseActionToIcon ? lerp(48, 0, actionLabelProgress) : undefined;
+  // 펼친 상태에서는 라벨 전체가 보이도록 넉넉하게(80px) 잡고, 축소 시 0으로 줄어든다.
+  const actionLabelMaxWidth = collapseActionToIcon ? lerp(80, 0, actionLabelProgress) : undefined;
 
   return (
     <div
