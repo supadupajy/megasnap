@@ -372,7 +372,7 @@ const PostSearch = () => {
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="키워드 또는 #해시태그로 검색"
-              className="w-full pl-12 pr-12 h-14 bg-white border-2 border-indigo-600 rounded-2xl outline-none font-normal placeholder:text-gray-400 shadow-sm transition-all focus:ring-2 focus:ring-indigo-50"
+              className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               autoFocus={!searchQuery}
