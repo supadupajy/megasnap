@@ -1547,13 +1547,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
 
       {/* 트렌딩 릴스(showInlineCloseButton=true)일 때 3-dot 메뉴를 X 버튼 왼쪽에 배치.
           X 버튼은 부모 ReelsViewer가 \"top-5 right-6\" 위치에 그리므로, 같은 y에 두고
-          X 너비(36px) + 간격(8px) 만큼 왼쪽으로 보정. */}
+          X 너비(36px) + 간격(8px) 만큼 왼쪽으로 보정.
+          z는 같은 영역의 ReelsSlideTrack(z 미지정)·미디어 컨테이너 위로 확실히 올라오도록 z-50. */}
       {isMine && onRequestDelete && showInlineCloseButton && (
         <div
-          className="absolute top-5 right-[68px] z-40"
+          className="absolute top-5 right-[68px] z-50 pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
         >
           <ReelsPostMenuDropdown
             onEdit={startContentEdit}

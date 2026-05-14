@@ -30,9 +30,11 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
         <button
           type="button"
           aria-label="포스팅 메뉴"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
+          onClick={() => console.log('[ReelsPostMenuDropdown] trigger click')}
+          onPointerDown={() => console.log('[ReelsPostMenuDropdown] trigger pointerdown')}
+          // Radix가 자식 button에 pointerdown/click 핸들러를 합성한다.
+          // 여기서 stopPropagation을 호출하면 Radix 자체 핸들러가 정상 동작은 하지만,
+          // 부모 영역(ReelsSlideTrack 등) 차단은 바깥 wrapper에서 처리하도록 한다.
           className={cn(
             // 가로형 3-dot, 둥근 사각형(rounded-2xl), 다크 톤
             'w-9 h-9 rounded-2xl bg-black/55 backdrop-blur-md',
@@ -49,8 +51,9 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
         sideOffset={6}
         className={cn(
           'w-36 rounded-2xl p-1.5 shadow-2xl border-gray-100 bg-white/95 backdrop-blur-md',
-          // ReelsViewer(포털, z=9999)보다 위로
-          'z-[10100]'
+          // ReelsViewer 포털(z=9999), 트렌딩 릴스 컨테이너(z=11000),
+          // Header(z=12600), BottomNav(z=20000) 모두 위에 떠야 함.
+          'z-[30000]'
         )}
         onClick={(e) => e.stopPropagation()}
       >
