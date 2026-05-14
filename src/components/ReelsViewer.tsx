@@ -1409,7 +1409,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         onPointerUp={handlePointerUp}
       >
         <div
-          className="relative overflow-hidden bg-black"
+          className="relative overflow-hidden bg-black rounded-2xl"
           style={{
             aspectRatio: "3 / 4",
             height: "100%",
