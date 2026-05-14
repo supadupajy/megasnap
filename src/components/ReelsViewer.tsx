@@ -1395,13 +1395,13 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
 
       {/* 메인 미디어 — 화면 가로 너비에 딱 맞는 3:4 비율 컨테이너 */}
       {/* 하단을 충분히 띄워 닉네임/위치/본문/액션 알약 영역이 영상과 겹치지 않도록 함.
-          embedded 모드에서는 페이지 자체가 헤더/BottomNav 사이로 한정되어 있어
-          safe-area 추가 패딩이 필요 없으나, 액션 영역의 실측 높이만큼은 여유가 필요. */}
+          embedded 모드에서는 컨테이너가 화면 바닥까지 닿으므로(부모 bottom: 0)
+          BottomNav 알약 높이(약 60px) + safe-area + 외부 여백 만큼 추가로 피해야 한다. */}
       <div
         className="absolute left-0 right-0 top-0 flex items-end justify-center"
         style={{
           bottom: embedded
-            ? `${infoHeight}px`
+            ? `calc(${infoHeight}px + 5rem + env(safe-area-inset-bottom, 0px))`
             : `calc(env(safe-area-inset-bottom, 0px) + ${infoHeight}px)`,
           cursor: "pointer",
         }}
@@ -1530,7 +1530,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           className="px-4"
           style={{
             paddingTop: "12px",
-            paddingBottom: embedded ? "12px" : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+            // embedded 모드에서는 부모 컨테이너가 화면 바닥까지 닿으므로
+            // BottomNav 알약(약 60px) + safe-area + 여유 만큼 피해야 한다.
+            paddingBottom: embedded
+              ? "calc(5rem + env(safe-area-inset-bottom, 0px))"
+              : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
           }}
         >
           {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}

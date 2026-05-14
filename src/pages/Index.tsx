@@ -2309,7 +2309,10 @@ const Index = () => {
             left: 0,
             right: 0,
             top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
+            // 화면 바닥까지 검은 배경이 꽉 차도록 bottom: 0.
+            // BottomNav 알약은 z=20000으로 그 위에 떠 있고, 알약 좌·우/아래로
+            // 지도가 비치지 않도록 영상 뷰어 배경이 끝까지 깔린다.
+            bottom: 0,
             // Header(z=12600), BottomNav(z=20000)보다 낮고 TrendingPosts(12000)보다 살짝 낮게
             // → Header/BottomNav가 위에 떠 있는 상태에서 본문 영역만 가린다.
             zIndex: 11000,
