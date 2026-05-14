@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1351,6 +1351,25 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     }
   };
 
+  // 하단 정보 영역(액션+아바타+본문) 실측 높이.
+  // 미디어 컨테이너의 bottom 값을 정보 영역 높이와 동기화해 영상 끝과 액션 버튼 사이
+  // 공백을 0으로 만든다. 본문 펼침/슬라이드 전환 시에도 ResizeObserver가 자동 갱신.
+  const infoRef = useRef<HTMLDivElement>(null);
+  const [infoHeight, setInfoHeight] = useState(150);
+
+  useLayoutEffect(() => {
+    const el = infoRef.current;
+    if (!el) return;
+    const measure = () => {
+      const h = el.getBoundingClientRect().height;
+      if (h > 0) setInfoHeight(h);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div
       className="relative h-full w-full bg-black overflow-hidden"
@@ -1374,8 +1393,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         className="absolute left-0 right-0 top-0 flex items-end justify-center"
         style={{
           bottom: embedded
-            ? "150px"
-            : "calc(env(safe-area-inset-bottom, 0px) + 150px)",
+            ? `${infoHeight}px`
+            : `calc(env(safe-area-inset-bottom, 0px) + ${infoHeight}px)`,
           cursor: "pointer",
         }}
         onPointerDown={handlePointerDown}
@@ -1491,7 +1510,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             3) 본문 */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
-          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-2.5"
+          ref={infoRef}
+          className="bg-gradient-to-t from-black/95 via-black/60 to-transparent px-4 pt-3"
           style={{ paddingBottom: embedded ? "10px" : "calc(env(safe-area-inset-bottom, 0px) + 10px)" }}
         >
           {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}
