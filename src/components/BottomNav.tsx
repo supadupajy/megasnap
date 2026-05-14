@@ -307,18 +307,17 @@ const BottomNav = () => {
           ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)'
           : 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
         willChange: 'transform',
+        outline: '2px solid blue', // [DEBUG] BottomNav 외부 컨테이너 경계
       }}
     >
-      {/* 하단 safe-area 영역을 흰색으로 가리는 마스크.
-          - 지도 페이지에서 알약 아래로 지도 타일이 비쳐 보이는 문제를 해결.
-          - 좌우는 알약의 floating 느낌을 살리기 위해 그대로 두고, 아래쪽만 가린다.
-          - 알약과 자연스럽게 이어지도록 화면 좌우 끝까지 채우되,
-            위쪽으로는 살짝 페이드 처리해 알약 그림자를 가리지 않게 한다. */}
+      {/* [DEBUG] 하단 safe-area 영역 마스크 — 빨강으로 임시 표시해서 위치/크기 확인 */}
       <div
         aria-hidden="true"
-        className="absolute left-0 right-0 bottom-0 bg-white pointer-events-none"
+        className="absolute left-0 right-0 bottom-0 pointer-events-none"
         style={{
           height: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          backgroundColor: 'red',
+          outline: '2px solid red',
         }}
       />
       <nav
