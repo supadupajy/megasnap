@@ -1805,59 +1805,75 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </div>
           </div>
 
-          {/* 3) 본문 — 인라인 편집 모드일 때는 Textarea + ✓/✗ 버튼, 아니면 일반 표시 */}
-          {isEditingContent ? (
-            <div
-              className="pointer-events-auto space-y-2"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <Textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                disabled={isSavingContent}
-                autoFocus
-                placeholder="이 영상에 대한 이야기를 들려주세요..."
-                className="min-h-[88px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/95 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
+          {/* 3) 본문 — 항상 일반 표시. 편집 UI는 별도 오버레이(아래 absolute)로 띄워
+              infoRef 실측 높이에 영향을 주지 않도록 한다 → 영상 컨테이너 크기 고정. */}
+          {displayContent && (
+            <div className="text-white pointer-events-auto">
+              <ReelContentText
+                content={displayContent}
+                expanded={contentExpanded}
+                onToggle={() => setContentExpanded((v) => !v)}
               />
-              <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={saveContentEdit}
-                  disabled={isSavingContent || !editContent.trim()}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
-                  aria-label="수정 저장"
-                >
-                  {isSavingContent ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Check className="h-5 w-5" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelContentEdit}
-                  disabled={isSavingContent}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
-                  aria-label="수정 취소"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
             </div>
-          ) : (
-            displayContent && (
-              <div className="text-white pointer-events-auto">
-                <ReelContentText
-                  content={displayContent}
-                  expanded={contentExpanded}
-                  onToggle={() => setContentExpanded((v) => !v)}
-                />
-              </div>
-            )
           )}
         </div>
       </div>
+
+      {/* 인라인 본문 편집 오버레이 — 정보 영역 위에 떠 있으며 infoRef 높이 측정에는 포함되지 않음.
+          → 영상 미디어 컨테이너 크기는 그대로 유지된다.
+          위치: 미디어 영역 바로 아래(=infoRef 위쪽)부터 화면 하단까지를 덮어 가독성 확보. */}
+      {isEditingContent && (
+        <div
+          className="absolute left-0 right-0 bottom-0 z-30 pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            // 정보 영역 위로 살짝 더 올라오게 띄워 본문/액션 위에 자연스럽게 겹치도록 함
+            // (실제 콘텐츠는 패딩으로 가독 영역 확보)
+            paddingBottom: embedded ? 8 : "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+          }}
+        >
+          {/* 어두운 디밍 그라데이션 — 영상은 그대로 보이되 편집창 가독성 향상 */}
+          <div
+            className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/70 to-black/30 pointer-events-none"
+            aria-hidden
+          />
+          <div className="relative px-4 pt-3 space-y-2">
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              disabled={isSavingContent}
+              autoFocus
+              placeholder="이 영상에 대한 이야기를 들려주세요..."
+              className="min-h-[88px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/95 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={saveContentEdit}
+                disabled={isSavingContent || !editContent.trim()}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
+                aria-label="수정 저장"
+              >
+                {isSavingContent ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Check className="h-5 w-5" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={cancelContentEdit}
+                disabled={isSavingContent}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
+                aria-label="수정 취소"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
