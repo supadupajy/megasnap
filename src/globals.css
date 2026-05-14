@@ -910,26 +910,26 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 /* =============================================
-   지도 탭 활성 Pill - 빛나는 도트(원) 패턴 + Glow
+   지도 탭 활성 Pill - 네모칸(타일) 패턴 + Glow
    - 우상단(top-right) → 좌하단(bottom-left)으로 천천히 흐름
    - 베이스: 다크 그레이
-   - 레이어1: 큰 도트 (밝은 노란 코어 + glow halo)
-   - 레이어2: 작은 도트 (촘촘하게, 깊이감)
+   - 레이어1: 큰 네모칸 (노란 테두리 + 미세한 내부 채움)
+   - 레이어2: 작은 네모칸 (촘촘하게, 깊이감)
    - ::before : 중앙 펄스 글로우
    - ::after  : 부드러운 빛 번짐
    ============================================= */
-@keyframes map-pill-dots-flow {
-  /* 두 레이어 셀 크기(20px, 12px)만큼 이동 → 끊김 없이 반복.
+@keyframes map-pill-squares-flow {
+  /* 두 레이어 셀 크기(18px, 9px)만큼 이동 → 끊김 없이 반복.
      우상단(+x, -y) → 좌하단(-x, +y) 방향 */
   0% {
     background-position:
-      20px -20px,   /* 큰 도트 */
-      12px -12px;   /* 작은 도트 */
+      18px -18px, 18px -18px,   /* 큰 네모칸 (가로선 + 세로선) */
+      9px -9px,   9px -9px;     /* 작은 네모칸 (가로선 + 세로선) */
   }
   100% {
     background-position:
-      0px 0px,
-      0px 0px;
+      0px 0px, 0px 0px,
+      0px 0px, 0px 0px;
   }
 }
 
@@ -943,26 +943,17 @@ video.post-item-video::-webkit-media-text-track-container {
   overflow: hidden;
   background-color: rgb(55, 65, 81);
   background-image:
-    /* 큰 도트 - 밝은 노란 코어에서 부드러운 halo로 퍼지는 glow */
-    radial-gradient(
-      circle at 50% 50%,
-      rgba(253, 224, 71, 0.95) 0px,
-      rgba(250, 204, 21, 0.55) 1.2px,
-      rgba(250, 204, 21, 0.18) 2.4px,
-      rgba(250, 204, 21, 0) 4px
-    ),
-    /* 작은 도트 - 사이사이를 채워 깊이감 */
-    radial-gradient(
-      circle at 50% 50%,
-      rgba(255, 255, 255, 0.45) 0px,
-      rgba(255, 255, 255, 0.15) 0.8px,
-      rgba(255, 255, 255, 0) 1.6px
-    );
+    /* 큰 네모칸 - 노란빛 테두리 */
+    linear-gradient(to right,  rgba(250, 204, 21, 0.28) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(250, 204, 21, 0.28) 1px, transparent 1px),
+    /* 작은 네모칸 - 흰빛 테두리 (깊이감) */
+    linear-gradient(to right,  rgba(255, 255, 255, 0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.10) 1px, transparent 1px);
   background-size:
-    20px 20px,
-    12px 12px;
-  background-repeat: repeat, repeat;
-  animation: map-pill-dots-flow 7s linear infinite;
+    18px 18px, 18px 18px,
+    9px 9px,   9px 9px;
+  background-repeat: repeat;
+  animation: map-pill-squares-flow 7s linear infinite;
 }
 
 /* 중앙 펄스 글로우 - 호흡하는 빛 */
@@ -973,7 +964,7 @@ video.post-item-video::-webkit-media-text-track-container {
   pointer-events: none;
   background: radial-gradient(
     ellipse at 50% 50%,
-    rgba(250, 204, 21, 0.38) 0%,
+    rgba(250, 204, 21, 0.40) 0%,
     rgba(250, 204, 21, 0.14) 35%,
     rgba(250, 204, 21, 0) 70%
   );
@@ -989,7 +980,7 @@ video.post-item-video::-webkit-media-text-track-container {
   pointer-events: none;
   background: radial-gradient(
     circle at 30% 30%,
-    rgba(253, 224, 71, 0.18) 0%,
+    rgba(253, 224, 71, 0.20) 0%,
     rgba(253, 224, 71, 0) 55%
   );
   mix-blend-mode: screen;
