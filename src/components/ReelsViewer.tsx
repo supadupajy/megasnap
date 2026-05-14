@@ -1396,10 +1396,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       {/* 메인 미디어 — 화면 가로 너비에 딱 맞는 3:4 비율 컨테이너 */}
       {/* 하단을 충분히 띄워 닉네임/위치/본문/액션 알약 영역이 영상과 겹치지 않도록 함.
           embedded 모드에서는 페이지 자체가 헤더/BottomNav 사이로 한정되어 있어
-          safe-area 추가 패딩이 필요 없으나, 액션 영역의 실측 높이만큼은 여유가 필요. */}
+          safe-area 추가 패딩이 필요 없으나, 액션 영역의 실측 높이만큼은 여유가 필요.
+          상단에 약간의 여백(top)을 둬서 순위 뱃지/닫기 버튼과 미디어 사이에 자연스러운 갭을 만든다. */}
       <div
-        className="absolute left-0 right-0 top-0 flex items-end justify-center"
+        className="absolute left-0 right-0 flex items-end justify-center"
         style={{
+          top: "10px",
           bottom: embedded
             ? `${infoHeight}px`
             : `calc(env(safe-area-inset-bottom, 0px) + ${infoHeight}px)`,
@@ -1529,12 +1531,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           ref={infoRef}
           className="px-4"
           style={{
-            paddingTop: "12px",
-            paddingBottom: embedded ? "12px" : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+            paddingTop: "8px",
+            paddingBottom: embedded ? "8px" : "calc(env(safe-area-inset-bottom, 0px) + 8px)",
           }}
         >
           {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}
-          <div className="flex items-center justify-between gap-2 pointer-events-auto mb-2.5">
+          <div className="flex items-center justify-between gap-2 pointer-events-auto mb-2">
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <button
                 type="button"
