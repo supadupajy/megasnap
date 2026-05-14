@@ -167,9 +167,9 @@ const PostDetailFullPage = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[50]">
+    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[200]">
       {/* 고정 상단 헤더 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+      <div className="absolute top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[10] bg-white">
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
             onClick={onClose}
