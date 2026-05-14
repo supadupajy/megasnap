@@ -1508,10 +1508,19 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             1) 액션 버튼 줄 (좋아요/댓글/공유 + 저장/위치보기) — 이미지/영상 바로 아래
             2) 아바타 + (닉네임/위치 세로) — 위치 정보가 닉네임 바로 밑, 모두 아바타 우측에 위치
             3) 본문 */}
+      {/* 정보 영역 위로 살짝 솟아나는 페이드 (배경 블러가 자연스럽게 이어지도록).
+          별도 레이어로 두어 정보 영역 자체의 높이(infoRef 측정)에는 포함되지 않는다.
+          → 미디어 컨테이너 bottom = 정보 영역 높이와 동기화되어 갭은 0이지만,
+            시각적으로는 페이드가 영상 끝에 자연스럽게 녹아든다. */}
+      <div
+        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/70 to-transparent"
+        style={{ bottom: `${infoHeight}px`, height: "28px" }}
+        aria-hidden
+      />
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
-          className="bg-gradient-to-t from-black/95 via-black/85 to-black/70 px-4"
+          className="bg-black/70 backdrop-blur-md px-4"
           style={{
             paddingTop: "12px",
             paddingBottom: embedded ? "12px" : "calc(env(safe-area-inset-bottom, 0px) + 12px)",
