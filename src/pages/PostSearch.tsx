@@ -133,7 +133,76 @@ const PostDetailFullPage = ({
   useEffect(() => {
     if (postId && allPosts.length > 0) {
       setTimeout(() => {
-        document.getElementById(`page-post-${postId}`)?.scrollIntoView({ behavior: 'auto', block: 'start' });
+        const el = document.getElementById(`page-post-${postId}`);
+        console.log('[PostSearch] === scroll debug start ===');
+        console.log('[PostSearch] postId:', postId);
+        console.log('[PostSearch] target element found:', !!el);
+
+        if (el) {
+          const rectBefore = el.getBoundingClientRect();
+          const cs = window.getComputedStyle(el);
+          console.log('[PostSearch] target rect BEFORE scroll:', {
+            top: rectBefore.top,
+            bottom: rectBefore.bottom,
+            height: rectBefore.height,
+          });
+          console.log('[PostSearch] target computed scrollMarginTop:', cs.scrollMarginTop);
+          console.log('[PostSearch] target inline style scrollMarginTop:', (el as HTMLElement).style.scrollMarginTop);
+
+          // 가장 가까운 스크롤 컨테이너 추적
+          let scrollParent: HTMLElement | null = el.parentElement;
+          while (scrollParent) {
+            const psc = window.getComputedStyle(scrollParent);
+            if (
+              (psc.overflowY === 'auto' || psc.overflowY === 'scroll') &&
+              scrollParent.scrollHeight > scrollParent.clientHeight
+            ) break;
+            scrollParent = scrollParent.parentElement;
+          }
+          if (scrollParent) {
+            const spRect = scrollParent.getBoundingClientRect();
+            const psc = window.getComputedStyle(scrollParent);
+            console.log('[PostSearch] scroll parent found:', scrollParent.className);
+            console.log('[PostSearch] scroll parent rect:', { top: spRect.top, height: spRect.height });
+            console.log('[PostSearch] scroll parent paddingTop:', psc.paddingTop);
+            console.log('[PostSearch] scroll parent scrollTop BEFORE:', scrollParent.scrollTop);
+          } else {
+            console.log('[PostSearch] no scroll parent found — will use window/document scroll');
+            console.log('[PostSearch] window scrollY BEFORE:', window.scrollY);
+            console.log('[PostSearch] documentElement.scrollTop BEFORE:', document.documentElement.scrollTop);
+          }
+
+          // 고정 헤더 실제 측정
+          const fixedHeader = document.querySelector<HTMLElement>('[data-search-fixed-header="post-search-detail"]');
+          if (fixedHeader) {
+            const hRect = fixedHeader.getBoundingClientRect();
+            console.log('[PostSearch] fixed header measured:', {
+              top: hRect.top,
+              bottom: hRect.bottom,
+              height: hRect.height,
+            });
+          } else {
+            console.log('[PostSearch] fixed header element NOT FOUND (will add data attr)');
+          }
+
+          el.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+          // 스크롤 직후 위치 측정 (다음 frame)
+          requestAnimationFrame(() => {
+            const rectAfter = el.getBoundingClientRect();
+            console.log('[PostSearch] target rect AFTER scroll:', {
+              top: rectAfter.top,
+              bottom: rectAfter.bottom,
+            });
+            if (scrollParent) {
+              console.log('[PostSearch] scroll parent scrollTop AFTER:', scrollParent.scrollTop);
+            } else {
+              console.log('[PostSearch] window scrollY AFTER:', window.scrollY);
+              console.log('[PostSearch] documentElement.scrollTop AFTER:', document.documentElement.scrollTop);
+            }
+            console.log('[PostSearch] === scroll debug end ===');
+          });
+        }
       }, 100);
     }
   }, [postId, allPosts]);
@@ -168,7 +237,10 @@ const PostDetailFullPage = ({
   return (
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden z-[50]">
       {/* 고정 상단 헤더 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+      <div
+        data-search-fixed-header="post-search-detail"
+        className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white"
+      >
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
             onClick={onClose}
