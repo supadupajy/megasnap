@@ -844,14 +844,16 @@ video.post-item-video::-webkit-media-text-track-container {
   animation: ghost-marker-appear 0.4s ease-out forwards;
 }
 
+/* 고스트 마커 사라짐 — 일반 마커 marker-disappear와 동일한 타이밍/이징.
+   시작 opacity가 0.7이라는 점만 다름. 스르륵 위로 살짝 뜨면서 페이드 아웃. */
 @keyframes ghost-marker-disappear {
   0%   { opacity: 0.7; transform: scale(1) translateY(0); }
-  100% { opacity: 0; transform: scale(0.6) translateY(4px); }
+  100% { opacity: 0;   transform: scale(0.85) translateY(8px); }
 }
 
 .ghost-marker-container.ghost-disappear {
   pointer-events: none;
-  animation: ghost-marker-disappear 0.35s ease-in forwards;
+  animation: ghost-marker-disappear 0.4s ease-in forwards;
 }
 
 .ghost-marker-dot {

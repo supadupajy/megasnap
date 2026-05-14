@@ -1479,12 +1479,25 @@ const MapContainer = ({
     const map = mapInstance.current;
     if (!isMapReady || !map || !kakao?.maps?.CustomOverlay) return;
 
-    // 줌 레벨 7 이상이면 고스트 마커도 모두 제거 (활성 마커와 동일 정책)
+    // 줌 레벨 7 이상이면 고스트 마커도 모두 제거 (활성 마커와 동일 정책).
+    // 단, 페이드아웃 애니메이션을 재생한 뒤 setMap(null)로 정리한다.
     if (map.getLevel() >= 7) {
-      if (ghostOverlaysRef.current.size > 0) {
-        ghostOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
-        ghostOverlaysRef.current.clear();
-      }
+      ghostOverlaysRef.current.forEach((overlay, id) => {
+        const content = overlay.getContent() as HTMLElement | null;
+        if (content && !content.classList.contains('ghost-disappear')) {
+          content.classList.add('ghost-disappear');
+          window.setTimeout(() => {
+            const cur = ghostOverlaysRef.current.get(id);
+            if (cur && cur === overlay) {
+              cur.setMap(null);
+              ghostOverlaysRef.current.delete(id);
+            }
+          }, 410);
+        } else if (!content) {
+          overlay.setMap(null);
+          ghostOverlaysRef.current.delete(id);
+        }
+      });
       return;
     }
 
@@ -1509,7 +1522,7 @@ const MapContainer = ({
     const kept = candidates.slice(0, GHOST_MARKER_MAX_VISIBLE).map(c => c.post);
     const keptIds = new Set<string>(kept.map(p => String(p.id)));
 
-    // 후보에서 빠진 ghost 오버레이는 페이드아웃 후 제거
+    // 후보에서 빠진 ghost 오버레이는 페이드아웃 애니메이션 후 제거
     ghostOverlaysRef.current.forEach((overlay, id) => {
       if (!keptIds.has(id)) {
         const content = overlay.getContent() as HTMLElement | null;
@@ -1521,7 +1534,7 @@ const MapContainer = ({
               cur.setMap(null);
               ghostOverlaysRef.current.delete(id);
             }
-          }, 360);
+          }, 410);
         } else if (!content) {
           overlay.setMap(null);
           ghostOverlaysRef.current.delete(id);
