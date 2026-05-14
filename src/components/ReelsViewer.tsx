@@ -1545,6 +1545,23 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
+      {/* 트렌딩 릴스(showInlineCloseButton=true)일 때 3-dot 메뉴를 X 버튼 왼쪽에 배치.
+          X 버튼은 부모 ReelsViewer가 \"top-5 right-6\" 위치에 그리므로, 같은 y에 두고
+          X 너비(36px) + 간격(8px) 만큼 왼쪽으로 보정. */}
+      {isMine && onRequestDelete && showInlineCloseButton && (
+        <div
+          className="absolute top-5 right-[68px] z-40"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <ReelsPostMenuDropdown
+            onEdit={startContentEdit}
+            onDelete={onRequestDelete}
+          />
+        </div>
+      )}
+
       {/* 메인 미디어 — 화면 가로 너비에 딱 맞는 3:4 비율 컨테이너 */}
       {/* 하단을 충분히 띄워 닉네임/위치/본문/액션 알약 영역이 영상과 겹치지 않도록 함.
           embedded 모드에서는 페이지 자체가 헤더/BottomNav 사이로 한정되어 있어
@@ -1597,11 +1614,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </button>
           )}
 
-          {/* 영상 내부 우상단 3-dot 메뉴 (내 포스팅일 때만)
-              음소거 버튼의 반대편(우상단)에 배치. 트렌딩 X 버튼은
-              미디어 컨테이너 바깥(상위 absolute 컨테이너의 top-5 right-6)에
-              위치하므로 위치가 겹치지 않는다. */}
-          {isMine && onRequestDelete && (
+          {/* 영상 내부 우상단 3-dot 메뉴 (내 포스팅일 때만, X 버튼이 없을 때만 여기에 둠).
+              X 버튼(showInlineCloseButton)이 있는 트렌딩 릴스에서는 이 위치가 X와 겹쳐
+              보이므로, 아래쪽의 \"외부 컨테이너\" 위치(X 왼쪽)로 옮긴다. */}
+          {isMine && onRequestDelete && !showInlineCloseButton && (
             <div
               className="absolute top-3 right-3 z-40"
               onClick={(e) => e.stopPropagation()}
