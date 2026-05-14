@@ -365,7 +365,9 @@ const BottomNav = () => {
                 )}
               </div>
 
-              {/* Label - 활성 탭에서만 노출 (가로 슬라이드) */}
+              {/* Label - 활성 탭에서만 노출 (가로 슬라이드)
+                  overflow-hidden은 width 애니메이션을 위해 필요하지만, 한글 글자(특히 'ㅈ' 등
+                  위쪽 획)가 잘리지 않도록 py-0.5 + leading 여유를 두어 박스 높이를 확보한다. */}
               <motion.span
                 initial={false}
                 animate={{
@@ -375,7 +377,7 @@ const BottomNav = () => {
                 }}
                 transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                 className={cn(
-                  'relative overflow-hidden whitespace-nowrap text-[13px] leading-none font-bold tracking-tight',
+                  'relative overflow-hidden whitespace-nowrap text-[13px] leading-[1.3] py-0.5 font-bold tracking-tight',
                   isMainMapTab ? 'text-amber-50' : 'text-gray-900'
                 )}
               >
