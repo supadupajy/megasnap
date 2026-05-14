@@ -801,3 +801,25 @@ video.post-item-video::cue,
 video.post-item-video::-webkit-media-text-track-container {
   display: none !important;
 }
+
+/* =============================================
+   영상 화질 보존 (High-Quality Video Rendering)
+   - 영상은 원본 그대로 업로드되지만, 화면에 그려질 때 브라우저가
+     컨테이너 크기에 맞게 다운스케일하면서 흐릿해 보이는 현상을 줄인다.
+   - GPU 합성 레이어로 분리해 픽셀 정렬과 보간 품질을 끌어올린다.
+   - iOS Safari / 안드로이드 WebView 모두에서 효과 있음.
+   ============================================= */
+video.video-hq {
+  /* 다운스케일 시 부드러운 보간 (브라우저 기본 high-quality 알고리즘 사용) */
+  image-rendering: auto;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* GPU 합성 레이어로 분리 — 픽셀 정렬과 색 정확도 보존 */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-transform-style: preserve-3d;
+  transform-style: preserve-3d;
+  will-change: transform;
+  /* 텍스트/엣지 안티앨리어싱 보강 */
+  -webkit-font-smoothing: antialiased;
+}

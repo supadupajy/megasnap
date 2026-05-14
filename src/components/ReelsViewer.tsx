@@ -1681,7 +1681,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       <video
         ref={setRefs}
         src={src}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-cover video-hq"
         playsInline
         loop
         muted={muted}

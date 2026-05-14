@@ -189,7 +189,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         // 회색 배경 위에 OS 네이티브 재생 아이콘을 그리는데, poster가 지정되어 있으면
         // 그 자리에 poster 이미지를 대신 그려서 네이티브 컨트롤이 보이지 않게 한다.
         poster={posterImage}
-        className="absolute inset-0 z-[1] w-full h-full object-cover bg-gray-200 post-item-video"
+        className="absolute inset-0 z-[1] w-full h-full object-cover bg-gray-200 post-item-video video-hq"
         loop
         playsInline
         disablePictureInPicture

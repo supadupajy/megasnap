@@ -183,7 +183,7 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
       <video
         ref={videoRef}
         src={src}
-        className={className ?? 'w-full h-full object-cover'}
+        className={cn(className ?? 'w-full h-full object-cover', 'video-hq')}
         autoPlay
         loop
         muted={muted}

@@ -39,7 +39,7 @@ const VideoThumbnailPreview = ({
     <video
       ref={videoRef}
       src={`${src}#t=${startTime}`}
-      className={className}
+      className={`${className ?? ''} video-hq`.trim()}
       muted
       playsInline
       preload="metadata"
