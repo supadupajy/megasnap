@@ -956,7 +956,6 @@ video.post-item-video::-webkit-media-text-track-container {
     18px 18px, 18px 18px,
     9px 9px,   9px 9px;
   background-repeat: repeat;
-  animation: map-pill-squares-flow 7s linear infinite;
 }
 
 /* 중앙 펄스 글로우 - 호흡하는 빛 (opacity만 변경, 박스 크기 영향 없음) */
