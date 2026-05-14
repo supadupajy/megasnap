@@ -474,6 +474,13 @@ type RankChange = number | null;
 
 interface TrendingPostsProps {
   posts: Post[];
+  /**
+   * 부모(Index.tsx)에서 5분마다 트렌딩 fetch가 완료될 때마다 1씩 증가하는 카운터.
+   * 이 값이 변할 때마다 "순위 변동 비교 기준(prevRanks)"을 직전 fetch 시점의 ranks로 갱신한다.
+   * 데이터 시그니처가 동일하더라도(좋아요 변동 등으로 순위가 안 바뀐 경우에도)
+   * 5분 간격으로 비교 기준이 갱신되어 NEW/▲/▼ 표시가 영원히 남는 문제가 없어진다.
+   */
+  refreshTick: number;
   isExpanded: boolean;
   onToggle: () => void;
   onPostClick: (post: Post) => void;
@@ -754,6 +761,7 @@ const TrendingAdBanner: React.FC = () => {
 
 const TrendingPosts: React.FC<TrendingPostsProps> = ({
   posts,
+  refreshTick,
   isExpanded,
   onToggle,
   onPostClick,
@@ -769,15 +777,24 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const [renderExpandedBody, setRenderExpandedBody] = useState(isExpanded);
   const [visibleItemLimit, setVisibleItemLimit] = useState(8);
   const [thumbnailTimerNow, setThumbnailTimerNow] = useState(() => Date.now());
-  // 비교 기준이 되는 "이전 순위" 스냅샷 — localStorage에서 1회 로드
-  // 현재 posts와 비교해 변동을 표시
+  // 비교 기준이 되는 "이전 순위" 스냅샷 — localStorage에서 1회 로드.
+  // 현재 posts와 비교해 ▲/▼/NEW/유지를 표시한다.
   const [prevRanks, setPrevRanks] = useState<PrevRankMap>(() => loadPrevRanks());
 
-  // 첫 진입 시(localStorage가 비어있던 사용자) 신규 표시를 억제하기 위한 플래그
+  // 첫 진입 시(localStorage가 비어있던 사용자) NEW 표시를 억제하기 위한 플래그.
+  // 신규 사용자는 비교 대상이 없으므로 모든 항목을 "유지(0)"로 표시한다.
   const [isFirstSnapshot, setIsFirstSnapshot] = useState<boolean>(() => {
     const loaded = loadPrevRanks();
     return Object.keys(loaded).length === 0;
   });
+
+  // 다음 갱신 사이클에서 비교 기준으로 박을 ranks를 미리 저장해두는 ref.
+  // - 매 5분 fetch 직후(refreshTick 변경 시) prevRanks를 이 ref의 직전 값으로 설정한 뒤,
+  //   현재 posts의 ranks로 이 ref를 다시 채운다.
+  // - 이렇게 하면 "이번에 표시되는 NEW/▲/▼은 직전 fetch 시점의 순위 기준"이 되고,
+  //   다음 fetch가 오면 prevRanks가 이번 ranks로 갱신되어 NEW가 자연스럽게 사라진다.
+  const ranksAtLastRefreshRef = useRef<PrevRankMap | null>(null);
+
   const isExpandedRef = useRef(isExpanded);
 
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
@@ -790,50 +807,39 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     return () => window.clearInterval(timer);
   }, []);
 
-  // posts ID:rank 시그니처가 바뀌면 다음 비교의 기준을 갱신
-
-  // - 이전 시그니처가 비어있던 경우: 현재 posts를 첫 스냅샷으로 저장(첫 비교 기준 마련)
-  // - 이전 시그니처가 있던 경우: 직전 시그니처의 순위를 prevRanks로 사용
-  const postsSignature = posts.map((p: any) => `${p.id}:${p.rank}`).join('|');
-  const prevSignatureRef = useRef<string>('');
-
+  // 5분 간격 fetch가 한 번씩 완료될 때마다(=refreshTick 증가) 비교 기준을 갱신한다.
+  // - 첫 번째 fetch(refreshTick === 1): 비교 기준이 없으므로 prevRanks를 그대로 두고
+  //   현재 posts의 ranks만 ref에 저장 → 다음 갱신부터 정상 비교 가능.
+  // - 두 번째 이후: 직전 fetch 시점의 ranks를 prevRanks로 설정 → 새 posts와 비교됨.
+  //   그 후 현재 posts의 ranks를 ref에 다시 저장 → 다음 비교의 기준이 됨.
   useEffect(() => {
-    if (posts.length === 0) return;
-    if (prevSignatureRef.current === postsSignature) return;
+    if (refreshTick === 0 || posts.length === 0) return;
 
-    // 다음 비교용 스냅샷을 localStorage에 저장
-    const newMap: PrevRankMap = {};
+    const currentMap: PrevRankMap = {};
     posts.forEach((p: any) => {
-      if (p.rank != null) newMap[p.id] = p.rank;
+      if (p.rank != null) currentMap[p.id] = p.rank;
     });
-    savePrevRanks(newMap);
 
-    if (prevSignatureRef.current === '') {
-      // 컴포넌트 마운트 후 첫 시그니처 등록
-      // - localStorage에 이전 순위가 있었으면(prevRanks 비어있지 않음) 그대로 비교 사용
-      // - 신규 사용자(localStorage 비었음)는 isFirstSnapshot=true 상태에서
-      //   현재 posts를 prevRanks로 박아 모두 "유지(0)"로 표시
+    if (ranksAtLastRefreshRef.current === null) {
+      // 첫 fetch 도착
+      // - 신규 사용자(prevRanks 비어있음): prevRanks를 현재 ranks로 박아 모두 "유지"로 표시
+      // - 기존 사용자(prevRanks=localStorage 직전 세션): prevRanks는 그대로 두고 비교 진행
       if (Object.keys(prevRanks).length === 0) {
-        setPrevRanks(newMap);
+        setPrevRanks(currentMap);
       }
     } else {
-      // 두 번째 갱신부터는 직전 시그니처의 순위를 새 비교 기준으로 사용
-      const updated: PrevRankMap = {};
-      prevSignatureRef.current.split('|').forEach(seg => {
-        const idx = seg.lastIndexOf(':');
-        if (idx > 0) {
-          const id = seg.slice(0, idx);
-          const rank = Number(seg.slice(idx + 1));
-          if (Number.isFinite(rank)) updated[id] = rank;
-        }
-      });
-      setPrevRanks(updated);
-      // 첫 갱신이 일어났으니 이제부터는 정상적으로 NEW 표시 가능
+      // 두 번째 이후 fetch: 직전 fetch 시점의 ranks를 비교 기준으로 사용
+      setPrevRanks(ranksAtLastRefreshRef.current);
       if (isFirstSnapshot) setIsFirstSnapshot(false);
     }
 
-    prevSignatureRef.current = postsSignature;
-  }, [postsSignature, posts]);
+    // 다음 갱신용으로 현재 ranks를 저장 + localStorage에도 보관(앱 재시작 시 사용)
+    ranksAtLastRefreshRef.current = currentMap;
+    savePrevRanks(currentMap);
+    // posts/prevRanks/isFirstSnapshot은 refreshTick 증가와 같은 렌더 사이클에 함께 갱신되거나
+    // 별도 setter로만 변하므로, refreshTick에만 의존해도 stale 이슈가 없다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTick]);
 
   // rankChange 계산 함수
   const getRankChange = (post: Post & { rank: number }): RankChange => {

@@ -193,6 +193,10 @@ const Index = () => {
   const restoredFromMapCacheRef = useRef(mapCache.posts.length > 0);
   const [allPosts, setAllPosts] = useState<Post[]>(() => mapCache.posts);
   const [globalTrendingPosts, setGlobalTrendingPosts] = useState<Post[]>([]);
+  // 5분마다 트렌딩 fetch가 완료될 때마다 증가하는 카운터.
+  // TrendingPosts에 prop으로 전달해 "순위 변동 비교 기준(prevRanks)"을
+  // 데이터 시그니처가 동일하더라도 매 5분 갱신 시점에 다시 박을 수 있게 한다.
+  const [trendingRefreshTick, setTrendingRefreshTick] = useState(0);
   // displayedMarkers: MapContainer에 실제로 전달되는 마커 목록
   const [displayedMarkers, setDisplayedMarkers] = useState<Post[]>(() => mapCache.posts);
   const [visibleMarkerIds, setVisibleMarkerIds] = useState<Set<string> | null>(null);
@@ -563,6 +567,8 @@ const Index = () => {
         const mapped = data.map((p: any) => ({ ...mapRawToPost({ ...p, isLiked: likedIds.has(String(p.id)) }), likes_per_hour: Number(p.likes_per_hour ?? 0) }));
         const trending = mapped.slice(0, 20).map((p: any, i: number) => ({ ...p, rank: i + 1 }));
         setGlobalTrendingPosts(trending);
+        // 새 트렌딩 fetch 완료 신호 → TrendingPosts가 비교 기준(prevRanks)을 갱신할 수 있게 한다.
+        setTrendingRefreshTick((t) => t + 1);
         trendingFetchedAtRef.current = now;
       }
     } catch (err) {
@@ -2089,6 +2095,7 @@ const Index = () => {
           <div className="max-w-md mx-auto pointer-events-auto relative">
             <TrendingPosts
               posts={globalTrendingPosts}
+              refreshTick={trendingRefreshTick}
               onPostClick={handleTrendingPostClick}
               isExpanded={isTrendingExpanded}
               onToggle={() => setIsTrendingExpanded(!isTrendingExpanded)}
