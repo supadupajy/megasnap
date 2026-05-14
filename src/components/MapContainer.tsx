@@ -273,20 +273,16 @@ const MapContainer = ({
   }, [posts, markerExpiryNow]);
 
   // 고스트(만료) 후보: 24시간이 지난 일반 포스트들. 광고는 제외.
-  // 좋아요 수 + 최신순(생성일 내림차순) 가중치로 우선순위 정렬해두고,
+  // 최신순(생성일 내림차순)으로 우선순위 정렬해두고,
   // 실제 표시는 viewport 안에 들어온 것 중 상위 N개만 추린다.
   const ghostCandidates = useMemo(() => {
     return posts
       .filter(p => p && p.lat != null && p.lng != null && isMarkerExpired(p, markerExpiryNow))
       .map(p => ({
         post: p,
-        likes: Number((p as any).likes ?? 0),
         createdMs: getPostCreatedAtMs(p) ?? 0,
       }))
-      .sort((a, b) => {
-        if (b.likes !== a.likes) return b.likes - a.likes;
-        return b.createdMs - a.createdMs;
-      });
+      .sort((a, b) => b.createdMs - a.createdMs);
   }, [posts, markerExpiryNow]);
 
   const ghostCandidatesRef = useRef(ghostCandidates);
