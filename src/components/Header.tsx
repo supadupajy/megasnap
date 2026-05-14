@@ -37,7 +37,15 @@ const Header = () => {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-[12600] bg-white border-b border-gray-100">
+    <header
+      className="fixed top-0 left-0 right-0 z-[12600] bg-white border-b border-gray-100"
+      style={{
+        // 안드로이드 WebView에서 fixed 헤더와 sticky 자식 페이지 사이에 발생하는
+        // 1px sub-pixel 갭(그 갭으로 아바타 그라데이션이 노란 줄처럼 비치는 현상)을
+        // 방지하기 위해 헤더 아래로 1px 흰색 그림자를 둬서 갭을 메운다.
+        boxShadow: '0 1px 0 0 #ffffff',
+      }}
+    >
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
       <div className="h-16 px-4 flex items-center gap-2 max-w-lg mx-auto">
