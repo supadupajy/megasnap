@@ -2301,6 +2301,22 @@ const Index = () => {
       {/* 실시간 인기 TOP20 릴스 뷰어
           Flicks 페이지와 동일하게 Header(top)/BottomNav(bottom) 사이의 영역에
           embedded 모드로 인라인 렌더링한다. 전역 chrome(헤더/바텀네브)은 그대로 유지. */}
+      {/* TrendingReels가 열렸을 때 BottomNav 알약 좌·우/아래로 지도가 비치지 않도록
+          화면 하단 BottomNav 영역만 검은색으로 가리는 마스크 (영상 영역 크기는 그대로 유지). */}
+      {!!trendingReelsInitialPost && (
+        <div
+          aria-hidden="true"
+          className="bg-black pointer-events-none"
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+            zIndex: 11000,
+          }}
+        />
+      )}
       {!!trendingReelsInitialPost && (
         <div
           className="bg-black"
@@ -2309,10 +2325,7 @@ const Index = () => {
             left: 0,
             right: 0,
             top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-            // 화면 바닥까지 검은 배경이 꽉 차도록 bottom: 0.
-            // BottomNav 알약은 z=20000으로 그 위에 떠 있고, 알약 좌·우/아래로
-            // 지도가 비치지 않도록 영상 뷰어 배경이 끝까지 깔린다.
-            bottom: 0,
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
             // Header(z=12600), BottomNav(z=20000)보다 낮고 TrendingPosts(12000)보다 살짝 낮게
             // → Header/BottomNav가 위에 떠 있는 상태에서 본문 영역만 가린다.
             zIndex: 11000,
