@@ -89,7 +89,7 @@ serve(async (req) => {
 
     await transporter.sendMail({
       from: `"TocaToca Ads" <${gmailUser}>`,
-      to: "tocatoca@gmail.com",
+      to: "chorasnap@gmail.com",
       subject: `[TocaToca 광고 문의] ${company} - ${adTypeLabel}`,
       html: htmlBody,
     });

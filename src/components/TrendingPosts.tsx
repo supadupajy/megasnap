@@ -678,7 +678,7 @@ const TrendingAdBanner: React.FC = () => {
         <div
           onClick={(e) => {
             e.stopPropagation();
-            window.open('mailto:tocatoca@gmail.com', '_blank');
+            window.open('mailto:chorasnap@gmail.com', '_blank');
           }}
           className="w-full bg-gradient-to-br from-yellow-100 via-amber-50 to-orange-100 rounded-2xl shadow-sm border border-amber-200/60 cursor-pointer relative overflow-hidden px-4 pt-2.5 pb-2.5 flex flex-col gap-1.5"
         >
@@ -697,7 +697,7 @@ const TrendingAdBanner: React.FC = () => {
           {/* 이메일 버튼 */}
           <div className="flex items-center gap-2 bg-white/70 rounded-xl px-2.5 py-1.5 border border-amber-200/60">
             <Mail className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span className="flex-1 text-[11px] font-bold text-gray-900 tracking-tight">tocatoca@gmail.com</span>
+            <span className="flex-1 text-[11px] font-bold text-gray-900 tracking-tight">chorasnap@gmail.com</span>
             <div className="w-5 h-5 bg-yellow-200 rounded-lg flex items-center justify-center">
               <svg className="w-2.5 h-2.5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
             </div>

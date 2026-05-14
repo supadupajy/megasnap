@@ -33,12 +33,12 @@ const HeaderAdBanner = () => {
       <div
         className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-yellow-100 via-amber-50 to-orange-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-amber-200/60"
         style={GPU_LAYER_STYLE}
-        onClick={() => window.open('mailto:tocatoca@gmail.com', '_blank')}
+        onClick={() => window.open('mailto:chorasnap@gmail.com', '_blank')}
       >
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="flex flex-col items-left">
             <span className="text-[8px] font-black text-gray-900 leading-none tracking-tighter uppercase">광고 문의</span>
-            <span className="text-[6px] font-bold text-amber-600 leading-none mt-0.5 tracking-[-0.08em]">tocatoca@gmail.com</span>
+            <span className="text-[6px] font-bold text-amber-600 leading-none mt-0.5 tracking-[-0.08em]">chorasnap@gmail.com</span>
           </div>
         </div>
         <Mail className="absolute top-2 right-2.5 w-2.5 h-2.5 text-amber-600" />
