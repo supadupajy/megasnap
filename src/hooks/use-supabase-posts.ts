@@ -260,7 +260,7 @@ export const fetchOffScreenCounts = async (
  * 현재 bounds 안에 "24시간이 지나서 지도엔 안 보이지만 DB엔 남아있는" 포스트가
  * 하나라도 있는지 카운트한다. head: true + limit(1) 로 가장 가벼운 형태로 조회.
  *
- * "지금 여기" 버튼이 displayedPostCount === 0 일 때도, 이 카운트가 > 0 이면
+ * "여기 보기" 버튼이 displayedPostCount === 0 일 때도, 이 카운트가 > 0 이면
  * "이 영역엔 시간이 지난 추억이 있다"는 힌트를 띄울 수 있다.
  */
 export const fetchExpiredOnlyCountInBounds = async (
