@@ -280,8 +280,8 @@ const BottomNav = () => {
               ref={(el) => { itemRefs.current[index] = el; }}
               onClick={() => handleNavClick(item.path)}
               className={cn(
-                'relative flex items-center justify-center gap-1.5 h-11 rounded-full transition-[padding] duration-300 ease-out',
-                isActive ? 'px-3.5 flex-1 min-w-0' : 'px-3 flex-none'
+                'relative flex items-center justify-center gap-1.5 h-11 rounded-full transition-[padding] duration-300 ease-out flex-none',
+                isActive ? 'px-3' : 'px-3'
               )}
               aria-label={item.label}
             >
