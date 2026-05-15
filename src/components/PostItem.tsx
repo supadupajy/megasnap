@@ -128,12 +128,32 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   // 댓글 lazy-load: post.comments가 비어있을 때 DB에서 가져옴
   useEffect(() => {
     if (commentsFetchedRef.current) return;
-    if (!isPersistedPostId(post.id)) return;
-    if (post.comments && post.comments.length > 0) {
-      commentsFetchedRef.current = true;
+    commentsFetchedRef.current = true;
+
+    if (!isPersistedPostId(post.id)) {
+      // 광고 포스트: ad_comments 테이블에서 fetch (hasUserCommented 계산용)
+      supabase
+        .from('ad_comments')
+        .select('id, user_id, user_name, content, created_at')
+        .eq('ad_id', post.id)
+        .order('created_at', { ascending: true })
+        .then(({ data }) => {
+          if (!data || data.length === 0) return;
+          setLocalComments(data.map(row => ({
+            id: row.id,
+            userId: row.user_id,
+            user: row.user_name || '사용자',
+            text: row.content,
+            createdAt: row.created_at ? new Date(row.created_at) : undefined,
+            likesCount: 0,
+            isLiked: false,
+          })));
+        })
+        .catch(() => {});
       return;
     }
-    commentsFetchedRef.current = true;
+
+    if (post.comments && post.comments.length > 0) return;
     fetchCommentsByPostId(post.id).then(dbComments => {
       if (dbComments.length > 0) setLocalComments(dbComments);
     }).catch(() => {});
