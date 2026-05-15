@@ -36,6 +36,7 @@ const fetchAdComments = async (adId: string): Promise<Comment[]> => {
     .eq('ad_id', adId)
     .order('created_at', { ascending: true });
   if (error) throw error;
+  console.log('[fetchAdComments] raw data:', JSON.stringify(data));
   return (data || []).map(row => ({
     id: row.id,
     userId: row.user_id,
@@ -426,6 +427,7 @@ const PostCommentsDialog = ({
 
   const renderCommentRow = (comment: Comment, index: number) => {
     const isOwnComment = !!authUser?.id && comment.userId === authUser.id;
+    console.log('[renderCommentRow]', { commentUserId: comment.userId, authUserId: authUser?.id, isOwnComment });
     const isEditing = !!comment.id && editingCommentId === comment.id;
     const isDeleting = !!comment.id && deletingCommentId === comment.id;
     const commentKey = comment.id || `${index}-${comment.user}-${comment.text}`;
