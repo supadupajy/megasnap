@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search as SearchIcon, UserPlus, Check, Users } from 'lucide-react';
+import { Search as SearchIcon, UserPlus, Check, Users, UsersRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -152,7 +152,7 @@ const Search = () => {
       <div className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={progress}
-          Icon={SearchIcon}
+          Icon={UsersRound}
           iconBgClass="bg-indigo-100"
           iconColorClass="text-indigo-600"
           title="친구 검색"
