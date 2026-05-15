@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Flame, Heart, Eye, ExternalLink, Sparkles, Mail, ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { cn, getOptimizedMarkerImage, getOptimizedBannerImage } from "@/lib/utils";
+import { cn, getOptimizedMarkerImage, getOptimizedBannerImage, formatCount } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
@@ -638,11 +638,11 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           </p>
           <div className="flex items-center gap-0.5 text-rose-500 shrink-0">
             <Heart className="w-3 h-3 fill-rose-500" />
-            <span className="text-[10px] font-black">{Number(post.likes ?? 0)}</span>
+            <span className="text-[10px] font-black">{formatCount(Number(post.likes ?? 0))}</span>
           </div>
           <div className="flex items-center gap-0.5 text-sky-500 shrink-0">
             <Eye className="w-3 h-3" />
-            <span className="text-[10px] font-black">{post.views_per_hour ?? 0}</span>
+            <span className="text-[10px] font-black">{formatCount(Number(post.views_per_hour ?? 0))}</span>
           </div>
         </div>
       </div>

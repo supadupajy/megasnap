@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash, X, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
+import { getFallbackImage, getOptimizedMarkerImage, formatCount } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
@@ -482,7 +482,7 @@ const PostSearch = () => {
                     <div className="flex items-center gap-1">
                       <Heart className="h-3 w-3 fill-white text-white" />
                       <span className="text-[10px] font-semibold text-white">
-                        {post.likes?.toLocaleString() ?? 0}
+                        {formatCount(post.likes ?? 0)}
                       </span>
                     </div>
                   </div>

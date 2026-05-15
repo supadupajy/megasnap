@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, MapPin, Heart, Download, ExternalLink, Smartphone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { getFallbackImage, getOptimizedFeedImage } from '@/lib/utils';
+import { getFallbackImage, getOptimizedFeedImage, formatCount } from '@/lib/utils';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 
 const ANDROID_PACKAGE = 'com.chorasnap.chorasnap';
@@ -218,7 +218,7 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
 
               <div className="flex items-center gap-1.5 text-gray-400">
                 <Heart className="w-4 h-4" />
-                <span className="text-sm font-medium">{post.likes?.toLocaleString() || 0}개의 좋아요</span>
+                <span className="text-sm font-medium">{formatCount(post.likes || 0)}개의 좋아요</span>
               </div>
             </div>
           </div>

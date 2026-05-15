@@ -396,13 +396,23 @@ export const formatRelativeTime = (date: Date | string): string => {
   return formatDistanceToNow(d, { addSuffix: true, locale: ko });
 };
 
+/**
+ * 큰 숫자를 K / M 단위로 축약 표기한다.
+ * - 1,000 미만: 원본 그대로 (예: 999)
+ * - 1,000 이상 ~ 1,000,000 미만: 소수점 1자리 K (예: 1.2K, 12.3K, 999.9K)
+ *   단, 정확히 정수배일 때도 ".0K"가 노출되도록 소수점은 항상 1자리 유지.
+ * - 1,000,000 이상: 소수점 1자리 M (예: 1.0M, 12.3M)
+ * 잘림(floor) 방식: 1,299 → 1.2K (반올림 시 사용자가 실제값보다 큰 숫자를 보지 않도록).
+ */
 export const formatCount = (n: number): string => {
+  if (!Number.isFinite(n) || n < 0) return '0';
   if (n >= 1_000_000) {
-    const m = n / 1_000_000;
-    return (Number.isInteger(m) ? m.toString() : m.toFixed(1).replace(/\.0$/, '')) + 'M';
+    const m = Math.floor(n / 100_000) / 10;
+    return `${m.toFixed(1)}M`;
   }
   if (n >= 1_000) {
-    return n.toLocaleString();
+    const k = Math.floor(n / 100) / 10;
+    return `${k.toFixed(1)}K`;
   }
   return n.toString();
 };

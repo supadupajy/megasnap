@@ -23,7 +23,7 @@ import { Post } from "@/types";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toggleLikeInDb } from "@/utils/like-utils";
-import { cn, getOptimizedFeedImage, getFallbackImage } from "@/lib/utils";
+import { cn, getOptimizedFeedImage, getFallbackImage, formatCount } from "@/lib/utils";
 import { handleShare } from "@/utils/share";
 import PostCommentsDialog from "@/components/PostCommentsDialog";
 import PostUserAvatar from "@/components/PostUserAvatar";
@@ -1699,7 +1699,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
                 )}
               >
                 <Heart className={cn("h-[18px] w-[18px] transition-colors", liked ? "fill-red-500 text-red-500" : "text-white")} />
-                <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
+                <span className="tabular-nums leading-none">{formatCount(likesCount)}</span>
               </button>
 
               <button
@@ -1709,7 +1709,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-sm font-black text-white backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
               >
                 <MessageCircle className="h-[18px] w-[18px] text-white" />
-                <span className="tabular-nums leading-none">{commentsCount.toLocaleString()}</span>
+                <span className="tabular-nums leading-none">{formatCount(commentsCount)}</span>
               </button>
 
               <button

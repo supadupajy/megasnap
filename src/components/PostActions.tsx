@@ -1,6 +1,6 @@
 import React from 'react';
 import { Heart, MessageCircle, Share2, Bookmark, ShoppingBag, ExternalLink } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCount } from '@/lib/utils';
 import { handleShare } from '@/utils/share';
 import { showSuccess } from '@/utils/toast';
 import LocationButtonWithTimer from './LocationButtonWithTimer';
@@ -130,7 +130,7 @@ const PostActions = ({
             aria-label={`좋아요 ${likesCount.toLocaleString()}개`}
           >
             <Heart className={cn('h-[18px] w-[18px] transition-colors', isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600')} />
-            <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
+            <span className="tabular-nums leading-none">{formatCount(likesCount)}</span>
           </button>
           <button
             type="button"
@@ -144,7 +144,7 @@ const PostActions = ({
             aria-label={`댓글 ${commentsCount.toLocaleString()}개`}
           >
             <MessageCircle className={cn('h-[18px] w-[18px] transition-colors', hasUserCommented ? 'fill-indigo-500 text-indigo-500' : 'text-gray-600')} />
-            <span className="tabular-nums leading-none">{commentsCount.toLocaleString()}</span>
+            <span className="tabular-nums leading-none">{formatCount(commentsCount)}</span>
           </button>
           <button
             type="button"

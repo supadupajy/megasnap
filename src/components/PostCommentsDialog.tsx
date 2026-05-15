@@ -13,7 +13,7 @@ import {
   toggleCommentLike,
 } from '@/utils/comments';
 import { supabase } from '@/integrations/supabase/client';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, formatCount } from '@/lib/utils';
 import { showError, showSuccess } from '@/utils/toast';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 import { useAuth } from '@/components/AuthProvider';
@@ -453,7 +453,7 @@ const PostCommentsDialog = ({
         aria-label={`댓글 좋아요 ${likesCount.toLocaleString()}개`}
       >
         <Heart className={`h-[18px] w-[18px] transition-colors ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
-        <span className="tabular-nums leading-none">{likesCount.toLocaleString()}</span>
+        <span className="tabular-nums leading-none">{formatCount(likesCount)}</span>
       </button>
     ) : null;
 
@@ -578,7 +578,7 @@ const PostCommentsDialog = ({
             </div>
             <div>
               <p className="text-lg font-black tracking-tight text-slate-950">댓글</p>
-              <p className="text-sm font-bold text-slate-400">{comments.length.toLocaleString()}개의 이야기</p>
+              <p className="text-sm font-bold text-slate-400">{formatCount(comments.length)}개의 이야기</p>
             </div>
           </div>
           <button
