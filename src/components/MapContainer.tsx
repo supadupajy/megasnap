@@ -302,18 +302,42 @@ const MapContainer = ({
     mapInstance.current.setDraggable(draggable);
   }, [draggable, isMapReady]);
 
-  // 'map-relayout-request' 이벤트 핸들러 — 외부에서 명시적으로 relayout이
-  // 필요할 때를 위해 유지. (현재는 App.tsx의 display 토글 케이스에서는 호출하지 않음:
-  // relayout이 CustomOverlay DOM을 일시 재배치하면서 CSS 트랜지션이 재생되는 부작용이 있다.)
+  // 숨겨져 있던 지도(display:none)가 다시 보일 때 카카오맵 타일이 일부만 로드되는 현상 방지.
+  // relayout을 한 번만 호출하면 Android WebView에서 타이밍에 따라 실패할 수 있어 짧게 재시도한다.
   useEffect(() => {
-    const handleRelayout = () => {
-      if (!mapInstance.current) return;
+    const runRelayout = () => {
+      const kakao = (window as any).kakao;
+      const map = mapInstance.current;
+      const container = containerRef.current;
+      if (!map || !kakao?.maps?.LatLng || !container || container.offsetWidth === 0 || container.offsetHeight === 0) return;
+
       try {
-        mapInstance.current.relayout();
+        const currentCenter = map.getCenter();
+        const lat = currentCenter.getLat();
+        const lng = currentCenter.getLng();
+        map.relayout();
+        map.setCenter(new kakao.maps.LatLng(lat, lng));
       } catch (e) {}
     };
+
+    const requestRelayout = () => {
+      requestAnimationFrame(runRelayout);
+      window.setTimeout(runRelayout, 80);
+      window.setTimeout(runRelayout, 250);
+      window.setTimeout(runRelayout, 700);
+    };
+
+    const handleRelayout = () => requestRelayout();
     window.addEventListener('map-relayout-request', handleRelayout);
-    return () => window.removeEventListener('map-relayout-request', handleRelayout);
+
+    const container = containerRef.current;
+    const observer = container ? new ResizeObserver(() => requestRelayout()) : null;
+    if (container && observer) observer.observe(container);
+
+    return () => {
+      window.removeEventListener('map-relayout-request', handleRelayout);
+      observer?.disconnect();
+    };
   }, []);
 
   const { user: authUser } = useAuth();

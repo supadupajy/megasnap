@@ -167,6 +167,18 @@ const AnimatedRoutes = () => {
   const [isReelsViewerOpen, setIsReelsViewerOpen] = useState(false);
 
   useEffect(() => {
+    if (!showIndex || !session) return;
+
+    const requestMapRelayout = () => {
+      window.dispatchEvent(new CustomEvent('map-relayout-request'));
+    };
+
+    requestAnimationFrame(requestMapRelayout);
+    const timers = [80, 250, 700].map(delay => window.setTimeout(requestMapRelayout, delay));
+    return () => timers.forEach(timer => window.clearTimeout(timer));
+  }, [showIndex, session, location.key]);
+
+  useEffect(() => {
     // 초기값 동기화 (다른 페이지에서 진입 시)
     if (typeof window !== 'undefined') {
       setIsPostListVisible((window as any).__isPostListOpen === true);
