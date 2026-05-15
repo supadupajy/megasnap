@@ -88,7 +88,7 @@ serve(async (req) => {
     console.log("[send-ad-inquiry] nodemailer 전송 시작...");
 
     await transporter.sendMail({
-      from: `"TocaToca Ads" <${gmailUser}>`,
+      from: `"TocaToca Ads" <support@thetocatoca.com>`,
       to: "support@thetocatoca.com",
       subject: `[TocaToca 광고 문의] ${company} - ${adTypeLabel}`,
       html: htmlBody,

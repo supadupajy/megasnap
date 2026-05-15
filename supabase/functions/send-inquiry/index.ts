@@ -99,7 +99,7 @@ serve(async (req) => {
     console.log('[send-inquiry] 이메일 전송 시작...');
 
     await transporter.sendMail({
-      from: `"TocaToca Support" <${gmailUser}>`,
+      from: `"TocaToca Support" <support@thetocatoca.com>`,
       to: "support@thetocatoca.com",
       replyTo: user.email,
       subject: `[TocaToca 문의] [${category}] ${title}`,

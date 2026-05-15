@@ -9,7 +9,7 @@ const info = [
   { icon: MapPin, label: '주소', value: '서울특별시 강남구 테헤란로 123, 4층' },
   { icon: Mail, label: '이메일', value: 'support@thetocatoca.com' },
   { icon: Phone, label: '고객센터', value: '02-1234-5678' },
-  { icon: Globe, label: '웹사이트', value: 'www.chorasnap.com' },
+  { icon: Globe, label: '웹사이트', value: 'www.thetocatoca.com' },
 ];
 
 const CompanyInfo = () => {
