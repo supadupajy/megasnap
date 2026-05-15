@@ -258,22 +258,19 @@ const ProfileEdit = () => {
         paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      {/* Page Header (Messages 스타일) */}
+      {/* Page Header (PostSearch와 동일한 뒤로가기 버튼 스타일) */}
       <div className="shrink-0 bg-white">
-        <div className="bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
-          <div className="flex justify-start">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
-              style={{ gap: '6px', padding: '8px 16px' }}
-              aria-label="뒤로가기"
-            >
-              <ChevronLeft className="w-4 h-4 text-gray-900 shrink-0" />
-              <span className="text-sm font-normal text-gray-900 whitespace-nowrap">뒤로</span>
-            </button>
+        <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
+            aria-label="뒤로가기"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필 편집</h2>
           </div>
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필 편집</h2>
-          <div />
         </div>
       </div>
 
@@ -374,24 +371,24 @@ const ProfileEdit = () => {
           />
           <p className="text-right text-[10px] text-gray-400 font-bold">{bio.length}/100</p>
         </div>
-      </div>
 
-      {/* Save Button (스크롤 영역 바깥, BottomNav 위쪽에 고정) */}
-      <div className="shrink-0 px-6 pt-3 pb-3 bg-white border-t border-gray-50">
-        <Button
-          className="w-full h-14 bg-gray-900 hover:bg-gray-800 text-white rounded-[20px] text-base font-black shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between px-5"
-          onClick={handleSave}
-          disabled={isSubmitting || isTakingPhoto}
-        >
-          <span>{isSubmitting ? '저장 중...' : '변경사항 저장하기'}</span>
-          <div className="w-9 h-9 rounded-full bg-amber-400 text-gray-900 flex items-center justify-center shrink-0">
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Check className="w-5 h-5 stroke-[3px]" />
-            )}
-          </div>
-        </Button>
+        {/* Save Button (내 소개 아래, 스크롤 영역 내부에 위치하여 함께 스크롤됨) */}
+        <div className="pt-2">
+          <Button
+            className="w-full h-14 bg-gray-900 hover:bg-gray-800 text-white rounded-[20px] text-base font-black shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between px-5"
+            onClick={handleSave}
+            disabled={isSubmitting || isTakingPhoto}
+          >
+            <span>{isSubmitting ? '저장 중...' : '변경사항 저장하기'}</span>
+            <div className="w-9 h-9 rounded-full bg-amber-400 text-gray-900 flex items-center justify-center shrink-0">
+              {isSubmitting ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Check className="w-5 h-5 stroke-[3px]" />
+              )}
+            </div>
+          </Button>
+        </div>
       </div>
     </div>
   );
