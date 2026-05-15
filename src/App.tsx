@@ -192,6 +192,12 @@ const AnimatedRoutes = () => {
   }, []);
 
   useEffect(() => {
+    if (!showIndex && (window as any).__isTrendingReelsOpen === true) {
+      window.dispatchEvent(new CustomEvent('close-trending-reels-by-back'));
+    }
+  }, [showIndex, location.pathname]);
+
+  useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
       // 0순위: ReelsViewer가 열려 있으면 닫기 (최상단 풀스크린 오버레이)
       if ((window as any).__isReelsViewerOpen === true) {
