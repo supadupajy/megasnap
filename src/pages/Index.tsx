@@ -935,6 +935,15 @@ const Index = () => {
         ? new Date(mapMarkerAd.start_date)
         : new Date(0);
 
+      // ad_likes, ad_comments에서 실제 수치 조회
+      const [{ count: adLikesCount }, { count: adCommentsCount }, adLikedByMe] = await Promise.all([
+        supabase.from('ad_likes').select('id', { count: 'exact', head: true }).eq('ad_id', AD_POST_ID),
+        supabase.from('ad_comments').select('id', { count: 'exact', head: true }).eq('ad_id', AD_POST_ID),
+        authUser?.id
+          ? supabase.from('ad_likes').select('id').eq('ad_id', AD_POST_ID).eq('user_id', authUser.id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+
       const adPost: Post = {
         id: AD_POST_ID,
         user_id: 'ad',
@@ -950,13 +959,13 @@ const Index = () => {
         lng,
         latitude: lat,
         longitude: lng,
-        likes: 0,
-        commentsCount: 0,
+        likes: adLikesCount || 0,
+        commentsCount: adCommentsCount || 0,
         comments: [],
         image: displayImage,
         image_url: displayImage,
         images: displayImage ? [displayImage] : [],
-        isLiked: false,
+        isLiked: !!(adLikedByMe as any)?.data,
         category: 'food',
         createdAt: adCreatedAt,
         borderType: 'none',
@@ -1602,7 +1611,6 @@ const Index = () => {
   // ── 좋아요 토글 ──────────────────────────────────────────────
   const handleLikeToggle = useCallback((postId: string) => {
     if (!authUser?.id) return;
-    // 광고 마커는 DB에 저장하지 않음 (UI만 반영)
     const isAdPost = postId.startsWith('ad-map-marker-');
     // Optimistic UI: 즉시 상태 반영
     let currentlyLiked = false;
@@ -1613,8 +1621,37 @@ const Index = () => {
     };
     setAllPosts(prev => prev.map(updater));
     setGlobalTrendingPosts(prev => prev.map(updater));
-    if (isAdPost) return;
-    // DB 쓰기 (트리거가 posts.likes 자동 동기화)
+
+    if (isAdPost) {
+      // 광고 포스트: ad_likes 테이블에 저장
+      const userId = authUser.id;
+      if (currentlyLiked) {
+        supabase.from('ad_likes').delete().eq('ad_id', postId).eq('user_id', userId).then(({ error }) => {
+          if (error) {
+            // 실패 시 롤백
+            const rollback = (p: Post) => p.id === postId
+              ? { ...p, isLiked: true, likes: p.likes + 1 }
+              : p;
+            setAllPosts(prev => prev.map(rollback));
+            setGlobalTrendingPosts(prev => prev.map(rollback));
+          }
+        });
+      } else {
+        supabase.from('ad_likes').insert({ ad_id: postId, user_id: userId }).then(({ error }) => {
+          if (error && (error as any).code !== '23505') {
+            // 실패 시 롤백 (unique violation 제외)
+            const rollback = (p: Post) => p.id === postId
+              ? { ...p, isLiked: false, likes: Math.max(0, p.likes - 1) }
+              : p;
+            setAllPosts(prev => prev.map(rollback));
+            setGlobalTrendingPosts(prev => prev.map(rollback));
+          }
+        });
+      }
+      return;
+    }
+
+    // 일반 포스트: DB 쓰기 (트리거가 posts.likes 자동 동기화)
     toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
       if (!ok) {
         // 실패 시 롤백

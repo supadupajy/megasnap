@@ -202,14 +202,32 @@ const Profile = () => {
       const adSavedItems = adSavedRes.data || [];
       let adSavedPosts: Post[] = [];
       if (adSavedItems.length > 0) {
-        const adIds = adSavedItems.map((item: any) => item.ad_id.replace('ad-map-marker-', ''));
-        const { data: adsData } = await supabase
-          .from('ads')
-          .select('id, brand_name, brand_logo_url, image_url, title, subtitle, link_url, lat, lng, updated_at')
-          .in('id', adIds);
+        const adPostIds = adSavedItems.map((item: any) => item.ad_id as string);
+        const adIds = adPostIds.map(id => id.replace('ad-map-marker-', ''));
 
-        adSavedPosts = (adsData || []).map((ad: any): Post => {
+        const [{ data: adsData }, ...adStatsResults] = await Promise.all([
+          supabase
+            .from('ads')
+            .select('id, brand_name, brand_logo_url, image_url, title, subtitle, link_url, lat, lng, updated_at')
+            .in('id', adIds),
+          ...adPostIds.map(adPostId =>
+            Promise.all([
+              supabase.from('ad_likes').select('id', { count: 'exact', head: true }).eq('ad_id', adPostId),
+              supabase.from('ad_comments').select('id', { count: 'exact', head: true }).eq('ad_id', adPostId),
+              authUser?.id
+                ? supabase.from('ad_likes').select('id').eq('ad_id', adPostId).eq('user_id', authUser.id).maybeSingle()
+                : Promise.resolve({ data: null }),
+            ])
+          ),
+        ]);
+
+        adSavedPosts = (adsData || []).map((ad: any, idx: number): Post => {
           const adPostId = `ad-map-marker-${ad.id}`;
+          const stats = adStatsResults[idx] as any;
+          const likesCount = stats?.[0]?.count || 0;
+          const commentsCount = stats?.[1]?.count || 0;
+          const isLiked = !!(stats?.[2]?.data);
+
           return {
             id: adPostId,
             isAd: true,
@@ -228,14 +246,14 @@ const Profile = () => {
             lng: ad.lng,
             latitude: ad.lat,
             longitude: ad.lng,
-            likes: 0,
-            commentsCount: 0,
+            likes: likesCount,
+            commentsCount: commentsCount,
             comments: [],
             image: ad.image_url || '/placeholder.svg',
             image_url: ad.image_url || '/placeholder.svg',
             images: ad.image_url ? [ad.image_url] : ['/placeholder.svg'],
             videoUrl: undefined,
-            isLiked: false,
+            isLiked: isLiked,
             isSaved: true,
             link_url: ad.link_url,
             createdAt: new Date(ad.updated_at || Date.now()),
