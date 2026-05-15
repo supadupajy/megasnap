@@ -1,0 +1,1 @@
+SELECT c.id, c.user_id, c.user_name, c.content, c.created_at, p.nickname, au.email FROM public.comments c LEFT JOIN public.profiles p ON p.id = c.user_id LEFT JOIN auth.users au ON au.id = c.user_id WHERE c.user_name ILIKE '%supadupajy%' OR p.nickname = '엄마쟤흙먹어' ORDER BY c.created_at DESC LIMIT 20;

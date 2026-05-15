@@ -45,6 +45,26 @@ export const fetchCommentsByPostId = async (postId: string): Promise<Comment[]> 
   const rows = data || [];
   const commentIds = rows.map(r => r.id).filter((id): id is string => !!id);
 
+  // 댓글 작성자들의 현재 닉네임을 profiles에서 조회 (DB에 저장된 user_name이 과거 값이거나
+  // 이메일 prefix로 잘못 저장된 경우에도 항상 최신 nickname을 표시하기 위함)
+  const userIds = Array.from(
+    new Set(rows.map(r => r.user_id).filter((id): id is string => !!id))
+  );
+  const nicknameMap = new Map<string, string>();
+
+  if (userIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from('profiles')
+      .select('id, nickname')
+      .in('id', userIds);
+
+    (profileRows || []).forEach((row: { id: string; nickname: string | null }) => {
+      if (row.nickname && row.nickname.trim()) {
+        nicknameMap.set(row.id, row.nickname);
+      }
+    });
+  }
+
   // 댓글별 좋아요 개수와 현재 사용자 좋아요 여부를 조회
   const likesCountMap = new Map<string, number>();
   const likedByMeSet = new Set<string>();
@@ -66,10 +86,16 @@ export const fetchCommentsByPostId = async (postId: string): Promise<Comment[]> 
     });
   }
 
-  return rows.map(row => mapCommentRowToComment(row, {
-    likesCount: row.id ? likesCountMap.get(row.id) || 0 : 0,
-    isLiked: row.id ? likedByMeSet.has(row.id) : false,
-  }));
+  return rows.map(row => {
+    const latestNickname = row.user_id ? nicknameMap.get(row.user_id) : undefined;
+    return mapCommentRowToComment(
+      { ...row, user_name: latestNickname || row.user_name },
+      {
+        likesCount: row.id ? likesCountMap.get(row.id) || 0 : 0,
+        isLiked: row.id ? likedByMeSet.has(row.id) : false,
+      },
+    );
+  });
 };
 
 export const insertComment = async ({

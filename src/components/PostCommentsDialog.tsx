@@ -37,10 +37,30 @@ const fetchAdComments = async (adId: string): Promise<Comment[]> => {
     .eq('ad_id', adId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data || []).map(row => ({
+
+  const rows = data || [];
+
+  // 댓글 작성자들의 최신 nickname을 profiles에서 조회해 우선 사용
+  const userIds = Array.from(
+    new Set(rows.map(r => r.user_id).filter((id): id is string => !!id))
+  );
+  const nicknameMap = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: profileRows } = await supabase
+      .from('profiles')
+      .select('id, nickname')
+      .in('id', userIds);
+    (profileRows || []).forEach((row: { id: string; nickname: string | null }) => {
+      if (row.nickname && row.nickname.trim()) {
+        nicknameMap.set(row.id, row.nickname);
+      }
+    });
+  }
+
+  return rows.map(row => ({
     id: row.id,
     userId: row.user_id,
-    user: row.user_name || '사용자',
+    user: (row.user_id ? nicknameMap.get(row.user_id) : undefined) || row.user_name || '사용자',
     text: row.content,
     createdAt: row.created_at ? new Date(row.created_at) : undefined,
     likesCount: 0,
@@ -281,7 +301,10 @@ const PostCommentsDialog = ({
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
-      const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
+      // profile.nickname이 비어있을 때 이메일 prefix(예: supadupajy)로 떨어지는
+      // 과거 이슈를 방지하기 위해, 닉네임이 없으면 '탐험가'로만 fallback한다.
+      // (화면 표시 시점에는 fetch에서 profiles.nickname을 다시 join해 항상 최신 닉네임을 보여줌)
+      const displayName = profile?.nickname?.trim() || '탐험가';
 
       let saved: Comment;
       if (isAdPost) {

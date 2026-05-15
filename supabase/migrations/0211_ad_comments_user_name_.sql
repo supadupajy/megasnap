@@ -1,0 +1,1 @@
+UPDATE public.ad_comments c SET user_name = p.nickname FROM public.profiles p WHERE p.id = c.user_id AND p.nickname IS NOT NULL AND p.nickname <> '' AND c.user_name IS DISTINCT FROM p.nickname RETURNING c.id, c.user_name;
