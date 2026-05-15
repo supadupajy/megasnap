@@ -630,15 +630,15 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
                 <PostUserAvatar name={user.name} avatar={user.avatar} postId={post.id} userId={user.id} isAd={isAd} size="md" />
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
+                  <div className="flex items-center gap-1.5 py-0.5">
+                    <p className="text-sm font-bold text-gray-900 leading-[1.25] group-hover:text-indigo-600 transition-colors">
                       {user.name}
                     </p>
                     <div className="ad-badge-fancy"><span>AD</span></div>
                   </div>
                   <div
                     className={cn(
-                      "flex items-center gap-0.5 mt-1",
+                      "flex items-center gap-0.5 mt-0.5",
                       isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
                     )}
                     onClick={handleHeaderLocationClick}
@@ -673,14 +673,14 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
               <PostUserAvatar name={user.name} avatar={user.avatar} postId={post.id} userId={user.id} isAd={isAd} size="md" />
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors">
+                <div className="flex items-center gap-1.5 py-0.5">
+                  <p className="text-sm font-bold text-gray-900 leading-[1.25] group-hover:text-indigo-600 transition-colors">
                     {user.name}
                   </p>
                 </div>
                 <div
                   className={cn(
-                    "flex items-center gap-0.5 mt-1",
+                    "flex items-center gap-0.5 mt-0.5",
                     isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
                   )}
                   onClick={handleHeaderLocationClick}

@@ -846,13 +846,13 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                                 activePress
                               />
                               <div className="flex flex-col min-w-0">
-                                <div className="flex items-center gap-1.5 min-w-0">
-                                  <p className="text-sm font-bold text-gray-900 leading-none group-hover:text-indigo-600 transition-colors truncate">{postDisplayName}</p>
+                                <div className="flex items-center gap-1.5 min-w-0 py-0.5">
+                                  <p className="text-sm font-bold text-gray-900 leading-[1.25] group-hover:text-indigo-600 transition-colors truncate">{postDisplayName}</p>
                                   {isAd && <div className="ad-badge-fancy shrink-0"><span>AD</span></div>}
                                 </div>
                                 <div
                                   className={cn(
-                                    "flex items-center gap-0.5 mt-1 min-w-0",
+                                    "flex items-center gap-0.5 mt-0.5 min-w-0",
                                     isLocationMissing ? "text-gray-400" : "text-indigo-600 cursor-pointer hover:underline"
                                   )}
                                   onClick={handleLocationClick}
