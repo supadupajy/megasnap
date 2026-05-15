@@ -365,7 +365,7 @@ const Popular = () => {
                   <ViewedAwarePostItem
                     key={post.id}
                     post={post}
-                    isViewed={post.isFriendPost ? !sessionNewFriendIds.has(post.id) : false}
+                    isViewed={post.isFriendPost ? !sessionNewFriendIds.has(post.id) : undefined}
                     scrollRoot={scrollRef.current}
                     onVisible={(id) => {
                       console.log('[Popular] onVisible 호출 - postId:', id);
