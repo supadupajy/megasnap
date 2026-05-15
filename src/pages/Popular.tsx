@@ -340,7 +340,7 @@ const Popular = () => {
           iconBgClass="bg-orange-100"
           iconColorClass="text-orange-600"
           iconFilled
-          title="인기 게시물"
+          title="인기 컨텐츠"
           subtitle="Trending Now"
           ActionIcon={Search}
           actionLabel="검색"
