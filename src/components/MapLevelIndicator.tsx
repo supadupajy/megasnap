@@ -161,7 +161,7 @@ const MapLevelIndicator = ({
               style={{ height: `${hiddenStart}%` }}
             />
             <div
-              className="absolute bottom-0 left-0 w-full bg-emerald-500"
+              className="absolute bottom-0 left-0 w-full bg-indigo-500"
               style={{ height: `${100 - hiddenStart}%` }}
             />
           </div>
@@ -170,7 +170,7 @@ const MapLevelIndicator = ({
             className="absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg transition-[top,background-color] duration-300 ease-out pointer-events-none"
             style={{
               top: `${progress}%`,
-              backgroundColor: markerVisible ? '#f59e0b' : '#10b981',
+              backgroundColor: markerVisible ? '#f59e0b' : '#6366f1',
             }}
           />
 
@@ -199,7 +199,7 @@ const MapLevelIndicator = ({
             'mt-1 flex w-7 items-center justify-center whitespace-nowrap rounded-full border px-0.5 py-0.5 text-[7px] font-black leading-none tracking-[-0.12em] shadow-sm transition-colors duration-500 ease-out',
             markerVisible
               ? 'border-amber-200 bg-amber-50/95 text-amber-700'
-              : 'border-emerald-200 bg-emerald-50/95 text-emerald-700',
+              : 'border-indigo-200 bg-indigo-50/95 text-indigo-700',
           )}
         >
           {markerVisible ? '마커' : '히트맵'}
