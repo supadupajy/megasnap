@@ -65,7 +65,6 @@ const BottomNav = () => {
   const lastActiveTabIndexRef = useRef(0);
   const [safeAreaBottom, setSafeAreaBottom] = useState(0);
 
-  // [DEBUG] safe-area-inset-bottom 값 측정 및 로깅
   useEffect(() => {
     const measure = () => {
       const el = document.createElement('div');
@@ -74,9 +73,6 @@ const BottomNav = () => {
       const h = el.getBoundingClientRect().height;
       document.body.removeChild(el);
       setSafeAreaBottom(h);
-      console.log('[BottomNav DEBUG] safe-area-inset-bottom:', h, 'px');
-      console.log('[BottomNav DEBUG] window.innerHeight:', window.innerHeight);
-      console.log('[BottomNav DEBUG] visualViewport.height:', window.visualViewport?.height);
     };
     measure();
     window.addEventListener('resize', measure);
@@ -328,26 +324,6 @@ const BottomNav = () => {
 
   return (
     <>
-      {/* [DEBUG] safe-area-inset-bottom 값 표시 - 항상 표시 */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 80,
-          right: 8,
-          background: 'rgba(255,0,0,0.85)',
-          color: 'white',
-          fontSize: 11,
-          padding: '4px 8px',
-          borderRadius: 8,
-          zIndex: 99999,
-          pointerEvents: 'none',
-          fontFamily: 'monospace',
-          lineHeight: 1.4,
-        }}
-      >
-        <div>safe-bottom: {safeAreaBottom}px</div>
-        <div>innerH: {typeof window !== 'undefined' ? window.innerHeight : 0}px</div>
-      </div>
       {/* 하단 safe area 배경 채우기
           - 시스템 네비게이션 바(|||, ○, <) 영역만 흰색으로 채움
           - zIndex를 높게 설정해 카카오맵 위에 올라오도록 함 */}
