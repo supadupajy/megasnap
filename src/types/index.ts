@@ -63,4 +63,5 @@ export interface Post {
 
   link_url?: string; // 광고 랜딩 URL
   isAdPending?: boolean; // 광고 시작 시간 전 대기 중 (반투명 마커 표시용)
+  isFriendPost?: boolean; // 친구(팔로잉) 포스팅 여부 (인기 탭 혼합 시 구분용)
 }
