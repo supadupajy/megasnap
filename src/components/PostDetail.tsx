@@ -129,6 +129,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     resetScroll: resetImageSlider,
   } = useImageSliderDrag<HTMLDivElement>();
   const [localComments, setLocalComments] = useState<Comment[]>([]);
+  const loadedCommentsPostIdRef = useRef<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
@@ -179,7 +180,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         setIsSaved(post.isSaved || false);
       }
     }
-    if (!isOpen) { setHasInitialized(false); }
+    if (!isOpen) { setHasInitialized(false); loadedCommentsPostIdRef.current = null; }
   }, [isOpen, initialIndex, hasInitialized, posts]);
 
   useEffect(() => {
@@ -187,12 +188,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     if (isOpen && currentPost) {
       if (onViewPost) onViewPost(currentPost.id);
       setCurrentImageIndex(0);
-      // 광고 포스트는 loadComments useEffect에서 ad_comments를 fetch해 세팅하므로 여기서 덮어쓰지 않음
-      if (isPersistedPostId(currentPost.id)) {
-        setLocalComments(currentPost.comments || []);
-      } else {
-        console.log('[PostDetail] useEffect#1 - ad post, skipping setLocalComments. currentPost.comments:', currentPost.comments);
-      }
+      setLocalComments(currentPost.comments || []);
       setIsSaved(currentPost.isSaved || false);
       setContentExpanded(false);
       setIsContentClamped(false);
@@ -285,22 +281,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   };
 
   useEffect(() => {
-    let cancelled = false;
     const currentPost = posts[currentPostIndex];
+    if (!isOpen || !currentPost) return;
+
+    const postId = currentPost.id;
+
+    // 이미 같은 postId로 로드 완료된 경우 재실행 방지 (posts 배열 변경으로 인한 불필요한 재실행 차단)
+    if (loadedCommentsPostIdRef.current === postId) return;
+    loadedCommentsPostIdRef.current = postId;
+
+    let cancelled = false;
+
     const loadComments = async () => {
-      if (!isOpen || !currentPost) return;
-      if (!isPersistedPostId(currentPost.id)) {
-        // 광고 포스트: ad_comments 테이블에서 fetch
-        console.log('[PostDetail] useEffect#2 loadComments - ad post start, postId:', currentPost.id);
+      if (!isPersistedPostId(postId)) {
         try {
           const { data } = await supabase
             .from('ad_comments')
             .select('id, user_id, user_name, content, created_at')
-            .eq('ad_id', currentPost.id)
+            .eq('ad_id', postId)
             .order('created_at', { ascending: true });
-          console.log('[PostDetail] useEffect#2 loadComments - fetch done, cancelled:', cancelled, 'data:', data);
           if (!cancelled) {
-            const mapped = (data || []).map((row: any) => ({
+            setLocalComments((data || []).map((row: any) => ({
               id: row.id,
               userId: row.user_id,
               user: row.user_name || '사용자',
@@ -308,25 +309,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               createdAt: row.created_at ? new Date(row.created_at) : undefined,
               likesCount: 0,
               isLiked: false,
-            }));
-            console.log('[PostDetail] useEffect#2 - setLocalComments with:', mapped);
-            setLocalComments(mapped);
+            })));
           }
         } catch {
-          if (!cancelled) setLocalComments(currentPost.comments || []);
+          // fetch 실패 시 현재 상태 유지
         }
         return;
       }
       try {
-        const dbComments = await fetchCommentsByPostId(currentPost.id);
+        const dbComments = await fetchCommentsByPostId(postId);
         if (!cancelled) setLocalComments(dbComments);
-      } catch (err) {
-        if (!cancelled) setLocalComments(currentPost.comments || []);
+      } catch {
+        // fetch 실패 시 현재 상태 유지
       }
     };
+
     loadComments();
     return () => { cancelled = true; };
-  // posts 대신 currentPost.id만 의존: posts 객체가 바뀔 때마다 재실행되어 첫 fetch가 취소되는 깜빡임 방지
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPostIndex, isOpen, currentPost?.id]);
 
@@ -765,7 +764,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const renderActionButtons = () => {
     const commentsDisplayCount = Math.max(localComments.length, currentPost.commentsCount || 0);
     const hasUserCommented = !!authUser?.id && localComments.some(comment => comment.userId === authUser.id);
-    console.log('[PostDetail] renderActionButtons - localComments:', localComments.map(c => ({ id: c.id, userId: c.userId })), 'authUserId:', authUser?.id, 'hasUserCommented:', hasUserCommented);
 
     // 광고 포스트: 본문(닉네임 + 컨텐츠)을 PostActions의 adFooterContent로 넘겨서
     // - 1줄: [좋아요/댓글/공유 + 저장]   ...   [위치보기]
