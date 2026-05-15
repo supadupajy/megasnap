@@ -260,7 +260,7 @@ const AnimatedRoutes = () => {
   // ✅ location.state 의존성 제거 — window 플래그는 클로저로 즉시 읽으므로 의존성 불필요
   }, [location.pathname, navigate]);
 
-  if (loading && location.pathname !== '/login') {
+  if (loading && location.pathname !== '/login' && location.pathname !== '/logo-preview') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -293,7 +293,7 @@ const AnimatedRoutes = () => {
         )}
 
         {/* 비세션 상태에서 Index가 보여야 하는 경로로 진입한 경우 /login으로 보냄 */}
-        {!session && showIndex && location.pathname !== '/login' && (
+        {!session && showIndex && location.pathname !== '/login' && location.pathname !== '/logo-preview' && (
           <Navigate to="/login" replace />
         )}
 
