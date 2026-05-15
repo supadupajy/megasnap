@@ -62,6 +62,7 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const NearbyPosts = lazy(() => import("./pages/NearbyPosts"));
 const Flicks = lazy(() => import("./pages/Flicks"));
 const PostSearch = lazy(() => import("./pages/PostSearch"));
+const NaverTest = lazy(() => import("./pages/NaverTest"));
 
 // React Query 기본 설정 강화 (불필요한 refetch 줄이기)
 const queryClient = new QueryClient({
@@ -110,6 +111,7 @@ const NON_INDEX_ROUTE_PREFIXES = [
   '/settings',
   '/write',
   '/flicks',
+  '/naver-test',
 ];
 
 const shouldShowIndex = (pathname: string): boolean => {
@@ -150,15 +152,17 @@ const AnimatedRoutes = () => {
   const isWritePage = location.pathname === "/write";
   const showIndex = shouldShowIndex(location.pathname);
 
-  // App 레벨 Header를 숨길 페이지 (login/splash만)
+  // App 레벨 Header를 숨길 페이지 (login/splash/naver-test)
   const hideAppChrome =
     location.pathname === "/login" ||
-    location.pathname === "/splash";
+    location.pathname === "/splash" ||
+    location.pathname === "/naver-test";
 
-  // BottomNav는 login/splash에서만 숨김 (settings 계열에서는 보여야 함)
+  // BottomNav는 login/splash/naver-test에서 숨김
   const hideBottomNav =
     location.pathname === "/login" ||
-    location.pathname === "/splash";
+    location.pathname === "/splash" ||
+    location.pathname === "/naver-test";
 
   // [FIX] PostListOverlay가 닫혀 있을 때는 무조건 BottomNav를 보여주도록 로직 수정
   // [Optimized] setInterval(100ms) 폴링 제거 → open/close 이벤트 기반 동기화
@@ -351,6 +355,7 @@ const AnimatedRoutes = () => {
                   <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
                   <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
                   <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
+                  <Route path="/naver-test" element={<NaverTest />} />
                 </Routes>
               </Suspense>
             </motion.div>
