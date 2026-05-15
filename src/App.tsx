@@ -62,7 +62,6 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const NearbyPosts = lazy(() => import("./pages/NearbyPosts"));
 const Flicks = lazy(() => import("./pages/Flicks"));
 const PostSearch = lazy(() => import("./pages/PostSearch"));
-const LogoPreview = lazy(() => import("./pages/LogoPreview"));
 
 // React Query 기본 설정 강화 (불필요한 refetch 줄이기)
 const queryClient = new QueryClient({
@@ -93,7 +92,6 @@ const RouteFallback = () => (
 // ─────────────────────────────────────────────────────────────
 const NON_INDEX_ROUTE_PREFIXES = [
   '/login',
-  '/logo-preview',
   '/auth/',
   '/terms',
   '/privacy-policy',
@@ -260,7 +258,7 @@ const AnimatedRoutes = () => {
   // ✅ location.state 의존성 제거 — window 플래그는 클로저로 즉시 읽으므로 의존성 불필요
   }, [location.pathname, navigate]);
 
-  if (loading && location.pathname !== '/login' && location.pathname !== '/logo-preview') {
+  if (loading && location.pathname !== '/login') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -293,7 +291,7 @@ const AnimatedRoutes = () => {
         )}
 
         {/* 비세션 상태에서 Index가 보여야 하는 경로로 진입한 경우 /login으로 보냄 */}
-        {!session && showIndex && location.pathname !== '/login' && location.pathname !== '/logo-preview' && (
+        {!session && showIndex && location.pathname !== '/login' && (
           <Navigate to="/login" replace />
         )}
 
@@ -353,7 +351,6 @@ const AnimatedRoutes = () => {
                   <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
                   <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
                   <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
-                  <Route path="/logo-preview" element={<LogoPreview />} />
                 </Routes>
               </Suspense>
             </motion.div>
