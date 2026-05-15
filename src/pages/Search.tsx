@@ -157,10 +157,6 @@ const Search = () => {
           iconColorClass="text-indigo-600"
           title="친구 검색"
           subtitle="Find Friends"
-          ActionIcon={SearchIcon}
-          actionLabel="검색"
-          onActionClick={() => {}}
-          collapseActionToIcon={false}
         />
       </div>
 

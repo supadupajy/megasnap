@@ -18,12 +18,10 @@ interface CollapsingHeaderProps {
   title: string;
   /** 서브 타이틀 (TRENDING NOW 같은 작은 텍스트) */
   subtitle: string;
-  /** 우측 버튼 아이콘 */
-  ActionIcon: LucideIcon;
-  /** 우측 버튼 텍스트 */
-  actionLabel: string;
-  /** 우측 버튼 클릭 핸들러 */
-  onActionClick: () => void;
+  /** 우측 버튼 아이콘 (없으면 버튼 미표시) */
+  ActionIcon?: LucideIcon;
+  actionLabel?: string;
+  onActionClick?: () => void;
   /** 축소 시 우측 버튼을 숨기지 않고 아이콘 버튼으로 유지 */
   collapseActionToIcon?: boolean;
   /** 축소 시 우측에 표시되는 힌트 텍스트 (액션 버튼과 페이드 교차) */
@@ -121,6 +119,7 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
           </div>
         </div>
 
+        {ActionIcon && onActionClick && (
         <div className="relative flex items-center shrink-0">
           {collapsedHint && (
             <div
@@ -162,6 +161,7 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
             </span>
           </button>
         </div>
+        )}
       </div>
     </div>
   );
