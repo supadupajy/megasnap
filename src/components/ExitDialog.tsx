@@ -27,7 +27,7 @@ const ExitDialog = ({ isOpen, onClose, onConfirm }: ExitDialogProps) => {
             앱 종료
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed break-keep">
-            TocaToca 서비스를 종료하시겠습니까?<br />
+            TocaToca 앱을 종료하시겠습니까?<br />
             오늘의 추억은 안전하게 저장되었습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
