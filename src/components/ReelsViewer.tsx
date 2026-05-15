@@ -640,11 +640,8 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         )}
       </AnimatePresence>
 
-      {/* embedded ranked 모드 전용 — 좌상단 순위 뱃지 / 우상단 X 버튼.
-          위로 스와이프(swipeDir=1)  : 알약/X 버튼이 통째로 위로 빠져 상단 헤더 뒤로 사라짐,
-                                       새 버튼이 통째로 아래에서 올라옴
-          아래로 스와이프(swipeDir=-1): 알약/X 버튼이 통째로 아래로 빠져 사라짐,
-                                       새 버튼이 통째로 위(헤더 뒤)에서 내려옴
+      {/* embedded ranked 모드 전용 — 좌상단 순위 뱃지.
+          X 버튼은 각 ReelSlide 안에 렌더링해 스와이프 전환에 슬라이드와 함께 움직인다.
           - 컨테이너(ReelsViewer 임베디드 루트)는 stacking context를 만들고 (Index 페이지 z=11000),
             그 위에 떠 있는 Header(z=12600)는 이 컨테이너 밖으로 빠져나간 자식을 자동으로 가려준다.
           - 따라서 클리핑 박스는 두지 않고, motion.div가 음수 y로 자유롭게 빠질 수 있게 한다. */}
@@ -693,19 +690,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
               </span>
             </motion.div>
           </AnimatePresence>
-        </div>
-      )}
-
-      {embedded && showInlineCloseButton && (
-        <div className="absolute top-5 right-6 z-40 pointer-events-none">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="닫기"
-            className="pointer-events-auto w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10 active:scale-95 transition-transform"
-          >
-            <X className="w-4 h-4 text-white" />
-          </button>
         </div>
       )}
 
@@ -1496,10 +1480,26 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 트렌딩 릴스(showInlineCloseButton=true)일 때 3-dot 메뉴를 X 버튼 왼쪽에 배치.
-          X 버튼은 부모 ReelsViewer가 \"top-5 right-6\" 위치에 그리므로, 같은 y에 두고
-          X 너비(36px) + 간격(8px) 만큼 왼쪽으로 보정.
-          z는 같은 영역의 ReelsSlideTrack(z 미지정)·미디어 컨테이너 위로 확실히 올라오도록 z-50. */}
+      {/* 트렌딩 릴스(showInlineCloseButton=true) 컨트롤.
+          X 버튼도 슬라이드 내부에 두어 순위/음소거/메뉴 버튼처럼 스와이프 전환에 함께 움직이게 한다. */}
+      {showInlineCloseButton && onClose && (
+        <div
+          className="absolute top-5 right-6 z-50 pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="w-9 h-9 rounded-full bg-black/45 backdrop-blur-md flex items-center justify-center border border-white/10 active:scale-95 transition-transform"
+          >
+            <X className="w-4 h-4 text-white" />
+          </button>
+        </div>
+      )}
+
       {isMine && onRequestDelete && showInlineCloseButton && (
         <div
           className="absolute top-5 right-[68px] z-50 pointer-events-auto"
