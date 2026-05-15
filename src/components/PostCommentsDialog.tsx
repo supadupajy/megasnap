@@ -106,7 +106,7 @@ const PostCommentsDialog = ({
   profile,
   onCommentsChange,
 }: PostCommentsDialogProps) => {
-  const [comments, setComments] = useState<Comment[]>(initialComments || []);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -191,8 +191,10 @@ const PostCommentsDialog = ({
 
   useEffect(() => {
     if (!isOpen) return;
+    // 광고 포스트는 fetchAdComments에서 직접 로드하므로 initialComments로 덮어쓰지 않음
+    if (isAdPost) return;
     setComments(initialComments || []);
-  }, [isOpen, initialComments]);
+  }, [isOpen, initialComments, isAdPost]);
 
   // 댓글 조회: 일반 포스트는 기존 로직, 광고 포스트는 ad_comments 테이블
   useEffect(() => {
