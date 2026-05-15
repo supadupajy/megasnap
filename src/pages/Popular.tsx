@@ -57,6 +57,7 @@ const ViewedAwarePostItem = React.memo(({
   onLikeToggle,
   onLocationClick,
   onDelete,
+  scrollRoot,
 }: {
   post: Post;
   isViewed: boolean;
@@ -64,6 +65,7 @@ const ViewedAwarePostItem = React.memo(({
   onLikeToggle: () => void;
   onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
   onDelete: (id: string) => void;
+  scrollRoot?: Element | null;
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
 
@@ -72,17 +74,20 @@ const ViewedAwarePostItem = React.memo(({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
           onVisible(post.id);
           observer.unobserve(entry.target);
         }
       },
-      { threshold: [0.6], rootMargin: '-10% 0px -10% 0px' }
+      {
+        root: scrollRoot ?? null,
+        threshold: [0.5],
+      }
     );
 
     if (itemRef.current) observer.observe(itemRef.current);
     return () => observer.disconnect();
-  }, [post.id, post.isAd, post.isFriendPost, onVisible]);
+  }, [post.id, post.isAd, post.isFriendPost, onVisible, scrollRoot]);
 
   return (
     <div ref={itemRef} className="border-b border-gray-100 last:border-0 bg-white">
@@ -152,9 +157,6 @@ const Popular = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-
-  // 이번 세션에서 "새 포스팅"으로 분류된 친구 포스팅 ID 스냅샷
-  // (탭 진입 시점에 미열람이었던 것들 — 스크롤 중 열람돼도 위치 유지)
   const [sessionNewFriendIds, setSessionNewFriendIds] = useState<Set<string>>(new Set());
 
   const { scrollRef, progress } = useCollapsingHeader(80);
@@ -163,6 +165,7 @@ const Popular = () => {
   const newFriendPostsRef = useRef<Post[]>([]);
   const displayedCountRef = useRef(0);
   const isLoadingRef = useRef(false);
+  const lastLocationKeyRef = useRef<string>('');
 
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
 
@@ -171,8 +174,8 @@ const Popular = () => {
     return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const buildAndLoad = useCallback(async () => {
-    if (!authUser?.id || isLoadingRef.current) return;
+  const buildAndLoad = useCallback(async (userId: string) => {
+    if (isLoadingRef.current) return;
     isLoadingRef.current = true;
     setIsInitialLoading(true);
 
@@ -181,10 +184,10 @@ const Popular = () => {
       const { data: viewedData } = await supabase
         .from('viewed_posts')
         .select('post_id')
-        .eq('user_id', authUser.id);
+        .eq('user_id', userId);
 
       const currentViewedIds = new Set<string>((viewedData || []).map((v: any) => v.post_id));
-      console.log('[Popular] buildAndLoad 실행 - viewed_posts 수:', currentViewedIds.size, '샘플:', [...currentViewedIds].slice(0, 3));
+      console.log('[Popular] buildAndLoad - viewed_posts 수:', currentViewedIds.size);
 
       // 2) 인기 포스팅 200개 (랜덤 셔플)
       const { data: popularData, error: popularError } = await supabase.rpc('get_popular_posts', { limit_count: 200 });
@@ -196,14 +199,13 @@ const Popular = () => {
       const { data: followsData } = await supabase
         .from('follows')
         .select('following_id')
-        .eq('follower_id', authUser.id);
+        .eq('follower_id', userId);
 
       const followingIds = (followsData || []).map((f: any) => f.following_id);
 
       let allFriendPosts: Post[] = [];
 
       if (followingIds.length > 0) {
-        // 4) 친구 포스팅 전체 (최신순, 최대 500개)
         const { data: friendData } = await supabase
           .from('posts')
           .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
@@ -214,33 +216,31 @@ const Popular = () => {
         allFriendPosts = (friendData || []).map((p: any) => mapPost(p, true));
 
         if (allFriendPosts.length > 0) {
-          const likedIds = await fetchLikedPostIds(allFriendPosts.map(p => p.id), authUser.id);
+          const likedIds = await fetchLikedPostIds(allFriendPosts.map(p => p.id), userId);
           allFriendPosts = allFriendPosts.map((p): Post => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
         }
       }
 
-      // 5) 인기 포스팅 좋아요 상태 반영
+      // 4) 인기 포스팅 좋아요 상태 반영
       let finalPopular: Post[] = shuffledPopular;
       if (finalPopular.length > 0) {
-        const likedIds = await fetchLikedPostIds(finalPopular.map(p => p.id), authUser.id);
+        const likedIds = await fetchLikedPostIds(finalPopular.map(p => p.id), userId);
         finalPopular = finalPopular.map((p): Post => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
       }
 
-      // 6) 새 친구 포스팅 (이번 탭 진입 시점 기준 미열람) → 상단 고정
+      // 5) 새 친구 포스팅 (미열람) → 상단 고정
       const newFriendPosts = allFriendPosts
         .filter(p => !currentViewedIds.has(p.id))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       console.log('[Popular] 친구 포스팅 전체:', allFriendPosts.length, '/ 미열람(NEW):', newFriendPosts.length, '/ 열람됨:', allFriendPosts.length - newFriendPosts.length);
-      console.log('[Popular] 미열람 포스팅 IDs:', newFriendPosts.map(p => p.id).slice(0, 5));
 
-      // 7) 열람된 친구 포스팅 + 인기 포스팅 → created_at 혼합 정렬
+      // 6) 열람된 친구 포스팅 + 인기 포스팅 → created_at 혼합 정렬
       const viewedFriendPosts = allFriendPosts.filter(p => currentViewedIds.has(p.id));
 
       const combined: Post[] = ([...finalPopular, ...viewedFriendPosts] as Post[])
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      // 중복 제거
       const seenIds = new Set<string>();
       const deduped: Post[] = combined.filter(p => {
         if (seenIds.has(p.id)) return false;
@@ -252,10 +252,8 @@ const Popular = () => {
       mergedPoolRef.current = deduped;
       displayedCountRef.current = 0;
 
-      // 이번 세션 "새 포스팅" ID 스냅샷 저장 (스크롤 중 열람돼도 위치 고정)
       setSessionNewFriendIds(new Set(newFriendPosts.map(p => p.id)));
 
-      // 초기 노출: 새 친구 포스팅 전체 + 혼합 풀 첫 PAGE_SIZE개
       const initial = deduped.slice(0, PAGE_SIZE);
       displayedCountRef.current = initial.length;
       setPosts([...newFriendPosts, ...initial]);
@@ -268,20 +266,17 @@ const Popular = () => {
       setIsInitialLoading(false);
       isLoadingRef.current = false;
     }
-  }, [authUser?.id]);
+  }, []);
 
-  // 탭에 진입할 때마다 항상 재빌드 — location.key가 바뀔 때마다 재실행
+  // location.key가 바뀔 때마다 재빌드 (탭 복귀 감지)
+  // lastLocationKeyRef로 중복 실행 방지
   useEffect(() => {
-    if (authLoading) return;
-    if (authUser) {
-      console.log('[Popular] useEffect 트리거 → buildAndLoad 호출, location.key:', location.key);
-      isLoadingRef.current = false; // 이전 로딩 락 해제
-      buildAndLoad();
-    } else {
-      navigate('/login', { replace: true });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, authUser?.id, location.key]);
+    if (authLoading || !authUser?.id) return;
+    if (lastLocationKeyRef.current === location.key) return;
+    lastLocationKeyRef.current = location.key;
+    console.log('[Popular] 탭 진입 감지, location.key:', location.key);
+    buildAndLoad(authUser.id);
+  }, [authLoading, authUser?.id, location.key, buildAndLoad]);
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
@@ -371,6 +366,7 @@ const Popular = () => {
                     key={post.id}
                     post={post}
                     isViewed={post.isFriendPost ? !sessionNewFriendIds.has(post.id) : false}
+                    scrollRoot={scrollRef.current}
                     onVisible={(id) => {
                       console.log('[Popular] onVisible 호출 - postId:', id);
                       markAsViewed(id);
