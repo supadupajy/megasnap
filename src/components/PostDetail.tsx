@@ -50,7 +50,7 @@ const FALLBACK_IMAGE = "/placeholder.svg";
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user: authUser, profile: authProfile, isAdmin } = useAuth();
+  const { user: authUser, profile: authProfile, isAdmin, commentedPostIds } = useAuth();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
@@ -282,7 +282,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   useEffect(() => {
     const currentPost = posts[currentPostIndex];
-    console.log('[PostDetail] loadComments useEffect triggered, isOpen:', isOpen, 'currentPost.id:', currentPost?.id, 'loadedRef:', loadedCommentsPostIdRef.current);
     if (!isOpen || !currentPost) return;
 
     const postId = currentPost.id;
@@ -771,7 +770,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   const renderActionButtons = () => {
     const commentsDisplayCount = Math.max(localComments.length, currentPost.commentsCount || 0);
-    const hasUserCommented = !!authUser?.id && localComments.some(comment => comment.userId === authUser.id);
+    const hasUserCommented = !!authUser?.id && (
+      commentedPostIds.has(currentPost.id) ||
+      localComments.some(comment => comment.userId === authUser.id)
+    );
 
     // 광고 포스트: 본문(닉네임 + 컨텐츠)을 PostActions의 adFooterContent로 넘겨서
     // - 1줄: [좋아요/댓글/공유 + 저장]   ...   [위치보기]

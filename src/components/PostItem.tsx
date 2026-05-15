@@ -47,7 +47,7 @@ interface PostItemProps {
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, onMediaClick, onOwnUserClick, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user: authUser, profile: authProfile, isAdmin } = useAuth();
+  const { user: authUser, profile: authProfile, isAdmin, commentedPostIds } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   
   const [localComments, setLocalComments] = useState(post.comments || []);
@@ -132,12 +132,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
     if (!isPersistedPostId(post.id)) {
       // 광고 포스트: ad_comments 테이블에서 fetch (hasUserCommented 계산용)
-      supabase
-        .from('ad_comments')
-        .select('id, user_id, user_name, content, created_at')
-        .eq('ad_id', post.id)
-        .order('created_at', { ascending: true })
-        .then(({ data }) => {
+      (async () => {
+        try {
+          const { data } = await supabase
+            .from('ad_comments')
+            .select('id, user_id, user_name, content, created_at')
+            .eq('ad_id', post.id)
+            .order('created_at', { ascending: true });
           if (!data || data.length === 0) return;
           setLocalComments(data.map(row => ({
             id: row.id,
@@ -148,8 +149,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             likesCount: 0,
             isLiked: false,
           })));
-        })
-        .catch(() => {});
+        } catch {}
+      })();
       return;
     }
 
@@ -606,7 +607,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const renderInteractionButtons = (adFooterContent?: React.ReactNode) => {
     const commentsDisplayCount = Math.max(localComments.length, post.commentsCount || 0);
-    const hasUserCommented = !!authUser?.id && localComments.some(comment => comment.userId === authUser.id);
+    const hasUserCommented = !!authUser?.id && (
+      commentedPostIds.has(post.id) ||
+      localComments.some(comment => comment.userId === authUser.id)
+    );
 
     return (
       <PostActions

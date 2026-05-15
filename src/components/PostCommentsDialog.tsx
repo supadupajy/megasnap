@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatRelativeTime } from '@/lib/utils';
 import { showError, showSuccess } from '@/utils/toast';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
+import { useAuth } from '@/components/AuthProvider';
 import ExpandableCommentText from './ExpandableCommentText';
 
 interface PostCommentsDialogProps {
@@ -106,6 +107,7 @@ const PostCommentsDialog = ({
   profile,
   onCommentsChange,
 }: PostCommentsDialogProps) => {
+  const { markCommented, unmarkCommented } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -295,6 +297,7 @@ const PostCommentsDialog = ({
       }
 
       syncComments([...comments, saved]);
+      markCommented(postId);
       setCommentInput('');
       requestAnimationFrame(() => commentInputRef.current?.focus());
       showSuccess('댓글이 등록되었습니다.');
@@ -411,7 +414,11 @@ const PostCommentsDialog = ({
       } else {
         await deleteComment({ commentId: commentToDelete.id, userId: authUser.id });
       }
-      syncComments(comments.filter(item => item.id !== commentToDelete.id));
+      const nextComments = comments.filter(item => item.id !== commentToDelete.id);
+      syncComments(nextComments);
+      // 해당 포스트에 내 댓글이 더 이상 없으면 commentedPostIds에서 제거
+      const stillHasMine = nextComments.some(item => item.userId === authUser.id);
+      if (!stillHasMine) unmarkCommented(postId);
       if (editingCommentId === commentToDelete.id) {
         cancelCommentEdit();
       }

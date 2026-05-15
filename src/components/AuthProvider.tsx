@@ -12,6 +12,9 @@ interface AuthContextType {
   profile: any | null;
   loading: boolean;
   isAdmin: boolean;
+  commentedPostIds: Set<string>;
+  markCommented: (postId: string) => void;
+  unmarkCommented: (postId: string) => void;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -27,6 +30,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [commentedPostIds, setCommentedPostIds] = useState<Set<string>>(() => new Set());
 
   const lastSeenIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
@@ -186,6 +190,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // 사용자가 댓글을 단 모든 post/ad ID를 한 번에 로드
+  // -> PostItem, PostDetail에서 댓글 아이콘 색을 즉시 결정해 깜빡임 방지
+  const fetchCommentedPostIds = async (userId: string) => {
+    try {
+      const [{ data: postComments }, { data: adComments }] = await Promise.all([
+        supabase.from('comments').select('post_id').eq('user_id', userId),
+        supabase.from('ad_comments').select('ad_id').eq('user_id', userId),
+      ]);
+      const next = new Set<string>();
+      (postComments || []).forEach((row: any) => { if (row.post_id) next.add(row.post_id); });
+      (adComments || []).forEach((row: any) => { if (row.ad_id) next.add(row.ad_id); });
+      setCommentedPostIds(next);
+    } catch (err) {
+      console.error('[AuthProvider] fetchCommentedPostIds error:', err);
+    }
+  };
+
+  const markCommented = (postId: string) => {
+    setCommentedPostIds(prev => {
+      if (prev.has(postId)) return prev;
+      const next = new Set(prev);
+      next.add(postId);
+      return next;
+    });
+  };
+
+  const unmarkCommented = (postId: string) => {
+    setCommentedPostIds(prev => {
+      if (!prev.has(postId)) return prev;
+      const next = new Set(prev);
+      next.delete(postId);
+      return next;
+    });
+  };
+
   // 딥링크(이메일 인증 등)로 앱이 열렸을 때 토큰 처리
   useEffect(() => {
     const handleDeepLink = async (url: string) => {
@@ -240,6 +279,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             currentUserIdRef.current = userId;
             fetchProfile(userId, currentSession.user.email);
             fetchIsAdmin(userId);
+            fetchCommentedPostIds(userId);
             startLastSeenInterval(userId);
             registerVisibilityEvents(userId);
             blockedStore.loadFromDB(userId);
@@ -248,6 +288,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             currentUserIdRef.current = userId;
             fetchProfile(userId, currentSession.user.email);
             fetchIsAdmin(userId);
+            fetchCommentedPostIds(userId);
             startLastSeenInterval(userId);
             registerVisibilityEvents(userId);
             blockedStore.loadFromDB(userId);
@@ -264,6 +305,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           currentUserIdRef.current = null;
           setProfile(null);
           setIsAdmin(false);
+          setCommentedPostIds(new Set());
           stopLastSeenInterval();
           unregisterVisibilityEvents();
         }
@@ -289,11 +331,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setProfile(null);
     setIsAdmin(false);
+    setCommentedPostIds(new Set());
   };
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, isAdmin, refreshProfile, signOut }}
+      value={{ session, user, profile, loading, isAdmin, commentedPostIds, markCommented, unmarkCommented, refreshProfile, signOut }}
     >
       {children}
     </AuthContext.Provider>
