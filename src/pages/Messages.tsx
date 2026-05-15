@@ -332,15 +332,16 @@ const Messages = () => {
 
   return (
     <div
-      className="h-screen min-h-0 w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-contain"
+      className="h-screen min-h-0 w-full max-w-full overflow-hidden bg-white flex flex-col"
       style={{
+        paddingTop: '4rem',
         paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
-        WebkitOverflowScrolling: 'touch',
       }}
       onClick={() => setSwipedId(null)}
     >
-      <div className="pt-16">
-        <div className="sticky top-16 z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
+      {/* 고정 영역: 헤더 + 검색창 + 섹션 타이틀 */}
+      <div className="shrink-0 bg-white">
+        <div className="bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
           <div />
           <h2 className="text-lg font-black text-gray-900 tracking-tight">메시지</h2>
           <div className="flex justify-end">
@@ -355,88 +356,96 @@ const Messages = () => {
           </div>
         </div>
 
-        <div className="flex flex-col">
-          <div className="bg-white px-4 py-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
-              <input
-                placeholder="대화 상대 또는 메시지 검색"
-                className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {isSearchingGlobal && (
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="space-y-6 px-4 pt-4">
-            <div className="space-y-4">
-              <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
-                {query ? '대화 목록 검색 결과' : '최근 메시지'}
-              </h2>
-              <div className="divide-y divide-gray-50 border-t border-gray-50">
-                <AnimatePresence initial={false}>
-                  {filteredConversations.map((conv) => (
-                    <SwipeConversationItem
-                      key={conv.other_id}
-                      conv={conv}
-                      isOpen={swipedId === conv.other_id}
-                      onOpen={(id) => setSwipedId(id)}
-                      onClose={() => setSwipedId(null)}
-                      onDeleteClick={handleDeleteClick}
-                      onNavigate={(id) => navigate(`/chat/${id}`)}
-                      onProfileNavigate={(id) => navigate(`/profile/${id}`)}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {query.trim() && globalSearchResults.length > 0 && (
-              <div className="space-y-4 pt-2 border-t border-gray-50">
-                <h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2">
-                  <UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기
-                </h2>
-                <div className="space-y-1">
-                  {globalSearchResults.map((user) => (
-                    <div
-                      key={user.id}
-                      onClick={() => handleStartChat(user)}
-                      className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"
-                    >
-                      <div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0">
-                        <Avatar className="w-full h-full border-2 border-white">
-                          <AvatarImage src={user.avatar_url} />
-                          <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback>
-                        </Avatar>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900">{user.nickname}</p>
-                        <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (
-              <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <MessageSquare className="w-8 h-8 text-gray-200" />
-                </div>
-                <p className="text-sm text-gray-400 font-bold leading-relaxed">
-                  {query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}
-                </p>
+        <div className="bg-white px-4 py-4">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
+            <input
+              placeholder="대화 상대 또는 메시지 검색"
+              className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {isSearchingGlobal && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
               </div>
             )}
           </div>
         </div>
+
+        <div className="px-4 pt-2 pb-3">
+          <h2 className="font-black text-sm text-gray-400 uppercase tracking-widest px-1">
+            {query ? '대화 목록 검색 결과' : '최근 메시지'}
+          </h2>
+        </div>
       </div>
+
+      {/* 스크롤 영역: 메시지 리스트 */}
+      <div
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div className="space-y-6 px-4 pb-4">
+          <div>
+            <div className="divide-y divide-gray-50 border-t border-gray-50">
+              <AnimatePresence initial={false}>
+                {filteredConversations.map((conv) => (
+                  <SwipeConversationItem
+                    key={conv.other_id}
+                    conv={conv}
+                    isOpen={swipedId === conv.other_id}
+                    onOpen={(id) => setSwipedId(id)}
+                    onClose={() => setSwipedId(null)}
+                    onDeleteClick={handleDeleteClick}
+                    onNavigate={(id) => navigate(`/chat/${id}`)}
+                    onProfileNavigate={(id) => navigate(`/profile/${id}`)}
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {query.trim() && globalSearchResults.length > 0 && (
+            <div className="space-y-4 pt-2 border-t border-gray-50">
+              <h2 className="font-black text-sm text-indigo-600 uppercase tracking-widest px-1 flex items-center gap-2">
+                <UserPlus className="w-4 h-4" /> 새로운 대화 상대 찾기
+              </h2>
+              <div className="space-y-1">
+                {globalSearchResults.map((user) => (
+                  <div
+                    key={user.id}
+                    onClick={() => handleStartChat(user)}
+                    className="flex items-center gap-4 p-3 hover:bg-indigo-50/50 rounded-[24px] cursor-pointer active:scale-[0.98] transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-full p-[2px] bg-indigo-100 shrink-0">
+                      <Avatar className="w-full h-full border-2 border-white">
+                        <AvatarImage src={user.avatar_url} />
+                        <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0]}</AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900">{user.nickname}</p>
+                      <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {filteredConversations.length === 0 && globalSearchResults.length === 0 && !isLoading && !isSearchingGlobal && (
+            <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <MessageSquare className="w-8 h-8 text-gray-200" />
+              </div>
+              <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                {query ? '검색 결과가 없습니다.' : '아직 대화 내역이 없습니다.\n새로운 메시지를 보내보세요!'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
       <DeleteChatDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
