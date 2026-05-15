@@ -184,29 +184,23 @@ const NearbyPosts = () => {
   }, [payload?.initialPosts]);
 
   const displayPosts = useMemo(() => {
-    if (dividerViewedIds.size === 0) return filteredPosts;
-
-    const reorderByViewed = (group: Post[]) => {
-      // 광고는 원래 자리(인덱스)를 유지하고, 일반 포스팅만 unseen → seen 순으로 재정렬한다.
-      // 그렇지 않으면 광고가 항상 unseen 그룹에 묶여 상단으로 올라가는 문제가 생긴다.
-      const nonAdQueue = group.filter(p => !p.isAd);
-      const unseenNonAds = nonAdQueue.filter(p => !dividerViewedIds.has(p.id));
-      const seenNonAds = nonAdQueue.filter(p => dividerViewedIds.has(p.id));
-      const reorderedNonAds = [...unseenNonAds, ...seenNonAds];
-
-      let cursor = 0;
-      return group.map(post => {
-        if (post.isAd) return post;
-        const next = reorderedNonAds[cursor];
-        cursor++;
-        return next;
-      });
-    };
-
+    // Index.tsx의 "여기 보기" 핸들러가 이미:
+    //   1) 일반 포스트를 시간 → unseen/seen 순으로 정렬
+    //   2) 광고를 균일 랜덤 슬롯에 배치
+    // 까지 마친 결과를 initialPosts로 전달한다.
+    // 따라서 지도에 보이는(=initialPosts에 들어 있는) 영역은 절대 재정렬하지 않고,
+    // 그 뒤에 무한스크롤로 새로 fetch된 hidden 포스트만 unseen/seen 정렬한다.
+    // (광고는 항상 visible 영역에만 존재하므로 hidden 정렬에서 영향받지 않는다.)
     const visiblePosts = filteredPosts.filter(post => visibleMapPostIds.has(post.id));
     const hiddenPosts = filteredPosts.filter(post => !visibleMapPostIds.has(post.id));
 
-    return [...reorderByViewed(visiblePosts), ...reorderByViewed(hiddenPosts)];
+    if (dividerViewedIds.size === 0 || hiddenPosts.length === 0) {
+      return [...visiblePosts, ...hiddenPosts];
+    }
+
+    const unseenHidden = hiddenPosts.filter(p => !dividerViewedIds.has(p.id));
+    const seenHidden = hiddenPosts.filter(p => dividerViewedIds.has(p.id));
+    return [...visiblePosts, ...unseenHidden, ...seenHidden];
   }, [filteredPosts, dividerViewedIds, visibleMapPostIds]);
 
   const loadMorePosts = useCallback(async () => {

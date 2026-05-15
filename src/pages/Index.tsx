@@ -2269,13 +2269,30 @@ const Index = () => {
                         const seen = sorted.filter(p => viewedIds.has(p.id));
                         const normalList = [...unseen, ...seen];
 
-                        // 광고를 랜덤 위치에 삽입
-                        // start_date가 있는 광고는 해당 날짜에 맞는 위치, 없는 광고는 완전 랜덤
-                        const finalList = [...normalList];
-                        adPosts.forEach(ad => {
-                          const insertAt = Math.floor(Math.random() * (finalList.length + 1));
-                          finalList.splice(insertAt, 0, ad);
-                        });
+                        // 광고를 균일 랜덤 위치에 삽입
+                        // - 일반 포스트의 상대 순서(unseen→seen)는 그대로 유지하고,
+                        //   광고는 N+M 자리 중 서로 다른 M개 슬롯을 균일 무작위로 골라 끼워넣는다.
+                        // - 기존 `splice` 누적 방식은 매 삽입마다 길이가 늘어나며 광고끼리
+                        //   앞쪽으로 몰리는 통계적 편향이 있었음(특히 일반 포스트가 적을 때
+                        //   광고들이 상단에 줄지어 나오는 문제).
+                        const totalLen = normalList.length + adPosts.length;
+                        // 0..totalLen-1 인덱스 중 광고가 차지할 위치 M개를 무작위로 선택 (셔플 후 앞 M개)
+                        const indices = Array.from({ length: totalLen }, (_, i) => i);
+                        for (let i = indices.length - 1; i > 0; i--) {
+                          const j = Math.floor(Math.random() * (i + 1));
+                          [indices[i], indices[j]] = [indices[j], indices[i]];
+                        }
+                        const adSlots = new Set(indices.slice(0, adPosts.length));
+                        const finalList: Post[] = new Array(totalLen);
+                        let adCursor = 0;
+                        let normalCursor = 0;
+                        for (let i = 0; i < totalLen; i++) {
+                          if (adSlots.has(i) && adCursor < adPosts.length) {
+                            finalList[i] = adPosts[adCursor++];
+                          } else {
+                            finalList[i] = normalList[normalCursor++];
+                          }
+                        }
                         const latestMapData = mapDataRef.current || mapData;
                         const returnCenter = latestMapData?.center || mapCache.lastCenter || mapCenter || { lat: 37.5665, lng: 126.9780 };
                         const returnZoom = currentZoomRef.current || currentZoom;
