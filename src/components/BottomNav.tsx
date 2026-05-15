@@ -317,7 +317,7 @@ const BottomNav = () => {
       }}
     >
       <div
-        className="absolute inset-x-0 bottom-0 bg-white shadow-[0_-10px_30px_rgba(15,23,42,0.06)]"
+        className="absolute inset-x-0 bottom-0 bg-white shadow-[0_-10px_30px_rgba(15,23,42,0.06)] md:hidden"
         style={{ height: 'calc(76px + max(env(safe-area-inset-bottom, 0px), 12px))' }}
         aria-hidden="true"
       />
