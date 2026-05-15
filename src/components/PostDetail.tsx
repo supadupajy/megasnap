@@ -666,7 +666,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             <p className="inline">
               <HashtagText text={currentContent} />
             </p>
-            {isContentClamped && (
+            {isContentClamped && !isAd && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -690,7 +690,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             <p ref={contentRef} className="block truncate leading-snug">
               <HashtagText text={currentContent} />
             </p>
-            {isContentClamped && (
+            {isContentClamped && !isAd && (
               <button
                 type="button"
                 onClick={(e) => {
