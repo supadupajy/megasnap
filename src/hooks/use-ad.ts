@@ -51,8 +51,8 @@ export function normalizeUrl(url: string): string {
 export const RECRUITMENT_SLOT: AdSlot = {
   image_url: '/assets/ad-recruitment-banner.png',
   title: '광고 문의',
-  subtitle: 'chorasnap@gmail.com',
-  link_url: 'mailto:chorasnap@gmail.com',
+  subtitle: 'support@thetocatoca.com',
+  link_url: 'mailto:support@thetocatoca.com',
   brand_name: 'TocaToca',
   brand_logo_url: '',
   isNext: false,
