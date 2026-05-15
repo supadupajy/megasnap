@@ -200,7 +200,7 @@ const PostCommentsDialog = ({
       return;
     }
     if (!canPersist) {
-      showError('저장 가능한 컨텐츠에서만 댓글을 작성할 수 있습니다.');
+      showError('광고 컨텐츠에는 댓글을 작성할 수 없습니다.');
       return;
     }
 
@@ -519,13 +519,17 @@ const PostCommentsDialog = ({
           onSubmit={handleAddComment}
           className="border-t border-slate-100 bg-white px-4 pt-3"
           style={{
-            // 키보드가 떠 있을 때는 키보드 바로 위에 붙으므로 작은 패딩으로 충분.
-            // 키보드가 없을 때는 안드로이드 제스처 바(safe-area)와 겹치지 않도록 여유 공간 확보.
             paddingBottom: keyboardOffset > 0
               ? '12px'
               : 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
           }}
         >
+          {!canPersist ? (
+            <div className="flex items-center justify-center gap-2 rounded-3xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              <span>광고 컨텐츠는 댓글을 지원하지 않습니다.</span>
+            </div>
+          ) : (
           <div
             className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner"
             onClick={focusCommentInput}
@@ -557,6 +561,7 @@ const PostCommentsDialog = ({
               <Send className="h-4 w-4" />
             </button>
           </div>
+          )}
         </form>
       </section>
 

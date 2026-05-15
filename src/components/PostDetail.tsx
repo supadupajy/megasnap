@@ -486,7 +486,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
-    if (!isPersistedPostId(currentPost.id)) { showError('이 컨텐츠는 저장할 수 없습니다.'); return; }
+    if (!isPersistedPostId(currentPost.id)) { showError('광고 컨텐츠는 저장을 지원하지 않습니다.'); return; }
     const prevSaved = isSaved;
     setIsSaved(!prevSaved);
     try {

@@ -2,6 +2,7 @@ import React from 'react';
 import { Heart, MessageCircle, Share2, Bookmark, ShoppingBag, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { handleShare } from '@/utils/share';
+import { showSuccess } from '@/utils/toast';
 import LocationButtonWithTimer from './LocationButtonWithTimer';
 
 interface PostActionsProps {
@@ -52,6 +53,26 @@ const PostActions = ({
   const hasValidLocation = typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng);
   const canShowLocation = hasValidLocation && onLocationClick;
   const shouldShowLocationUnavailable = !isAd && !!onLocationClick && !hasValidLocation;
+
+  const handleShareClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isAd && linkUrl) {
+      // 광고 포스트는 link_url을 공유
+      const shareUrl = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: '광고', url: shareUrl });
+        } catch (err: any) {
+          if (err?.name === 'AbortError') return;
+          try { await navigator.clipboard.writeText(shareUrl); showSuccess('링크가 복사되었습니다.'); } catch {}
+        }
+      } else {
+        try { await navigator.clipboard.writeText(shareUrl); showSuccess('링크가 복사되었습니다.'); } catch {}
+      }
+    } else {
+      handleShare(e, postId);
+    }
+  };
 
   const saveButton = (
     <button
@@ -127,7 +148,7 @@ const PostActions = ({
           </button>
           <button
             type="button"
-            onClick={(e) => handleShare(e, postId)}
+            onClick={handleShareClick}
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50 text-gray-700 transition-all hover:bg-gray-100 active:scale-95"
             aria-label="공유하기"
           >
