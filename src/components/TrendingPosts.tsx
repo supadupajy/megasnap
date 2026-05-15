@@ -1129,9 +1129,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               data-bottom-nav-keep="true"
               style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y', contain: 'layout paint' }}
             >
-              {/* 상단 스톱바 (1위 위) */}
-              <div className="h-[3px] rounded-full mx-8 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
-
               {visibleExpandedPosts.map((post) => (
                 <TrendingPostItem
                   key={post.id}
