@@ -552,26 +552,23 @@ const Notifications = () => {
           ) : (
             <div className="py-4">
               <div className="flex flex-col">
-                <AnimatePresence initial={false}>
-                  {notifications.map((notif) => (
-                    <SwipeNotificationItem
-                      key={notif.id}
-                      notif={notif}
-                      isOpen={swipedId === notif.id}
-                      onOpen={(id) => setSwipedId(id)}
-                      onClose={() => setSwipedId(null)}
-                      onDelete={deleteNotification}
-                      onClick={handleNotifClick}
-                      onActorClick={handleActorClick}
-                      getNotificationText={getNotificationText}
-                      selectionMode={selectionMode}
-                      isSelected={selectedIds.has(notif.id)}
-                      onLongPress={handleLongPress}
-                      onToggleSelect={handleToggleSelect}
-                    />
-
-                  ))}
-                </AnimatePresence>
+                {notifications.map((notif) => (
+                  <SwipeNotificationItem
+                    key={notif.id}
+                    notif={notif}
+                    isOpen={swipedId === notif.id}
+                    onOpen={(id) => setSwipedId(id)}
+                    onClose={() => setSwipedId(null)}
+                    onDelete={deleteNotification}
+                    onClick={handleNotifClick}
+                    onActorClick={handleActorClick}
+                    getNotificationText={getNotificationText}
+                    selectionMode={selectionMode}
+                    isSelected={selectedIds.has(notif.id)}
+                    onLongPress={handleLongPress}
+                    onToggleSelect={handleToggleSelect}
+                  />
+                ))}
                 {notifications.length === 0 && (
                   <div className="py-20 flex flex-col items-center justify-center text-center px-10">
                     <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
