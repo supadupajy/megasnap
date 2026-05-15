@@ -214,9 +214,15 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       recordView();
 
       const checkSaveStatus = async () => {
-        if (!authUser || !isPersistedPostId(currentPost.id)) return;
-        const { data } = await supabase.from('saved_posts').select('id').eq('post_id', currentPost.id).eq('user_id', authUser.id).maybeSingle();
-        setIsSaved(!!data);
+        if (!authUser) return;
+        if (isPersistedPostId(currentPost.id)) {
+          const { data } = await supabase.from('saved_posts').select('id').eq('post_id', currentPost.id).eq('user_id', authUser.id).maybeSingle();
+          setIsSaved(!!data);
+        } else {
+          // 광고 포스트: ad_saved 테이블에서 확인
+          const { data } = await supabase.from('ad_saved').select('id').eq('ad_id', currentPost.id).eq('user_id', authUser.id).maybeSingle();
+          setIsSaved(!!data);
+        }
       };
       checkSaveStatus();
     }
@@ -486,17 +492,25 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
-    if (!isPersistedPostId(currentPost.id)) { showError('광고 컨텐츠는 저장을 지원하지 않습니다.'); return; }
     const prevSaved = isSaved;
     setIsSaved(!prevSaved);
     try {
-      if (prevSaved) {
-        await supabase.from('saved_posts').delete().eq('post_id', currentPost.id).eq('user_id', authUser.id);
-        showSuccess('저장이 취소되었습니다.');
+      if (isPersistedPostId(currentPost.id)) {
+        // 일반 포스트: saved_posts 테이블
+        if (prevSaved) {
+          await supabase.from('saved_posts').delete().eq('post_id', currentPost.id).eq('user_id', authUser.id);
+        } else {
+          await supabase.from('saved_posts').insert({ post_id: currentPost.id, user_id: authUser.id });
+        }
       } else {
-        await supabase.from('saved_posts').insert({ post_id: currentPost.id, user_id: authUser.id });
-        showSuccess('컨텐츠를 저장했습니다! ✨');
+        // 광고 포스트: ad_saved 테이블
+        if (prevSaved) {
+          await supabase.from('ad_saved').delete().eq('ad_id', currentPost.id).eq('user_id', authUser.id);
+        } else {
+          await supabase.from('ad_saved').insert({ ad_id: currentPost.id, user_id: authUser.id });
+        }
       }
+      showSuccess(prevSaved ? '저장이 취소되었습니다.' : '컨텐츠를 저장했습니다! ✨');
     } catch (err) {
       setIsSaved(prevSaved);
       showError('저장 처리 중 오류가 발생했습니다.');

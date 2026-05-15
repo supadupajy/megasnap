@@ -56,9 +56,9 @@ const PostActions = ({
 
   const handleShareClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isAd && linkUrl) {
-      // 광고 포스트는 link_url을 공유
-      const shareUrl = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`;
+    if (isAd) {
+      // 광고 포스트는 adHref(link_url 또는 기본값)를 공유
+      const shareUrl = adHref;
       if (navigator.share) {
         try {
           await navigator.share({ title: '광고', url: shareUrl });

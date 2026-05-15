@@ -12,6 +12,7 @@ import {
   updateComment,
   toggleCommentLike,
 } from '@/utils/comments';
+import { supabase } from '@/integrations/supabase/client';
 import { formatRelativeTime } from '@/lib/utils';
 import { showError, showSuccess } from '@/utils/toast';
 import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
@@ -26,6 +27,75 @@ interface PostCommentsDialogProps {
   profile: any;
   onCommentsChange: (comments: Comment[]) => void;
 }
+
+// 광고 댓글 조회
+const fetchAdComments = async (adId: string): Promise<Comment[]> => {
+  const { data, error } = await supabase
+    .from('ad_comments')
+    .select('id, user_id, user_name, content, created_at')
+    .eq('ad_id', adId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map(row => ({
+    id: row.id,
+    userId: row.user_id,
+    user: row.user_name || '사용자',
+    text: row.content,
+    createdAt: row.created_at ? new Date(row.created_at) : undefined,
+    likesCount: 0,
+    isLiked: false,
+  }));
+};
+
+// 광고 댓글 작성
+const insertAdComment = async (adId: string, userId: string, userName: string, userAvatar: string | null, content: string): Promise<Comment> => {
+  const { data, error } = await supabase
+    .from('ad_comments')
+    .insert({ ad_id: adId, user_id: userId, user_name: userName, user_avatar: userAvatar, content: content.trim() })
+    .select('id, user_id, user_name, content, created_at')
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    userId: data.user_id,
+    user: data.user_name || '사용자',
+    text: data.content,
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
+    likesCount: 0,
+    isLiked: false,
+  };
+};
+
+// 광고 댓글 수정
+const updateAdComment = async (commentId: string, userId: string, content: string): Promise<Comment> => {
+  const { data, error } = await supabase
+    .from('ad_comments')
+    .update({ content: content.trim() })
+    .eq('id', commentId)
+    .eq('user_id', userId)
+    .select('id, user_id, user_name, content, created_at')
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    userId: data.user_id,
+    user: data.user_name || '사용자',
+    text: data.content,
+    createdAt: data.created_at ? new Date(data.created_at) : undefined,
+    likesCount: 0,
+    isLiked: false,
+  };
+};
+
+// 광고 댓글 삭제
+const deleteAdComment = async (commentId: string, userId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('ad_comments')
+    .delete()
+    .eq('id', commentId)
+    .eq('user_id', userId);
+  if (error) throw error;
+};
 
 const PostCommentsDialog = ({
   isOpen,
@@ -52,34 +122,22 @@ const PostCommentsDialog = ({
   const commentInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
-  const canPersist = useMemo(() => isPersistedPostId(postId), [postId]);
-  // 이 환경(안드로이드 삼성 인터넷)에서는 키보드가 뜨면 window.innerHeight 자체가 줄어든다.
-  // 즉 fixed bottom:0은 자동으로 키보드 위에 붙는다.
-  // 따라서 keyboardOffset을 sheet 위치 계산에 쓰지 않는다.
-  // (useKeyboardOffset은 다른 컴포넌트와의 호환을 위해 유지, BottomNav 등이 사용)
+  const isAdPost = useMemo(() => !isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
   const frozenSheetBottomRef = useRef<string | null>(null);
   const frozenSheetTopRef = useRef<number | null>(null);
-  // 시트는 항상 화면 맨 아래(bottom: 0)에 붙는다.
-  // 키보드가 뜨면 layout viewport(window.innerHeight)가 자동으로 줄어들기 때문에
-  // bottom:0만으로 시트가 키보드 바로 위에 자연스럽게 붙는다.
   const liveSheetBottom = '0px';
   const sheetBottom = isClosing && frozenSheetBottomRef.current != null
     ? frozenSheetBottomRef.current
     : liveSheetBottom;
 
-  // top도 sheetTopPx 그대로 사용. 키보드 등장 시 innerHeight가 줄면 setSheetTopPx 자체가
-  // 작은 viewport에 맞게 재계산되는 게 이상적이지만, 일단 처음 값 유지.
   const liveSheetTopPx = sheetTopPx;
   const effectiveSheetTopPx = isClosing && frozenSheetTopRef.current != null
     ? frozenSheetTopRef.current
     : liveSheetTopPx;
 
-
   useEffect(() => {
     if (!isOpen) return;
-
-    // 시트는 화면 상단에서 약 40px(≈1cm) 남기고 거의 풀스크린으로 올라온다.
     setSheetTopPx(40);
   }, [isOpen]);
 
@@ -136,22 +194,31 @@ const PostCommentsDialog = ({
     setComments(initialComments || []);
   }, [isOpen, initialComments]);
 
+  // 댓글 조회: 일반 포스트는 기존 로직, 광고 포스트는 ad_comments 테이블
   useEffect(() => {
-    if (!isOpen || !canPersist) return;
+    if (!isOpen) return;
 
     let cancelled = false;
-    fetchCommentsByPostId(postId)
-      .then((freshComments) => {
-        if (cancelled) return;
-        setComments(freshComments);
-        onCommentsChange(freshComments);
-      })
-      .catch(() => {});
+    if (isAdPost) {
+      fetchAdComments(postId)
+        .then((freshComments) => {
+          if (cancelled) return;
+          setComments(freshComments);
+          onCommentsChange(freshComments);
+        })
+        .catch(() => {});
+    } else {
+      fetchCommentsByPostId(postId)
+        .then((freshComments) => {
+          if (cancelled) return;
+          setComments(freshComments);
+          onCommentsChange(freshComments);
+        })
+        .catch(() => {});
+    }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, canPersist, postId, onCommentsChange]);
+    return () => { cancelled = true; };
+  }, [isOpen, isAdPost, postId, onCommentsChange]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -199,25 +266,32 @@ const PostCommentsDialog = ({
       showError('로그인이 필요합니다.');
       return;
     }
-    if (!canPersist) {
-      showError('광고 컨텐츠에는 댓글을 작성할 수 없습니다.');
-      return;
-    }
 
     const text = commentInput.trim();
     if (!text) return;
+    if (text.length > COMMENT_MAX_LENGTH) {
+      showError(`댓글은 최대 ${COMMENT_MAX_LENGTH}자까지 입력할 수 있습니다.`);
+      return;
+    }
 
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const displayName = profile?.nickname || authUser.email?.split('@')[0] || '탐험가';
-      const saved = await insertComment({
-        postId,
-        userId: authUser.id,
-        userName: displayName,
-        userAvatar: profile?.avatar_url,
-        content: text,
-      });
+
+      let saved: Comment;
+      if (isAdPost) {
+        saved = await insertAdComment(postId, authUser.id, displayName, profile?.avatar_url || null, text);
+      } else {
+        saved = await insertComment({
+          postId,
+          userId: authUser.id,
+          userName: displayName,
+          userAvatar: profile?.avatar_url,
+          content: text,
+        });
+      }
+
       syncComments([...comments, saved]);
       setCommentInput('');
       requestAnimationFrame(() => commentInputRef.current?.focus());
@@ -252,7 +326,12 @@ const PostCommentsDialog = ({
 
     setSavingCommentId(comment.id);
     try {
-      const saved = await updateComment({ commentId: comment.id, userId: authUser.id, content: nextText });
+      let saved: Comment;
+      if (isAdPost) {
+        saved = await updateAdComment(comment.id, authUser.id, nextText);
+      } else {
+        saved = await updateComment({ commentId: comment.id, userId: authUser.id, content: nextText });
+      }
       syncComments(comments.map(item => item.id === saved.id ? saved : item));
       setEditingCommentId(null);
       setEditCommentText('');
@@ -275,6 +354,7 @@ const PostCommentsDialog = ({
       return;
     }
     if (!comment.id) return;
+    // 광고 댓글은 좋아요 미지원 (ad_comment_likes 테이블 없음) → UI만 토글
     if (likingCommentIds.has(comment.id)) return;
 
     const commentId = comment.id;
@@ -283,12 +363,13 @@ const PostCommentsDialog = ({
     const nextIsLiked = !previousIsLiked;
     const nextLikesCount = Math.max(0, previousLikesCount + (nextIsLiked ? 1 : -1));
 
-    // 낙관적 업데이트
     syncComments(comments.map(item =>
       item.id === commentId
         ? { ...item, isLiked: nextIsLiked, likesCount: nextLikesCount }
         : item
     ));
+
+    if (isAdPost) return; // 광고 댓글 좋아요는 UI만 반영
 
     setLikingCommentIds(prev => {
       const next = new Set(prev);
@@ -303,7 +384,6 @@ const PostCommentsDialog = ({
         shouldLike: nextIsLiked,
       });
     } catch (err) {
-      // 실패 시 롤백
       syncComments(comments.map(item =>
         item.id === commentId
           ? { ...item, isLiked: previousIsLiked, likesCount: previousLikesCount }
@@ -324,7 +404,11 @@ const PostCommentsDialog = ({
 
     setDeletingCommentId(commentToDelete.id);
     try {
-      await deleteComment({ commentId: commentToDelete.id, userId: authUser.id });
+      if (isAdPost) {
+        await deleteAdComment(commentToDelete.id, authUser.id);
+      } else {
+        await deleteComment({ commentId: commentToDelete.id, userId: authUser.id });
+      }
       syncComments(comments.filter(item => item.id !== commentToDelete.id));
       if (editingCommentId === commentToDelete.id) {
         cancelCommentEdit();
@@ -524,12 +608,6 @@ const PostCommentsDialog = ({
               : 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
           }}
         >
-          {!canPersist ? (
-            <div className="flex items-center justify-center gap-2 rounded-3xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700">
-              <MessageCircle className="h-4 w-4 shrink-0" />
-              <span>광고 컨텐츠는 댓글을 지원하지 않습니다.</span>
-            </div>
-          ) : (
           <div
             className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner"
             onClick={focusCommentInput}
@@ -561,7 +639,6 @@ const PostCommentsDialog = ({
               <Send className="h-4 w-4" />
             </button>
           </div>
-          )}
         </form>
       </section>
 
