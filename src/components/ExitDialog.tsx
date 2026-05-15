@@ -24,7 +24,7 @@ const ExitDialog = ({ isOpen, onClose, onConfirm }: ExitDialogProps) => {
       <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
         <AlertDialogHeader className="space-y-3">
           <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
-            서비스 종료
+            앱 종료
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed break-keep">
             TocaToca 서비스를 종료하시겠습니까?<br />
