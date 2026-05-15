@@ -544,7 +544,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           <span
             aria-label="새 컨텐츠"
             className="inline-flex items-center justify-center rounded-full border-2 border-white bg-yellow-400 px-1.5 text-[9px] font-black leading-none tracking-[0.08em] text-amber-950"
-            style={{ height: '18px', filter: 'drop-shadow(0 2px 6px rgba(234,179,8,0.55))' }}
+            style={{ height: '18px' }}
           >
             NEW
           </span>
