@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { MapPin, Flame, UsersRound, User } from 'lucide-react';
 
 // 둥근 모서리 플레이 아이콘 (lucide의 기본 Play는 모서리가 각져있어 직접 정의)
 const RoundedPlayIcon = ({ className, strokeWidth = 2 }: { className?: string; strokeWidth?: number | string }) => (
   <svg
     viewBox="0 0 24 24"
+
     fill="none"
     stroke="currentColor"
     strokeWidth={strokeWidth}
@@ -301,6 +303,7 @@ const BottomNav = () => {
   if (isKeyboardOpen) return null;
 
   const isMapPillActive = navItems[safeIndex]?.path === '/';
+  const showNativeBottomBackdrop = Capacitor.isNativePlatform();
 
   return (
     <div
@@ -308,6 +311,7 @@ const BottomNav = () => {
       style={{
         paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
         paddingLeft: '16px',
+
         paddingRight: '16px',
         transform: isHidden ? 'translateY(calc(100% + 24px))' : 'translateY(0)',
         transition: isHidden
@@ -316,16 +320,19 @@ const BottomNav = () => {
         willChange: 'transform',
       }}
     >
-      <div
-        className="absolute inset-x-0 bottom-0 bg-white shadow-[0_-10px_30px_rgba(15,23,42,0.06)] md:hidden"
-        style={{ height: 'calc(76px + max(env(safe-area-inset-bottom, 0px), 12px))' }}
-        aria-hidden="true"
-      />
+      {showNativeBottomBackdrop && (
+        <div
+          className="absolute inset-x-0 bottom-0 bg-white shadow-[0_-10px_30px_rgba(15,23,42,0.06)]"
+          style={{ height: 'calc(76px + max(env(safe-area-inset-bottom, 0px), 12px))' }}
+          aria-hidden="true"
+        />
+      )}
       <nav
         ref={navRef}
         className="pointer-events-auto relative z-10 mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
       >
         {/* Sliding pill background */}
+
         {ready && (
 
           <motion.div
