@@ -132,7 +132,6 @@ const mapPost = (p: any, isFriend = false): Post => {
   };
 };
 
-// Fisher-Yates 셔플
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -146,33 +145,23 @@ const Popular = () => {
   const navigate = useNavigate();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, loading: authLoading } = useAuth();
-  const { initialViewedIds, markAsViewed, hasLoadedViewedHistory } = useViewedPosts();
+  const { markAsViewed } = useViewedPosts();
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  // 이번 세션에서 "새 포스팅"으로 분류된 친구 포스팅 ID 스냅샷
+  // (탭 진입 시점에 미열람이었던 것들 — 스크롤 중 열람돼도 위치 유지)
+  const [sessionNewFriendIds, setSessionNewFriendIds] = useState<Set<string>>(new Set());
+
   const { scrollRef, progress } = useCollapsingHeader(80);
 
-  // 셔플된 혼합 풀 (인기 + 친구 포스팅 created_at 정렬)
   const mergedPoolRef = useRef<Post[]>([]);
-  // 상단 고정 새 친구 포스팅 (미열람)
   const newFriendPostsRef = useRef<Post[]>([]);
   const displayedCountRef = useRef(0);
-  const hasLoaded = useRef(false);
-
-  // 초기 열람 기록 스냅샷 (페이지 진입 시점 기준)
-  const [dividerViewedIds, setDividerViewedIds] = useState<Set<string>>(new Set());
-  const hasCapturedSnapshotRef = useRef(false);
-
-  useEffect(() => {
-    if (hasCapturedSnapshotRef.current || !hasLoadedViewedHistory) return;
-    hasCapturedSnapshotRef.current = true;
-    if (initialViewedIds.size > 0) {
-      setDividerViewedIds(new Set(initialViewedIds));
-    }
-  }, [hasLoadedViewedHistory, initialViewedIds]);
+  const isLoadingRef = useRef(false);
 
   const isLoading = authLoading || (isInitialLoading && posts.length === 0);
 
@@ -181,17 +170,27 @@ const Popular = () => {
     return posts.filter(p => p && p.user && !blockedIds.has(p.user.id));
   }, [posts, blockedIds]);
 
-  const fetchAndBuildPool = useCallback(async () => {
-    if (!authUser?.id) return;
+  const buildAndLoad = useCallback(async () => {
+    if (!authUser?.id || isLoadingRef.current) return;
+    isLoadingRef.current = true;
+    setIsInitialLoading(true);
+
     try {
-      // 1) 인기 포스팅 200개 (랜덤 셔플)
+      // 1) 현재 시점의 열람 기록을 DB에서 직접 조회
+      const { data: viewedData } = await supabase
+        .from('viewed_posts')
+        .select('post_id')
+        .eq('user_id', authUser.id);
+
+      const currentViewedIds = new Set<string>((viewedData || []).map((v: any) => v.post_id));
+
+      // 2) 인기 포스팅 200개 (랜덤 셔플)
       const { data: popularData, error: popularError } = await supabase.rpc('get_popular_posts', { limit_count: 200 });
       if (popularError) throw popularError;
 
-      const popularPosts: Post[] = (popularData || []).map((p: any) => mapPost(p, false));
-      const shuffledPopular = shuffle(popularPosts);
+      const shuffledPopular: Post[] = shuffle((popularData || []).map((p: any) => mapPost(p, false)));
 
-      // 2) 팔로잉 목록
+      // 3) 팔로잉 목록
       const { data: followsData } = await supabase
         .from('follows')
         .select('following_id')
@@ -202,7 +201,7 @@ const Popular = () => {
       let allFriendPosts: Post[] = [];
 
       if (followingIds.length > 0) {
-        // 3) 친구 포스팅 전체 (최신순, 최대 500개)
+        // 4) 친구 포스팅 전체 (최신순, 최대 500개)
         const { data: friendData } = await supabase
           .from('posts')
           .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
@@ -212,39 +211,33 @@ const Popular = () => {
 
         allFriendPosts = (friendData || []).map((p: any) => mapPost(p, true));
 
-        // 좋아요 상태 반영
         if (allFriendPosts.length > 0) {
           const likedIds = await fetchLikedPostIds(allFriendPosts.map(p => p.id), authUser.id);
-          allFriendPosts = allFriendPosts.map(p => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
+          allFriendPosts = allFriendPosts.map((p): Post => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
         }
       }
 
-      // 4) 인기 포스팅에도 좋아요 상태 반영
-      let finalPopular = shuffledPopular;
+      // 5) 인기 포스팅 좋아요 상태 반영
+      let finalPopular: Post[] = shuffledPopular;
       if (finalPopular.length > 0) {
         const likedIds = await fetchLikedPostIds(finalPopular.map(p => p.id), authUser.id);
-        finalPopular = finalPopular.map(p => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
+        finalPopular = finalPopular.map((p): Post => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
       }
 
-      // 5) 현재 열람 기록 스냅샷 (이 시점 기준)
-      const viewedSnapshot = new Set(initialViewedIds);
-
-      // 6) 새 친구 포스팅 (미열람) → 상단 고정, created_at 내림차순
+      // 6) 새 친구 포스팅 (이번 탭 진입 시점 기준 미열람) → 상단 고정
       const newFriendPosts = allFriendPosts
-        .filter(p => !viewedSnapshot.has(p.id))
+        .filter(p => !currentViewedIds.has(p.id))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      // 7) 나머지 친구 포스팅 (이미 열람) + 인기 포스팅 → created_at 내림차순 혼합
-      const viewedFriendPosts = allFriendPosts.filter(p => viewedSnapshot.has(p.id));
+      // 7) 열람된 친구 포스팅 + 인기 포스팅 → created_at 혼합 정렬
+      const viewedFriendPosts = allFriendPosts.filter(p => currentViewedIds.has(p.id));
 
-      // 인기 포스팅과 열람된 친구 포스팅을 created_at 기준으로 합쳐서 정렬
-      // 단, 인기 포스팅은 셔플 순서를 유지하되 친구 포스팅과 시간 기준으로 인터리브
-      const combined = [...finalPopular, ...viewedFriendPosts]
+      const combined: Post[] = ([...finalPopular, ...viewedFriendPosts] as Post[])
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      // 중복 제거 (친구 포스팅이 인기 포스팅에도 포함될 수 있음)
+      // 중복 제거
       const seenIds = new Set<string>();
-      const deduped = combined.filter(p => {
+      const deduped: Post[] = combined.filter(p => {
         if (seenIds.has(p.id)) return false;
         seenIds.add(p.id);
         return true;
@@ -253,33 +246,34 @@ const Popular = () => {
       newFriendPostsRef.current = newFriendPosts;
       mergedPoolRef.current = deduped;
       displayedCountRef.current = 0;
+
+      // 이번 세션 "새 포스팅" ID 스냅샷 저장 (스크롤 중 열람돼도 위치 고정)
+      setSessionNewFriendIds(new Set(newFriendPosts.map(p => p.id)));
+
+      // 초기 노출: 새 친구 포스팅 전체 + 혼합 풀 첫 PAGE_SIZE개
+      const initial = deduped.slice(0, PAGE_SIZE);
+      displayedCountRef.current = initial.length;
+      setPosts([...newFriendPosts, ...initial]);
+      setHasMore(deduped.length > PAGE_SIZE);
+
     } catch (err) {
       mergedPoolRef.current = [];
       newFriendPostsRef.current = [];
+    } finally {
+      setIsInitialLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [authUser?.id, initialViewedIds]);
+  }, [authUser?.id]);
 
-  const loadInitialData = useCallback(async () => {
-    if (hasLoaded.current) return;
-    setIsInitialLoading(true);
-    await fetchAndBuildPool();
-
-    // 새 친구 포스팅 + 혼합 풀 첫 PAGE_SIZE개
-    const initial = mergedPoolRef.current.slice(0, PAGE_SIZE);
-    displayedCountRef.current = initial.length;
-    setPosts([...newFriendPostsRef.current, ...initial]);
-    setHasMore(mergedPoolRef.current.length > PAGE_SIZE);
-    hasLoaded.current = true;
-    setIsInitialLoading(false);
-  }, [fetchAndBuildPool]);
-
+  // 탭에 진입할 때마다 항상 재빌드 (열람 기록 반영)
   useEffect(() => {
-    if (!authLoading && !hasLoadedViewedHistory) return; // 열람 기록 로드 대기
-    if (!authLoading) {
-      if (authUser) loadInitialData();
-      else navigate('/login', { replace: true });
+    if (authLoading) return;
+    if (authUser) {
+      buildAndLoad();
+    } else {
+      navigate('/login', { replace: true });
     }
-  }, [authLoading, authUser, loadInitialData, navigate, hasLoadedViewedHistory]);
+  }, [authLoading, authUser, buildAndLoad, navigate]);
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
@@ -336,7 +330,6 @@ const Popular = () => {
 
   return (
     <div ref={scrollRef} className="h-screen w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
-      {/* 고정 상단 헤더 */}
       <div className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={progress}
@@ -369,7 +362,8 @@ const Popular = () => {
                   <ViewedAwarePostItem
                     key={post.id}
                     post={post}
-                    isViewed={post.isFriendPost ? dividerViewedIds.has(post.id) : false}
+                    // 이번 세션 진입 시 "새 포스팅"이었던 것만 isViewed=false로 표시
+                    isViewed={post.isFriendPost ? !sessionNewFriendIds.has(post.id) : false}
                     onVisible={markAsViewed}
                     onLikeToggle={() => handleLikeToggle(post.id)}
                     onLocationClick={handleLocationClick}
