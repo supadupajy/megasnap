@@ -63,6 +63,29 @@ const BottomNav = () => {
   const [hasNewFriendPost, setHasNewFriendPost] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const lastActiveTabIndexRef = useRef(0);
+  const [safeAreaBottom, setSafeAreaBottom] = useState(0);
+
+  // [DEBUG] safe-area-inset-bottom 값 측정 및 로깅
+  useEffect(() => {
+    const measure = () => {
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';
+      document.body.appendChild(el);
+      const h = el.getBoundingClientRect().height;
+      document.body.removeChild(el);
+      setSafeAreaBottom(h);
+      console.log('[BottomNav DEBUG] safe-area-inset-bottom:', h, 'px');
+      console.log('[BottomNav DEBUG] window.innerHeight:', window.innerHeight);
+      console.log('[BottomNav DEBUG] visualViewport.height:', window.visualViewport?.height);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.visualViewport?.addEventListener('resize', measure);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.visualViewport?.removeEventListener('resize', measure);
+    };
+  }, []);
 
   // 스크롤 방향에 따라 BottomNav를 숨기거나 보여준다.
   // - 아래로 스크롤하면 숨김, 위로 스크롤하면 다시 보임.
@@ -304,102 +327,142 @@ const BottomNav = () => {
   const isMapPillActive = navItems[safeIndex]?.path === '/';
 
   return (
-    <div
-      className="fixed bottom-0 left-0 right-0 z-[20000] pointer-events-none"
-      style={{
-        paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
-        paddingLeft: '16px',
+    <>
+      {/* [DEBUG] safe-area-inset-bottom 값 표시 */}
+      {process.env.NODE_ENV !== 'production' && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 80,
+            right: 8,
+            background: 'rgba(0,0,0,0.7)',
+            color: 'white',
+            fontSize: 10,
+            padding: '4px 8px',
+            borderRadius: 8,
+            zIndex: 99999,
+            pointerEvents: 'none',
+            fontFamily: 'monospace',
+          }}
+        >
+          safe-bottom: {safeAreaBottom}px
+        </div>
+      )}
+      {/* 하단 safe area + BottomNav 전체 영역 배경 채우기
+          - BottomNav 알약 아래 시스템 네비게이션 바 영역에 지도가 비치는 문제 방지
+          - BottomNav가 숨겨져도(translateY) 이 배경은 항상 유지됨
+          - safeAreaBottom이 0이어도 최소 12px 높이 보장 */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: `calc(env(safe-area-inset-bottom, 0px) + ${Math.max(safeAreaBottom, 0)}px + 12px)`,
+          backgroundColor: 'white',
+          zIndex: 19998,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        className="fixed bottom-0 left-0 right-0 z-[20000] pointer-events-none"
+        style={{
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          paddingLeft: '16px',
 
-        paddingRight: '16px',
+          paddingRight: '16px',
 
-        transform: isHidden ? 'translateY(calc(100% + 24px))' : 'translateY(0)',
-        transition: isHidden
-          ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)'
-          : 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
-        willChange: 'transform',
-      }}
-    >
-      <nav
-        ref={navRef}
-        className="pointer-events-auto relative z-10 mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
+          transform: isHidden ? 'translateY(calc(100% + 24px))' : 'translateY(0)',
+          transition: isHidden
+            ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)'
+            : 'transform 350ms cubic-bezier(0.22, 1, 0.36, 1)',
+          willChange: 'transform',
+        }}
       >
-        {/* Sliding pill background */}
+        <nav
+          ref={navRef}
+          className="pointer-events-auto relative z-10 mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
+        >
+          {/* Sliding pill background */}
 
-        {ready && (
+          {ready && (
 
-          <motion.div
-            className={cn(
-              'absolute top-1/2 -translate-y-1/2 pointer-events-none rounded-full',
-              isMapPillActive ? 'map-pill-animated-bg' : 'bg-gray-100'
-            )}
-            style={{ height: 44 }}
-            animate={{ left: pillStyle.left, width: pillStyle.width }}
-            initial={{ left: pillStyle.left, width: pillStyle.width }}
-            transition={{ type: 'spring', stiffness: 1000, damping: 50, mass: 0.5 }}
-          />
-        )}
 
-        {navItems.map((item, index) => {
-          const Icon = item.icon;
-          const isActive = safeIndex === index;
-          const isMainMapTab = item.path === '/';
-
-          return (
-            <button
-              key={item.path}
-              ref={(el) => { itemRefs.current[index] = el; }}
-              onClick={() => handleNavClick(item.path)}
+            <motion.div
               className={cn(
-                'relative flex items-center justify-center gap-1.5 h-11 rounded-full transition-[padding] duration-300 ease-out flex-none',
-                isActive ? 'px-3' : 'px-3'
+                'absolute top-1/2 -translate-y-1/2 pointer-events-none rounded-full',
+                isMapPillActive ? 'map-pill-animated-bg' : 'bg-gray-100'
               )}
-              aria-label={item.label}
-            >
-              {/* Icon */}
-              <div className="relative flex items-center justify-center shrink-0">
-                <Icon
-                  className={cn(
-                    item.iconSizeClass || 'w-[22px] h-[22px]',
-                    'transition-colors duration-200',
-                    isActive
-                      ? isMainMapTab
-                        ? 'text-yellow-400'
-                        : 'text-gray-900'
-                      : 'text-gray-400'
-                  )}
-                  strokeWidth={isActive ? 2.4 : 2}
-                />
-                {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
-                  <span
-                    aria-label="새 친구 포스팅"
-                    className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"
-                  />
-                )}
-              </div>
+              style={{ height: 44 }}
+              animate={{ left: pillStyle.left, width: pillStyle.width }}
+              initial={{ left: pillStyle.left, width: pillStyle.width }}
+              transition={{ type: 'spring', stiffness: 1000, damping: 50, mass: 0.5 }}
+            />
+          )}
 
-              {/* Label - 활성 탭에서만 노출 (가로 슬라이드)
-                  overflow-hidden은 width 애니메이션을 위해 필요하지만, 한글 글자(특히 'ㅈ' 등
-                  위쪽 획)가 잘리지 않도록 py-0.5 + leading 여유를 두어 박스 높이를 확보한다. */}
-              <motion.span
-                initial={false}
-                animate={{
-                  width: isActive ? 'auto' : 0,
-                  opacity: isActive ? 1 : 0,
-                  marginLeft: isActive ? 0 : -2,
-                }}
-                transition={{ type: 'spring', stiffness: 700, damping: 35, mass: 0.5 }}
+          {navItems.map((item, index) => {
+            const Icon = item.icon;
+            const isActive = safeIndex === index;
+            const isMainMapTab = item.path === '/';
+
+            return (
+              <button
+                key={item.path}
+                ref={(el) => { itemRefs.current[index] = el; }}
+                onClick={() => handleNavClick(item.path)}
                 className={cn(
-                  'relative overflow-hidden whitespace-nowrap text-[13px] leading-[1.3] py-0.5 font-bold tracking-tight',
-                  isMainMapTab ? 'text-amber-50' : 'text-gray-900'
+                  'relative flex items-center justify-center gap-1.5 h-11 rounded-full transition-[padding] duration-300 ease-out flex-none',
+                  isActive ? 'px-3' : 'px-3'
                 )}
+                aria-label={item.label}
               >
-                {item.label}
-              </motion.span>
-            </button>
-          );
-        })}
-      </nav>
-    </div>
+                {/* Icon */}
+                <div className="relative flex items-center justify-center shrink-0">
+                  <Icon
+                    className={cn(
+                      item.iconSizeClass || 'w-[22px] h-[22px]',
+                      'transition-colors duration-200',
+                      isActive
+                        ? isMainMapTab
+                          ? 'text-yellow-400'
+                          : 'text-gray-900'
+                        : 'text-gray-400'
+                    )}
+                    strokeWidth={isActive ? 2.4 : 2}
+                  />
+                  {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
+                    <span
+                      aria-label="새 친구 포스팅"
+                      className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"
+                    />
+                  )}
+                </div>
+
+                {/* Label - 활성 탭에서만 노출 (가로 슬라이드)
+                    overflow-hidden은 width 애니메이션을 위해 필요하지만, 한글 글자(특히 'ㅈ' 등
+                    위쪽 획)가 잘리지 않도록 py-0.5 + leading 여유를 두어 박스 높이를 확보한다. */}
+                <motion.span
+                  initial={false}
+                  animate={{
+                    width: isActive ? 'auto' : 0,
+                    opacity: isActive ? 1 : 0,
+                    marginLeft: isActive ? 0 : -2,
+                  }}
+                  transition={{ type: 'spring', stiffness: 700, damping: 35, mass: 0.5 }}
+                  className={cn(
+                    'relative overflow-hidden whitespace-nowrap text-[13px] leading-[1.3] py-0.5 font-bold tracking-tight',
+                    isMainMapTab ? 'text-amber-50' : 'text-gray-900'
+                  )}
+                >
+                  {item.label}
+                </motion.span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    </>
   );
 };
 
