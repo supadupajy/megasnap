@@ -1,6 +1,7 @@
-import React, { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from "react-router-dom";
@@ -17,7 +18,6 @@ import Login from "./pages/Login";
 import SplashScreen from "./components/SplashScreen";
 import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
-import ExitDialog from "./components/ExitDialog";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { NotificationProvider } from "./components/NotificationProvider";
 import { Loader2 } from "lucide-react";
@@ -146,8 +146,8 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { session, loading } = useAuth();
-  const [showExitDialog, setShowExitDialog] = useState(false);
-  
+  const lastBackPressRef = useRef<number>(0);
+
   const isChatPage = location.pathname.startsWith("/chat");
   const isWritePage = location.pathname === "/write";
   const showIndex = shouldShowIndex(location.pathname);
@@ -245,9 +245,17 @@ const AnimatedRoutes = () => {
         return;
       }
 
-      // 3순위: 메인 페이지(지도)인 경우 종료 팝업
+      // 3순위: 메인 페이지(지도)인 경우 종료 안내 토스트 (두 번 누르면 종료)
       if (location.pathname === '/') {
-        setShowExitDialog(true);
+        const now = Date.now();
+        if (now - lastBackPressRef.current < 2000) {
+          CapApp.exitApp();
+        } else {
+          lastBackPressRef.current = now;
+          toast("종료하시려면 한번 더 뒤로가기 버튼을 눌러주세요.", {
+            duration: 2000,
+          });
+        }
       } 
       // 4순위: 그 외 페이지는 이전 페이지로
       else if (canGoBack) {
@@ -368,11 +376,6 @@ const AnimatedRoutes = () => {
       {/* 전역 장소 검색 오버레이 — open-place-search 이벤트로 열림 (detail.onSelect 콜백 전달) */}
       {session && <PlaceSearchOverlay />}
 
-      <ExitDialog
-        isOpen={showExitDialog}
-        onClose={() => setShowExitDialog(false)}
-        onConfirm={() => CapApp.exitApp()}
-      />
     </div>
   );
 };
