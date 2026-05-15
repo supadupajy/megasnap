@@ -187,7 +187,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     if (isOpen && currentPost) {
       if (onViewPost) onViewPost(currentPost.id);
       setCurrentImageIndex(0);
-      setLocalComments(currentPost.comments || []);
+      // 광고 포스트는 loadComments useEffect에서 ad_comments를 fetch해 세팅하므로 여기서 덮어쓰지 않음
+      if (isPersistedPostId(currentPost.id)) {
+        setLocalComments(currentPost.comments || []);
+      }
       setIsSaved(currentPost.isSaved || false);
       setContentExpanded(false);
       setIsContentClamped(false);
