@@ -282,13 +282,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   useEffect(() => {
     const currentPost = posts[currentPostIndex];
+    console.log('[PostDetail] loadComments useEffect triggered, isOpen:', isOpen, 'currentPost.id:', currentPost?.id, 'loadedRef:', loadedCommentsPostIdRef.current);
     if (!isOpen || !currentPost) return;
 
     const postId = currentPost.id;
 
-    // 이미 같은 postId로 로드 완료된 경우 재실행 방지 (posts 배열 변경으로 인한 불필요한 재실행 차단)
-    if (loadedCommentsPostIdRef.current === postId) return;
+    if (loadedCommentsPostIdRef.current === postId) {
+      console.log('[PostDetail] SKIP - already loaded for postId:', postId);
+      return;
+    }
     loadedCommentsPostIdRef.current = postId;
+    console.log('[PostDetail] FETCH START for postId:', postId);
 
     let cancelled = false;
 
@@ -300,8 +304,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             .select('id, user_id, user_name, content, created_at')
             .eq('ad_id', postId)
             .order('created_at', { ascending: true });
+          console.log('[PostDetail] FETCH DONE, cancelled:', cancelled, 'data count:', data?.length);
           if (!cancelled) {
-            setLocalComments((data || []).map((row: any) => ({
+            const mapped = (data || []).map((row: any) => ({
               id: row.id,
               userId: row.user_id,
               user: row.user_name || '사용자',
@@ -309,10 +314,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               createdAt: row.created_at ? new Date(row.created_at) : undefined,
               likesCount: 0,
               isLiked: false,
-            })));
+            }));
+            console.log('[PostDetail] setLocalComments with:', mapped);
+            setLocalComments(mapped);
           }
-        } catch {
-          // fetch 실패 시 현재 상태 유지
+        } catch (err) {
+          console.error('[PostDetail] FETCH ERROR:', err);
         }
         return;
       }
@@ -325,7 +332,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     };
 
     loadComments();
-    return () => { cancelled = true; };
+    return () => {
+      console.log('[PostDetail] cleanup, cancelled=true for postId:', postId);
+      cancelled = true;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPostIndex, isOpen, currentPost?.id]);
 
