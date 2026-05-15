@@ -155,7 +155,7 @@ const PostActions = ({
       </div>
 
       {isAd && canShowLocation && adFooterContent && (
-        <div className="flex items-start justify-between gap-3">
+        <div className="-mt-1 flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 pt-1">
             {adFooterContent}
           </div>
