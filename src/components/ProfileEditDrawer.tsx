@@ -253,13 +253,13 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[92vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[1500] mb-[-45px] border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+      <DrawerContent className="h-[88vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[1500] mb-[-45px] border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         {/* Handle Bar */}
-        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
+        <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-3 shrink-0" />
         
         <div className="flex flex-col flex-1 min-h-0">
           {/* Header */}
-          <div className="px-8 flex items-center justify-center mb-6 shrink-0">
+          <div className="px-8 flex items-center justify-center mb-3 shrink-0">
             <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-600" />
               프로필 편집
@@ -267,11 +267,11 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto no-scrollbar px-8 space-y-8">
+          <div className="flex-1 overflow-y-auto no-scrollbar px-8 space-y-5">
             {/* Avatar Section */}
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-2">
               <div className="relative group">
-                <div className="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 shadow-xl">
+                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 shadow-xl">
                   <Avatar className="w-full h-full border-4 border-white">
                     <AvatarImage
                       src={avatarUrl || '/placeholder.svg'}
@@ -295,7 +295,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
 
             {/* Nickname Section */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                   <Type className="w-4 h-4 text-gray-400" />
@@ -350,7 +350,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
             </div>
 
             {/* Bio Section */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center gap-2 px-1">
                 <AlignLeft className="w-4 h-4 text-gray-400" />
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">내 소개</p>
@@ -359,7 +359,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
                 placeholder="나를 표현하는 한 줄 소개를 적어보세요"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                className="min-h-[100px] rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-medium resize-none p-4 shadow-inner"
+                className="min-h-[80px] rounded-2xl bg-gray-50 border-none focus-visible:ring-2 focus-visible:ring-indigo-600 text-base font-medium resize-none p-4 shadow-inner"
                 maxLength={100}
               />
               <p className="text-right text-[10px] text-gray-400 font-bold">{bio.length}/100</p>
@@ -367,14 +367,14 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
           </div>
 
           {/* Fixed Bottom Button Area */}
-          <div className="px-8 pt-4 pb-14 bg-white shrink-0 border-t border-gray-50">
+          <div className="px-8 pt-3 pb-8 bg-white shrink-0 border-t border-gray-50">
             <Button
-              className="w-full h-16 bg-gray-900 hover:bg-gray-800 text-white rounded-[20px] text-lg font-black shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between px-6"
+              className="w-full h-14 bg-gray-900 hover:bg-gray-800 text-white rounded-[20px] text-base font-black shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between px-5"
               onClick={handleSave}
               disabled={isSubmitting || isTakingPhoto}
             >
               <span>{isSubmitting ? '저장 중...' : '변경사항 저장하기'}</span>
-              <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
                 {isSubmitting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
