@@ -70,7 +70,11 @@ const ViewedAwarePostItem = React.memo(({
   const itemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (post.isAd || !post.isFriendPost) return;
+    // 광고는 조회수/열람 기록을 남기지 않는다.
+    // 인기 컨텐츠/친구 컨텐츠 모두 화면에 노출되면 markAsViewed가 호출돼야
+    // 조회수(post_views)가 카운트된다. (이전엔 친구 포스트일 때만 옵저버를
+    // 만들어 인기 컨텐츠 스크롤로는 조회수가 절대 오르지 않는 버그가 있었음.)
+    if (post.isAd) return;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -87,7 +91,7 @@ const ViewedAwarePostItem = React.memo(({
 
     if (itemRef.current) observer.observe(itemRef.current);
     return () => observer.disconnect();
-  }, [post.id, post.isAd, post.isFriendPost, onVisible, scrollRoot]);
+  }, [post.id, post.isAd, onVisible, scrollRoot]);
 
   return (
     <div ref={itemRef} className="border-b border-gray-100 last:border-0 bg-white">

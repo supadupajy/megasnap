@@ -36,6 +36,7 @@ import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 import { useVideoMuted } from "@/hooks/use-video-muted";
+import { useViewedPosts } from "@/hooks/use-viewed-posts";
 import { showSuccess, showError } from "@/utils/toast";
 
 // 광고 삽입 주기 (포스팅 3개마다 광고 1개)
@@ -124,6 +125,10 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   const exhaustedRef = useRef(false);
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
+  // 활성 슬라이드가 바뀔 때마다 조회수를 기록한다.
+  // markAsViewed 자체가 세션 dedupe + 서버측 시간 단위 dedupe를 하므로
+  // 빠르게 위아래로 스와이프해도 동일 포스트는 1회만 카운트된다.
+  const { markAsViewed } = useViewedPosts();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<ReelItem[]>([]);
@@ -355,6 +360,16 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     setShowHint(false);
     // 새 슬라이드로 이동해도 사용자가 마지막에 선택한 UI 표시 상태를 유지함
   }, [activeIndex, isOpen]);
+
+  // 활성 슬라이드가 포스트일 때마다 조회수 기록.
+  // - 광고/끝 슬라이드는 건너뜀
+  // - 동일 포스트는 markAsViewed 내부에서 세션 단위 dedupe되므로 안전
+  useEffect(() => {
+    if (!isOpen) return;
+    const current = items[activeIndex];
+    if (!current || current.kind !== "post") return;
+    markAsViewed(current.post.id);
+  }, [isOpen, activeIndex, items, markAsViewed]);
 
   // 끝에 가까워지면 추가 로드 (ranked 모드에서는 무한 스크롤 없음)
   useEffect(() => {
