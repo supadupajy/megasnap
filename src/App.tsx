@@ -62,6 +62,7 @@ const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const NearbyPosts = lazy(() => import("./pages/NearbyPosts"));
 const Flicks = lazy(() => import("./pages/Flicks"));
 const PostSearch = lazy(() => import("./pages/PostSearch"));
+const LogoPreview = lazy(() => import("./pages/LogoPreview"));
 
 // React Query 기본 설정 강화 (불필요한 refetch 줄이기)
 const queryClient = new QueryClient({
@@ -92,6 +93,7 @@ const RouteFallback = () => (
 // ─────────────────────────────────────────────────────────────
 const NON_INDEX_ROUTE_PREFIXES = [
   '/login',
+  '/logo-preview',
   '/auth/',
   '/terms',
   '/privacy-policy',
@@ -351,6 +353,7 @@ const AnimatedRoutes = () => {
                   <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
                   <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
                   <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
+                  <Route path="/logo-preview" element={<LogoPreview />} />
                 </Routes>
               </Suspense>
             </motion.div>
