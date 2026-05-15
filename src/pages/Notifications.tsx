@@ -226,7 +226,7 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
               {notif.actor?.nickname || '알 수 없는 사용자'}
             </span>
             <span className="text-gray-700"> {getNotificationText(notif)}</span>
-            <span className="text-[10px] text-gray-400 ml-2 block mt-1">
+            <span className="text-[10px] text-gray-400 block mt-1">
               {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
             </span>
           </div>
