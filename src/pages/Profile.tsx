@@ -16,7 +16,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import PostItem from '@/components/PostItem';
 import ProfileEditDrawer from '@/components/ProfileEditDrawer';
-import VideoThumbnailPreview from '@/components/VideoThumbnailPreview';
 import { Post } from '@/types';
 import { cn, formatCount, getOptimizedMarkerImage } from '@/lib/utils';
 
@@ -480,21 +479,14 @@ const Profile = () => {
                       className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
                       onClick={() => handleGridItemClick(post.id)}
                     >
-                      {post.videoUrl ? (
-                        <VideoThumbnailPreview
-                          src={post.videoUrl}
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity bg-gray-100"
-                        />
-                      ) : (
-                        <img
-                          src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-                          onError={() => handleImageError(post.id)}
-                        />
-                      )}
+                      <img
+                        src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                        onError={() => handleImageError(post.id)}
+                      />
                       {post.videoUrl && (
                         <div className="absolute top-2 right-2 z-10">
                           <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />

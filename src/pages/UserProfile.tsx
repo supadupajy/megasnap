@@ -24,7 +24,6 @@ import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import { Button } from '@/components/ui/button';
 import PostItem from '@/components/PostItem';
-import VideoThumbnailPreview from '@/components/VideoThumbnailPreview';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import {
@@ -377,20 +376,13 @@ const UserProfile = () => {
                       className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
                       onClick={() => handleGridItemClick(post.id)}
                     >
-                      {post.videoUrl ? (
-                        <VideoThumbnailPreview
-                          src={post.videoUrl}
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity bg-gray-100"
-                        />
-                      ) : (
-                        <img
-                          src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-                        />
-                      )}
+                      <img
+                        src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                      />
                       {post.videoUrl && (
 
                         <div className="absolute top-2 right-2 z-10">
