@@ -27,7 +27,7 @@ const ExitDialog = ({ isOpen, onClose, onConfirm }: ExitDialogProps) => {
             서비스 종료
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed break-keep">
-            Chora 서비스를 종료하시겠습니까?<br />
+            TocaToca 서비스를 종료하시겠습니까?<br />
             오늘의 추억은 안전하게 저장되었습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -40,7 +40,7 @@ const ExitDialog = ({ isOpen, onClose, onConfirm }: ExitDialogProps) => {
           </AlertDialogCancel>
           <AlertDialogAction 
             onClick={onConfirm}
-            className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all m-0"
+            className="flex-1 h-12 rounded-2xl bg-amber-500 text-white font-bold hover:bg-amber-600 shadow-lg shadow-amber-100 transition-all m-0"
           >
             예
           </AlertDialogAction>
