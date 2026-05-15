@@ -316,12 +316,18 @@ const BottomNav = () => {
         willChange: 'transform',
       }}
     >
+      <div
+        className="absolute inset-x-0 bottom-0 bg-white shadow-[0_-10px_30px_rgba(15,23,42,0.06)]"
+        style={{ height: 'calc(76px + max(env(safe-area-inset-bottom, 0px), 12px))' }}
+        aria-hidden="true"
+      />
       <nav
         ref={navRef}
-        className="pointer-events-auto relative mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
+        className="pointer-events-auto relative z-10 mx-auto flex items-center justify-between max-w-md bg-white rounded-full px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.06)] ring-1 ring-black/5"
       >
         {/* Sliding pill background */}
         {ready && (
+
           <motion.div
             className={cn(
               'absolute top-1/2 -translate-y-1/2 pointer-events-none rounded-full',
