@@ -288,11 +288,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     const postId = currentPost.id;
 
     if (loadedCommentsPostIdRef.current === postId) {
-      console.log('[PostDetail] SKIP - already loaded for postId:', postId);
       return;
     }
-    loadedCommentsPostIdRef.current = postId;
-    console.log('[PostDetail] FETCH START for postId:', postId);
 
     let cancelled = false;
 
@@ -304,7 +301,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             .select('id, user_id, user_name, content, created_at')
             .eq('ad_id', postId)
             .order('created_at', { ascending: true });
-          console.log('[PostDetail] FETCH DONE, cancelled:', cancelled, 'data count:', data?.length);
           if (!cancelled) {
             const mapped = (data || []).map((row: any) => ({
               id: row.id,
@@ -315,7 +311,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               likesCount: 0,
               isLiked: false,
             }));
-            console.log('[PostDetail] setLocalComments with:', mapped);
+            loadedCommentsPostIdRef.current = postId;
             setLocalComments(mapped);
           }
         } catch (err) {
@@ -325,7 +321,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       }
       try {
         const dbComments = await fetchCommentsByPostId(postId);
-        if (!cancelled) setLocalComments(dbComments);
+        if (!cancelled) {
+          loadedCommentsPostIdRef.current = postId;
+          setLocalComments(dbComments);
+        }
       } catch {
         // fetch 실패 시 현재 상태 유지
       }
@@ -333,7 +332,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
     loadComments();
     return () => {
-      console.log('[PostDetail] cleanup, cancelled=true for postId:', postId);
       cancelled = true;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
