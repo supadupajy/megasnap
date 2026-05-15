@@ -1732,11 +1732,21 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
                 <Bookmark className={cn("h-[18px] w-[18px] transition-colors", saved ? "fill-amber-400 text-amber-400" : "text-white")} />
               </button>
 
-              {(post.lat != null && post.lng != null) && (
+              {/* 위치 버튼: 좌표가 있으면 정상 위치 버튼, 없으면 "위치없음" 비활성 버튼.
+                  위치 정보가 누락된 컨텐츠라도 시각적으로 위치 슬롯이 비어보이지 않도록
+                  항상 위치 버튼 자리를 채워준다. */}
+              {(post.lat != null && post.lng != null) ? (
                 <LocationButtonWithTimer
                   createdAt={post.createdAt}
                   isAd={post.isAd}
                   onClick={onLocationClick as (e: React.MouseEvent) => void}
+                  variant="dark"
+                />
+              ) : (
+                <LocationButtonWithTimer
+                  createdAt={null}
+                  unavailable
+                  onClick={(e) => e.stopPropagation()}
                   variant="dark"
                 />
               )}
