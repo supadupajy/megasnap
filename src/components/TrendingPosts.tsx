@@ -638,7 +638,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           </p>
           <div className="flex items-center gap-0.5 text-rose-500 shrink-0">
             <Heart className="w-3 h-3 fill-rose-500" />
-            <span className="text-[10px] font-black">{post.likes_per_hour ?? 0}</span>
+            <span className="text-[10px] font-black">{Number(post.likes ?? 0)}</span>
           </div>
           <div className="flex items-center gap-0.5 text-sky-500 shrink-0">
             <Eye className="w-3 h-3" />
