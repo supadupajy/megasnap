@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 
-const categories = ['계정/로그인', '포스팅', '버그/오류', '기타'];
+const categories = ['계정/로그인', '컨텐츠', '버그/오류', '기타'];
 
 const Inquiry = () => {
   const navigate = useNavigate();

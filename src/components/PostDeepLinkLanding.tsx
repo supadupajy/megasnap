@@ -176,7 +176,7 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
             <div className="relative bg-gray-100 transition-[height] duration-300" style={{ aspectRatio: mediaAspectRatio }}>
               <img
                 src={postImage}
-                alt="포스팅 이미지"
+                alt="컨텐츠 이미지"
                 loading="eager"
                 decoding="async"
                 className="w-full h-full object-cover"
@@ -227,7 +227,7 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
             <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <MapPin className="w-8 h-8 text-indigo-400" />
             </div>
-            <p className="text-gray-500 font-medium">포스팅을 불러올 수 없습니다.</p>
+            <p className="text-gray-500 font-medium">컨텐츠를 불러올 수 없습니다.</p>
           </div>
         )}
 
@@ -238,7 +238,7 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
               TocaToca에서 전체 내용 보기
             </h2>
             <p className="text-sm text-gray-500">
-              지도 기반 여행 포스팅 앱 · 내 주변 여행지 발견
+              지도 기반 여행 컨텐츠 앱 · 내 주변 여행지 발견
             </p>
           </div>
 

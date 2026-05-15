@@ -391,7 +391,7 @@ const Popular = () => {
 
             {!isLoading && filteredPosts.length === 0 && (
               <div className="text-center py-20 text-gray-400 font-medium px-10">
-                표시할 인기 포스팅이 없습니다.
+                표시할 인기 컨텐츠가 없습니다.
               </div>
             )}
 
@@ -402,7 +402,7 @@ const Popular = () => {
             )}
             {!hasMore && posts.length > 0 && (
               <div className="py-8 text-center text-xs text-gray-400 font-medium">
-                모든 포스팅을 불러왔습니다.
+                모든 컨텐츠를 불러왔습니다.
               </div>
             )}
           </div>

@@ -200,7 +200,7 @@ const PostCommentsDialog = ({
       return;
     }
     if (!canPersist) {
-      showError('저장 가능한 포스팅에서만 댓글을 작성할 수 있습니다.');
+      showError('저장 가능한 컨텐츠에서만 댓글을 작성할 수 있습니다.');
       return;
     }
 

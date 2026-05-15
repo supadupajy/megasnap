@@ -367,7 +367,7 @@ const PostSearch = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div className="absolute left-1/2 -translate-x-1/2">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">포스팅 검색</h2>
+            <h2 className="text-lg font-black text-gray-900 tracking-tight">컨텐츠 검색</h2>
           </div>
         </div>
       </div>
@@ -403,7 +403,7 @@ const PostSearch = () => {
             <div className="mt-3 flex items-center gap-2 rounded-2xl bg-indigo-50 px-4 py-2.5 text-indigo-700">
               <Hash className="h-4 w-4 shrink-0" />
               <p className="text-xs font-black">
-                #{activeTag} 태그와 일치하는 포스팅을 우선 검색 중
+                #{activeTag} 태그와 일치하는 컨텐츠를 우선 검색 중
               </p>
             </div>
           )}
@@ -425,7 +425,7 @@ const PostSearch = () => {
               </div>
               <p className="text-base font-black text-slate-700">검색어를 입력해 보세요</p>
               <p className="mt-1 text-sm font-medium text-slate-400">
-                키워드나 #해시태그로 포스팅을 찾을 수 있어요.
+                키워드나 #해시태그로 컨텐츠를 찾을 수 있어요.
               </p>
             </div>
           ) : isSearching ? (
@@ -441,7 +441,7 @@ const PostSearch = () => {
               </div>
               <p className="text-base font-black text-slate-700">결과가 없어요</p>
               <p className="mt-1 text-sm font-medium text-slate-400">
-                "{searchQuery}"에 대한 포스팅이 없습니다.
+                "{searchQuery}"에 대한 컨텐츠가 없습니다.
               </p>
             </div>
           ) : (

@@ -265,7 +265,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       setIsEditingContent(false);
       setContentExpanded(false);
       onUpdate?.(currentPost.id, nextContent);
-      showSuccess('포스팅이 수정되었습니다.');
+      showSuccess('컨텐츠가 수정되었습니다.');
     } catch (err) {
       showError('수정 중 오류가 발생했습니다.');
     } finally {
@@ -486,7 +486,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const handleSaveToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
-    if (!isPersistedPostId(currentPost.id)) { showError('이 포스팅은 저장할 수 없습니다.'); return; }
+    if (!isPersistedPostId(currentPost.id)) { showError('이 컨텐츠는 저장할 수 없습니다.'); return; }
     const prevSaved = isSaved;
     setIsSaved(!prevSaved);
     try {
@@ -495,7 +495,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         showSuccess('저장이 취소되었습니다.');
       } else {
         await supabase.from('saved_posts').insert({ post_id: currentPost.id, user_id: authUser.id });
-        showSuccess('포스팅을 저장했습니다! ✨');
+        showSuccess('컨텐츠를 저장했습니다! ✨');
       }
     } catch (err) {
       setIsSaved(prevSaved);
@@ -504,7 +504,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   };
 
   const confirmDelete = async () => {
-    if (!currentPost || !currentPost.id) { showError('유효하지 않은 포스팅입니다.'); return; }
+    if (!currentPost || !currentPost.id) { showError('유효하지 않은 컨텐츠입니다.'); return; }
 
     if (currentPost.isAd) {
       setIsDeleteDialogOpen(false);
@@ -553,7 +553,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     try {
       const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
-      showSuccess('포스팅이 삭제되었습니다.');
+      showSuccess('컨텐츠가 삭제되었습니다.');
     } catch (err: any) {
       console.error('[PostDetail] Delete error:', err);
       showError(`삭제 중 오류가 발생했습니다.`);

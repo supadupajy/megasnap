@@ -243,10 +243,10 @@ const PostDetail = () => {
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
             <h2 className="text-lg font-black text-gray-900 tracking-tight">
               {allPosts.length > 0 && allPosts[0].user.id === authUser?.id
-                ? '내 포스팅'
+                ? '내 컨텐츠'
                 : allPosts.length > 0
-                  ? `${allPosts[0].user.name}의 포스팅`
-                  : '포스팅'}
+                  ? `${allPosts[0].user.name}의 컨텐츠`
+                  : '컨텐츠'}
             </h2>
           </div>
         </div>

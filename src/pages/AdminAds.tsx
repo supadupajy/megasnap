@@ -111,7 +111,7 @@ const AD_DESCRIPTIONS: Record<string, string> = {
   splash:     '앱 시작 시 스플래시 화면에 표시되는 광고입니다.',
   header:     '지도 화면 상단 헤더 영역의 배너 광고입니다.',
   search:     '친구 검색 화면 상단에 표시되는 배너 광고입니다.',
-  trending:   '실시간 인기 포스팅 패널 내 광고 구좌입니다.',
+  trending:   '실시간 인기 컨텐츠 패널 내 광고 구좌입니다.',
   map_marker: '지도 위에 표시되는 브랜드 마커 광고입니다.',
 };
 

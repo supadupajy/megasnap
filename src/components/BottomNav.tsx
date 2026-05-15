@@ -406,7 +406,7 @@ const BottomNav = () => {
                   />
                   {item.path === '/search' && hasNewFriendPost && !isFriendsPage && (
                     <span
-                      aria-label="새 친구 포스팅"
+                      aria-label="새 친구 컨텐츠"
                       className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"
                     />
                   )}

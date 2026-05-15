@@ -262,7 +262,7 @@ const Notifications = () => {
   const getNotificationText = (notif: Notification) => {
     switch (notif.type) {
       case 'follow': return '님이 회원님을 팔로우하기 시작했습니다.';
-      case 'like_post': return '님이 회원님의 포스팅을 좋아합니다.';
+      case 'like_post': return '님이 회원님의 컨텐츠를 좋아합니다.';
       case 'comment': return `님이 댓글을 남겼습니다: "${notif.content}"`;
       case 'message': return `님이 메시지를 보냈습니다: "${notif.content}"`;
       default: return '님이 활동을 남겼습니다.';

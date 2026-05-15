@@ -39,7 +39,7 @@ const CATEGORIES = [
 
 const SPECIAL_FILTERS = [
   {
-    id: 'hot', label: 'HOT 포스팅', icon: Flame,
+    id: 'hot', label: 'HOT 컨텐츠', icon: Flame,
     iconClass: 'bg-red-50 text-red-500', selectedRowClass: 'bg-red-50', selectedTextClass: 'text-red-700', checkboxClass: 'data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500',
   },
   {
@@ -47,11 +47,11 @@ const SPECIAL_FILTERS = [
     iconClass: 'bg-amber-50 text-amber-500', selectedRowClass: 'bg-amber-50', selectedTextClass: 'text-amber-700', checkboxClass: 'data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500',
   },
   {
-    id: 'mine', label: '내 포스팅만 보기', icon: User,
+    id: 'mine', label: '내 컨텐츠만 보기', icon: User,
     iconClass: 'bg-lime-50 text-lime-600', selectedRowClass: 'bg-lime-50', selectedTextClass: 'text-lime-700', checkboxClass: 'data-[state=checked]:bg-lime-500 data-[state=checked]:border-lime-500',
   },
   {
-    id: 'friends', label: '내 친구 포스팅만 보기', icon: Users,
+    id: 'friends', label: '내 친구 컨텐츠만 보기', icon: Users,
     iconClass: 'bg-emerald-50 text-emerald-600', selectedRowClass: 'bg-emerald-50', selectedTextClass: 'text-emerald-800', checkboxClass: 'data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600',
   },
 ];
@@ -213,7 +213,7 @@ const CategoryMenu = ({ isOpen, selectedCategories, onSelect, onClose, targetUse
                       </div>
                       <div className="flex flex-col">
                         <span className={cn("text-[10px] font-black", selectedCategories.includes('user_filter') ? "text-indigo-600" : "text-gray-500")}>@{targetUserId}</span>
-                        <span className="text-[8px] text-gray-400 font-bold">님의 포스팅만 보기</span>
+                        <span className="text-[8px] text-gray-400 font-bold">님의 컨텐츠만 보기</span>
                       </div>
                     </div>
                     <Checkbox 

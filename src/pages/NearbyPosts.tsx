@@ -264,7 +264,7 @@ const NearbyPosts = () => {
       });
     } catch (error) {
       console.error('[NearbyPosts] loadMorePosts error:', error);
-      showError('포스팅을 불러오는 중 오류가 발생했습니다.');
+      showError('컨텐츠를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setIsLoadingMore(false);
       setIsInitialLoading(false);
@@ -414,7 +414,7 @@ const NearbyPosts = () => {
 
         {filteredPosts.length === 0 && !isInitialLoading && (
           <div className="text-center py-20 text-gray-400 font-medium px-10">
-            {isExpiredOnly ? '이 영역엔 남아있는 기록이 없습니다.' : '표시할 포스팅이 없습니다.'}
+            {isExpiredOnly ? '이 영역엔 남아있는 기록이 없습니다.' : '표시할 컨텐츠가 없습니다.'}
           </div>
         )}
 
@@ -433,7 +433,7 @@ const NearbyPosts = () => {
 
         {!hasMore && posts.length > 0 && (
           <div className="py-8 text-center text-xs text-gray-400 font-medium">
-            이 지역의 모든 포스팅을 불러왔습니다.
+            이 지역의 모든 컨텐츠를 불러왔습니다.
           </div>
         )}
       </div>

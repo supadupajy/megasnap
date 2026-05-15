@@ -46,10 +46,10 @@ const DeleteConfirmDialog = ({ isOpen, onClose, onConfirm }: DeleteConfirmDialog
             <Trash2 className="w-6 h-6 text-red-500" />
           </div>
           <AlertDialogTitle className="text-center text-xl font-black text-gray-900">
-            포스팅 삭제
+            컨텐츠 삭제
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-gray-500 font-bold leading-relaxed break-keep">
-            정말로 이 포스팅을 삭제하시겠습니까?<br />
+            정말로 이 컨텐츠를 삭제하시겠습니까?<br />
             삭제된 데이터는 복구할 수 없습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>

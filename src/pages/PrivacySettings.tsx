@@ -139,7 +139,7 @@ const PrivacySettings = () => {
               <div className="flex-1 text-left">
                 <p className={`text-sm font-bold ${!isPrivate ? 'text-indigo-700' : 'text-gray-700'}`}>공개 계정</p>
                 <p className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">
-                  누구나 내 포스팅과 프로필을 볼 수 있어요
+                  누구나 내 컨텐츠와 프로필을 볼 수 있어요
                 </p>
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${!isPrivate ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'}`}>
@@ -158,7 +158,7 @@ const PrivacySettings = () => {
               <div className="flex-1 text-left">
                 <p className={`text-sm font-bold ${isPrivate ? 'text-indigo-700' : 'text-gray-700'}`}>비공개 계정</p>
                 <p className="text-[11px] text-gray-400 font-medium leading-tight mt-0.5">
-                  팔로워만 내 포스팅과 프로필을 볼 수 있어요
+                  팔로워만 내 컨텐츠와 프로필을 볼 수 있어요
                 </p>
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isPrivate ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'}`}>
@@ -222,7 +222,7 @@ const PrivacySettings = () => {
       </div>
 
 
-      <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)}>
+      <AlertDialog open={!!unblockTarget} onOpenChange={(open) => !open && setUnblockTarget(null)} >
         <AlertDialogContent className="rounded-[32px] w-[85%] max-w-[320px] p-6 border-none shadow-2xl">
           <AlertDialogHeader className="space-y-3">
             <AlertDialogTitle className="text-center text-xl font-black text-gray-900">

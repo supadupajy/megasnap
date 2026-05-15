@@ -13,7 +13,7 @@ const plans = [
     color: 'text-gray-500',
     bg: 'bg-gray-50',
     border: 'border-gray-200',
-    features: ['기본 지도 탐색', '하루 5개 포스팅', '기본 알림'],
+    features: ['기본 지도 탐색', '하루 5개 컨텐츠', '기본 알림'],
     current: true,
   },
   {
@@ -25,7 +25,7 @@ const plans = [
     color: 'text-indigo-600',
     bg: 'bg-indigo-50',
     border: 'border-indigo-300',
-    features: ['무제한 포스팅', '광고 없음', '고급 필터', '우선 고객 지원'],
+    features: ['무제한 컨텐츠', '광고 없음', '고급 필터', '우선 고객 지원'],
     current: false,
     badge: '인기',
   },

@@ -155,7 +155,7 @@ const Flicks = () => {
             <Clapperboard className="w-12 h-12 text-white/70" />
             <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
             <p className="text-xs font-bold text-white/60 leading-relaxed">
-              영상이 등록된 포스팅이 없습니다.<br />영상을 업로드하면 여기서 즐길 수 있어요.
+              영상이 등록된 컨텐츠가 없습니다.<br />영상을 업로드하면 여기서 즐길 수 있어요.
             </p>
           </div>
         </div>

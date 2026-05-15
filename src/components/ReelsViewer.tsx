@@ -542,7 +542,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         .eq("id", postId)
         .eq("user_id", authUser.id);
       if (error) throw error;
-      showSuccess("포스팅이 삭제되었습니다.");
+      showSuccess("컨텐츠가 삭제되었습니다.");
       onDelete?.(postId);
     } catch (err) {
       console.error("[ReelsViewer] delete error:", err);
@@ -1184,7 +1184,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       if (error) throw error;
       onContentSaved?.(post.id, next);
       setIsEditingContent(false);
-      showSuccess("포스팅이 수정되었습니다.");
+      showSuccess("컨텐츠가 수정되었습니다.");
     } catch (err) {
       console.error("[ReelsViewer] update error:", err);
       showError("수정 중 오류가 발생했습니다.");

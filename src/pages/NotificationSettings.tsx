@@ -141,7 +141,7 @@ const NotificationSettings = () => {
               iconBg="bg-rose-50"
               iconColor="text-rose-500"
               label="좋아요"
-              description="내 포스팅에 좋아요가 달리면 알려드려요"
+              description="내 컨텐츠에 좋아요가 달리면 알려드려요"
               checked={settings.likes}
               onChange={() => toggle('likes')}
             />
@@ -150,7 +150,7 @@ const NotificationSettings = () => {
               iconBg="bg-blue-50"
               iconColor="text-blue-500"
               label="댓글"
-              description="내 포스팅에 댓글이 달리면 알려드려요"
+              description="내 컨텐츠에 댓글이 달리면 알려드려요"
               checked={settings.comments}
               onChange={() => toggle('comments')}
             />
@@ -183,8 +183,8 @@ const NotificationSettings = () => {
               icon={MapPin}
               iconBg="bg-orange-50"
               iconColor="text-orange-500"
-              label="주변 새 포스팅"
-              description="내 주변에 새 포스팅이 올라오면 알려드려요"
+              label="주변 새 컨텐츠"
+              description="내 주변에 새 컨텐츠가 올라오면 알려드려요"
               checked={settings.nearbyPosts}
               onChange={() => toggle('nearbyPosts')}
             />

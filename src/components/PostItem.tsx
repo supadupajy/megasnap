@@ -350,7 +350,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       return;
     }
     if (!isPersistedPostId(post.id)) {
-      showError('이 포스팅은 저장할 수 없습니다.');
+      showError('이 컨텐츠는 저장할 수 없습니다.');
       return;
     }
 
@@ -376,7 +376,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           if (error) throw error;
         }
 
-        showSuccess('포스팅을 저장했습니다! ✨');
+        showSuccess('컨텐츠를 저장했습니다! ✨');
       } else {
         const { error } = await supabase
           .from('saved_posts')
@@ -385,7 +385,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           .eq('user_id', authUser.id);
         if (error) throw error;
 
-        showSuccess('저장이 취소되었습니다.');
+        showSuccess('컨텐츠가 수정되었습니다.');
       }
 
       onSaveToggle?.(post.id, nextSaved);
@@ -484,7 +484,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       setIsEditingContent(false);
       setContentExpanded(false);
       onUpdate?.(post.id, nextContent);
-      showSuccess('포스팅이 수정되었습니다.');
+      showSuccess('컨텐츠가 수정되었습니다.');
     } catch (err) {
       showError('수정 중 오류가 발생했습니다.');
     } finally {
@@ -513,7 +513,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               onClick={saveContentEdit}
               disabled={isSavingContent || !editContent.trim()}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
-              aria-label="수정 저장"
+              aria-label="새 컨텐츠"
             >
               <Check className="h-5 w-5" />
             </button>

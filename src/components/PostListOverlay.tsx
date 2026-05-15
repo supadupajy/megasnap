@@ -500,7 +500,7 @@ const PostListOverlay = ({
             )}
             {!hasMore && posts.length > 0 && (
               <div className="py-8 text-center text-xs text-gray-400 font-medium">
-                이 지역의 모든 포스팅을 불러왔습니다.
+                이 지역의 모든 컨텐츠를 불러왔습니다.
               </div>
             )}
           </div>
@@ -509,7 +509,7 @@ const PostListOverlay = ({
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
               <LayoutGrid className="w-8 h-8 text-gray-300" />
             </div>
-            <p className="text-gray-900 font-bold mb-1">표시할 포스팅이 없습니다</p>
+            <p className="text-gray-900 font-bold mb-1">표시할 컨텐츠가 없습니다</p>
             <p className="text-gray-400 text-xs">필터를 변경하거나 지도를 이동해보세요</p>
           </div>
         )}

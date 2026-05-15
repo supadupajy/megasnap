@@ -440,7 +440,7 @@ const Profile = () => {
                   </div>
                 ))}
                 {savedPosts.length === 0 && (
-                  <div className="py-20 text-center text-gray-400 font-medium">저장된 포스팅이 없습니다.</div>
+                  <div className="py-20 text-center text-gray-400 font-medium">저장된 컨텐츠가 없습니다.</div>
                 )}
               </div>
 
@@ -495,7 +495,7 @@ const Profile = () => {
                     </div>
                   ))}
                   {myPosts.length === 0 && (
-                    <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 포스팅이 없습니다.</div>
+                    <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 컨텐츠가 없습니다.</div>
                   )}
                 </div>
               </div>

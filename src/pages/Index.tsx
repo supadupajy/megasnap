@@ -1646,7 +1646,7 @@ const Index = () => {
   }, []);
 
   // ── PostDetail 핸들러 (useCallback으로 stable reference 보장) ──
-  // 인라인 화살표 함수로 넘기면 매 렌더마다 새 reference가 생성되어
+  // 인라인 화살표 함수로 넘기면 매 렌더링 때 새 reference가 생성되어
   // PostDetail 내부 useEffect가 cleanup→re-run 되면서 history.back()이 호출되어
   // popstate 이벤트로 인해 모달이 즉시 닫히는 버그를 방지함
   const handleClosePostDetail = useCallback(() => {
@@ -1752,7 +1752,7 @@ const Index = () => {
             .single();
 
           if (error || !data) {
-            showError('포스팅을 찾을 수 없습니다.');
+            showError('컨텐츠를 찾을 수 없습니다.');
             return;
           }
 
@@ -1768,7 +1768,7 @@ const Index = () => {
           setSelectedPostId(post.id);
         } catch (error) {
           console.error('[Index] notification post open error:', error);
-          showError('포스팅을 여는 중 오류가 발생했습니다.');
+          showError('컨텐츠를 여는 중 오류가 발생했습니다.');
         } finally {
           setTimeout(() => { locationLockedRef.current = false; }, 5000);
         }

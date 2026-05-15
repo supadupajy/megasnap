@@ -285,7 +285,7 @@ const FriendFeed = () => {
           Icon={Users}
           iconBgClass="bg-indigo-100"
           iconColorClass="text-indigo-600"
-          title="친구 포스팅"
+          title="친구 컨텐츠"
           subtitle="Friends Feed"
           ActionIcon={Search}
           actionLabel="친구 검색"
@@ -337,7 +337,7 @@ const FriendFeed = () => {
                 </div>
                 <p className="text-base font-black text-gray-700 mb-2">아직 팔로우한 친구가 없어요</p>
                 <p className="text-sm text-gray-400 font-medium leading-relaxed mb-6">
-                  친구를 팔로우하면 이곳에서<br />친구들의 포스팅을 볼 수 있어요!
+                  친구를 팔로우하면 이곳에서<br />친구들의 컨텐츠를 볼 수 있어요!
                 </p>
                 <button
                   onClick={() => navigate('/search')}
@@ -355,7 +355,7 @@ const FriendFeed = () => {
                   <Users className="w-10 h-10 text-gray-200" />
                 </div>
                 <p className="text-sm text-gray-400 font-bold leading-relaxed">
-                  친구들의 포스팅이 아직 없습니다.
+                  친구들의 컨텐츠가 아직 없습니다.
                 </p>
               </div>
             )}
