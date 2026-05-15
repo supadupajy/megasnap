@@ -155,6 +155,9 @@ const Search = () => {
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
       {/* 검색 입력창 - 헤더 바로 아래 */}
       <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+64px)]">
+        <div className="flex items-center justify-center h-14 border-b border-gray-50">
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">친구 검색</h2>
+        </div>
         <div className="px-4 py-3 border-b border-gray-50">
           <div className="relative">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
