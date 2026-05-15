@@ -28,7 +28,7 @@ interface Notification {
 
 const SWIPE_THRESHOLD = 40;
 const SNAP_OPEN = -80;
-const SELECT_SHIFT = 32; // 선택 모드에서 콘텐츠가 오른쪽으로 이동하는 거리
+const SELECT_PADDING = 36; // 선택 모드에서 닷이 차지하는 좌측 여백
 const LONG_PRESS_MS = 450;
 const SPRING = { type: 'spring' as const, stiffness: 400, damping: 35 };
 
@@ -72,11 +72,11 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
     return () => { isMounted.current = false; };
   }, []);
 
-  // 선택 모드 또는 스와이프 상태에 따라 x 위치 결정
+  // 스와이프 상태에 따라 x 위치 결정 (선택 모드에서는 항상 0)
   useEffect(() => {
     if (!isMounted.current) return;
     if (selectionMode) {
-      animate(x, SELECT_SHIFT, SPRING);
+      animate(x, 0, SPRING);
     } else {
       animate(x, isOpen ? SNAP_OPEN : 0, SPRING);
     }
@@ -139,32 +139,6 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
         </div>
       )}
 
-      {/* 선택 닷 (왼쪽에 노출) */}
-      <AnimatePresence>
-        {selectionMode && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ duration: 0.18 }}
-            className="absolute left-3 top-1/2 -translate-y-1/2 z-0 pointer-events-none"
-          >
-            <div
-              className={cn(
-                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                isSelected
-                  ? "bg-indigo-600 border-indigo-600"
-                  : "bg-white border-gray-300"
-              )}
-            >
-              {isSelected && (
-                <div className="w-2 h-2 rounded-full bg-white" />
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <motion.div
         drag={selectionMode ? false : "x"}
         dragConstraints={{ left: SNAP_OPEN, right: 0 }}
@@ -176,7 +150,7 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
         onPointerCancel={handlePressEnd}
         onPointerLeave={handlePressEnd}
         onContextMenu={(e) => e.preventDefault()}
-        className="relative px-4 py-4 flex items-center gap-3 border-b border-gray-50 z-10 cursor-pointer bg-white active:bg-gray-50 transition-colors select-none"
+        className="relative z-10 cursor-pointer bg-white active:bg-gray-50 transition-colors select-none border-b border-gray-50"
         onClick={(e) => {
           e.stopPropagation();
 
@@ -200,30 +174,63 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
           onClick(notif);
         }}
       >
-        <div
-          data-notification-actor="true"
-          className="shrink-0 rounded-full active:scale-95 transition-transform"
-          role="button"
-          aria-label={`${notif.actor?.nickname || '사용자'} 프로필 보기`}
+        {/* 내부 컨테이너: 선택 모드에서 paddingLeft 확장으로 닷 공간 확보 */}
+        <motion.div
+          animate={{ paddingLeft: selectionMode ? 16 + SELECT_PADDING : 16 }}
+          transition={SPRING}
+          className="relative py-4 pr-4 flex items-center gap-3"
         >
-          <Avatar className="w-11 h-11 border border-gray-100 pointer-events-none">
-            <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
-            <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
-          </Avatar>
-        </div>
-        <div className="flex-1 text-sm leading-tight">
-          <span
+          {/* 선택 닷 (왼쪽에 노출) */}
+          <AnimatePresence>
+            {selectionMode && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                transition={{ duration: 0.18 }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              >
+                <div
+                  className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                    isSelected
+                      ? "bg-indigo-600 border-indigo-600"
+                      : "bg-white border-gray-300"
+                  )}
+                >
+                  {isSelected && (
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div
             data-notification-actor="true"
-            className="inline-block font-bold active:opacity-70 transition-opacity"
+            className="shrink-0 rounded-full active:scale-95 transition-transform"
             role="button"
+            aria-label={`${notif.actor?.nickname || '사용자'} 프로필 보기`}
           >
-            {notif.actor?.nickname || '알 수 없는 사용자'}
-          </span>
-          <span className="text-gray-700"> {getNotificationText(notif)}</span>
-          <span className="text-[10px] text-gray-400 ml-2 block mt-1">
-            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
-          </span>
-        </div>
+            <Avatar className="w-11 h-11 border border-gray-100 pointer-events-none">
+              <AvatarImage src={notif.actor?.avatar_url || '/placeholder.svg'} />
+              <AvatarFallback>{notif.actor?.nickname?.[0] || '?'}</AvatarFallback>
+            </Avatar>
+          </div>
+          <div className="flex-1 min-w-0 text-sm leading-tight">
+            <span
+              data-notification-actor="true"
+              className="inline font-bold active:opacity-70 transition-opacity"
+              role="button"
+            >
+              {notif.actor?.nickname || '알 수 없는 사용자'}
+            </span>
+            <span className="text-gray-700"> {getNotificationText(notif)}</span>
+            <span className="text-[10px] text-gray-400 ml-2 block mt-1">
+              {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
+            </span>
+          </div>
+        </motion.div>
       </motion.div>
 
     </div>
