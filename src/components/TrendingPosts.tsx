@@ -662,7 +662,7 @@ const TrendingAdBanner: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="px-5 py-1 border-b border-gray-100">
+      <div className="px-5 py-1">
         <div className="h-24 rounded-2xl bg-gray-100 animate-pulse" />
       </div>
     );
@@ -674,7 +674,7 @@ const TrendingAdBanner: React.FC = () => {
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {
     return (
-      <div className="px-5 py-1 border-b border-gray-100">
+      <div className="px-5 py-1">
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -708,7 +708,7 @@ const TrendingAdBanner: React.FC = () => {
   }
 
   return (
-    <div className="px-5 py-1 border-b border-gray-100">
+    <div className="px-5 py-1">
       <div
         onClick={(e) => {
           e.stopPropagation();
@@ -1129,6 +1129,9 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               data-bottom-nav-keep="true"
               style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y', contain: 'layout paint' }}
             >
+              {/* 상단 스톱바 (1위 위) */}
+              <div className="h-[3px] rounded-full mx-8 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
+
               {visibleExpandedPosts.map((post) => (
                 <TrendingPostItem
                   key={post.id}
