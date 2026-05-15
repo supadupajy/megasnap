@@ -286,16 +286,14 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       if (!isOpen || !currentPost) return;
       if (!isPersistedPostId(currentPost.id)) {
         // 광고 포스트: ad_comments 테이블에서 fetch
-        console.log('[PostDetail] ad post loadComments, postId:', currentPost.id);
         try {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('ad_comments')
             .select('id, user_id, user_name, content, created_at')
             .eq('ad_id', currentPost.id)
             .order('created_at', { ascending: true });
-          console.log('[PostDetail] ad_comments fetch result:', { data, error });
           if (!cancelled) {
-            const mapped = (data || []).map((row: any) => ({
+            setLocalComments((data || []).map((row: any) => ({
               id: row.id,
               userId: row.user_id,
               user: row.user_name || '사용자',
@@ -303,12 +301,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               createdAt: row.created_at ? new Date(row.created_at) : undefined,
               likesCount: 0,
               isLiked: false,
-            }));
-            console.log('[PostDetail] mapped ad comments:', mapped);
-            setLocalComments(mapped);
+            })));
           }
-        } catch (err) {
-          console.error('[PostDetail] ad_comments fetch error:', err);
+        } catch {
           if (!cancelled) setLocalComments(currentPost.comments || []);
         }
         return;

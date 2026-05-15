@@ -359,7 +359,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const handleLikeToggleLocal = (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('[PostItem] Like button clicked for post:', post.id);
     onLikeToggle?.(post.id);
   };
 
