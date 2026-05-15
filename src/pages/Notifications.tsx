@@ -175,10 +175,9 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
         }}
       >
         {/* 내부 컨테이너: 선택 모드에서 paddingLeft 확장으로 닷 공간 확보 */}
-        <motion.div
-          animate={{ paddingLeft: selectionMode ? 16 + SELECT_PADDING : 16 }}
-          transition={SPRING}
-          className="relative py-4 pr-4 flex items-center gap-3"
+        <div
+          className="relative py-4 pr-4 flex items-center gap-3 transition-[padding] duration-300 ease-out"
+          style={{ paddingLeft: selectionMode ? 16 + SELECT_PADDING : 16 }}
         >
           {/* 선택 닷 (왼쪽에 노출) - CSS transition 기반 */}
           <div
@@ -228,7 +227,7 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
               {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ko })}
             </span>
           </div>
-        </motion.div>
+        </div>
       </motion.div>
 
     </div>
