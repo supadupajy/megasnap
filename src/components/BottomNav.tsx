@@ -350,8 +350,7 @@ const BottomNav = () => {
       </div>
       {/* 하단 safe area 배경 채우기
           - 시스템 네비게이션 바(|||, ○, <) 영역만 흰색으로 채움
-          - 알약 네비게이션 바 영역은 포함하지 않음
-          - BottomNav가 숨겨져도(translateY) 이 배경은 항상 유지됨 */}
+          - zIndex를 높게 설정해 카카오맵 위에 올라오도록 함 */}
       <div
         aria-hidden="true"
         style={{
@@ -359,20 +358,18 @@ const BottomNav = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          height: 'env(safe-area-inset-bottom, 0px)',
+          height: safeAreaBottom > 0 ? `${safeAreaBottom}px` : 'env(safe-area-inset-bottom, 0px)',
           backgroundColor: 'white',
-          zIndex: 19998,
+          zIndex: 19999,
           pointerEvents: 'none',
         }}
       />
       <div
         className="fixed bottom-0 left-0 right-0 z-[20000] pointer-events-none"
         style={{
-          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)',
+          paddingBottom: safeAreaBottom > 0 ? `${safeAreaBottom + 8}px` : 'max(env(safe-area-inset-bottom, 0px), 20px)',
           paddingLeft: '16px',
-
           paddingRight: '16px',
-
           transform: isHidden ? 'translateY(calc(100% + 24px))' : 'translateY(0)',
           transition: isHidden
             ? 'transform 600ms cubic-bezier(0.4, 0, 0.2, 1)'
