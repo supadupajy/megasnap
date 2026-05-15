@@ -142,7 +142,7 @@ const BottomNav = () => {
     setIsHidden(false);
   }, [location.pathname]);
 
-  const isFriendsPage = location.pathname.startsWith('/friends') || location.pathname === '/search';
+  const isPopularPage = location.pathname.startsWith('/popular');
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
@@ -151,10 +151,10 @@ const BottomNav = () => {
   }, [authUser?.id]);
 
   useEffect(() => {
-    if (isFriendsPage) {
+    if (isPopularPage) {
       markFriendPostsSeen();
     }
-  }, [isFriendsPage, markFriendPostsSeen]);
+  }, [isPopularPage, markFriendPostsSeen]);
 
   useEffect(() => {
     if (!authUser?.id) {
@@ -166,7 +166,7 @@ const BottomNav = () => {
     const seenKey = `${FRIEND_POST_SEEN_KEY_PREFIX}${authUser.id}`;
 
     const checkFriendPostBadgeOnce = async () => {
-      if (isFriendsPage) {
+      if (isPopularPage) {
         markFriendPostsSeen();
         return;
       }
@@ -404,7 +404,7 @@ const BottomNav = () => {
                     )}
                     strokeWidth={isActive ? 2.4 : 2}
                   />
-                  {item.path === '/search' && hasNewFriendPost && !isFriendsPage && (
+                  {item.path === '/popular' && hasNewFriendPost && !isPopularPage && (
                     <span
                       aria-label="새 친구 컨텐츠"
                       className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"
