@@ -575,197 +575,24 @@ const MapContainer = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // ── 핀치 줌 상태 ──────────────────────────────────────────────────
-    // 카카오맵은 정수 레벨만 지원하므로, 핀치 중에는 카카오맵의 자체 줌을
-    // 잠시 비활성화하고 CSS transform: scale()로 부드럽게 확대/축소한다.
-    // 손을 떼는 순간 scale을 기반으로 가장 가까운 정수 레벨로 setLevel.
-    let pinchActive = false;
-    let pinchStartDistance = 0;
-    let pinchStartLevel = 6;
-    let pinchCurrentScale = 1;
-    // 핀치 시작 시점의 두 손가락 중점(컨테이너 기준 픽셀 좌표).
-    // transform-origin을 이 지점으로 잡아 자연스러운 확대 중심을 만든다.
-    let pinchOriginX = 0;
-    let pinchOriginY = 0;
-
-    const getDistance = (t1: Touch, t2: Touch) => {
-      const dx = t1.clientX - t2.clientX;
-      const dy = t1.clientY - t2.clientY;
-      return Math.sqrt(dx * dx + dy * dy);
-    };
-
-    const beginPinch = (t1: Touch, t2: Touch) => {
-      const kakao = (window as any).kakao;
-      const map = mapInstance.current;
-      if (!map) return;
-
-      pinchActive = true;
-      pinchStartDistance = getDistance(t1, t2);
-      pinchStartLevel = map.getLevel();
-      pinchCurrentScale = 1;
-
-      // 컨테이너 기준 중점 계산
-      const rect = container.getBoundingClientRect();
-      pinchOriginX = ((t1.clientX + t2.clientX) / 2) - rect.left;
-      pinchOriginY = ((t1.clientY + t2.clientY) / 2) - rect.top;
-
-      // 카카오맵 자체 줌 비활성화 (드래그도 막아 의도치 않은 panBy 방지)
-      try {
-        map.setZoomable(false);
-        map.setDraggable(false);
-      } catch (e) {}
-
-      // 카카오맵 div 자식(타일 + 오버레이)에 transform 적용 준비
-      // 마커는 컨테이너의 자식 div(.kakao-overlay)로 붙어 있으므로 함께 확대됨
-      container.style.transformOrigin = `${pinchOriginX}px ${pinchOriginY}px`;
-      container.style.willChange = 'transform';
-      // 트랜지션 없이 즉각 반응
-      container.style.transition = 'none';
-
-      // 진행 중인 smoothMoveTo / pending level 정리
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      if (levelTimerRef.current) {
-        clearTimeout(levelTimerRef.current);
-        levelTimerRef.current = null;
-      }
-
-      // 롱프레스/드래그 상태 취소
-      cancelLongPress();
-      revealMarkersOnce();
-    };
-
-    const updatePinch = (t1: Touch, t2: Touch) => {
-      if (!pinchActive) return;
-      const currentDistance = getDistance(t1, t2);
-      if (pinchStartDistance <= 0) return;
-      let scale = currentDistance / pinchStartDistance;
-
-      // 카카오맵 레벨은 한 단계당 정확히 2배(축소) / 0.5배(확대) 차이.
-      // 핀치는 2단계 정도까지만 의미있게 변환 → 0.25 ~ 4.0으로 클램프.
-      scale = Math.max(0.25, Math.min(4.0, scale));
-      pinchCurrentScale = scale;
-
-      container.style.transform = `scale(${scale})`;
-    };
-
-    const endPinch = () => {
-      if (!pinchActive) return;
-      pinchActive = false;
-
-      const map = mapInstance.current;
-      const finalScale = pinchCurrentScale;
-
-      // scale → 레벨 변화량 계산
-      // 카카오: 레벨↑ = 축소 = 더 멀리. 즉 scale > 1(확대) → 레벨 ↓.
-      // log2(scale)이 정확한 변환: scale=2 → levelDelta=-1 (1단계 확대)
-      let levelDelta = -Math.round(Math.log2(finalScale));
-      // 너무 작은 변화는 무시 (의도치 않은 떨림 방지)
-      if (Math.abs(Math.log2(finalScale)) < 0.35) {
-        levelDelta = 0;
-      }
-
-      let targetLevel = pinchStartLevel + levelDelta;
-      if (map) {
-        // 카카오맵 minLevel/maxLevel 범위 내로 제한
-        targetLevel = Math.max(3, Math.min(11, targetLevel));
-      }
-
-      // transform을 부드럽게 리셋하면서 동시에 setLevel 호출.
-      // 두 단계로 처리:
-      //  1) 짧은 ease 트랜지션으로 scale을 1.0으로 복귀 (~140ms)
-      //  2) 트랜지션 종료 후 transform 제거 + setLevel로 실제 타일 갱신
-      //
-      // 이렇게 하면 핀치 중의 흐릿한 비트맵에서 → 정확한 타일로 자연스럽게 전환.
-      const needLevelChange = !!map && targetLevel !== pinchStartLevel;
-
-      container.style.transition = 'transform 140ms ease-out';
-      container.style.transform = 'scale(1)';
-
-      const finalize = () => {
-        container.style.transition = 'none';
-        container.style.transform = '';
-        container.style.transformOrigin = '';
-        container.style.willChange = '';
-
-        if (map) {
-          try {
-            map.setZoomable(true);
-            map.setDraggable(true);
-          } catch (e) {}
-          if (needLevelChange) {
-            try {
-              // 큰 점프는 즉시, 작은 점프는 카카오 자체 애니메이션 활용
-              const diff = Math.abs(map.getLevel() - targetLevel);
-              map.setLevel(targetLevel, diff <= 2 ? { animate: { duration: 200 } } : { animate: false });
-            } catch (e) {}
-          }
-        }
-      };
-
-      // transitionend는 transform 속성 한정으로 한 번만 받음
-      const onEnd = (e: TransitionEvent) => {
-        if (e.propertyName !== 'transform') return;
-        container.removeEventListener('transitionend', onEnd);
-        finalize();
-      };
-      container.addEventListener('transitionend', onEnd);
-      // 안전망: 200ms 후에도 transitionend가 안 오면 강제 finalize
-      setTimeout(() => {
-        container.removeEventListener('transitionend', onEnd);
-        finalize();
-      }, 200);
-    };
-
     const onTouchStart = (e: TouchEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.marker-container') || target.closest('.search-result-marker-container')) return;
-
-      // 2손가락 → 핀치 모드 진입
-      if (e.touches.length === 2) {
-        beginPinch(e.touches[0], e.touches[1]);
-        return;
-      }
-
       if (e.touches.length === 1) {
         startLongPress(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
 
-    const onTouchEnd = (e: TouchEvent) => {
-      // 핀치 중이었고 두 손가락 중 하나가 떨어지면 핀치 종료
-      if (pinchActive && e.touches.length < 2) {
-        endPinch();
-        return;
-      }
+    const onTouchEnd = () => {
       handlePointerUp();
     };
 
     const onTouchMove = (e: TouchEvent) => {
-      // 2손가락 + 핀치 활성 → scale 갱신
-      if (pinchActive && e.touches.length >= 2) {
-        updatePinch(e.touches[0], e.touches[1]);
-        return;
-      }
-      // 1손가락 중 두 번째가 늦게 추가된 경우: 새로 핀치 시작
-      if (!pinchActive && e.touches.length === 2) {
-        beginPinch(e.touches[0], e.touches[1]);
-        return;
-      }
-
       if (!isLongPressingRef.current || !pressStartPosRef.current) return;
       const dx = e.touches[0].clientX - pressStartPosRef.current.x;
       const dy = e.touches[0].clientY - pressStartPosRef.current.y;
       if (Math.sqrt(dx * dx + dy * dy) > LONG_PRESS_MOVE_THRESHOLD) {
         cancelLongPress();
-      }
-    };
-
-    const onTouchCancel = () => {
-      if (pinchActive) {
-        endPinch();
       }
     };
 
@@ -791,7 +618,6 @@ const MapContainer = ({
     container.addEventListener('touchstart', onTouchStart, { passive: true });
     container.addEventListener('touchend', onTouchEnd, { passive: true });
     container.addEventListener('touchmove', onTouchMove, { passive: true });
-    container.addEventListener('touchcancel', onTouchCancel, { passive: true });
     container.addEventListener('mousedown', onMouseDown);
     container.addEventListener('mouseup', onMouseUp);
     container.addEventListener('mousemove', onMouseMove);
@@ -800,12 +626,11 @@ const MapContainer = ({
       container.removeEventListener('touchstart', onTouchStart);
       container.removeEventListener('touchend', onTouchEnd);
       container.removeEventListener('touchmove', onTouchMove);
-      container.removeEventListener('touchcancel', onTouchCancel);
       container.removeEventListener('mousedown', onMouseDown);
       container.removeEventListener('mouseup', onMouseUp);
       container.removeEventListener('mousemove', onMouseMove);
     };
-  }, [startLongPress, handlePointerUp, cancelLongPress, revealMarkersOnce]);
+  }, [startLongPress, handlePointerUp, cancelLongPress]);
 
   // 카카오맵 dragstart/dragend → 롱프레스 취소 및 마커 복원
   useEffect(() => {
