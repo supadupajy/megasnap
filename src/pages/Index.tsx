@@ -1924,7 +1924,7 @@ const Index = () => {
           minHeight: `${stableViewportHeight}px`,
           maxHeight: `${stableViewportHeight}px`,
           paddingTop: isSelectingLocation ? '0px' : 'env(safe-area-inset-top)',
-          paddingBottom: '0px'
+          paddingBottom: isSelectingLocation ? '0px' : 'env(safe-area-inset-bottom)'
         }}
       >
 
