@@ -32,7 +32,16 @@ const NaverTest = () => {
         if (cancelled || !mapEl.current) return;
         const naver = (window as any).naver;
 
-        const map = new naver.maps.Map(mapEl.current, {
+        // 컨테이너 크기가 잡힌 후 생성하도록 한 프레임 지연
+        const container = mapEl.current;
+        console.log('[NaverTest] container size before init:', {
+          width: container.offsetWidth,
+          height: container.offsetHeight,
+          clientWidth: container.clientWidth,
+          clientHeight: container.clientHeight,
+        });
+
+        const map = new naver.maps.Map(container, {
           center: new naver.maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng),
           zoom: 14,
           minZoom: 6,
@@ -47,6 +56,38 @@ const NaverTest = () => {
           disableDoubleClickZoom: false,
         });
         mapRef.current = map;
+
+        // 컨테이너 크기가 늦게 잡히는 경우 대비 — 리사이즈 트리거
+        const triggerResize = () => {
+          if (!mapRef.current) return;
+          naver.maps.Event.trigger(mapRef.current, 'resize');
+          console.log('[NaverTest] resize triggered. container size:', {
+            width: container.offsetWidth,
+            height: container.offsetHeight,
+          });
+        };
+        // 여러 시점에 시도 (마운트 직후, 다음 프레임, 100ms, 500ms)
+        requestAnimationFrame(triggerResize);
+        const t1 = window.setTimeout(triggerResize, 100);
+        const t2 = window.setTimeout(triggerResize, 500);
+
+        // ResizeObserver로 컨테이너 크기 변화 감지
+        let ro: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== 'undefined') {
+          ro = new ResizeObserver(() => {
+            if (mapRef.current) {
+              naver.maps.Event.trigger(mapRef.current, 'resize');
+            }
+          });
+          ro.observe(container);
+        }
+
+        // cleanup 등록
+        (mapRef.current as any).__cleanupExtras = () => {
+          window.clearTimeout(t1);
+          window.clearTimeout(t2);
+          ro?.disconnect();
+        };
 
         // 줌 변경 감지
         naver.maps.Event.addListener(map, 'zoom_changed', (z: number) => {
@@ -119,6 +160,9 @@ const NaverTest = () => {
       cancelled = true;
       markersRef.current.forEach((m) => m.setMap(null));
       markersRef.current = [];
+      if (mapRef.current?.__cleanupExtras) {
+        mapRef.current.__cleanupExtras();
+      }
       mapRef.current = null;
     };
   }, []);
@@ -147,9 +191,16 @@ const NaverTest = () => {
   const selectedMarker = SAMPLE_MARKERS.find((m) => m.id === selected);
 
   return (
-    <div className="fixed inset-0 bg-gray-100">
-      {/* 지도 컨테이너 */}
-      <div ref={mapEl} className="absolute inset-0" />
+    <div
+      className="fixed inset-0 bg-gray-100"
+      style={{ width: '100vw', height: '100vh' }}
+    >
+      {/* 지도 컨테이너 — 명시적 크기 필수 (네이버 SDK가 0x0이면 타일 안 그림) */}
+      <div
+        ref={mapEl}
+        className="absolute inset-0"
+        style={{ width: '100%', height: '100%', minHeight: '100vh' }}
+      />
 
       {/* 상단 헤더 */}
       <div className="absolute top-0 left-0 right-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200">
