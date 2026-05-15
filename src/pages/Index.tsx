@@ -545,7 +545,7 @@ const Index = () => {
       trending_score: trendingScore,
       like_score: likeScore,
       view_score: viewScore,
-      commentsCount: prev?.commentsCount ?? 0,
+      commentsCount: p.comments_count ?? prev?.commentsCount ?? 0,
       comments: prev?.comments ?? [],
       image: img,
       image_url: img,

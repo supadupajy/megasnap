@@ -54,13 +54,20 @@ export const fetchPostsInBounds = async (
     const postIds = posts.map((post: any) => post.id).filter(Boolean);
     const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-    const { data: recentLikes, error: likesError } = await supabase
-      .from('likes')
-      .select('post_id')
-      .in('post_id', postIds)
-      .gte('created_at', oneHourAgoIso);
+    const [{ data: recentLikes, error: likesError }, { data: allComments, error: commentsError }] = await Promise.all([
+      supabase
+        .from('likes')
+        .select('post_id')
+        .in('post_id', postIds)
+        .gte('created_at', oneHourAgoIso),
+      supabase
+        .from('comments')
+        .select('post_id')
+        .in('post_id', postIds),
+    ]);
 
     if (likesError) throw likesError;
+    if (commentsError) throw commentsError;
 
     const likesPerHourMap = new Map<string, number>();
     (recentLikes || []).forEach((like: any) => {
@@ -68,9 +75,16 @@ export const fetchPostsInBounds = async (
       likesPerHourMap.set(postId, (likesPerHourMap.get(postId) ?? 0) + 1);
     });
 
+    const commentsCountMap = new Map<string, number>();
+    (allComments || []).forEach((c: any) => {
+      const postId = String(c.post_id);
+      commentsCountMap.set(postId, (commentsCountMap.get(postId) ?? 0) + 1);
+    });
+
     return posts.map((post: any) => ({
       ...post,
       likes_per_hour: likesPerHourMap.get(String(post.id)) ?? 0,
+      comments_count: commentsCountMap.get(String(post.id)) ?? 0,
     }));
   } catch (err) {
     console.error('[SupabasePosts] Fetch error:', err);
