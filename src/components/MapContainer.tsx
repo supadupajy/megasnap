@@ -1343,7 +1343,11 @@ const MapContainer = ({
       return;
     }
 
-    map.setLevel(targetLevel, { animate: false });
+    // 카카오 공식 옵션: 레벨 차이가 2 이하일 때만 animate 효과가 적용됨.
+    // 큰 점프(예: 14→3)는 자동으로 즉시 변경되므로 항상 켜둬도 안전.
+    const levelDiff = Math.abs(currentMapLevel - targetLevel);
+    const shouldAnimate = levelDiff <= 2;
+    map.setLevel(targetLevel, shouldAnimate ? { animate: { duration: 280 } } : { animate: false });
     const newLevel = map.getLevel();
     setCurrentLevel(newLevel);
     currentLevelRef.current = newLevel;
