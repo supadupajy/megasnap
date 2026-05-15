@@ -17,26 +17,6 @@ const getTierFromFollowers = (followers: number) => {
   return 'none';
 };
 
-// ReelsViewer 내부와 동일한 영상 URL 판별
-const isVideoUrl = (url: string | undefined | null): boolean => {
-  if (!url) return false;
-  const lower = url.toLowerCase().split('?')[0];
-  return (
-    lower.endsWith('.mp4') ||
-    lower.endsWith('.mov') ||
-    lower.endsWith('.webm') ||
-    lower.endsWith('.avi') ||
-    lower.endsWith('.m4v')
-  );
-};
-
-const hasVideo = (p: Post): boolean => {
-  if (p.videoUrl) return true;
-  if (isVideoUrl(p.image_url) || isVideoUrl(p.image)) return true;
-  if (Array.isArray(p.images) && p.images.some((u) => isVideoUrl(u))) return true;
-  return false;
-};
-
 // Fisher-Yates 셔플
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr];
@@ -47,10 +27,6 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// 화면 viewport 중 Flicks 콘텐츠가 차지할 영역
-// Header (fixed top, safe-top + 64px) 와 BottomNav (fixed bottom, safe-bottom + 64px) 사이를 정확히 채움.
-// position: fixed 로 viewport 좌표 기준 배치하여, 본문 흐름에 영향 받지 않고
-// 위/아래에서 잘리거나 빈 공간이 생기지 않도록 함.
 const CONTENT_FIXED_STYLE: React.CSSProperties = {
   position: 'fixed',
   left: 0,
@@ -59,8 +35,6 @@ const CONTENT_FIXED_STYLE: React.CSSProperties = {
   bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
 
-// Floating BottomNav 뒤로 비치는 흰색 배경을 가리기 위한 풀스크린 검은 레이어.
-// Flicks 페이지의 분위기와 자연스럽게 이어지도록 헤더 아래부터 화면 끝까지 검정으로 채운다.
 const BACKDROP_STYLE: React.CSSProperties = {
   position: 'fixed',
   left: 0,
@@ -83,12 +57,13 @@ const Flicks = () => {
   const fetchVideoPool = useCallback(async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 200 });
+
+      // 전체 영상 포스트 중 좋아요 50점 + 조회수 50점 합산 상위 200개 조회
+      const { data, error } = await supabase.rpc('get_flicks_pool', { limit_count: 200 });
       if (error) throw error;
 
       const mapped: Post[] = (data || []).map((p: any) => {
-        const followers = Number(p.profiles?.followers ?? 0);
-        const borderType = p.hot_since ? 'popular' : getTierFromFollowers(followers);
+        const borderType = p.hot_since ? 'popular' : 'none';
         const isAd = p.content?.trim().startsWith('[AD]');
         const finalImage = p.image_url || getFallbackImage(String(p.id));
         const finalImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
@@ -96,7 +71,7 @@ const Flicks = () => {
           id: p.id,
           isAd,
           isGif: false,
-          isInfluencer: ['silver', 'gold', 'diamond'].includes(borderType),
+          isInfluencer: false,
           user: { id: p.user_id, name: p.user_name, avatar: p.user_avatar },
           content: p.content?.replace(/^\[AD\]\s*/, '') || '',
           location: p.location_name,
@@ -119,11 +94,12 @@ const Flicks = () => {
         };
       });
 
-      const videosOnly = mapped.filter(
-        (p) => !p.isAd && hasVideo(p) && p.user && !blockedIds.has(p.user.id)
+      // 광고 제외 + 차단 유저 제외 후 랜덤 셔플
+      const filtered = mapped.filter(
+        (p) => !p.isAd && p.user && !blockedIds.has(p.user.id)
       );
 
-      setVideoPool(shuffle(videosOnly));
+      setVideoPool(shuffle(filtered));
     } catch (err) {
       console.error('[Flicks] failed to load video pool', err);
       setVideoPool([]);
@@ -143,15 +119,14 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
-  // 사용되지 않는 닫기 콜백(embedded에서는 호출되지 않지만 prop 시그니처 충족용)
   const handleClose = useCallback(() => {
     navigate(-1);
   }, [navigate]);
 
-  // ReelsViewer 내부에서 내 포스팅 삭제/수정이 일어났을 때 풀 갱신
   const handlePostDeleted = useCallback((postId: string) => {
     setVideoPool((prev) => prev.filter((p) => p.id !== postId));
   }, []);
+
   const handlePostUpdated = useCallback((postId: string, content: string) => {
     setVideoPool((prev) => prev.map((p) => (p.id === postId ? { ...p, content } : p)));
   }, []);
@@ -180,7 +155,7 @@ const Flicks = () => {
             <Clapperboard className="w-12 h-12 text-white/70" />
             <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
             <p className="text-xs font-bold text-white/60 leading-relaxed">
-              인기 포스팅에 영상이 등록되면<br />여기서 풀스크린으로 즐길 수 있어요.
+              영상이 등록된 포스팅이 없습니다.<br />영상을 업로드하면 여기서 즐길 수 있어요.
             </p>
           </div>
         </div>
