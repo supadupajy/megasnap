@@ -1,7 +1,9 @@
 // 네이버 지도 SDK 로더 (테스트 페이지 전용)
 // 본 서비스의 카카오맵 로직과는 완전히 분리되어 있음.
 const NAVER_CLIENT_ID = 'ipu2vry3sw';
-const NAVER_MAPS_SDK_URL = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_CLIENT_ID}`;
+// ⚠️ 네이버가 2024년 SDK 인증 파라미터를 ncpClientId → ncpKeyId로 변경함.
+// 옛 파라미터를 쓰면 "Authentication Failed (Error 200)"이 발생.
+const NAVER_MAPS_SDK_URL = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_CLIENT_ID}`;
 const NAVER_MAPS_SCRIPT_ID = 'naver-maps-sdk';
 
 let naverMapsSdkPromise: Promise<void> | null = null;
