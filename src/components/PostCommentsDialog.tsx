@@ -36,7 +36,6 @@ const fetchAdComments = async (adId: string): Promise<Comment[]> => {
     .eq('ad_id', adId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  console.log('[fetchAdComments] raw data:', JSON.stringify(data));
   return (data || []).map(row => ({
     id: row.id,
     userId: row.user_id,
@@ -427,7 +426,6 @@ const PostCommentsDialog = ({
 
   const renderCommentRow = (comment: Comment, index: number) => {
     const isOwnComment = !!authUser?.id && comment.userId === authUser.id;
-    console.log('[renderCommentRow]', { commentUserId: comment.userId, authUserId: authUser?.id, isOwnComment });
     const isEditing = !!comment.id && editingCommentId === comment.id;
     const isDeleting = !!comment.id && deletingCommentId === comment.id;
     const commentKey = comment.id || `${index}-${comment.user}-${comment.text}`;
@@ -455,7 +453,7 @@ const PostCommentsDialog = ({
     const showLikeOnly = !isEditing && !isOwnComment && !!likeButton;
 
     return (
-      <div key={commentKey} className={`rounded-3xl px-4 py-3.5 ${isOwnComment ? 'bg-indigo-50' : 'bg-slate-50'}`}>
+      <div key={commentKey} className="rounded-3xl px-4 py-3.5" style={{ backgroundColor: isOwnComment ? '#eef2ff' : '#f8fafc' }}>
         <div className={`flex justify-between gap-3 ${showLikeOnly ? 'items-center' : 'items-start'}`}>
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
