@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, Flame, Search } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Post } from '@/types';
@@ -143,6 +143,7 @@ const shuffle = <T,>(arr: T[]): T[] => {
 
 const Popular = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { blockedIds } = useBlockedUsers();
   const { user: authUser, loading: authLoading } = useAuth();
   const { markAsViewed } = useViewedPosts();
@@ -183,6 +184,7 @@ const Popular = () => {
         .eq('user_id', authUser.id);
 
       const currentViewedIds = new Set<string>((viewedData || []).map((v: any) => v.post_id));
+      console.log('[Popular] buildAndLoad 실행 - viewed_posts 수:', currentViewedIds.size, '샘플:', [...currentViewedIds].slice(0, 3));
 
       // 2) 인기 포스팅 200개 (랜덤 셔플)
       const { data: popularData, error: popularError } = await supabase.rpc('get_popular_posts', { limit_count: 200 });
@@ -229,6 +231,9 @@ const Popular = () => {
         .filter(p => !currentViewedIds.has(p.id))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
+      console.log('[Popular] 친구 포스팅 전체:', allFriendPosts.length, '/ 미열람(NEW):', newFriendPosts.length, '/ 열람됨:', allFriendPosts.length - newFriendPosts.length);
+      console.log('[Popular] 미열람 포스팅 IDs:', newFriendPosts.map(p => p.id).slice(0, 5));
+
       // 7) 열람된 친구 포스팅 + 인기 포스팅 → created_at 혼합 정렬
       const viewedFriendPosts = allFriendPosts.filter(p => currentViewedIds.has(p.id));
 
@@ -265,15 +270,18 @@ const Popular = () => {
     }
   }, [authUser?.id]);
 
-  // 탭에 진입할 때마다 항상 재빌드 (열람 기록 반영)
+  // 탭에 진입할 때마다 항상 재빌드 — location.key가 바뀔 때마다 재실행
   useEffect(() => {
     if (authLoading) return;
     if (authUser) {
+      console.log('[Popular] useEffect 트리거 → buildAndLoad 호출, location.key:', location.key);
+      isLoadingRef.current = false; // 이전 로딩 락 해제
       buildAndLoad();
     } else {
       navigate('/login', { replace: true });
     }
-  }, [authLoading, authUser, buildAndLoad, navigate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, authUser?.id, location.key]);
 
   const loadMore = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
@@ -362,9 +370,11 @@ const Popular = () => {
                   <ViewedAwarePostItem
                     key={post.id}
                     post={post}
-                    // 이번 세션 진입 시 "새 포스팅"이었던 것만 isViewed=false로 표시
                     isViewed={post.isFriendPost ? !sessionNewFriendIds.has(post.id) : false}
-                    onVisible={markAsViewed}
+                    onVisible={(id) => {
+                      console.log('[Popular] onVisible 호출 - postId:', id);
+                      markAsViewed(id);
+                    }}
                     onLikeToggle={() => handleLikeToggle(post.id)}
                     onLocationClick={handleLocationClick}
                     onDelete={handlePostDelete}
