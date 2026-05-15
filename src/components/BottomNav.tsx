@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback, useLayoutEffect } from 'react';
-import { MapPin, Flame, UsersRound, User } from 'lucide-react';
+import { MapPin, Flame, Search, User } from 'lucide-react';
 
 // 둥근 모서리 플레이 아이콘 (lucide의 기본 Play는 모서리가 각져있어 직접 정의)
 const RoundedPlayIcon = ({ className, strokeWidth = 2 }: { className?: string; strokeWidth?: number | string }) => (
@@ -36,12 +36,12 @@ const navItems: {
   { icon: Flame, label: '인기', path: '/popular' },
   { icon: RoundedPlayIcon, label: 'Flicks', path: '/flicks', iconSizeClass: 'w-6 h-6' },
   { icon: MapPin, label: '지도', path: '/' },
-  { icon: UsersRound, label: '친구', path: '/friends' },
+  { icon: Search, label: '검색', path: '/search' },
   { icon: User, label: '내정보', path: '/profile' },
 ];
 
 const subRouteToTab: { match: (pathname: string) => boolean; tabPath: string }[] = [
-  { match: (p) => p === '/search' || p.startsWith('/friends'), tabPath: '/friends' },
+  { match: (p) => p === '/search' || p.startsWith('/friends'), tabPath: '/search' },
   { match: (p) => p.startsWith('/popular'), tabPath: '/popular' },
   { match: (p) => p.startsWith('/profile') || p.startsWith('/settings'), tabPath: '/profile' },
   { match: (p) => p.startsWith('/flicks'), tabPath: '/flicks' },
@@ -142,7 +142,7 @@ const BottomNav = () => {
     setIsHidden(false);
   }, [location.pathname]);
 
-  const isFriendsPage = location.pathname.startsWith('/friends');
+  const isFriendsPage = location.pathname.startsWith('/friends') || location.pathname === '/search';
 
   const markFriendPostsSeen = useCallback(() => {
     if (!authUser?.id) return;
@@ -404,7 +404,7 @@ const BottomNav = () => {
                     )}
                     strokeWidth={isActive ? 2.4 : 2}
                   />
-                  {item.path === '/friends' && hasNewFriendPost && !isFriendsPage && (
+                  {item.path === '/search' && hasNewFriendPost && !isFriendsPage && (
                     <span
                       aria-label="새 친구 포스팅"
                       className="absolute -right-1 -top-0.5 h-2.5 w-2.5 rounded-full bg-yellow-400 ring-2 ring-white shadow-[0_2px_6px_rgba(234,179,8,0.55)]"

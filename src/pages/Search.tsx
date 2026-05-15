@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Search as SearchIcon, UserPlus, Check, Users, ChevronLeft } from 'lucide-react';
+import { Search as SearchIcon, UserPlus, Check, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -153,25 +153,10 @@ const Search = () => {
 
   return (
     <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
-      {/* 고정 상단 헤더 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
-        <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
-          <button
-            onClick={() => navigate('/friends')}
-            className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <h2 className="text-lg font-black text-gray-900 tracking-tight">친구 검색</h2>
-          </div>
-        </div>
-      </div>
-
-      {/* 검색 입력창 */}
-      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+122px)]">
-        <div className="px-4 pb-0">
-          <div className="relative mb-2">
+      {/* 검색 입력창 - 헤더 바로 아래 */}
+      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+64px)]">
+        <div className="px-4 py-3 border-b border-gray-50">
+          <div className="relative">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
             <input
               placeholder="닉네임으로 친구 찾기"
@@ -191,9 +176,8 @@ const Search = () => {
       {/* 유저 리스트 */}
       <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
         <div className="px-4" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
-          <div className="space-y-1">
+          <div className="space-y-1 pt-2">
             {isLoading ? (
-              // 초기 로딩 스켈레톤
               Array.from({ length: 8 }).map((_, i) => <UserSkeleton key={i} />)
             ) : users.length > 0 ? (
               users.map((user) => {
