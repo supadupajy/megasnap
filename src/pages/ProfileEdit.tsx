@@ -251,25 +251,34 @@ const ProfileEdit = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-gray-100">
-        <div className="flex items-center h-14 px-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center rounded-full active:bg-gray-100 transition-colors"
-            aria-label="뒤로가기"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-900" />
-          </button>
-          <h1 className="flex-1 text-center text-base font-black text-gray-900 -ml-10">
-            프로필 편집
-          </h1>
+    <div
+      className="h-screen min-h-0 w-full max-w-full overflow-hidden bg-white flex flex-col"
+      style={{
+        paddingTop: '4rem',
+        paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
+      {/* Page Header (Messages 스타일) */}
+      <div className="shrink-0 bg-white">
+        <div className="bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
+          <div className="flex justify-start">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
+              style={{ gap: '6px', padding: '8px 16px' }}
+              aria-label="뒤로가기"
+            >
+              <ChevronLeft className="w-4 h-4 text-gray-900 shrink-0" />
+              <span className="text-sm font-normal text-gray-900 whitespace-nowrap">뒤로</span>
+            </button>
+          </div>
+          <h2 className="text-lg font-black text-gray-900 tracking-tight">프로필 편집</h2>
+          <div />
         </div>
       </div>
 
-      {/* Body */}
-      <div className="flex-1 px-6 pt-6 pb-32 space-y-7">
+      {/* Scrollable Body */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar overscroll-contain px-6 pt-6 pb-28 space-y-7">
         {/* Avatar */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative group">
@@ -367,8 +376,8 @@ const ProfileEdit = () => {
         </div>
       </div>
 
-      {/* Fixed Bottom Save Button */}
-      <div className="fixed bottom-0 left-0 right-0 px-6 pt-3 pb-8 bg-white border-t border-gray-50 z-10">
+      {/* Save Button (스크롤 영역 바깥, BottomNav 위쪽에 고정) */}
+      <div className="shrink-0 px-6 pt-3 pb-3 bg-white border-t border-gray-50">
         <Button
           className="w-full h-14 bg-gray-900 hover:bg-gray-800 text-white rounded-[20px] text-base font-black shadow-xl active:scale-95 transition-all disabled:opacity-50 flex items-center justify-between px-5"
           onClick={handleSave}
