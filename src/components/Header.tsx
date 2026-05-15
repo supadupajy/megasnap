@@ -61,25 +61,25 @@ const Header = () => {
 
         <HeaderAdBanner />
 
-        <div className="flex items-center gap-4 shrink-0 ml-auto">
-          <button 
-            className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <button
+            className="relative w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-full transition-all"
             onClick={() => navigateKeepingMapPosition('/notifications')}
           >
-            <Bell className="w-6 h-6 text-gray-600" />
+            <Bell className="w-[18px] h-[18px] text-gray-700" />
             {unreadNotifs > 0 && (
-              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+              <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
                 {unreadNotifs > 99 ? '99+' : unreadNotifs}
               </span>
             )}
           </button>
-          <button 
-            className="relative p-1 hover:bg-gray-50 rounded-full transition-colors"
+          <button
+            className="relative w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-full transition-all"
             onClick={() => navigateKeepingMapPosition('/messages')}
           >
-            <MessageSquare className="w-6 h-6 text-gray-600" />
+            <MessageSquare className="w-[18px] h-[18px] text-gray-700" />
             {unreadMessages > 0 && (
-              <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+              <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
                 {unreadMessages > 99 ? '99+' : unreadMessages}
               </span>
             )}
