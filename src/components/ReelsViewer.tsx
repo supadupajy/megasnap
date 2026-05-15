@@ -1456,10 +1456,35 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     return () => ro.disconnect();
   }, []);
 
+  // ── 편집 진입 시 슬라이드 루트 높이를 px로 박제 ─────────────
+  // 안드로이드 WebView에서 키보드가 올라오면 visualViewport뿐만 아니라 layout viewport
+  // 자체(window.innerHeight)도 줄어서, 부모(Flicks 페이지 컨테이너)와 함께 ReelSlide의
+  // 100%/100dvh 높이가 같이 압축된다 → 영상이 작아짐.
+  // 편집 모드에 들어가는 시점의 높이를 px로 박제하면, 부모가 줄어도 ReelSlide는 원래
+  // 크기를 유지하고(=영상 그대로), 편집 오버레이만 portal로 키보드 위에 따로 그려진다.
+  const slideRootRef = useRef<HTMLDivElement>(null);
+  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isEditingContent) {
+      // 편집 진입 시 1회만 측정 (키보드가 이미 올라오는 중일 수도 있으므로 현재 값을 그대로 사용)
+      const el = slideRootRef.current;
+      if (el && lockedHeight == null) {
+        const h = el.getBoundingClientRect().height;
+        if (h > 0) setLockedHeight(h);
+      }
+    } else {
+      setLockedHeight(null);
+    }
+  }, [isEditingContent, lockedHeight]);
+
   return (
     <div
-      className="relative h-full w-full bg-black overflow-hidden"
-      style={{ height: embedded ? "100%" : "100dvh" }}
+      ref={slideRootRef}
+      className="relative w-full bg-black overflow-hidden"
+      style={{
+        height: lockedHeight != null ? `${lockedHeight}px` : embedded ? "100%" : "100dvh",
+      }}
     >
       {/* 배경 블러 — 3:4 메인 영상의 좌우 여백을 자연스럽게 채워주는 레이어 */}
       {fallbackImage && (
@@ -1757,62 +1782,144 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         </div>
       </div>
 
-      {/* 인라인 본문 편집 오버레이 — 정보 영역 위에 떠 있으며 infoRef 높이 측정에는 포함되지 않음.
-          → 영상 미디어 컨테이너 크기는 그대로 유지된다.
-          위치: 미디어 영역 바로 아래(=infoRef 위쪽)부터 화면 하단까지를 덮어 가독성 확보. */}
-      {isEditingContent && (
-        <div
-          className="absolute left-0 right-0 bottom-0 z-30 pointer-events-auto"
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          style={{
-            // 정보 영역 위로 살짝 더 올라오게 띄워 본문/액션 위에 자연스럽게 겹치도록 함
-            // (실제 콘텐츠는 패딩으로 가독 영역 확보)
-            paddingBottom: embedded ? 8 : "calc(env(safe-area-inset-bottom, 0px) + 8px)",
-          }}
-        >
-          {/* 어두운 디밍 그라데이션 — 영상은 그대로 보이되 편집창 가독성 향상 */}
-          <div
-            className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/70 to-black/30 pointer-events-none"
-            aria-hidden
+      {/* 인라인 본문 편집 오버레이 — body에 portal로 띄워 키보드 바로 위에 고정.
+          이렇게 하면:
+            1) ReelsViewer/Flicks 페이지 컨테이너가 visualViewport 축소로 줄어도
+               편집창은 영향을 받지 않고 항상 키보드 바로 위에 위치한다.
+            2) 영상 컨테이너 크기는 ReelSlide 내부에서 그대로 유지된다(편집 진입 시 박제).
+          위치 계산: visualViewport.height + offsetTop 으로 키보드 상단을 정확히 추적. */}
+      <ReelContentEditOverlay
+        open={isEditingContent}
+        value={editContent}
+        onChange={setEditContent}
+        onSave={saveContentEdit}
+        onCancel={cancelContentEdit}
+        saving={isSavingContent}
+      />
+    </div>
+  );
+};
+
+// ─── 본문 편집 오버레이 (body portal, 키보드 위 고정) ────────────
+// 안드로이드 WebView에서 키보드가 올라오면 layout viewport(window.innerHeight)가
+// 줄어 ReelsViewer 페이지 컨테이너도 같이 줄어든다(=영상이 작아짐). 편집창을 페이지
+// 내부 absolute로 두면 영상 크기에 종속되어 같이 밀리는 문제가 있다.
+// → 편집창만 body에 portal로 띄우고 position: fixed로 키보드 바로 위에 박제한다.
+//   visualViewport API로 키보드 상단의 정확한 y좌표를 추적해 따라간다.
+interface ReelContentEditOverlayProps {
+  open: boolean;
+  value: string;
+  onChange: (next: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}
+
+const ReelContentEditOverlay: React.FC<ReelContentEditOverlayProps> = ({
+  open,
+  value,
+  onChange,
+  onSave,
+  onCancel,
+  saving,
+}) => {
+  // 키보드 상단(=visualViewport 하단)의 viewport 기준 y좌표.
+  // 키보드가 내려간 상태에서는 layout viewport 하단(window.innerHeight)과 같다.
+  const [keyboardTop, setKeyboardTop] = useState<number>(() =>
+    typeof window === "undefined" ? 0 : window.innerHeight
+  );
+
+  useEffect(() => {
+    if (!open) return;
+
+    const computeKeyboardTop = () => {
+      const vv = window.visualViewport;
+      if (vv) {
+        // visualViewport 하단의 layout viewport 기준 y좌표
+        return vv.offsetTop + vv.height;
+      }
+      return window.innerHeight;
+    };
+
+    const update = () => setKeyboardTop(computeKeyboardTop());
+
+    update();
+    // 키보드가 올라오는 동안 visualViewport는 여러 번 갱신되므로 모든 이벤트에 반응
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", update);
+    vv?.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+
+    // 키보드 애니메이션 중 누락 방지용 추가 체크
+    const t1 = window.setTimeout(update, 100);
+    const t2 = window.setTimeout(update, 250);
+    const t3 = window.setTimeout(update, 450);
+
+    return () => {
+      vv?.removeEventListener("resize", update);
+      vv?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+  }, [open]);
+
+  if (!open) return null;
+  if (typeof document === "undefined") return null;
+
+  // bottom 위치: layout viewport 하단으로부터 키보드 높이만큼 위로
+  // (= window.innerHeight - keyboardTop)
+  // 키보드와 완전히 밀착되도록 추가 패딩 없음.
+  const bottomPx = Math.max(0, window.innerHeight - keyboardTop);
+
+  return createPortal(
+    <div
+      className="fixed left-0 right-0 z-[40000] pointer-events-auto"
+      style={{ bottom: `${bottomPx}px` }}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div className="relative px-4 pb-2 pt-3 bg-gradient-to-t from-black/90 via-black/75 to-black/40 backdrop-blur-sm">
+        <div className="space-y-2">
+          <Textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            disabled={saving}
+            autoFocus
+            placeholder="이 영상에 대한 이야기를 들려주세요..."
+            className="min-h-[88px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/95 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
           />
-          <div className="relative px-4 pt-3 space-y-2">
-            <Textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              disabled={isSavingContent}
-              autoFocus
-              placeholder="이 영상에 대한 이야기를 들려주세요..."
-              className="min-h-[88px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/95 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
-            />
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={saveContentEdit}
-                disabled={isSavingContent || !editContent.trim()}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
-                aria-label="수정 저장"
-              >
-                {isSavingContent ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Check className="h-5 w-5" />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={cancelContentEdit}
-                disabled={isSavingContent}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
-                aria-label="수정 취소"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={saving || !value.trim()}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition active:scale-95 disabled:bg-gray-300"
+              aria-label="수정 저장"
+            >
+              {saving ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Check className="h-5 w-5" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={saving}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition active:scale-95 disabled:opacity-60"
+              aria-label="수정 취소"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 
