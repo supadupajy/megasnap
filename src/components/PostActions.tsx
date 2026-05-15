@@ -94,7 +94,7 @@ const PostActions = ({
   ) : null;
 
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
+    <div className={cn('flex flex-col gap-3', className)} onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <button

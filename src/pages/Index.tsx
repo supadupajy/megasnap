@@ -1602,6 +1602,8 @@ const Index = () => {
   // ── 좋아요 토글 ──────────────────────────────────────────────
   const handleLikeToggle = useCallback((postId: string) => {
     if (!authUser?.id) return;
+    // 광고 마커는 DB에 저장하지 않음 (UI만 반영)
+    const isAdPost = postId.startsWith('ad-map-marker-');
     // Optimistic UI: 즉시 상태 반영
     let currentlyLiked = false;
     const updater = (p: Post) => {
@@ -1611,6 +1613,7 @@ const Index = () => {
     };
     setAllPosts(prev => prev.map(updater));
     setGlobalTrendingPosts(prev => prev.map(updater));
+    if (isAdPost) return;
     // DB 쓰기 (트리거가 posts.likes 자동 동기화)
     toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
       if (!ok) {

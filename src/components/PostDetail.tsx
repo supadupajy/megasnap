@@ -727,7 +727,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     // 형태로 정렬한다. 그러면 본문이 BottomNav 알약 뒤로 숨지 않고
     // "보러가기" 버튼 왼쪽에 자연스럽게 배치된다.
     const adFooterContent = isAd ? (
-      <div className="cursor-pointer" onClick={onClose}>
+      <div className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-2 items-start">
           <span
             className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors"
