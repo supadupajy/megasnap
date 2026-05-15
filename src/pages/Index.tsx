@@ -1980,7 +1980,7 @@ const Index = () => {
 
           <AnimatePresence>
             {isSelectingLocation && (
-              <div className="fixed inset-0 z-[3000] pointer-events-none">
+              <div className="absolute inset-0 z-[3000] pointer-events-none">
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                   <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative" style={{ marginBottom: '58px' }}>
                     <div className="relative w-12 h-12">
@@ -2018,7 +2018,7 @@ const Index = () => {
           {/* 광고 마커 위치 선택 모드 */}
           <AnimatePresence>
             {isSelectingAdLocation && (
-              <div className="fixed inset-0 z-[3000] pointer-events-none">
+              <div className="absolute inset-0 z-[3000] pointer-events-none">
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                   <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative" style={{ marginBottom: '58px' }}>
                     <div className="relative w-12 h-12">
