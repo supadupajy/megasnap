@@ -1006,6 +1006,7 @@ const MapContainer = ({
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = (!post.isAd && post.videoUrl) ? (videoThumbCacheRef.current.has(post.id) ? '1' : '0') : '';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
+      const positionStateKey = `${post.lat},${post.lng}`;
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -1031,6 +1032,7 @@ const MapContainer = ({
         if (!isInsideViewport) content.classList.add('marker-viewport-hidden');
         viewportVisibilityRef.current.set(String(post.id), isInsideViewport);
         content.setAttribute('data-content-state', contentStateKey);
+        content.setAttribute('data-position-state', positionStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
         content.onclick = (e) => {
           e.stopPropagation();
@@ -1068,6 +1070,11 @@ const MapContainer = ({
         const content = existingOverlay.getContent() as HTMLElement;
         if (existingOverlay.getMap() === null) {
           existingOverlay.setMap(mapInstance.current);
+        }
+
+        if (content.getAttribute('data-position-state') !== positionStateKey) {
+          existingOverlay.setPosition(position);
+          content.setAttribute('data-position-state', positionStateKey);
         }
         
         if (content.getAttribute('data-content-state') !== contentStateKey) {

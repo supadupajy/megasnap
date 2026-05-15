@@ -1770,7 +1770,14 @@ const Index = () => {
     }
     if (routeState.startAdLocationSelection) {
       setIsPostListOpen(false);
-      setTempAdLocation(mapCache.lastCenter || null);
+      const initialAdLocation = routeState.initialCenter || mapCache.lastCenter || null;
+      if (initialAdLocation) {
+        locationLockedRef.current = true;
+        setMapCenter(initialAdLocation);
+        mapCache.lastCenter = initialAdLocation;
+      }
+      tempAdLocationRef.current = initialAdLocation;
+      setTempAdLocation(initialAdLocation);
       setTimeout(() => {
         setIsSelectingAdLocation(true);
       }, 300);
@@ -1779,7 +1786,7 @@ const Index = () => {
       setMapCenter(routeState.center);
       setCurrentZoom(4);
       setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: 'ad-map-marker', duration: 3000 } }));
+        window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: routeState.adMarkerId || 'ad-map-marker', duration: 3000 } }));
       }, 1000);
     }
     navigate(location.pathname, { replace: true, state: null });

@@ -917,7 +917,13 @@ const AdminAds = () => {
 
     if (savedAd.lat != null && savedAd.lng != null) {
       setTimeout(() => {
-        navigate('/', { state: { center: { lat: savedAd.lat, lng: savedAd.lng }, adMarkerSaved: true } });
+        navigate('/', {
+          state: {
+            center: { lat: savedAd.lat, lng: savedAd.lng },
+            adMarkerSaved: true,
+            adMarkerId: `ad-map-marker-${savedAd.id}`,
+          },
+        });
       }, 800);
     }
   };
@@ -973,7 +979,19 @@ const AdminAds = () => {
   const handleSelectLocation = (adId: string) => {
     // adId를 sessionStorage에 함께 저장해서 돌아왔을 때 어떤 마커인지 알 수 있게
     sessionStorage.setItem('adLocationTargetId', adId);
-    navigate('/', { state: { startAdLocationSelection: true, targetAdId: adId } });
+
+    const currentMarker = mapMarkerAds.find(ad => ad.id === adId);
+    const initialCenter = currentMarker?.lat != null && currentMarker?.lng != null
+      ? { lat: currentMarker.lat, lng: currentMarker.lng }
+      : undefined;
+
+    navigate('/', {
+      state: {
+        startAdLocationSelection: true,
+        targetAdId: adId,
+        initialCenter,
+      },
+    });
   };
 
   const totalAds = regularAds.length + mapMarkerAds.length;
