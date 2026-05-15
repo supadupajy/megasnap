@@ -180,14 +180,14 @@ const Chat = () => {
           inputRef.current.style.paddingBottom = '8px';
         } else {
           inputRef.current.style.top = 'auto';
-          inputRef.current.style.bottom = '112px';
+          inputRef.current.style.bottom = '80px';
           inputRef.current.style.transform = 'translateY(0px)';
           inputRef.current.style.paddingBottom = '12px';
         }
       }
 
       if (scrollRef.current) {
-        scrollRef.current.style.paddingBottom = isKeyboardOpen ? '80px' : '220px';
+        scrollRef.current.style.paddingBottom = isKeyboardOpen ? '80px' : '160px';
       }
 
       setTimeout(scrollToBottom, 50);
@@ -354,14 +354,14 @@ const Chat = () => {
       {/* 글로벌 헤더 */}
       <div className="fixed top-0 left-0 right-0 z-[110] bg-white border-b border-gray-100 pt-[env(safe-area-inset-top,0px)]">
         <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
-          <div className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform" onClick={() => navigate('/')}>
+          <div className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform" onClick={() => navigate('/')} >
             <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
               <span className="text-gray-900">Toca</span><span className="text-yellow-500">Toca</span>
             </h1>
           </div>
           <HeaderAdBanner />
           <div className="flex items-center gap-4 shrink-0">
-            <button className="relative p-1 hover:bg-gray-50 rounded-full" onClick={() => navigate('/notifications')}>
+            <button className="relative p-1 hover:bg-gray-50 rounded-full" onClick={() => navigate('/notifications')} >
               <Bell className="w-6 h-6 text-gray-600" />
               {unreadNotifs > 0 && (
                 <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
@@ -369,7 +369,7 @@ const Chat = () => {
                 </span>
               )}
             </button>
-            <button className="relative p-1 hover:bg-gray-50 rounded-full" onClick={() => navigate('/messages')}>
+            <button className="relative p-1 hover:bg-gray-50 rounded-full" onClick={() => navigate('/messages')} >
               <MessageSquare className="w-6 h-6 text-gray-600" />
               {unreadMessages > 0 && (
                 <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
@@ -415,7 +415,7 @@ const Chat = () => {
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto px-4 space-y-4 no-scrollbar"
-        style={{ paddingTop: 'calc(128px + env(safe-area-inset-top, 0px))', paddingBottom: '220px' }}
+        style={{ paddingTop: 'calc(128px + env(safe-area-inset-top, 0px))', paddingBottom: '160px' }}
       >
         <div className="flex flex-col gap-4 py-4">
           {messages.map((msg) => {
@@ -439,7 +439,7 @@ const Chat = () => {
       <div
         ref={inputRef}
         className="fixed left-0 right-0 z-[120] px-4 pt-2 bg-white/95 backdrop-blur-md border-t border-gray-100"
-        style={{ bottom: '112px', paddingBottom: '12px' }}
+        style={{ bottom: '80px', paddingBottom: '12px' }}
       >
         <div className="flex items-center gap-2 bg-gray-50 rounded-[24px] px-4 py-1.5 border border-gray-100 shadow-inner">
           <Input
