@@ -769,7 +769,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   );
 
   const renderActionButtons = () => {
-    const commentsDisplayCount = Math.max(localComments.length, currentPost.commentsCount || 0);
+    // 댓글이 아직 로드되지 않았다면 currentPost.commentsCount를 그대로 사용 (깜빡임 방지).
+    // 로드 완료 후엔 실제 localComments.length를 신뢰.
+    const commentsLoaded = loadedCommentsPostIdRef.current === currentPost.id;
+    const commentsDisplayCount = commentsLoaded
+      ? Math.max(localComments.length, currentPost.commentsCount || 0)
+      : (currentPost.commentsCount || 0);
     const hasUserCommented = !!authUser?.id && (
       commentedPostIds.has(currentPost.id) ||
       localComments.some(comment => comment.userId === authUser.id)

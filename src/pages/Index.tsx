@@ -1419,17 +1419,24 @@ const Index = () => {
     // 광고 마커는 posts 테이블에 없으므로 DB fetch 스킵
     if (lightPost.isAd) return;
     try {
-      // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지
-      const { data, error } = await supabase
-        .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
-        .eq('id', lightPost.id)
-        .single();
+      // [Optimized] select('*') → 필요한 컬럼만. profiles JOIN은 상세 진입 시점이므로 유지.
+      // 댓글 수도 함께 가져와 PostDetail의 댓글 카운트가 0→N으로 깜빡이지 않게 한다.
+      const [{ data, error }, { count: commentsCount }] = await Promise.all([
+        supabase
+          .from('posts')
+          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
+          .eq('id', lightPost.id)
+          .single(),
+        supabase
+          .from('comments')
+          .select('id', { count: 'exact', head: true })
+          .eq('post_id', lightPost.id),
+      ]);
       if (!error && data) {
         setAllPosts(prev => {
           const idx = prev.findIndex(p => p.id === data.id);
           const prevPost = idx === -1 ? null : prev[idx];
-          const full = mapRawToPost(data, prevPost);
+          const full = mapRawToPost({ ...data, comments_count: commentsCount ?? 0 }, prevPost);
           if (idx === -1) return [full, ...prev];
           const next = [...prev];
           next[idx] = full;
