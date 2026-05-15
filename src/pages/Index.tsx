@@ -578,6 +578,21 @@ const Index = () => {
         // 새 트렌딩 fetch 완료 신호 → TrendingPosts가 비교 기준(prevRanks)을 갱신할 수 있게 한다.
         setTrendingRefreshTick((t) => t + 1);
         trendingFetchedAtRef.current = now;
+
+        // 처음 트렌딩에 진입한 포스팅의 first_trended_at을 기록 (콜드 스타트 보호)
+        // first_trended_at이 없는 포스팅만 업데이트 (이미 기록된 포스팅은 스킵)
+        const newlyTrendedIds = (data as any[])
+          .filter((p: any) => !p.first_trended_at)
+          .map((p: any) => p.id);
+        if (newlyTrendedIds.length > 0) {
+          supabase
+            .from('posts')
+            .update({ first_trended_at: new Date().toISOString() })
+            .in('id', newlyTrendedIds)
+            .then(({ error: updateError }) => {
+              if (updateError) console.error('[Trending] first_trended_at update error:', updateError);
+            });
+        }
       }
     } catch (err) {
       console.error('[Trending] fetch error:', err);
