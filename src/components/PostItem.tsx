@@ -349,45 +349,55 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       showError('로그인이 필요합니다.');
       return;
     }
-    if (!isPersistedPostId(post.id)) {
-      showError('이 컨텐츠는 저장할 수 없습니다.');
-      return;
-    }
 
     const prevSaved = isSaved;
     const nextSaved = !prevSaved;
     setIsSaved(nextSaved);
 
     try {
-      if (nextSaved) {
-        const { data: existingSaved, error: checkError } = await supabase
-          .from('saved_posts')
-          .select('id')
-          .eq('post_id', post.id)
-          .eq('user_id', authUser.id)
-          .maybeSingle();
-
-        if (checkError) throw checkError;
-
-        if (!existingSaved) {
+      if (isPersistedPostId(post.id)) {
+        // 일반 포스트: saved_posts 테이블
+        if (nextSaved) {
+          const { data: existingSaved, error: checkError } = await supabase
+            .from('saved_posts')
+            .select('id')
+            .eq('post_id', post.id)
+            .eq('user_id', authUser.id)
+            .maybeSingle();
+          if (checkError) throw checkError;
+          if (!existingSaved) {
+            const { error } = await supabase
+              .from('saved_posts')
+              .insert({ post_id: post.id, user_id: authUser.id });
+            if (error) throw error;
+          }
+        } else {
           const { error } = await supabase
             .from('saved_posts')
-            .insert({ post_id: post.id, user_id: authUser.id });
+            .delete()
+            .eq('post_id', post.id)
+            .eq('user_id', authUser.id);
           if (error) throw error;
         }
-
-        showSuccess('컨텐츠를 저장했습니다! ✨');
       } else {
-        const { error } = await supabase
-          .from('saved_posts')
-          .delete()
-          .eq('post_id', post.id)
-          .eq('user_id', authUser.id);
-        if (error) throw error;
-
-        showSuccess('컨텐츠가 수정되었습니다.');
+        // 광고 포스트: ad_saved 테이블
+        if (nextSaved) {
+          const { error } = await supabase
+            .from('ad_saved')
+            .insert({ ad_id: post.id, user_id: authUser.id });
+          // 23505 = unique_violation (이미 저장된 경우 무시)
+          if (error && (error as any).code !== '23505') throw error;
+        } else {
+          const { error } = await supabase
+            .from('ad_saved')
+            .delete()
+            .eq('ad_id', post.id)
+            .eq('user_id', authUser.id);
+          if (error) throw error;
+        }
       }
 
+      showSuccess(nextSaved ? '컨텐츠를 저장했습니다! ✨' : '저장이 취소되었습니다.');
       onSaveToggle?.(post.id, nextSaved);
     } catch (err) {
       console.error('[PostItem] Save toggle error:', err);

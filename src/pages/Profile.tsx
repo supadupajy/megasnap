@@ -146,7 +146,7 @@ const Profile = () => {
   const loadProfileData = useCallback(async (uid: string) => {
     setIsDataLoading(true);
     try {
-      const [myPostsRes, savedPostsRes, followersRes, followingRes, profileRes] = await Promise.all([
+      const [myPostsRes, savedPostsRes, adSavedRes, followersRes, followingRes, profileRes] = await Promise.all([
         supabase
           .from('posts')
           .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id')
@@ -156,6 +156,11 @@ const Profile = () => {
         supabase
           .from('saved_posts')
           .select('post_id, posts(id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, profiles(nickname, avatar_url))')
+          .eq('user_id', uid)
+          .limit(20),
+        supabase
+          .from('ad_saved')
+          .select('ad_id, created_at')
           .eq('user_id', uid)
           .limit(20),
         supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', uid),
@@ -192,8 +197,56 @@ const Profile = () => {
 
       const initialMyPosts = myData.map(p => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
       const initialSavedPosts = savedPostObjects.map((p: any) => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
+
+      // 광고 저장 항목 처리: ad_saved에서 ad_id 목록을 가져와 ads 테이블에서 데이터 조회
+      const adSavedItems = adSavedRes.data || [];
+      let adSavedPosts: Post[] = [];
+      if (adSavedItems.length > 0) {
+        const adIds = adSavedItems.map((item: any) => item.ad_id.replace('ad-map-marker-', ''));
+        const { data: adsData } = await supabase
+          .from('ads')
+          .select('id, brand_name, brand_logo_url, image_url, title, subtitle, link_url, lat, lng, updated_at')
+          .in('id', adIds);
+
+        adSavedPosts = (adsData || []).map((ad: any): Post => {
+          const adPostId = `ad-map-marker-${ad.id}`;
+          return {
+            id: adPostId,
+            isAd: true,
+            isGif: false,
+            isInfluencer: false,
+            user_id: '',
+            owner_id: '',
+            user: {
+              id: '',
+              name: ad.brand_name || '광고',
+              avatar: ad.brand_logo_url || '/placeholder.svg',
+            },
+            content: ad.subtitle || ad.title || '',
+            location: '',
+            lat: ad.lat,
+            lng: ad.lng,
+            latitude: ad.lat,
+            longitude: ad.lng,
+            likes: 0,
+            commentsCount: 0,
+            comments: [],
+            image: ad.image_url || '/placeholder.svg',
+            image_url: ad.image_url || '/placeholder.svg',
+            images: ad.image_url ? [ad.image_url] : ['/placeholder.svg'],
+            videoUrl: undefined,
+            isLiked: false,
+            isSaved: true,
+            link_url: ad.link_url,
+            createdAt: new Date(ad.updated_at || Date.now()),
+            borderType: 'none',
+            category: 'none',
+          };
+        });
+      }
+
       setMyPosts(initialMyPosts);
-      setSavedPosts(initialSavedPosts);
+      setSavedPosts([...initialSavedPosts, ...adSavedPosts]);
       setIsDataLoading(false);
 
     } catch (err) {
@@ -251,7 +304,6 @@ const Profile = () => {
         if (prev.some(p => p.id === postId)) {
           return prev.map(p => p.id === postId ? { ...p, isSaved: true } : p);
         }
-
         const postToAdd = myPosts.find(p => p.id === postId);
         return postToAdd ? [{ ...postToAdd, isSaved: true }, ...prev] : prev;
       });
