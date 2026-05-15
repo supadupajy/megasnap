@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
 import PostItem from '@/components/PostItem';
-import ProfileEditDrawer from '@/components/ProfileEditDrawer';
 import { Post } from '@/types';
 import { cn, formatCount, getOptimizedMarkerImage } from '@/lib/utils';
 
@@ -69,7 +68,6 @@ const Profile = () => {
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'saved' | 'list'>('grid');
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -464,7 +462,7 @@ const Profile = () => {
               </div>
             </div>
 
-            <Button onClick={() => setIsEditOpen(true)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-0">프로필 편집</Button>
+            <Button onClick={() => navigate('/profile/edit')} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-0">프로필 편집</Button>
 
             {/* 탭 바 */}
             <div ref={postListStartRef} className="bg-white -mx-6 px-6 mb-0">
@@ -573,7 +571,6 @@ const Profile = () => {
           </div>
         )}
       </div>
-      <ProfileEditDrawer isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} onUpdate={refreshProfile} />
     </div>
   );
 };

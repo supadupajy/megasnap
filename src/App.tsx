@@ -26,6 +26,7 @@ import PlaceSearchOverlay from "./components/PlaceSearchOverlay";
 
 // Lazy-loaded routes (초기 로드 후 필요할 때만 fetch)
 const Profile = lazy(() => import("./pages/Profile"));
+const ProfileEdit = lazy(() => import("./pages/ProfileEdit"));
 const PostDetail = lazy(() => import("./pages/PostDetail"));
 const UserProfile = lazy(() => import("./pages/UserProfile"));
 const Follow = lazy(() => import("./pages/Follow"));
@@ -344,6 +345,7 @@ const AnimatedRoutes = () => {
                   <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
                   <Route path="/friends" element={<ProtectedRoute><FriendFeed /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/profile/edit" element={<ProtectedRoute><ProfileEdit /></ProtectedRoute>} />
                   <Route path="/post/:id" element={<PostDetail />} />
                   <Route path="/profile/follow/:userId" element={<Follow />} />
                   <Route path="/profile/friends" element={<FriendList />} />
