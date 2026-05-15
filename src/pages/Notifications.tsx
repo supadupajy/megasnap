@@ -386,6 +386,11 @@ const Notifications = () => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+
+      // 모두 해제되면 선택 모드 자동 종료 (버튼은 닫기로 다시 flip)
+      if (next.size === 0) {
+        setSelectionMode(false);
+      }
       return next;
     });
   };
@@ -394,7 +399,9 @@ const Notifications = () => {
 
   const handleToggleSelectAll = () => {
     if (allSelected) {
+      // 모두 해제 → 선택 모드 자동 종료
       setSelectedIds(new Set());
+      setSelectionMode(false);
     } else {
       setSelectedIds(new Set(notifications.map(n => n.id)));
     }
