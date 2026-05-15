@@ -328,30 +328,30 @@ const BottomNav = () => {
 
   return (
     <>
-      {/* [DEBUG] safe-area-inset-bottom 값 표시 */}
-      {process.env.NODE_ENV !== 'production' && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 80,
-            right: 8,
-            background: 'rgba(0,0,0,0.7)',
-            color: 'white',
-            fontSize: 10,
-            padding: '4px 8px',
-            borderRadius: 8,
-            zIndex: 99999,
-            pointerEvents: 'none',
-            fontFamily: 'monospace',
-          }}
-        >
-          safe-bottom: {safeAreaBottom}px
-        </div>
-      )}
-      {/* 하단 safe area + BottomNav 전체 영역 배경 채우기
-          - BottomNav 알약 아래 시스템 네비게이션 바 영역에 지도가 비치는 문제 방지
-          - BottomNav가 숨겨져도(translateY) 이 배경은 항상 유지됨
-          - safeAreaBottom이 0이어도 최소 12px 높이 보장 */}
+      {/* [DEBUG] safe-area-inset-bottom 값 표시 - 항상 표시 */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 80,
+          right: 8,
+          background: 'rgba(255,0,0,0.85)',
+          color: 'white',
+          fontSize: 11,
+          padding: '4px 8px',
+          borderRadius: 8,
+          zIndex: 99999,
+          pointerEvents: 'none',
+          fontFamily: 'monospace',
+          lineHeight: 1.4,
+        }}
+      >
+        <div>safe-bottom: {safeAreaBottom}px</div>
+        <div>innerH: {typeof window !== 'undefined' ? window.innerHeight : 0}px</div>
+      </div>
+      {/* 하단 safe area 배경 채우기
+          - 시스템 네비게이션 바(|||, ○, <) 영역만 흰색으로 채움
+          - 알약 네비게이션 바 영역은 포함하지 않음
+          - BottomNav가 숨겨져도(translateY) 이 배경은 항상 유지됨 */}
       <div
         aria-hidden="true"
         style={{
@@ -359,7 +359,7 @@ const BottomNav = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          height: `calc(env(safe-area-inset-bottom, 0px) + ${Math.max(safeAreaBottom, 0)}px + 12px)`,
+          height: 'env(safe-area-inset-bottom, 0px)',
           backgroundColor: 'white',
           zIndex: 19998,
           pointerEvents: 'none',
