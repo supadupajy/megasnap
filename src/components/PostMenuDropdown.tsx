@@ -51,6 +51,11 @@ const PostMenuDropdown = ({
           'w-36 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md',
           zIndexClass
         )}
+        // 메뉴가 닫힐 때 Radix가 트리거 버튼으로 포커스를 되돌리는 기본 동작을 차단.
+        // 이 동작이 살아있으면 "수정하기" 탭 → Textarea autoFocus → 곧바로 Radix가
+        // 트리거 버튼으로 포커스를 빼앗아 키보드가 잠깐 내려갔다 → autoFocus 재시도로
+        // 다시 올라오는 플리커링이 발생한다.
+        onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {(isMine || isAdmin) ? (
           <>

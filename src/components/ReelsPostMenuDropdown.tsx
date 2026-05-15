@@ -53,6 +53,11 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
           // Header(z=12600), BottomNav(z=20000) 모두 위에 떠야 함.
           'z-[30000]'
         )}
+        // 메뉴가 닫힐 때 Radix가 트리거 버튼으로 포커스를 되돌리는 기본 동작을 차단.
+        // 이 동작이 살아있으면 "수정하기" 탭 → Textarea autoFocus → 곧바로 Radix가
+        // 트리거 버튼으로 포커스를 빼앗아 키보드가 잠깐 내려갔다 → autoFocus 재시도로
+        // 다시 올라오는 플리커링이 발생한다.
+        onCloseAutoFocus={(e) => e.preventDefault()}
         // 영상 영역에서 native touch listener가 pointerdown 이벤트를 가로채면서
         // 메뉴가 \"열림 → 즉시 외부 클릭으로 닫힘\" 사이클이 발생하는 것을 방지.
         // 일반적으로 트리거 버튼/메뉴 외 영역을 탭하면 자동으로 닫혀야 하지만,
