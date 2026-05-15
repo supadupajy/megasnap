@@ -31,7 +31,7 @@ const HeaderAdBanner = () => {
   if (slot.isRecruitment) {
     return (
       <div
-        className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-yellow-100 via-amber-50 to-orange-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-amber-200/60"
+        className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-amber-100 via-amber-50 to-amber-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-amber-300/60"
         style={GPU_LAYER_STYLE}
         onClick={() => window.open('mailto:support@thetocatoca.com', '_blank')}
       >
