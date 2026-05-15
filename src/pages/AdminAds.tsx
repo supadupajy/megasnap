@@ -35,9 +35,13 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
-import { formatAdministrativeAddress } from '@/utils/location-format';
+import { formatAdministrativeAddress, getCachedLocationName, setCachedLocationName } from '@/utils/location-format';
 
 const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
+  // 동일 좌표는 세션 내 1회만 카카오 Geocoder를 호출한다.
+  const cached = getCachedLocationName(lat, lng);
+  if (cached) return cached;
+
   try {
     await loadKakaoMapsSdk();
   } catch (e) {
@@ -54,11 +58,13 @@ const reverseGeocode = async (lat: number, lng: number): Promise<string> => {
     geocoder.coord2Address(lng, lat, (result: any, status: any) => {
       if (status === kakao.maps.services.Status.OK) {
         const addr = result[0].address;
-        resolve(formatAdministrativeAddress(
+        const name = formatAdministrativeAddress(
           addr.region_1depth_name,
           addr.region_2depth_name,
           addr.region_3depth_name
-        ));
+        );
+        setCachedLocationName(lat, lng, name);
+        resolve(name);
       } else {
         resolve(resolveOfflineLocationName(lat, lng));
       }

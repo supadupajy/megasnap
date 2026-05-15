@@ -15,7 +15,7 @@ import { getSeoulDistrict } from '@/utils/seoul-district-polygons';
 import { useWriteStore } from '@/utils/write-store';
 import { mapCache } from '@/utils/map-cache';
 import { extractHashtags } from '@/utils/hashtags';
-import { formatAdministrativeAddress } from '@/utils/location-format';
+import { formatAdministrativeAddress, getCachedLocationName, setCachedLocationName } from '@/utils/location-format';
 import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 
 interface MediaFile {
@@ -88,6 +88,13 @@ const Write = () => {
       setAddress(district ?? resolveOfflineLocationName(lat, lng));
     };
 
+    // 이미 다른 화면에서 동일 좌표가 해석된 적이 있으면 SDK 로드/Geocoder 호출 생략
+    const cached = getCachedLocationName(lat, lng);
+    if (cached) {
+      setAddress(cached);
+      return () => { cancelled = true; };
+    }
+
     loadKakaoMapsSdk()
       .then(() => {
         if (cancelled) return;
@@ -101,11 +108,13 @@ const Write = () => {
           if (cancelled) return;
           if (status === kakao.maps.services.Status.OK && result[0]) {
             const addr = result[0].address;
-            setAddress(formatAdministrativeAddress(
+            const name = formatAdministrativeAddress(
               addr.region_1depth_name,
               addr.region_2depth_name,
               addr.region_3depth_name
-            ));
+            );
+            setCachedLocationName(lat, lng, name);
+            setAddress(name);
           } else {
             setFallbackAddress();
           }

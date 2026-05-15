@@ -31,7 +31,7 @@ import { postDraftStore } from '@/utils/post-draft-store';
 import { fetchLikedPostIds, toggleLikeInDb } from '@/utils/like-utils';
 import { useMapMarkerAds, resolveActiveSlot } from '@/hooks/use-ad';
 import { resolveOfflineLocationName } from '@/utils/offline-location';
-import { formatAdministrativeAddress } from '@/utils/location-format';
+import { formatAdministrativeAddress, getCachedLocationName, setCachedLocationName } from '@/utils/location-format';
 import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 import confetti from 'canvas-confetti';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
@@ -727,9 +727,14 @@ const Index = () => {
   const useClientSideCountsRef = useRef(useClientSideCounts);
   const selectedCategoriesRef = useRef(selectedCategories);
   const authUserIdRef = useRef<string | null>(authUser?.id || null);
+  // 광고 마커 주입 effect가 deps 없이도 최신 allPosts에서 기존 광고 location을
+  // 재사용할 수 있도록 ref로 미러링한다. (effect deps에 allPosts를 넣으면 매 fetch마다
+  // effect가 재실행되며 동일 좌표라도 추가 카카오 호출이 발생할 수 있다.)
+  const allPostsRef = useRef<Post[]>(allPosts);
   useEffect(() => { useClientSideCountsRef.current = useClientSideCounts; }, [useClientSideCounts]);
   useEffect(() => { selectedCategoriesRef.current = selectedCategories; }, [selectedCategories]);
   useEffect(() => { authUserIdRef.current = authUser?.id || null; }, [authUser?.id]);
+  useEffect(() => { allPostsRef.current = allPosts; }, [allPosts]);
 
   useEffect(() => {
     if (!restoredFromMapCacheRef.current) {
@@ -872,7 +877,23 @@ const Index = () => {
 
     const AD_POST_PREFIX = 'ad-map-marker-';
 
+    // 이미 allPosts에 들어있는 같은 광고의 location/lat/lng를 빠르게 조회하기 위한 맵.
+    // (mapMarkerNow 변경, Realtime UPDATE, 페이지 재진입 등으로 effect가 다시 도는 경우
+    //  좌표가 동일하면 행정 주소 문자열도 절대 안 바뀌므로 카카오 Geocoder 호출을 생략한다.)
+    const existingAdLocationById = new Map<string, { lat: number; lng: number; location: string }>();
+    for (const p of allPostsRef.current) {
+      if (!p.id.startsWith(AD_POST_PREFIX)) continue;
+      if (p.lat == null || p.lng == null) continue;
+      if (!p.location) continue;
+      existingAdLocationById.set(p.id, { lat: p.lat, lng: p.lng, location: p.location });
+    }
+
     const getLocation = async (lat: number, lng: number): Promise<string> => {
+      // 1) 프로세스 전역 (lat,lng)→주소 캐시 hit이면 즉시 반환.
+      //    이 경우 카카오 SDK 로드도 하지 않는다.
+      const cached = getCachedLocationName(lat, lng);
+      if (cached) return cached;
+
       try {
         await loadKakaoMapsSdk();
       } catch (e) {
@@ -889,11 +910,14 @@ const Index = () => {
         geocoder.coord2Address(lng, lat, (result: any, status: any) => {
           if (status === kakao.maps.services.Status.OK) {
             const addr = result[0].address;
-            resolve(formatAdministrativeAddress(
+            const name = formatAdministrativeAddress(
               addr.region_1depth_name,
               addr.region_2depth_name,
               addr.region_3depth_name
-            ));
+            );
+            // 동일 좌표 재호출 방지를 위해 캐시에 저장
+            setCachedLocationName(lat, lng, name);
+            resolve(name);
           } else {
             resolve(resolveOfflineLocationName(lat, lng));
           }
@@ -923,7 +947,13 @@ const Index = () => {
 
       const lat = mapMarkerAd.lat!;
       const lng = mapMarkerAd.lng!;
-      const locationName = await getLocation(lat, lng);
+
+      // 이미 화면에 같은 ID의 광고가 있고 좌표가 같으면 행정 주소도 같다.
+      // → Geocoder 호출 없이 즉시 재사용. (카카오 API 호출량 절감의 핵심 단축 경로)
+      const existing = existingAdLocationById.get(AD_POST_ID);
+      const locationName = existing && existing.lat === lat && existing.lng === lng
+        ? existing.location
+        : await getLocation(lat, lng);
 
       const displayImage = slot.isPending
         ? (mapMarkerAd.image_url || mapMarkerAd.brand_logo_url || '')
@@ -1333,8 +1363,18 @@ const Index = () => {
       return;
     }
 
+    // 다른 페이지/다른 effect에서 이미 동일 좌표를 해석한 적이 있으면
+    // 카카오 Geocoder 호출 없이 그 결과를 그대로 사용한다.
+    const globallyCached = getCachedLocationName(center.lat, center.lng);
+    if (globallyCached) {
+      addressCacheRef.current.set(cacheKey, globallyCached);
+      setCenterAddress(globallyCached);
+      return;
+    }
+
     const saveAddressCache = (address: string) => {
       addressCacheRef.current.set(cacheKey, address);
+      setCachedLocationName(center.lat, center.lng, address);
       const entries = Array.from(addressCacheRef.current.entries()).slice(-MAP_ADDRESS_CACHE_LIMIT);
       addressCacheRef.current = new Map(entries);
       try {
