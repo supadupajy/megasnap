@@ -65,16 +65,20 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const isClosingByButtonRef = useRef(false);
 
   // ── window 플래그: App.tsx Capacitor backButton 핸들러에서 참조 ──
+  // 광고 포스트가 열렸을 때는 BottomNav를 숨기기 위해 isAd 정보도 함께 전달
+  const isAdForFlag = currentPost?.isAd || false;
   useEffect(() => {
     (window as any).__isPostDetailOpen = isOpen;
-    window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: isOpen } }));
+    (window as any).__isPostDetailAd = isOpen && isAdForFlag;
+    window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: isOpen, isAd: isAdForFlag } }));
     return () => {
       if (isOpen) {
         (window as any).__isPostDetailOpen = false;
-        window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: false } }));
+        (window as any).__isPostDetailAd = false;
+        window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: false, isAd: false } }));
       }
     };
-  }, [isOpen]);
+  }, [isOpen, isAdForFlag]);
 
   // ── Capacitor 뒤로가기 버튼 이벤트 수신 (App.tsx에서 발송) ──
   useEffect(() => {

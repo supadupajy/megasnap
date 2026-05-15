@@ -169,6 +169,8 @@ const AnimatedRoutes = () => {
   // (PostListOverlay에서 isOpen 변경 시 open-post-list-overlay/close-post-list-overlay 이벤트 발생)
   const [isPostListVisible, setIsPostListVisible] = useState(false);
   const [isReelsViewerOpen, setIsReelsViewerOpen] = useState(false);
+  // 광고 PostDetail이 열려 있을 때는 BottomNav 숨김 (X 버튼으로만 닫음)
+  const [isAdPostDetailOpen, setIsAdPostDetailOpen] = useState(false);
 
   useEffect(() => {
     if (!showIndex || !session) return;
@@ -187,23 +189,30 @@ const AnimatedRoutes = () => {
     if (typeof window !== 'undefined') {
       setIsPostListVisible((window as any).__isPostListOpen === true);
       setIsReelsViewerOpen((window as any).__isReelsViewerOpen === true);
+      setIsAdPostDetailOpen((window as any).__isPostDetailAd === true);
     }
 
     const handleOpen = () => setIsPostListVisible(true);
     const handleClose = () => setIsPostListVisible(false);
     const handleReelsOpen = () => setIsReelsViewerOpen(true);
     const handleReelsClose = () => setIsReelsViewerOpen(false);
+    const handlePostDetailVisibility = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      setIsAdPostDetailOpen(!!detail.open && !!detail.isAd);
+    };
 
     window.addEventListener('open-post-list-overlay', handleOpen);
     window.addEventListener('close-post-list-overlay', handleClose);
     window.addEventListener('open-reels-viewer', handleReelsOpen);
     window.addEventListener('close-reels-viewer', handleReelsClose);
+    window.addEventListener('post-detail-visibility', handlePostDetailVisibility);
 
     return () => {
       window.removeEventListener('open-post-list-overlay', handleOpen);
       window.removeEventListener('close-post-list-overlay', handleClose);
       window.removeEventListener('open-reels-viewer', handleReelsOpen);
       window.removeEventListener('close-reels-viewer', handleReelsClose);
+      window.removeEventListener('post-detail-visibility', handlePostDetailVisibility);
     };
   }, []);
 
@@ -371,7 +380,7 @@ const AnimatedRoutes = () => {
         )}
       </main>
 
-      {(!hideBottomNav || isWritePage) && session && !isReelsViewerOpen && <BottomNav />}
+      {(!hideBottomNav || isWritePage) && session && !isReelsViewerOpen && !isAdPostDetailOpen && <BottomNav />}
 
       {/* 전역 장소 검색 오버레이 — open-place-search 이벤트로 열림 (detail.onSelect 콜백 전달) */}
       {session && <PlaceSearchOverlay />}
