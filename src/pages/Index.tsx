@@ -563,8 +563,9 @@ const Index = () => {
     try {
       const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 20 });
       if (!error && data) {
-        const likedIds = await fetchLikedPostIds(data.map((p: any) => p.id), authUserIdRef.current);
-        const mapped = data.map((p: any) => ({ ...mapRawToPost({ ...p, isLiked: likedIds.has(String(p.id)) }), likes_per_hour: Number(p.likes_per_hour ?? 0) }));
+        const activeTrendingRows = data.filter((p: any) => Number(p.likes_per_hour ?? 0) > 0);
+        const likedIds = await fetchLikedPostIds(activeTrendingRows.map((p: any) => p.id), authUserIdRef.current);
+        const mapped = activeTrendingRows.map((p: any) => ({ ...mapRawToPost({ ...p, isLiked: likedIds.has(String(p.id)) }), likes_per_hour: Number(p.likes_per_hour ?? 0) }));
         const trending = mapped.slice(0, 20).map((p: any, i: number) => ({ ...p, rank: i + 1 }));
         setGlobalTrendingPosts(trending);
         // 새 트렌딩 fetch 완료 신호 → TrendingPosts가 비교 기준(prevRanks)을 갱신할 수 있게 한다.
