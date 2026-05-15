@@ -326,7 +326,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     };
     loadComments();
     return () => { cancelled = true; };
-  }, [currentPostIndex, isOpen, posts]);
+  // posts 대신 currentPost.id만 의존: posts 객체가 바뀔 때마다 재실행되어 첫 fetch가 취소되는 깜빡임 방지
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPostIndex, isOpen, currentPost?.id]);
 
   useEffect(() => {
     const currentPost = posts[currentPostIndex];
