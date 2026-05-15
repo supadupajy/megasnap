@@ -49,7 +49,7 @@ const PostSkeleton = () => (
   </div>
 );
 
-// 친구 포스팅 - 조회 감지 컴포넌트
+// 친구 컨텐츠 - 조회 감지 컴포넌트
 const ViewedAwarePostItem = React.memo(({
   post,
   isViewed,
@@ -187,9 +187,8 @@ const Popular = () => {
         .eq('user_id', userId);
 
       const currentViewedIds = new Set<string>((viewedData || []).map((v: any) => v.post_id));
-      console.log('[Popular] buildAndLoad - viewed_posts 수:', currentViewedIds.size);
 
-      // 2) 인기 포스팅 200개 (랜덤 셔플)
+      // 2) 인기 컨텐츠 200개 (랜덤 셔플)
       const { data: popularData, error: popularError } = await supabase.rpc('get_popular_posts', { limit_count: 200 });
       if (popularError) throw popularError;
 
@@ -221,21 +220,19 @@ const Popular = () => {
         }
       }
 
-      // 4) 인기 포스팅 좋아요 상태 반영
+      // 4) 인기 컨텐츠 좋아요 상태 반영
       let finalPopular: Post[] = shuffledPopular;
       if (finalPopular.length > 0) {
         const likedIds = await fetchLikedPostIds(finalPopular.map(p => p.id), userId);
         finalPopular = finalPopular.map((p): Post => ({ ...p, isLiked: likedIds.has(String(p.id)) }));
       }
 
-      // 5) 새 친구 포스팅 (미열람) → 상단 고정
+      // 5) 새 친구 컨텐츠 (미열람) → 상단 고정
       const newFriendPosts = allFriendPosts
         .filter(p => !currentViewedIds.has(p.id))
         .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-      console.log('[Popular] 친구 포스팅 전체:', allFriendPosts.length, '/ 미열람(NEW):', newFriendPosts.length, '/ 열람됨:', allFriendPosts.length - newFriendPosts.length);
-
-      // 6) 열람된 친구 포스팅 + 인기 포스팅 → created_at 혼합 정렬
+      // 6) 열람된 친구 컨텐츠 + 인기 컨텐츠 → created_at 혼합 정렬
       const viewedFriendPosts = allFriendPosts.filter(p => currentViewedIds.has(p.id));
 
       const combined: Post[] = ([...finalPopular, ...viewedFriendPosts] as Post[])
@@ -274,7 +271,6 @@ const Popular = () => {
     if (authLoading || !authUser?.id) return;
     if (lastLocationKeyRef.current === location.key) return;
     lastLocationKeyRef.current = location.key;
-    console.log('[Popular] 탭 진입 감지, location.key:', location.key);
     buildAndLoad(authUser.id);
   }, [authLoading, authUser?.id, location.key, buildAndLoad]);
 
@@ -367,10 +363,7 @@ const Popular = () => {
                     post={post}
                     isViewed={post.isFriendPost ? !sessionNewFriendIds.has(post.id) : undefined}
                     scrollRoot={scrollRef.current}
-                    onVisible={(id) => {
-                      console.log('[Popular] onVisible 호출 - postId:', id);
-                      markAsViewed(id);
-                    }}
+                    onVisible={markAsViewed}
                     onLikeToggle={() => handleLikeToggle(post.id)}
                     onLocationClick={handleLocationClick}
                     onDelete={handlePostDelete}
