@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { cn, getFallbackImage, formatRelativeTime, getOptimizedFeedImage } from '@/lib/utils';
 
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from './AuthProvider';
 
@@ -46,6 +46,7 @@ interface PostItemProps {
 
 const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, onMediaClick, onOwnUserClick, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   
@@ -104,6 +105,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     const ownerId = post.owner_id || post.user_id;
     return ownerId === authUser.id || ownerId === 'me';
   }, [authUser?.id, post.owner_id, post.user_id]);
+  const canEditContent = location.pathname === '/profile';
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -561,7 +563,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       isAd={isAd}
       postOwnerId={user.id}
       zIndexClass="z-[200]"
-      onEdit={startContentEdit}
+      onEdit={canEditContent ? startContentEdit : undefined}
       onDelete={() => setIsDeleteDialogOpen(true)}
     />
   );

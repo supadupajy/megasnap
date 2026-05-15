@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,13 +14,11 @@ import { cn } from '@/lib/utils';
  * 드롭다운 컨텐츠는 ReelsViewer의 z-index(9999)보다 위로 떠야 한다.
  */
 interface ReelsPostMenuDropdownProps {
-  onEdit: () => void;
   onDelete: () => void;
   className?: string;
 }
 
 const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
-  onEdit,
   onDelete,
   className,
 }) => {
@@ -53,10 +51,6 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
           // Header(z=12600), BottomNav(z=20000) 모두 위에 떠야 함.
           'z-[30000]'
         )}
-        // 메뉴가 닫힐 때 Radix가 트리거 버튼으로 포커스를 되돌리는 기본 동작을 차단.
-        // 이 동작이 살아있으면 "수정하기" 탭 → Textarea autoFocus → 곧바로 Radix가
-        // 트리거 버튼으로 포커스를 빼앗아 키보드가 잠깐 내려갔다 → autoFocus 재시도로
-        // 다시 올라오는 플리커링이 발생한다.
         onCloseAutoFocus={(e) => e.preventDefault()}
         // 영상 영역에서 native touch listener가 pointerdown 이벤트를 가로채면서
         // 메뉴가 \"열림 → 즉시 외부 클릭으로 닫힘\" 사이클이 발생하는 것을 방지.
@@ -75,16 +69,6 @@ const ReelsPostMenuDropdown: React.FC<ReelsPostMenuDropdownProps> = ({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        <DropdownMenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none"
-        >
-          <Pencil className="w-4 h-4 text-indigo-600" />
-          <span className="text-sm font-bold text-indigo-600">수정하기</span>
-        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();

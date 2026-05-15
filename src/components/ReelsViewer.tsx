@@ -1506,7 +1506,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           onClick={(e) => e.stopPropagation()}
         >
           <ReelsPostMenuDropdown
-            onEdit={startContentEdit}
             onDelete={onRequestDelete}
           />
         </div>
@@ -1575,7 +1574,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               onPointerUp={(e) => e.stopPropagation()}
             >
               <ReelsPostMenuDropdown
-                onEdit={startContentEdit}
                 onDelete={onRequestDelete}
               />
             </div>
@@ -1870,20 +1868,15 @@ const ReelContentEditOverlay: React.FC<ReelContentEditOverlayProps> = ({
   if (!open) return null;
   if (typeof document === "undefined") return null;
 
-  // bottom 위치: layout viewport 하단으로부터 키보드 높이만큼 위로.
-  // 키보드가 내려간 뒤에는 안드로이드 시스템 내비게이션 바 영역이 viewport에
-  // 포함되는 기기들이 있어, 버튼이 제스처/3버튼 내비게이션 뒤로 들어가지 않도록
-  // 하단 안전 여백을 추가한다. 키보드가 떠 있을 때는 키보드에 바로 붙인다.
+  // bottom 위치: layout viewport 하단으로부터 키보드 높이만큼 위로
+  // (= window.innerHeight - keyboardTop)
+  // 키보드와 완전히 밀착되도록 추가 패딩 없음.
   const bottomPx = Math.max(0, window.innerHeight - keyboardTop);
-  const isKeyboardVisible = bottomPx > 24;
-  const bottomOffset = isKeyboardVisible
-    ? `${bottomPx}px`
-    : `calc(${bottomPx}px + max(env(safe-area-inset-bottom, 0px), 56px))`;
 
   return createPortal(
     <div
       className="fixed left-0 right-0 z-[40000] pointer-events-auto"
-      style={{ bottom: bottomOffset }}
+      style={{ bottom: `${bottomPx}px` }}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >

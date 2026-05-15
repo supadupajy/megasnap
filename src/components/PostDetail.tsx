@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { cn, getFallbackImage, getOptimizedDetailImage } from '@/lib/utils';
 
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Comment } from '@/types';
 import { Dialog, DialogPortal, DialogOverlay, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -49,11 +49,13 @@ const FALLBACK_IMAGE = "/placeholder.svg";
 
 const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, onViewPost, onLikeToggle, onLocationClick }: PostDetailProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user: authUser, profile: authProfile, isAdmin } = useAuth();
   const [currentPostIndex, setCurrentPostIndex] = useState(initialIndex);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
   
   const currentPost = useMemo(() => posts[currentPostIndex], [posts, currentPostIndex]);
+  const canEditContent = location.pathname === '/profile';
 
   // ── 뒤로가기 버튼으로 닫기 (Android/브라우저 back 버튼) ──────
   const onCloseRef = useRef(onClose);
@@ -751,7 +753,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       isAd={isAd}
       postOwnerId={currentPost.user.id}
       zIndexClass="z-[13010]"
-      onEdit={startContentEdit}
+      onEdit={canEditContent ? startContentEdit : undefined}
       onDelete={() => window.setTimeout(() => setIsDeleteDialogOpen(true), 0)}
       onAfterBlock={onClose}
       reportMessage="신고되었습니다."
