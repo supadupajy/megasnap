@@ -253,7 +253,7 @@ const ProfileEditDrawer = ({ isOpen, onClose, onUpdate }: ProfileEditDrawerProps
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DrawerContent className="h-[75vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[1500] mb-[-45px] border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+      <DrawerContent className="h-[92vh] flex flex-col outline-none bg-white rounded-t-[40px] overflow-hidden z-[1500] mb-[-45px] border-none shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
         {/* Handle Bar */}
         <div className="mx-auto w-12 h-1.5 bg-gray-200 rounded-full my-4 shrink-0" />
         

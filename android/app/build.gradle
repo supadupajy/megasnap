@@ -16,8 +16,8 @@ android {
         applicationId "com.chorasnap.chorasnap"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 142
-        versionName "1.0.142"
+        versionCode 143
+        versionName "1.0.143"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
