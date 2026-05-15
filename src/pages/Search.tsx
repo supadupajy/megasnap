@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { searchProfilesByNickname } from '@/utils/profile-search';
 import { showError, showSuccess } from '@/utils/toast';
+import CollapsingHeader from '@/components/CollapsingHeader';
+import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
 
 // 유저 카드 스켈레톤
 const UserSkeleton = () => (
@@ -32,8 +34,8 @@ const Search = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
 
-  // followingIds를 ref로도 관리해 검색 시 재조회 불필요
   const followingIdsRef = useRef<Set<string>>(new Set());
+  const { scrollRef, progress } = useCollapsingHeader(80);
 
   useEffect(() => {
     document.documentElement.style.overflow = 'hidden';
@@ -50,7 +52,6 @@ const Search = () => {
     };
   }, []);
 
-  // ✅ 초기 로드: 팔로잉 목록 + 추천 유저를 병렬로 한 번에 가져옴
   useEffect(() => {
     if (!authUser) return;
     setIsLoading(true);
@@ -76,11 +77,9 @@ const Search = () => {
     });
   }, [authUser?.id]);
 
-  // ✅ 검색: 팔로잉 목록 재조회 없이 캐시된 값 사용
   const handleSearch = useCallback(async (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) {
-      // 검색어 지우면 추천 유저 다시 표시 (이미 로드된 데이터 재사용)
       if (!authUser) return;
       setIsSearching(true);
       try {
@@ -109,9 +108,8 @@ const Search = () => {
     }
   }, [authUser?.id]);
 
-  // 디바운스 검색
   useEffect(() => {
-    if (isLoading) return; // 초기 로딩 중엔 검색 트리거 안 함
+    if (isLoading) return;
     const timer = setTimeout(() => handleSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery, handleSearch, isLoading]);
@@ -120,7 +118,6 @@ const Search = () => {
     e.stopPropagation();
     if (!authUser) { showError('로그인이 필요합니다.'); return; }
     const isCurrentlyFollowing = followingIdsRef.current.has(targetUserId);
-    // 낙관적 업데이트
     const next = new Set(followingIdsRef.current);
     if (isCurrentlyFollowing) {
       next.delete(targetUserId);
@@ -139,8 +136,6 @@ const Search = () => {
         showSuccess('팔로우를 시작했습니다! ✨');
       }
     } catch (err) {
-      // 실패 시 롤백
-      followingIdsRef.current = followingIdsRef.current;
       setFollowingIds(prev => {
         const rollback = new Set(prev);
         if (isCurrentlyFollowing) rollback.add(targetUserId);
@@ -152,85 +147,94 @@ const Search = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
-      {/* 검색 입력창 - 헤더 바로 아래 */}
-      <div className="shrink-0 bg-white z-[90] pt-[calc(env(safe-area-inset-top,0px)+64px)]">
-        <div className="flex items-center justify-center h-14 border-b border-gray-50">
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">친구 검색</h2>
-        </div>
-        <div className="px-4 py-3 border-b border-gray-50">
-          <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
-            <input
-              placeholder="닉네임으로 친구 찾기"
-              className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {isSearching && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-          </div>
+    <div ref={scrollRef} className="h-screen w-full max-w-full overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
+      {/* CollapsingHeader */}
+      <div className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
+        <CollapsingHeader
+          progress={progress}
+          Icon={SearchIcon}
+          iconBgClass="bg-indigo-100"
+          iconColorClass="text-indigo-600"
+          title="친구 검색"
+          subtitle="Find Friends"
+          ActionIcon={SearchIcon}
+          actionLabel="검색"
+          onActionClick={() => {}}
+          collapseActionToIcon={false}
+        />
+      </div>
+
+      {/* 검색 입력창 */}
+      <div className="px-4 pt-3 pb-2 bg-white border-b border-gray-50 sticky top-[calc(64px+72px)] z-30">
+        <div className="relative">
+          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
+          <input
+            placeholder="닉네임으로 친구 찾기"
+            className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {isSearching && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+              <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
         </div>
       </div>
 
       {/* 유저 리스트 */}
-      <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain bg-white">
-        <div className="px-4" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
-          <div className="space-y-1 pt-2">
-            {isLoading ? (
-              Array.from({ length: 8 }).map((_, i) => <UserSkeleton key={i} />)
-            ) : users.length > 0 ? (
-              users.map((user) => {
-                const isFollowing = followingIds.has(user.id);
-                return (
+      <div className="px-4 pt-2">
+        <div className="space-y-1">
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, i) => <UserSkeleton key={i} />)
+          ) : users.length > 0 ? (
+            users.map((user) => {
+              const isFollowing = followingIds.has(user.id);
+              return (
+                <div
+                  key={user.id}
+                  onClick={() => navigate(`/user-profile/${user.id}`)}
+                  className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
+                >
                   <div
-                    key={user.id}
-                    onClick={() => navigate(`/user-profile/${user.id}`)}
-                    className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
+                    className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/user-profile/${user.id}`); }}
                   >
-                    <div
-                      className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/user-profile/${user.id}`); }}
-                    >
-                      <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
-                        <AvatarImage src={user.avatar_url} />
-                        <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
-                      </Avatar>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</span>
-                        <span className="text-[10px] text-gray-400">@{user.id.substring(0, 8)}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
-                    </div>
-                    <Button
-                      variant={isFollowing ? "secondary" : "default"}
-                      size="sm"
-                      onClick={(e) => toggleFollow(e, user.id)}
-                      className={isFollowing
-                        ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200 font-bold"
-                        : "rounded-xl h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"}
-                    >
-                      {isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                    </Button>
+                    <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
+                      <AvatarImage src={user.avatar_url} />
+                      <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>
+                    </Avatar>
                   </div>
-                );
-              })
-            ) : (
-              <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <Users className="w-8 h-8 text-gray-200" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-gray-900 truncate">{user.nickname || '사용자'}</span>
+                      <span className="text-[10px] text-gray-400">@{user.id.substring(0, 8)}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">{user.bio || 'Chora 탐험가'}</p>
+                  </div>
+                  <Button
+                    variant={isFollowing ? "secondary" : "default"}
+                    size="sm"
+                    onClick={(e) => toggleFollow(e, user.id)}
+                    className={isFollowing
+                      ? "rounded-xl h-8 px-3 bg-gray-100 text-gray-900 hover:bg-gray-200 font-bold"
+                      : "rounded-xl h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"}
+                  >
+                    {isFollowing ? <Check className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                  </Button>
                 </div>
-                <p className="text-sm text-gray-400 font-bold leading-relaxed">
-                  {searchQuery ? '해당 닉네임을 가진 사용자가 없습니다.' : '추천할 사용자가 없습니다.'}
-                </p>
+              );
+            })
+          ) : (
+            <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <Users className="w-8 h-8 text-gray-200" />
               </div>
-            )}
-          </div>
+              <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                {searchQuery ? '해당 닉네임을 가진 사용자가 없습니다.' : '추천할 사용자가 없습니다.'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
