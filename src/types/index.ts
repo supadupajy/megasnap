@@ -54,6 +54,10 @@ export interface Post {
   owner_id?: string; // 실제 DB user_id (RLS 소유자 판별용, mapRawToPost에서 p.user_id로 설정)
   hot_since?: string | null; // 최근 1시간 좋아요 기준 HOT 마일스톤 시각
   likes_per_hour?: number; // 최근 1시간 내 좋아요 증가량 (HOT/트렌딩 판별용)
+  views_per_hour?: number; // 최근 1시간 내 유효 조회수 (트렌딩 판별용)
+  trending_score?: number; // 좋아요 점수 + 조회수 점수
+  like_score?: number; // 최근 1시간 좋아요 순위 점수
+  view_score?: number; // 최근 1시간 조회수 순위 점수
   user_followers?: number; // 작성자 follower 수 (tier 판별용)
   hashtags?: string[]; // 본문에서 추출된 검색용 해시태그
 

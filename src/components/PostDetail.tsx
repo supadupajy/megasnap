@@ -143,6 +143,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const contentRef = useRef<HTMLParagraphElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
+  const recordedViewPostIdsRef = useRef<Set<string>>(new Set());
   const { targetRef: editFormRef } = useKeyboardSafeScroll<HTMLDivElement>(isOpen && isEditingContent);
 
   // contentRef가 마운트된 후 실제로 잘렸는지 감지.
@@ -193,6 +194,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       setIsEditingContent(false);
       setEditContent(localContentById[currentPost.id] ?? currentPost.content ?? '');
       if (imageScrollRef.current) imageScrollRef.current.scrollLeft = 0;
+
+      const recordView = async () => {
+        if (currentPost.isAd || !isPersistedPostId(currentPost.id)) return;
+        if (recordedViewPostIdsRef.current.has(currentPost.id)) return;
+        recordedViewPostIdsRef.current.add(currentPost.id);
+
+        try {
+          const { data } = await supabase.functions.invoke('record-post-view', {
+            body: { postId: currentPost.id },
+          });
+          if ((data as any)?.counted) {
+            window.dispatchEvent(new CustomEvent('post-view-recorded', { detail: { postId: currentPost.id } }));
+          }
+        } catch {
+          recordedViewPostIdsRef.current.delete(currentPost.id);
+        }
+      };
+      recordView();
 
       const checkSaveStatus = async () => {
         if (!authUser || !isPersistedPostId(currentPost.id)) return;

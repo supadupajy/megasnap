@@ -497,6 +497,10 @@ const Index = () => {
     const isAd = content.trim().startsWith('[AD]') || prev?.isAd || false;
     const likes = Number(p.likes ?? prev?.likes ?? 0);
     const likesPerHour = Number(p.likes_per_hour ?? prev?.likes_per_hour ?? 0);
+    const viewsPerHour = Number(p.views_per_hour ?? prev?.views_per_hour ?? 0);
+    const trendingScore = Number(p.trending_score ?? prev?.trending_score ?? 0);
+    const likeScore = Number(p.like_score ?? prev?.like_score ?? 0);
+    const viewScore = Number(p.view_score ?? prev?.view_score ?? 0);
     let borderType: any = 'none';
     const hotSince = p.hot_since ?? prev?.hot_since ?? null;
     if (likesPerHour >= 100) borderType = 'popular';
@@ -537,6 +541,10 @@ const Index = () => {
       longitude: p.longitude ?? prev?.longitude,
       likes,
       likes_per_hour: likesPerHour,
+      views_per_hour: viewsPerHour,
+      trending_score: trendingScore,
+      like_score: likeScore,
+      view_score: viewScore,
       commentsCount: prev?.commentsCount ?? 0,
       comments: prev?.comments ?? [],
       image: img,
@@ -563,9 +571,8 @@ const Index = () => {
     try {
       const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 20 });
       if (!error && data) {
-        const activeTrendingRows = data.filter((p: any) => Number(p.likes_per_hour ?? 0) > 0);
-        const likedIds = await fetchLikedPostIds(activeTrendingRows.map((p: any) => p.id), authUserIdRef.current);
-        const mapped = activeTrendingRows.map((p: any) => ({ ...mapRawToPost({ ...p, isLiked: likedIds.has(String(p.id)) }), likes_per_hour: Number(p.likes_per_hour ?? 0) }));
+        const likedIds = await fetchLikedPostIds(data.map((p: any) => p.id), authUserIdRef.current);
+        const mapped = data.map((p: any) => mapRawToPost({ ...p, isLiked: likedIds.has(String(p.id)) }));
         const trending = mapped.slice(0, 20).map((p: any, i: number) => ({ ...p, rank: i + 1 }));
         setGlobalTrendingPosts(trending);
         // 새 트렌딩 fetch 완료 신호 → TrendingPosts가 비교 기준(prevRanks)을 갱신할 수 있게 한다.
@@ -579,6 +586,7 @@ const Index = () => {
 
   // 마운트 시 1회 + 5분마다 자동 갱신
   // 탭이 백그라운드였다가 다시 활성화되면 마지막 fetch가 오래된 경우 즉시 갱신
+  // 유효 조회가 새로 기록되면 순위 반영을 위해 강제 갱신
   useEffect(() => {
     fetchGlobalTrending();
     const intervalId = window.setInterval(() => {
@@ -591,11 +599,16 @@ const Index = () => {
         fetchGlobalTrending();
       }
     };
+    const handlePostViewRecorded = () => {
+      window.setTimeout(() => fetchGlobalTrending(true), 300);
+    };
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('post-view-recorded', handlePostViewRecorded);
 
     return () => {
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('post-view-recorded', handlePostViewRecorded);
     };
   }, [fetchGlobalTrending]);
 
