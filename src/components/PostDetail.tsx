@@ -659,6 +659,18 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     //   - 펼치기 전: 한 줄 truncate + 우측에 절대 위치 "... 더 보기" 버튼 (그라데이션 페이드)
     //   - 펼치고 나면: 전체 내용 + 끝에 "... <닫기>" 인라인 버튼
     // PostDetail은 라이트 테마이므로 색상만 어둡게(검정 글씨, 흰 배경) 맞춤.
+    //
+    // 광고 포스트는 더보기/닫기 토글 없이 항상 전체 텍스트를 그대로 노출한다.
+    if (isAd) {
+      return (
+        <div className="text-sm leading-snug text-gray-800">
+          <p>
+            <HashtagText text={currentContent} />
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="text-sm leading-snug text-gray-800">
         {contentExpanded ? (
@@ -666,7 +678,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             <p className="inline">
               <HashtagText text={currentContent} />
             </p>
-            {isContentClamped && !isAd && (
+            {isContentClamped && (
               <button
                 type="button"
                 onClick={(e) => {
@@ -690,7 +702,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             <p ref={contentRef} className="block truncate leading-snug">
               <HashtagText text={currentContent} />
             </p>
-            {isContentClamped && !isAd && (
+            {isContentClamped && (
               <button
                 type="button"
                 onClick={(e) => {
