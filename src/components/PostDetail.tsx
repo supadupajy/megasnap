@@ -190,6 +190,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       // 광고 포스트는 loadComments useEffect에서 ad_comments를 fetch해 세팅하므로 여기서 덮어쓰지 않음
       if (isPersistedPostId(currentPost.id)) {
         setLocalComments(currentPost.comments || []);
+      } else {
+        console.log('[PostDetail] useEffect#1 - ad post, skipping setLocalComments. currentPost.comments:', currentPost.comments);
       }
       setIsSaved(currentPost.isSaved || false);
       setContentExpanded(false);
@@ -289,14 +291,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       if (!isOpen || !currentPost) return;
       if (!isPersistedPostId(currentPost.id)) {
         // 광고 포스트: ad_comments 테이블에서 fetch
+        console.log('[PostDetail] useEffect#2 loadComments - ad post start, postId:', currentPost.id);
         try {
           const { data } = await supabase
             .from('ad_comments')
             .select('id, user_id, user_name, content, created_at')
             .eq('ad_id', currentPost.id)
             .order('created_at', { ascending: true });
+          console.log('[PostDetail] useEffect#2 loadComments - fetch done, cancelled:', cancelled, 'data:', data);
           if (!cancelled) {
-            setLocalComments((data || []).map((row: any) => ({
+            const mapped = (data || []).map((row: any) => ({
               id: row.id,
               userId: row.user_id,
               user: row.user_name || '사용자',
@@ -304,7 +308,9 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               createdAt: row.created_at ? new Date(row.created_at) : undefined,
               likesCount: 0,
               isLiked: false,
-            })));
+            }));
+            console.log('[PostDetail] useEffect#2 - setLocalComments with:', mapped);
+            setLocalComments(mapped);
           }
         } catch {
           if (!cancelled) setLocalComments(currentPost.comments || []);
@@ -757,6 +763,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   const renderActionButtons = () => {
     const commentsDisplayCount = Math.max(localComments.length, currentPost.commentsCount || 0);
     const hasUserCommented = !!authUser?.id && localComments.some(comment => comment.userId === authUser.id);
+    console.log('[PostDetail] renderActionButtons - localComments:', localComments.map(c => ({ id: c.id, userId: c.userId })), 'authUserId:', authUser?.id, 'hasUserCommented:', hasUserCommented);
 
     // 광고 포스트: 본문(닉네임 + 컨텐츠)을 PostActions의 adFooterContent로 넘겨서
     // - 1줄: [좋아요/댓글/공유 + 저장]   ...   [위치보기]
