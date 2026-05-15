@@ -180,31 +180,29 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
           transition={SPRING}
           className="relative py-4 pr-4 flex items-center gap-3"
         >
-          {/* 선택 닷 (왼쪽에 노출) */}
-          <AnimatePresence>
-            {selectionMode && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.18 }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              >
-                <div
-                  className={cn(
-                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
-                    isSelected
-                      ? "bg-indigo-600 border-indigo-600"
-                      : "bg-white border-gray-300"
-                  )}
-                >
-                  {isSelected && (
-                    <div className="w-2 h-2 rounded-full bg-white" />
-                  )}
-                </div>
-              </motion.div>
+          {/* 선택 닷 (왼쪽에 노출) - CSS transition 기반 */}
+          <div
+            className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-all duration-200",
+              selectionMode
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-50"
             )}
-          </AnimatePresence>
+            aria-hidden={!selectionMode}
+          >
+            <div
+              className={cn(
+                "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                isSelected
+                  ? "bg-indigo-600 border-indigo-600"
+                  : "bg-white border-gray-300"
+              )}
+            >
+              {isSelected && (
+                <div className="w-2 h-2 rounded-full bg-white" />
+              )}
+            </div>
+          </div>
 
           <div
             data-notification-actor="true"
