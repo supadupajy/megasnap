@@ -424,7 +424,6 @@ const Profile = () => {
           title="내 프로필"
           subtitle="My Activity"
           ActionIcon={Settings}
-          actionLabel="설정"
           onActionClick={() => navigate('/settings')}
         />
       </div>

@@ -72,7 +72,9 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
   // 액션 버튼 보더 라디우스 (둥근 알약 형태 유지)
   const actionPadX = collapseActionToIcon ? lerp(16, 10, progress) : lerp(16, 12, progress);
   const actionPadY = collapseActionToIcon ? lerp(8, 8, progress) : lerp(8, 6, progress);
-  const actionGap = collapseActionToIcon ? lerp(6, 0, progress) : 6;
+  const actionGap = actionLabel
+    ? (collapseActionToIcon ? lerp(6, 0, progress) : 6)
+    : 0;
   const actionLabelProgress = Math.min(1, progress * 1.5);
   const actionLabelOpacity = collapseActionToIcon ? Math.max(0, 1 - progress * 1.8) : 1;
   // 펼친 상태에서는 라벨 전체가 보이도록 넉넉하게(80px) 잡고, 축소 시 0으로 줄어든다.
@@ -150,15 +152,17 @@ const CollapsingHeader: React.FC<CollapsingHeaderProps> = ({
             }}
           >
             <ActionIcon className="w-4 h-4 text-gray-900 shrink-0" />
-            <span
-              className="text-sm font-normal text-gray-900 whitespace-nowrap overflow-hidden"
-              style={{
-                opacity: actionLabelOpacity,
-                maxWidth: actionLabelMaxWidth,
-              }}
-            >
-              {actionLabel}
-            </span>
+            {actionLabel && (
+              <span
+                className="text-sm font-normal text-gray-900 whitespace-nowrap overflow-hidden"
+                style={{
+                  opacity: actionLabelOpacity,
+                  maxWidth: actionLabelMaxWidth,
+                }}
+              >
+                {actionLabel}
+              </span>
+            )}
           </button>
         </div>
         )}

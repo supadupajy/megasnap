@@ -343,7 +343,6 @@ const Popular = () => {
           title="인기 컨텐츠"
           subtitle="Trending Now"
           ActionIcon={Search}
-          actionLabel="검색"
           onActionClick={() => navigate('/post-search')}
           collapseActionToIcon
         />
