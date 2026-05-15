@@ -86,8 +86,8 @@ const Popular = () => {
 
   const fetchAndShufflePool = useCallback(async () => {
     try {
-      // likes_per_hour 기반 상위 200개를 가져와서 셔플 풀로 사용
-      const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 200 });
+      // 전체 포스트 중 좋아요 50점 + 조회수 50점 합산 상위 200개를 가져와서 셔플 풀로 사용
+      const { data, error } = await supabase.rpc('get_popular_posts', { limit_count: 200 });
       if (error) throw error;
 
       const mapped: Post[] = (data || []).map((p: any) => {
