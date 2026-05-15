@@ -161,7 +161,7 @@ const Search = () => {
       </div>
 
       {/* 검색 입력창 */}
-      <div className="px-4 pt-3 pb-2 bg-white border-b border-gray-50 sticky top-[calc(64px+72px)] z-30">
+      <div className="px-4 pt-3 pb-2 bg-white border-b border-gray-50">
         <div className="relative">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-600 z-10" />
           <input
