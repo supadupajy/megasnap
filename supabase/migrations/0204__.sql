@@ -1,0 +1,1 @@
+SELECT id, video_url, image_url, images FROM posts WHERE video_url IS NOT NULL ORDER BY created_at DESC LIMIT 20;

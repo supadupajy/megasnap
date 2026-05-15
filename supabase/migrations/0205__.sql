@@ -1,0 +1,1 @@
+SELECT COUNT(*) as total_videos, COUNT(CASE WHEN image_url IS NULL OR image_url = '' THEN 1 END) as missing_thumbnail FROM posts WHERE video_url IS NOT NULL;
