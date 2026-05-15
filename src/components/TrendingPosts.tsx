@@ -816,6 +816,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   //   현재 posts의 ranks만 ref에 저장 → 다음 갱신부터 정상 비교 가능.
   // - 두 번째 이후: 직전 fetch 시점의 ranks를 prevRanks로 설정 → 새 posts와 비교됨.
   //   그 후 현재 posts의 ranks를 ref에 다시 저장 → 다음 비교의 기준이 됨.
+  //
+  // ⚠️ localStorage 저장 정책 (중요):
+  //   localStorage에 저장하는 값은 "다음 마운트 시 비교 기준으로 쓸 ranks"여야 한다.
+  //   즉, **현재 화면에 표시되는 ranks가 아니라 prevRanks**를 저장해야 한다.
+  //   그래야 페이지 새로고침/탭 전환 후 다시 마운트됐을 때 NEW/▲/▼이 동일하게 유지된다.
+  //   (이전 구현은 현재 ranks를 즉시 저장해버려서 새로고침하면 모든 항목이 '유지'로 보이는 버그가 있었음)
   useEffect(() => {
     if (refreshTick === 0 || posts.length === 0) return;
 
@@ -827,19 +833,27 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     if (ranksAtLastRefreshRef.current === null) {
       // 첫 fetch 도착
       // - 신규 사용자(prevRanks 비어있음): prevRanks를 현재 ranks로 박아 모두 "유지"로 표시
+      //   → localStorage에도 currentMap을 저장(다음 마운트의 비교 기준).
       // - 기존 사용자(prevRanks=localStorage 직전 세션): prevRanks는 그대로 두고 비교 진행
+      //   → localStorage는 절대 덮어쓰지 않는다. 이번 화면이 보여주는 NEW가 새로고침 후에도
+      //     동일하게 보여야 하기 때문.
       if (Object.keys(prevRanks).length === 0) {
         setPrevRanks(currentMap);
+        savePrevRanks(currentMap);
       }
+      // 기존 사용자의 첫 fetch에서는 localStorage 갱신을 의도적으로 스킵.
     } else {
       // 두 번째 이후 fetch: 직전 fetch 시점의 ranks를 비교 기준으로 사용
-      setPrevRanks(ranksAtLastRefreshRef.current);
+      const newPrev = ranksAtLastRefreshRef.current;
+      setPrevRanks(newPrev);
+      // 비교 기준이 갱신됐으므로 localStorage도 동일하게 갱신.
+      // (다음 마운트 시 동일한 비교 기준으로 NEW/▲/▼을 보여주기 위함)
+      savePrevRanks(newPrev);
       if (isFirstSnapshot) setIsFirstSnapshot(false);
     }
 
-    // 다음 갱신용으로 현재 ranks를 저장 + localStorage에도 보관(앱 재시작 시 사용)
+    // 다음 갱신용으로 현재 ranks를 ref에만 저장(localStorage는 위에서 prevRanks로만 갱신).
     ranksAtLastRefreshRef.current = currentMap;
-    savePrevRanks(currentMap);
     // posts/prevRanks/isFirstSnapshot은 refreshTick 증가와 같은 렌더 사이클에 함께 갱신되거나
     // 별도 setter로만 변하므로, refreshTick에만 의존해도 stale 이슈가 없다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
