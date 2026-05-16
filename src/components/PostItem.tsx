@@ -778,15 +778,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
           {/* Content Section - 일반 */}
           <div className="px-4 pt-2 pb-4 space-y-1">
-            <div className="flex gap-2 items-start">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                {renderContentBody()}
-              </div>
+            <div className="min-w-0">
+              {renderContentBody()}
             </div>
-
           </div>
         </div>
       )}
