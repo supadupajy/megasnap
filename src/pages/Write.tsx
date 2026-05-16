@@ -92,7 +92,15 @@ const Write = () => {
     contentY: number;
   }>({ active: false, startDistance: 0, startZoom: 1, centerX: 0, centerY: 0, contentX: 0, contentY: 0 });
   const [landscapeZoom, setLandscapeZoom] = useState(1);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const DEBUG_LOG_KEY = 'write-debug-logs';
+  const [debugLogs, setDebugLogs] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(DEBUG_LOG_KEY);
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [debugOpen, setDebugOpen] = useState(true);
   const debugLog = (label: string, data?: unknown) => {
     const time = new Date().toISOString().split('T')[1]?.replace('Z', '') ?? '';
@@ -103,7 +111,11 @@ const Write = () => {
       payload = ' [unserializable]';
     }
     const line = `[${time}] ${label}${payload}`;
-    setDebugLogs((prev) => [...prev.slice(-49), line]);
+    setDebugLogs((prev) => {
+      const next = [...prev.slice(-99), line];
+      try { localStorage.setItem(DEBUG_LOG_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
     // 콘솔에도 남김
     // eslint-disable-next-line no-console
     console.log('[Write][debug]', label, data);
@@ -989,7 +1001,11 @@ const Write = () => {
             </button>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setDebugLogs([]); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDebugLogs([]);
+                try { localStorage.removeItem(DEBUG_LOG_KEY); } catch {}
+              }}
               className="px-2 py-0.5 rounded bg-white/10 active:bg-white/20"
             >
               지우기
