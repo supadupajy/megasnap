@@ -297,31 +297,16 @@
   100% { left: 100%; opacity: 0; }
 }
 
-.trending-shine-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  border-radius: inherit;
-  z-index: 20;
-  /* [DEBUG A] overlay div가 DOM에 깔리는지 확인 — 파란 점선 + 옅은 파란 배경 */
-  border: 2px dashed blue;
-  background: rgba(0, 0, 255, 0.1);
-}
-
+/* 위치/스타일은 JSX inline style로 직접 지정.
+   (Tailwind/빌드 캐시 등 우선순위 충돌 회피를 위해 inline 사용) */
 .trending-shine-bar {
-  /* [DEBUG B2] 위치 지정 없이, 단순한 박스로 띄워서 자식이 그려지는지 확인 */
-  width: 100%;
-  height: 30px;
-  background: yellow;
-  border: 3px solid orange;
+  /* 클래스 자체로는 더 줄 스타일 없음 — keyframe 식별 + reduced-motion 대응용 마커 */
 }
 
-/* prefers-reduced-motion 사용자에게는 애니메이션 비활성화 */
 @media (prefers-reduced-motion: reduce) {
   .trending-shine-bar {
-    animation: none;
-    opacity: 0;
+    animation: none !important;
+    opacity: 0 !important;
   }
 }
 

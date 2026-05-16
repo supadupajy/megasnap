@@ -593,18 +593,36 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       className="relative flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group overflow-hidden"
     >
       <div
-        className="trending-shine-overlay"
         aria-hidden="true"
-        style={{ ['--shine-delay' as any]: shineDelay }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+          borderRadius: 'inherit',
+          zIndex: 20,
+          ['--shine-delay' as any]: shineDelay,
+        }}
       >
         <div
+          className="trending-shine-bar"
           style={{
-            width: '100%',
-            height: '30px',
-            background: 'lime',
-            border: '3px solid magenta',
+            position: 'absolute',
+            top: '-20%',
+            bottom: '-20%',
+            left: '-60%',
+            width: '50%',
+            pointerEvents: 'none',
+            background:
+              'linear-gradient(100deg, rgba(99,102,241,0) 0%, rgba(129,140,248,0.75) 30%, rgba(167,139,250,0.95) 50%, rgba(129,140,248,0.75) 70%, rgba(99,102,241,0) 100%)',
+            transform: 'skewX(-20deg)',
+            animation: 'trending-shine-sweep 7s linear infinite',
+            animationDelay: 'var(--shine-delay, 0s)',
+            willChange: 'left, opacity',
           }}
-          data-debug="shine-bar-inline"
         />
       </div>
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
