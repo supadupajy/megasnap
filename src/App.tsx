@@ -23,7 +23,6 @@ import { NotificationProvider } from "./components/NotificationProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
 import PlaceSearchOverlay from "./components/PlaceSearchOverlay";
-import EditMapDebugger from "./components/EditMapDebugger";
 
 // Lazy-loaded routes (초기 로드 후 필요할 때만 fetch)
 const Profile = lazy(() => import("./pages/Profile"));
@@ -420,7 +419,6 @@ const App = () => {
                   <AnimatedRoutes key="main-app" />
                 )}
               </AnimatePresence>
-              <EditMapDebugger />
             </div>
             </NotificationProvider>
           </AuthProvider>

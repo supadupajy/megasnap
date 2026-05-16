@@ -127,8 +127,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     const textarea = editTextareaRef.current;
     if (!form || !textarea) return;
 
-    (window as any).__tocaCaptureEditMapDebug?.('edit-form-mounted-before-scroll-focus', { postId: post.id });
-
     const scrollParent = getScrollableParent(form);
     if (scrollParent) {
       const parentRect = scrollParent.getBoundingClientRect();
@@ -139,40 +137,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       const overflowBottom = formRect.bottom - (parentRect.bottom - bottomMargin);
       const delta = overflowTop < 0 ? overflowTop : overflowBottom > 0 ? overflowBottom : 0;
 
-      (window as any).__tocaCaptureEditMapDebug?.('edit-scroll-parent-measured', {
-        postId: post.id,
-        delta,
-        scrollParent: {
-          tag: scrollParent.tagName,
-          className: scrollParent.className?.toString(),
-          beforeScrollTop: scrollParent.scrollTop,
-          rect: { top: parentRect.top, bottom: parentRect.bottom, height: parentRect.height },
-        },
-        formRect: { top: formRect.top, bottom: formRect.bottom, height: formRect.height },
-      });
-
       if (Math.abs(delta) > 1) {
         scrollParent.scrollTo({
           top: scrollParent.scrollTop + delta,
           behavior: 'smooth',
         });
       }
-    } else {
-      (window as any).__tocaCaptureEditMapDebug?.('edit-scroll-parent-not-found', { postId: post.id });
     }
 
     textarea.focus({ preventScroll: true });
-    (window as any).__tocaCaptureEditMapDebug?.('after-focus-prevent-scroll', { postId: post.id });
-
-    const capture = (label: string) =>
-      (window as any).__tocaCaptureEditMapDebug?.(label, { postId: post.id });
-    requestAnimationFrame(() => capture('after-edit-raf1'));
-    window.setTimeout(() => capture('after-edit-50ms'), 50);
-    window.setTimeout(() => capture('after-edit-150ms'), 150);
-    window.setTimeout(() => capture('after-edit-350ms'), 350);
-    window.setTimeout(() => capture('after-edit-800ms'), 800);
-    window.setTimeout(() => capture('after-edit-1500ms'), 1500);
-  }, [isEditingContent, post.id]);
+  }, [isEditingContent]);
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -543,13 +517,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const startContentEdit = (e: React.SyntheticEvent) => {
     e.stopPropagation();
-    (window as any).__tocaCaptureEditMapDebug?.('before-startContentEdit', { postId: post.id });
     setEditContent(localContent);
     setIsEditingContent(true);
     setContentExpanded(true);
   };
 
   const cancelContentEdit = (e: React.MouseEvent) => {
+
     e.stopPropagation();
     setEditContent(localContent);
     setIsEditingContent(false);
