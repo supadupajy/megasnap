@@ -92,6 +92,22 @@ const Write = () => {
     contentY: number;
   }>({ active: false, startDistance: 0, startZoom: 1, centerX: 0, centerY: 0, contentX: 0, contentY: 0 });
   const [landscapeZoom, setLandscapeZoom] = useState(1);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [debugOpen, setDebugOpen] = useState(true);
+  const debugLog = (label: string, data?: unknown) => {
+    const time = new Date().toISOString().split('T')[1]?.replace('Z', '') ?? '';
+    let payload = '';
+    try {
+      payload = data === undefined ? '' : ' ' + JSON.stringify(data);
+    } catch {
+      payload = ' [unserializable]';
+    }
+    const line = `[${time}] ${label}${payload}`;
+    setDebugLogs((prev) => [...prev.slice(-49), line]);
+    // 콘솔에도 남김
+    // eslint-disable-next-line no-console
+    console.log('[Write][debug]', label, data);
+  };
   const cropPixelRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const currentZoomRef = useRef(1);
@@ -597,17 +613,24 @@ const Write = () => {
         if (media.type !== 'image') {
           fileToUpload = media.file;
         } else if (media.orientation === 'landscape') {
-          console.log('[Write][upload] landscape image', {
+          // 업로드 직전, 실시간으로 viewport를 다시 계산해 가장 최신 상태로 사용한다.
+          const liveViewport = currentSlide === index ? computeLandscapeViewport('preUpload') : null;
+          const chosenViewport = liveViewport ?? media.landscapeViewport ?? null;
+          debugLog('upload:landscape', {
+            index,
             zoom: media.zoom,
             crop: media.crop,
-            landscapeViewport: media.landscapeViewport,
-            naturalSize: 'will be read in cropper',
+            storedViewport: media.landscapeViewport,
+            liveViewport,
+            chosen: chosenViewport,
+            fileSize: media.file.size,
           });
-          if (media.landscapeViewport) {
-            fileToUpload = await cropImageBySourceRect(media.file, media.landscapeViewport).catch(() => media.file);
+          if (chosenViewport) {
+            fileToUpload = await cropImageBySourceRect(media.file, chosenViewport).catch(() => media.file);
           } else {
             fileToUpload = await compressImage(media.file).catch(() => media.file);
           }
+          debugLog('upload:landscape:result', { size: fileToUpload.size, type: fileToUpload.type });
         } else {
           fileToUpload = await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file);
         }
@@ -768,7 +791,7 @@ const Write = () => {
 
   // 현재 스크롤러의 가시 영역을 원본 이미지 픽셀 좌표로 환산한다.
   // 미리보기와 업로드가 정확히 같은 영역을 사용하도록 보장하기 위한 핵심 계산.
-  const computeLandscapeViewport = () => {
+  const computeLandscapeViewport = (reason?: string) => {
     const scroller = landscapeScrollerRef.current;
     const img = landscapeImgRef.current;
     if (!scroller || !img) return null;
@@ -782,6 +805,20 @@ const Write = () => {
     const sy = Math.max(0, scroller.scrollTop * scale);
     const sw = Math.min(natW - sx, scroller.clientWidth * scale);
     const sh = Math.min(natH - sy, scroller.clientHeight * scale);
+    if (reason) {
+      debugLog(`computeViewport:${reason}`, {
+        zoom: landscapeZoomRef.current,
+        nat: { w: natW, h: natH },
+        img: { ow: img.offsetWidth, oh: img.offsetHeight },
+        scroller: {
+          cw: scroller.clientWidth, ch: scroller.clientHeight,
+          sl: scroller.scrollLeft, st: scroller.scrollTop,
+          sw: scroller.scrollWidth, sh: scroller.scrollHeight,
+        },
+        scale,
+        viewport: { sx, sy, sw, sh },
+      });
+    }
     return { sx, sy, sw, sh };
   };
 
@@ -796,7 +833,7 @@ const Write = () => {
       const maxScrollY = Math.max(0, img.offsetHeight - scroller.clientHeight);
       const cropX = maxScrollX <= 0 ? 50 : (scroller.scrollLeft / maxScrollX) * 100;
       const cropY = maxScrollY <= 0 ? 50 : (scroller.scrollTop / maxScrollY) * 100;
-      const viewport = computeLandscapeViewport();
+      const viewport = computeLandscapeViewport('scroll');
       const current = useWriteStore.getState().mediaFiles;
       const newMedia = [...current];
       const target = newMedia[currentSlide];
@@ -828,6 +865,7 @@ const Write = () => {
 
     landscapeZoomRef.current = clampedZoom;
     setLandscapeZoom(clampedZoom);
+    debugLog('applyZoom', { from: prevZoom, to: clampedZoom, focalX, focalY });
 
     // 다음 페인트에서 새로운 이미지 크기를 기준으로 scroll 위치 보정
     requestAnimationFrame(() => {
@@ -889,7 +927,7 @@ const Write = () => {
         const maxScrollY = Math.max(0, img.offsetHeight - scroller.clientHeight);
         const cropX = maxScrollX <= 0 ? 50 : (scroller.scrollLeft / maxScrollX) * 100;
         const cropY = maxScrollY <= 0 ? 50 : (scroller.scrollTop / maxScrollY) * 100;
-        const viewport = computeLandscapeViewport();
+        const viewport = computeLandscapeViewport('pinchEnd');
         const current = useWriteStore.getState().mediaFiles;
         const newMedia = [...current];
         const target = newMedia[currentSlide];
@@ -917,8 +955,57 @@ const Write = () => {
     }
   };
 
+  const copyDebugLogs = async () => {
+    const text = debugLogs.join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      showSuccess('디버그 로그를 복사했습니다');
+    } catch {
+      // 폴백: prompt로 노출
+      window.prompt('아래 로그를 복사하세요', text);
+    }
+  };
+
   return (
     <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
+      {/* 디버그 패널 (가로 이미지 업로드 진단용) */}
+      <div className="fixed bottom-2 left-2 right-2 z-[9999] pointer-events-none">
+        <div className="pointer-events-auto rounded-xl bg-black/85 text-white text-[10px] font-mono shadow-2xl border border-white/10">
+          <div className="flex items-center gap-2 px-2 py-1.5 border-b border-white/10">
+            <span className="font-bold text-[11px]">DEBUG ({debugLogs.length})</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setDebugOpen((v) => !v); }}
+              className="ml-auto px-2 py-0.5 rounded bg-white/10 active:bg-white/20"
+            >
+              {debugOpen ? '숨기기' : '보이기'}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); copyDebugLogs(); }}
+              className="px-2 py-0.5 rounded bg-indigo-500 active:bg-indigo-600"
+            >
+              복사
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setDebugLogs([]); }}
+              className="px-2 py-0.5 rounded bg-white/10 active:bg-white/20"
+            >
+              지우기
+            </button>
+          </div>
+          {debugOpen && (
+            <div className="max-h-48 overflow-y-auto px-2 py-1 leading-snug whitespace-pre-wrap break-all">
+              {debugLogs.length === 0 ? (
+                <div className="text-white/50">로그가 비어 있습니다. 가로 이미지를 선택하거나 줌/스크롤 후 업로드해 보세요.</div>
+              ) : (
+                debugLogs.map((line, i) => <div key={i}>{line}</div>)
+              )}
+            </div>
+          )}
+        </div>
+      </div>
       {/* 고정 헤더(Header.tsx) 높이만큼만 정확히 공간 확보 - pt-16으로 통일 */}
       <div className="pt-16 h-full flex flex-col overflow-hidden">
         {/* 고정 타이틀 영역 */}
@@ -1052,7 +1139,7 @@ const Write = () => {
                               setImgLoaded(true);
 
                               // 초기 viewport 저장 (사용자가 한 번도 스크롤/줌 하지 않은 경우에도 정확한 업로드를 보장)
-                              const viewport = computeLandscapeViewport();
+                              const viewport = computeLandscapeViewport('onLoad');
                               if (viewport) {
                                 const current = useWriteStore.getState().mediaFiles;
                                 const newMedia = [...current];
