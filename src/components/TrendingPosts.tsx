@@ -604,7 +604,6 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           overflow: 'hidden',
           borderRadius: 'inherit',
           zIndex: 20,
-          ['--shine-delay' as any]: shineDelay,
         }}
       >
         <div
@@ -617,10 +616,10 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
             width: '50%',
             pointerEvents: 'none',
             background:
-              'linear-gradient(100deg, rgba(99,102,241,0) 0%, rgba(129,140,248,0.75) 30%, rgba(167,139,250,0.95) 50%, rgba(129,140,248,0.75) 70%, rgba(99,102,241,0) 100%)',
+              'linear-gradient(100deg, rgba(99,102,241,0) 0%, rgba(129,140,248,0.85) 30%, rgba(196,181,253,1) 50%, rgba(129,140,248,0.85) 70%, rgba(99,102,241,0) 100%)',
             transform: 'skewX(-20deg)',
-            animation: 'trending-shine-sweep 7s linear infinite',
-            animationDelay: 'var(--shine-delay, 0s)',
+            // delay를 shorthand에 함께 넣어 확실히 적용 (CSS 변수 호환 이슈 회피)
+            animation: `trending-shine-sweep 7s linear ${shineDelay} infinite`,
             willChange: 'left, opacity',
           }}
         />
@@ -1185,8 +1184,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               data-bottom-nav-keep="true"
               style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y', contain: 'layout paint' }}
             >
-              {/* 상단 스톱바 (1위 위) */}
-              <div className="h-[3px] rounded-full mx-8 mb-1" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
+              {/* 상단 스톱바 (1위 위) — 가운데 정렬 */}
+              <div className="h-[3px] rounded-full mb-1 mx-auto" style={{ width: '60%', background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
 
               {visibleExpandedPosts.map((post) => (
                 <TrendingPostItem
@@ -1201,8 +1200,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
               ))}
 
-              {/* 하단 스톱바 (20위 아래) */}
-              <div className="h-[3px] rounded-full mx-8 mt-1" style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
+              {/* 하단 스톱바 (20위 아래) — 가운데 정렬 */}
+              <div className="h-[3px] rounded-full mt-1 mx-auto" style={{ width: '60%', background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
             </div>
 
             {isExpanded && posts.length > 5 && showScrollDownArrow && (
