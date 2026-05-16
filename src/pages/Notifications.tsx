@@ -523,8 +523,11 @@ const Notifications = () => {
               )}
             >
               <div
-                className="flex items-center"
-                style={{ gap: '6px', padding: '8px 16px' }}
+                className="flex items-center justify-center"
+                style={{
+                  gap: selectionMode ? '6px' : '0px',
+                  padding: selectionMode ? '8px 16px' : '8px',
+                }}
               >
                 {selectionMode ? (
                   <>
