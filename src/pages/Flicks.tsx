@@ -47,13 +47,59 @@ const BACKDROP_STYLE: React.CSSProperties = {
   pointerEvents: 'none',
 };
 
+// ─────────────────────────────────────────────────────────────
+// 세션 캐시: 라우터 unmount 후에도 같은 세션에 돌아오면
+// 동일한 셔플 순서/현재 영상/재생 위치를 유지하기 위한 module-scope 저장소.
+//
+// 사용 시나리오:
+//   Flicks → 알림/메시지 진입 → X 눌러 복귀
+//   이때 fetchVideoPool로 새로 셔플되지 않고, 보던 영상의 같은 시점부터 이어 재생.
+//
+// 무효화 시점:
+//   - 사용자 변경 (다른 계정 로그인)
+//   - 차단 목록 변경 (필터 결과가 달라지므로)
+//   - 다음 fetchVideoPool 호출 (= 캐시가 없을 때만 fetch하므로 보통 한 세션 1회)
+// ─────────────────────────────────────────────────────────────
+type FlicksCache = {
+  videoPool: Post[];
+  activePostId: string | null;
+  activeVideoTime: number;
+  authUserId: string | null;
+  blockedKey: string;
+};
+let flicksCache: FlicksCache | null = null;
+
 const Flicks = () => {
   const navigate = useNavigate();
   const { user: authUser, loading: authLoading } = useAuth();
   const { blockedIds } = useBlockedUsers();
-  const [videoPool, setVideoPool] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const hasLoaded = useRef(false);
+  const blockedKey = Array.from(blockedIds).sort().join(',');
+
+  // 캐시가 현재 사용자/차단목록과 일치하면 즉시 복원 (재셔플/재페치 없이)
+  const cachedValid =
+    !!flicksCache &&
+    flicksCache.authUserId === (authUser?.id ?? null) &&
+    flicksCache.blockedKey === blockedKey &&
+    flicksCache.videoPool.length > 0;
+
+  const [videoPool, setVideoPool] = useState<Post[]>(
+    cachedValid ? flicksCache!.videoPool : []
+  );
+  const [isLoading, setIsLoading] = useState(!cachedValid);
+  const hasLoaded = useRef(cachedValid);
+
+  // 마지막으로 보고된 활성 포스트/시간을 ref로 추적 (state로 두면 매 보고마다 리렌더)
+  const activePostIdRef = useRef<string | null>(
+    cachedValid ? flicksCache!.activePostId : null
+  );
+  const activeVideoTimeRef = useRef<number>(
+    cachedValid ? flicksCache!.activeVideoTime : 0
+  );
+
+  // ReelsViewer에 넘길 초기 포스트와 초기 재생 시간을 마운트 시 1회만 결정
+  // (이후 ReelsViewer 내부 상태로 흘러가므로 부모는 재계산 안 함)
+  const initialPostRef = useRef<Post | null>(null);
+  const initialVideoTimeRef = useRef<number>(0);
 
   const fetchVideoPool = useCallback(async () => {
     try {
@@ -68,10 +114,6 @@ const Flicks = () => {
       const userId = authUser?.id || null;
 
       // 좋아요/댓글/저장 상태를 병렬로 조회해 영속화된 상태를 정확히 반영
-      // - likedIds: 현재 사용자가 좋아요한 post id 집합
-      // - commentedIds: 현재 사용자가 댓글을 남긴 post id 집합 (댓글 아이콘 인디고 표시용)
-      // - savedIds: 현재 사용자가 저장한 post id 집합 (북마크 표시용)
-      // - commentCountMap: 각 포스트의 전체 댓글 수
       const [likedIds, commentedIds, savedIds, commentCountMap] = await Promise.all([
         fetchLikedPostIds(postIds, userId),
         (async (): Promise<Set<string>> => {
@@ -159,14 +201,26 @@ const Flicks = () => {
         (p) => !p.isAd && p.user && !blockedIds.has(p.user.id)
       );
 
-      setVideoPool(shuffle(filtered));
+      const shuffled = shuffle(filtered);
+      setVideoPool(shuffled);
+
+      // 새로 셔플된 풀을 캐시에 저장 (이후 페이지 재진입 시 재사용)
+      flicksCache = {
+        videoPool: shuffled,
+        activePostId: shuffled[0]?.id ?? null,
+        activeVideoTime: 0,
+        authUserId: authUser?.id ?? null,
+        blockedKey,
+      };
+      activePostIdRef.current = flicksCache.activePostId;
+      activeVideoTimeRef.current = 0;
     } catch (err) {
       console.error('[Flicks] failed to load video pool', err);
       setVideoPool([]);
     } finally {
       setIsLoading(false);
     }
-  }, [blockedIds, authUser?.id]);
+  }, [blockedIds, authUser?.id, blockedKey]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -179,16 +233,59 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
+  // 마운트 시 초기 포스트/초기 시간 결정 (cached일 때만 의미 있음; 새 fetch면 fetchVideoPool이 캐시를 덮어쓴 후 ReelsViewer가 첫 슬라이드부터 시작)
+  if (videoPool.length > 0 && !initialPostRef.current) {
+    const cachedActiveId = activePostIdRef.current;
+    const found = cachedActiveId
+      ? videoPool.find((p) => p.id === cachedActiveId)
+      : null;
+    initialPostRef.current = found ?? videoPool[0];
+    initialVideoTimeRef.current = found ? activeVideoTimeRef.current : 0;
+  }
+
   const handleClose = useCallback(() => {
     navigate(-1);
   }, [navigate]);
 
   const handlePostDeleted = useCallback((postId: string) => {
-    setVideoPool((prev) => prev.filter((p) => p.id !== postId));
+    setVideoPool((prev) => {
+      const next = prev.filter((p) => p.id !== postId);
+      if (flicksCache) {
+        flicksCache.videoPool = next;
+        if (flicksCache.activePostId === postId) {
+          flicksCache.activePostId = next[0]?.id ?? null;
+          flicksCache.activeVideoTime = 0;
+        }
+      }
+      return next;
+    });
   }, []);
 
   const handlePostUpdated = useCallback((postId: string, content: string) => {
-    setVideoPool((prev) => prev.map((p) => (p.id === postId ? { ...p, content } : p)));
+    setVideoPool((prev) => {
+      const next = prev.map((p) => (p.id === postId ? { ...p, content } : p));
+      if (flicksCache) flicksCache.videoPool = next;
+      return next;
+    });
+  }, []);
+
+  // ReelsViewer에서 활성 포스트가 바뀔 때마다 캐시 갱신
+  const handleActivePostChange = useCallback((postId: string) => {
+    activePostIdRef.current = postId;
+    if (flicksCache) {
+      // 활성 포스트가 바뀌면 영상 시간은 0부터 — 그래야 다른 영상으로 갔다 돌아왔을 때
+      // 마지막 본 영상이 처음부터 재생되는 게 아니라, 마지막 영상의 마지막 시점에서 재개됨
+      if (flicksCache.activePostId !== postId) {
+        flicksCache.activeVideoTime = 0;
+      }
+      flicksCache.activePostId = postId;
+    }
+  }, []);
+
+  // 활성 영상의 재생 시간을 ref+캐시에 저장 (state 갱신 X, 리렌더 없음)
+  const handleActiveVideoTimeChange = useCallback((time: number) => {
+    activeVideoTimeRef.current = time;
+    if (flicksCache) flicksCache.activeVideoTime = time;
   }, []);
 
   if (isLoading) {
@@ -229,11 +326,14 @@ const Flicks = () => {
       <div className="bg-black" style={CONTENT_FIXED_STYLE}>
         <ReelsViewer
           isOpen={true}
-          initialPost={videoPool[0]}
+          initialPost={initialPostRef.current ?? videoPool[0]}
           pool={videoPool}
           onClose={handleClose}
           onDelete={handlePostDeleted}
           onUpdate={handlePostUpdated}
+          onActivePostChange={handleActivePostChange}
+          onActiveVideoTimeChange={handleActiveVideoTimeChange}
+          initialVideoTime={initialVideoTimeRef.current}
           noRepeat
           embedded
           endMessage="더 이상 표시할 영상이 없습니다"

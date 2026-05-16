@@ -103,6 +103,12 @@ interface ReelsViewerProps {
   onDelete?: (postId: string) => void;
   // 내 포스팅 본문 수정 후 호출 (부모가 캐시된 content를 갱신하도록)
   onUpdate?: (postId: string, content: string) => void;
+  // 활성 슬라이드의 포스트가 바뀔 때마다 부모에게 알림 (페이지 재진입 시 위치 복원용)
+  onActivePostChange?: (postId: string) => void;
+  // 활성 영상의 재생 시간을 주기적으로 부모에게 알림 (재진입 시 같은 위치에서 재생용)
+  onActiveVideoTimeChange?: (time: number) => void;
+  // 활성 영상의 시작 재생 위치 (페이지 재진입 시 복원). 활성 슬라이드가 영상일 때 1회 적용.
+  initialVideoTime?: number;
 }
 
 const ReelsViewer: React.FC<ReelsViewerProps> = ({
@@ -119,6 +125,9 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   showInlineCloseButton = false,
   onDelete,
   onUpdate,
+  onActivePostChange,
+  onActiveVideoTimeChange,
+  initialVideoTime,
 }) => {
   const isRankedMode = mode === "ranked";
   // 풀이 모두 소진되었는지 (noRepeat 모드 전용)
@@ -376,6 +385,15 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     if (!current || current.kind !== "post") return;
     markAsViewed(current.post.id);
   }, [isOpen, activeIndex, items, markAsViewed]);
+
+  // 활성 포스트가 바뀌면 부모에게 알림 (페이지 재진입 시 복원용)
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!onActivePostChange) return;
+    const current = items[activeIndex];
+    if (!current || current.kind !== "post") return;
+    onActivePostChange(current.post.id);
+  }, [isOpen, activeIndex, items, onActivePostChange]);
 
   // 끝에 가까워지면 추가 로드 (ranked 모드에서는 무한 스크롤 없음)
   useEffect(() => {
@@ -768,6 +786,10 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 authUserId={authUser?.id}
                 onContentSaved={handleEditSaved}
                 onRequestDelete={() => setDeletingPostId(item.post.id)}
+                onActiveVideoTimeChange={
+                  index === activeIndex ? onActiveVideoTimeChange : undefined
+                }
+                initialVideoTime={index === activeIndex ? initialVideoTime : undefined}
               />
             ) : item.kind === "ad" ? (
               <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
@@ -1151,6 +1173,10 @@ interface ReelSlideProps {
   // 수정 저장 완료 시 부모에게 알림 (contentMap/외부 리스트 동기화용)
   onContentSaved?: (postId: string, nextContent: string) => void;
   onRequestDelete?: () => void;
+  // 활성 영상의 재생 시간을 부모에게 throttle해서 알림 (Flicks 페이지 재진입 시 위치 복원용)
+  onActiveVideoTimeChange?: (time: number) => void;
+  // 활성 슬라이드가 영상일 때 적용할 시작 재생 위치 (재진입 시 복원). 한 번만 적용.
+  initialVideoTime?: number;
 }
 
 const ReelSlide: React.FC<ReelSlideProps> = ({
@@ -1176,6 +1202,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   authUserId,
   onContentSaved,
   onRequestDelete,
+  onActiveVideoTimeChange,
+  initialVideoTime,
 }) => {
   // 본문 표시는 부모의 수정 결과(contentOverride)를 우선
   const displayContent = contentOverride ?? post.content ?? "";
@@ -1245,6 +1273,19 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
+
+  // 활성 영상의 currentTime이 바뀔 때 부모에게 보고 (throttle ~400ms)
+  // - 매 timeupdate마다 보고하면 부모 setState가 너무 자주 일어남
+  // - 페이지 재진입 시 위치 복원 용도이므로 400ms 정도면 충분
+  const lastReportedTimeRef = useRef(0);
+  useEffect(() => {
+    if (!isActive) return;
+    if (!onActiveVideoTimeChange) return;
+    const now = performance.now();
+    if (now - lastReportedTimeRef.current < 400) return;
+    lastReportedTimeRef.current = now;
+    onActiveVideoTimeChange(currentTime);
+  }, [currentTime, isActive, onActiveVideoTimeChange]);
   // 스크럽 중에는 사용자가 드래그하는 위치를 표시 (currentTime은 video element가 따라옴)
   const [scrubTime, setScrubTime] = useState(0);
   // 스크럽 시작 직전 재생 중이었는지 (드래그 끝나면 복원)
@@ -1328,6 +1369,13 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     };
   }, []);
 
+  // 페이지 재진입 시 복원할 시작 위치를 1회만 적용하기 위한 가드.
+  // post id + initialVideoTime 조합이 살아있는 동안 한 번만 seek 한다.
+  const initialSeekAppliedRef = useRef(false);
+  useEffect(() => {
+    initialSeekAppliedRef.current = false;
+  }, [post.id, initialVideoTime]);
+
   // active 슬라이드 + 현재 미디어가 영상일 때만 재생, 음소거 상태 적용
   // (오버레이가 떠 있는 동안은 일시정지하고, 닫히면 다시 재생)
   useEffect(() => {
@@ -1335,6 +1383,20 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     if (!v) return;
     if (isActive && activeIsVideo && !isOverlayOpen) {
       v.muted = muted;
+      // 재진입 시 직전 위치로 복원 (활성 슬라이드의 첫 재생 시 1회만)
+      if (
+        !initialSeekAppliedRef.current &&
+        typeof initialVideoTime === "number" &&
+        initialVideoTime > 0.1
+      ) {
+        try {
+          v.currentTime = initialVideoTime;
+          setCurrentTime(initialVideoTime);
+        } catch {
+          // seek 실패해도 재생은 진행
+        }
+        initialSeekAppliedRef.current = true;
+      }
       const tryPlay = async () => {
         try {
           await v.play();
