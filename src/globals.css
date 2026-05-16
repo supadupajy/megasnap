@@ -288,14 +288,13 @@
 
 /* 실시간 트렌드 카드 위로 좌→우로 흐르는 광택 효과.
    각 카드는 rank에 따라 animation-delay를 다르게 줘서
-   1위→2위→3위… 순서로 차례차례 빛이 흘러내리듯 보임.
-   ※ 디버깅을 위해 일단 매우 또렷하게 보이도록 설정. */
+   1위→2위→3위… 순서로 차례차례 빛이 흘러내리듯 보임. */
 @keyframes trending-shine-sweep {
   0%   { left: -60%; opacity: 0; }
-  10%  { opacity: 1; }
-  60%  { left: 100%;  opacity: 1; }
-  70%  { left: 100%;  opacity: 0; }
-  100% { left: 100%;  opacity: 0; }
+  6%   { opacity: 1; }
+  45%  { left: 100%; opacity: 1; }
+  52%  { left: 100%; opacity: 0; }
+  100% { left: 100%; opacity: 0; }
 }
 
 .trending-shine-overlay {
@@ -305,25 +304,6 @@
   overflow: hidden;
   border-radius: inherit;
   z-index: 20;
-  /* [DEBUG] overlay 영역이 DOM에 실제로 깔려 있는지 확인하기 위한 임시 보더 */
-  border: 1px dashed red;
-  background: rgba(255, 0, 0, 0.08);
-}
-
-/* [DEBUG] overlay의 ::before가 정말 렌더링되는지 확인하기 위해
-   사이클 밖(opacity 0) 구간에서도 살짝 보이도록 base opacity를 줌 */
-.trending-shine-overlay::after {
-  content: 'shine';
-  position: absolute;
-  top: 2px;
-  left: 4px;
-  font-size: 9px;
-  font-weight: 900;
-  color: red;
-  background: rgba(255, 255, 255, 0.8);
-  padding: 0 3px;
-  border-radius: 4px;
-  z-index: 1;
 }
 
 .trending-shine-overlay::before {
@@ -333,17 +313,17 @@
   bottom: -20%;
   left: -60%;
   width: 50%;
-  /* 인디고/보라 톤의 또렷한 광택 — 흰 배경 위에서도 명확히 보임 */
+  /* 인디고/바이올렛 톤의 광택 — 흰 카드 배경 위에서도 또렷이 보이는 채도 */
   background: linear-gradient(
     100deg,
     rgba(99, 102, 241, 0) 0%,
-    rgba(129, 140, 248, 0.55) 30%,
-    rgba(196, 181, 253, 0.85) 50%,
-    rgba(129, 140, 248, 0.55) 70%,
+    rgba(129, 140, 248, 0.75) 30%,
+    rgba(167, 139, 250, 0.95) 50%,
+    rgba(129, 140, 248, 0.75) 70%,
     rgba(99, 102, 241, 0) 100%
   );
   transform: skewX(-20deg);
-  animation: trending-shine-sweep 6s linear infinite;
+  animation: trending-shine-sweep 7s linear infinite;
   animation-delay: var(--shine-delay, 0s);
   will-change: left, opacity;
 }
