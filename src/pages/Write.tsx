@@ -44,6 +44,8 @@ const Write = () => {
 
   const { content, setContent, category, setCategory, clear, mediaFiles, setMediaFiles } = useWriteStore();
   const hashtags = useMemo(() => extractHashtags(content), [content]);
+  const selectedVideoCount = useMemo(() => mediaFiles.filter((media) => media.type === 'video').length, [mediaFiles]);
+  const hasTooManyVideos = selectedVideoCount > 1;
   
   const [currentPage, setCurrentPage] = useState<1 | 2>(
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
@@ -540,6 +542,11 @@ const Write = () => {
       return;
     }
 
+    if (hasTooManyVideos) {
+      showError('영상은 1개만 업로드 가능합니다.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -707,6 +714,7 @@ const Write = () => {
   };
 
   const currentMedia = mediaFiles[currentSlide];
+  const canGoNext = mediaFiles.length > 0 && !hasTooManyVideos;
 
   return (
     <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
@@ -777,12 +785,12 @@ const Write = () => {
                       <span className="text-sm font-bold text-gray-900">다음</span>
                       <button
                         type="button"
-                        onClick={() => mediaFiles.length > 0 && setCurrentPage(2)}
-                        disabled={mediaFiles.length === 0}
+                        onClick={() => canGoNext && setCurrentPage(2)}
+                        disabled={!canGoNext}
                         aria-label="다음 단계로"
                         className={cn(
                           "w-9 h-9 rounded-full flex items-center justify-center transition-all",
-                          mediaFiles.length === 0
+                          !canGoNext
                             ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                             : "bg-indigo-500 text-white shadow-md shadow-indigo-200 active:scale-90"
                         )}
@@ -844,6 +852,14 @@ const Write = () => {
                           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                           autoPlay muted loop playsInline
                         />
+                      )}
+
+                      {hasTooManyVideos && (
+                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 px-6 text-center pointer-events-none">
+                          <p className="rounded-2xl bg-black/55 px-5 py-3 text-sm font-black text-white shadow-lg backdrop-blur-sm">
+                            영상은 1개만 업로드 가능합니다.
+                          </p>
+                        </div>
                       )}
 
                       {/* 드래그 오버레이 */}
@@ -1040,7 +1056,7 @@ const Write = () => {
             {currentPage === 2 && (
               <div ref={submitAreaRef} className="-mt-2">
                 {(() => {
-                  const isDisabled = isSubmitting || !content.trim() || mediaFiles.length === 0;
+                  const isDisabled = isSubmitting || !content.trim() || mediaFiles.length === 0 || hasTooManyVideos;
                   return (
                     <button
                       type="button"
