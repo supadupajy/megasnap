@@ -312,11 +312,13 @@ const MapContainer = ({
       if (!map || !kakao?.maps?.LatLng || !container || container.offsetWidth === 0 || container.offsetHeight === 0) return;
 
       try {
+        (window as any).__tocaCaptureEditMapDebug?.('map-relayout-before');
         const currentCenter = map.getCenter();
         const lat = currentCenter.getLat();
         const lng = currentCenter.getLng();
         map.relayout();
         map.setCenter(new kakao.maps.LatLng(lat, lng));
+        (window as any).__tocaCaptureEditMapDebug?.('map-relayout-after');
       } catch (e) {}
     };
 
@@ -327,7 +329,10 @@ const MapContainer = ({
       window.setTimeout(runRelayout, 700);
     };
 
-    const handleRelayout = () => requestRelayout();
+    const handleRelayout = () => {
+      (window as any).__tocaCaptureEditMapDebug?.('map-relayout-request-received');
+      requestRelayout();
+    };
     window.addEventListener('map-relayout-request', handleRelayout);
 
     const container = containerRef.current;
@@ -820,6 +825,34 @@ const MapContainer = ({
       mapInstance.current = map;
       setMapInstanceState(map);
 
+      (window as any).__tocaGetMapDebugSnapshot = () => {
+        try {
+          const center = map.getCenter();
+          const bounds = map.getBounds();
+          const sw = bounds.getSouthWest();
+          const ne = bounds.getNorthEast();
+          const container = containerRef.current;
+          return {
+            center: { lat: center.getLat(), lng: center.getLng() },
+            level: map.getLevel(),
+            bounds: {
+              sw: { lat: sw.getLat(), lng: sw.getLng() },
+              ne: { lat: ne.getLat(), lng: ne.getLng() },
+            },
+            container: container ? {
+              rect: (() => {
+                const rect = container.getBoundingClientRect();
+                return { top: rect.top, left: rect.left, width: rect.width, height: rect.height, bottom: rect.bottom, right: rect.right };
+              })(),
+              scroll: { left: container.scrollLeft, top: container.scrollTop },
+              className: container.className,
+            } : null,
+          };
+        } catch (error) {
+          return { error: String(error) };
+        }
+      };
+
       const updateZoomClass = () => {
         const lvl = map.getLevel();
         const el = containerRef.current;
@@ -908,11 +941,20 @@ const MapContainer = ({
         }
       }, 500);
 
-      kakao.maps.event.addListener(map, 'idle', updateMapData);
+      kakao.maps.event.addListener(map, 'idle', () => {
+        (window as any).__tocaCaptureEditMapDebug?.('kakao-map-idle');
+        updateMapData();
+      });
+      kakao.maps.event.addListener(map, 'center_changed', () => {
+        (window as any).__tocaCaptureEditMapDebug?.('kakao-map-center_changed');
+      });
 
       // zoom_changed: 레벨 즉시 전달 (idle보다 먼저 발생하므로 레벨 7 전환 시 마커 깜빡임 방지)
       // 단, onMapChangeRef는 여기서만 호출 (별도 useEffect의 zoom_changed 리스너와 중복 방지)
-      kakao.maps.event.addListener(map, 'zoom_changed', updateMapData);
+      kakao.maps.event.addListener(map, 'zoom_changed', () => {
+        (window as any).__tocaCaptureEditMapDebug?.('kakao-map-zoom_changed');
+        updateMapData();
+      });
       
       kakao.maps.event.addListener(map, 'click', (mouseEvent: any) => {
         if (onMapClickRef.current) {

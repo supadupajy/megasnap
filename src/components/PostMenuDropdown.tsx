@@ -42,6 +42,7 @@ const PostMenuDropdown = ({
     if (now - lastEditRunAtRef.current < 300) return;
     lastEditRunAtRef.current = now;
     e.stopPropagation();
+    (window as any).__tocaCaptureEditMapDebug?.('edit-menu-runEdit-before-close');
     setOpen(false);
     onEdit?.(e);
   };
