@@ -319,7 +319,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         <PostItemVideo
           videoRef={videoRef}
           src={displayMedia[0].url}
-          posterUrl={displayMedia[0].posterUrl}
         />
       );
     }

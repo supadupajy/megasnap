@@ -1628,7 +1628,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             videoRef={videoRef}
             muted={muted}
             isSlideActive={isActive}
-            videoPosterUrl={fallbackImage}
           />
 
           {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
@@ -1994,8 +1993,6 @@ interface ReelsVideoProps {
   muted: boolean;
   preload: "none" | "metadata" | "auto";
   isCurrent: boolean;
-  /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
-  posterUrl?: string;
 }
 
 const ReelsVideo: React.FC<ReelsVideoProps> = ({
@@ -2004,7 +2001,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   muted,
   preload,
   isCurrent,
-  posterUrl,
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
@@ -2079,33 +2075,28 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 
   return (
     <>
-      {/* 첫 프레임 디코드 전엔 posterUrl을 깔아 둠 (흰/회색 빈 화면 방지).
-          isReady가 되면 부드럽게 사라진다. */}
-      {posterUrl && (
-        <img
-          src={posterUrl}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{
-            opacity: isReady ? 0 : 1,
-            transition: "opacity 200ms ease-out",
-          }}
-          draggable={false}
-        />
-      )}
+      {/* 첫 프레임 디코드 전엔 어두운 배경만 보여주고, 디코드 완료 시 즉시 영상 첫 프레임 노출.
+          (별도 썸네일을 깔아두면 썸네일 ↔ 영상 첫 프레임 차이로 화면이 "튀는" 현상이 생김) */}
+      <div
+        className="absolute inset-0 bg-neutral-900"
+        aria-hidden="true"
+        style={{
+          opacity: isReady ? 0 : 1,
+          transition: "opacity 120ms ease-out",
+        }}
+      />
       <video
         ref={setRefs}
         src={src}
         className="absolute inset-0 w-full h-full object-cover video-hq"
-        poster={posterUrl || TRANSPARENT_POSTER}
+        poster={TRANSPARENT_POSTER}
         playsInline
         loop
         muted={muted}
         preload={preload}
         style={{
           opacity: isCurrent && !isReady ? 0 : 1,
-          transition: "opacity 200ms ease-out",
+          transition: "opacity 120ms ease-out",
         }}
       />
       {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 */}
@@ -2129,8 +2120,6 @@ interface MediaCarouselProps {
   // false면 캐러셀 내부의 비디오가 canplay/loadeddata 이벤트로 자동 재생되는 것을 차단한다.
   // (여러 슬라이드가 동시에 DOM에 마운트되어 있어도 활성 슬라이드만 영상을 재생하기 위함)
   isSlideActive: boolean;
-  /** 영상 슬라이드용 fallback 썸네일 (첫 프레임 디코드 전 빈 화면 방지). */
-  videoPosterUrl?: string;
 }
 
 const MediaCarousel: React.FC<MediaCarouselProps> = ({
@@ -2140,7 +2129,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   videoRef,
   muted,
   isSlideActive,
-  videoPosterUrl,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [dragX, setDragX] = useState(0);
@@ -2402,7 +2390,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   muted={isPlayable ? muted : true}
                   preload={isPlayable ? "auto" : "none"}
                   isCurrent={isPlayable}
-                  posterUrl={videoPosterUrl}
                 />
               ) : (
                 <img
