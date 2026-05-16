@@ -30,15 +30,18 @@ const MARKER_IMAGE_TRANSFORM = {
   resize: 'cover' as const,
 };
 
+// 업로드된 포스팅 이미지는 3:4 비율로 저장되므로, 표시용 트랜스폼도 동일한 3:4 비율을 사용해
+// Supabase image render가 추가로 정사각형으로 크롭하지 않도록 한다.
+// (정사각형으로 두면 가로 이미지의 좌우, 또는 세로 이미지의 위아래가 잘려 사용자가 의도한 구도와 달라진다.)
 const FEED_IMAGE_TRANSFORM = {
-  width: 800,
+  width: 600,
   height: 800,
   quality: 75,
   resize: 'cover' as const,
 };
 
 const DETAIL_IMAGE_TRANSFORM = {
-  width: 1200,
+  width: 900,
   height: 1200,
   quality: 85,
   resize: 'cover' as const,
