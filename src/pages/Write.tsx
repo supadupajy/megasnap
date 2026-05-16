@@ -980,8 +980,11 @@ const Write = () => {
 
   return (
     <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
-      {/* 디버그 패널 (가로 이미지 업로드 진단용) */}
-      <div className="fixed bottom-2 left-2 right-2 z-[9999] pointer-events-none">
+      {/* 디버그 패널 (가로 이미지 업로드 진단용) - 하단 메뉴바 위로 띄움 */}
+      <div
+        className="fixed left-2 right-2 z-[9999] pointer-events-none"
+        style={{ bottom: 'calc(6rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <div className="pointer-events-auto rounded-xl bg-black/85 text-white text-[10px] font-mono shadow-2xl border border-white/10">
           <div className="flex items-center gap-2 px-2 py-1.5 border-b border-white/10">
             <span className="font-bold text-[11px]">DEBUG ({debugLogs.length})</span>
