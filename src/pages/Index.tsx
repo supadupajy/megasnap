@@ -1990,8 +1990,11 @@ const Index = () => {
   const [trendingReelsInitialPost, setTrendingReelsInitialPost] = useState<Post | null>(null);
 
   const handleTrendingPostClick = useCallback((post: Post) => {
-    // 트렌딩 리스트(패널)는 그대로 유지한 상태로 풀스크린 뷰어를 연다.
-    setTrendingReelsInitialPost(post);
+    setIsTrendingExpanded(false);
+    // 패널 닫힘 애니메이션이 살짝 진행된 뒤 풀스크린 뷰어를 연다
+    window.setTimeout(() => {
+      setTrendingReelsInitialPost(post);
+    }, 180);
   }, []);
 
   const handleCloseTrendingReels = useCallback(() => {
