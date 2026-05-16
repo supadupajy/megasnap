@@ -425,6 +425,7 @@ const Profile = () => {
           subtitle="My Activity"
           ActionIcon={Settings}
           onActionClick={() => navigate('/settings')}
+          collapseActionToIcon
         />
       </div>
 
