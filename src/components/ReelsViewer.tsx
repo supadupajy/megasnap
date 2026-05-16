@@ -2122,7 +2122,21 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [dragX, setDragX] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
+  // 트랜지션 문자열 자체를 state로: 빠른 flick엔 짧고 가파른 곡선, 느릴 땐 살짝 더 부드럽게.
+  const [trackTransition, setTrackTransition] = useState<string>("none");
+
+  // velocity(px/ms) 기반으로 손을 놓은 뒤 다음 사진까지 갈 때 쓸 transition 계산
+  const computeSnapTransition = (velocity: number): string => {
+    // velocity: 0(정지) ~ 2.5+(아주 빠른 플릭) 범위로 보고 보간
+    const v = Math.min(Math.max(velocity, 0), 2.5);
+    // 빠를수록 짧게: 220ms(느림) → 110ms(빠름)
+    const duration = Math.round(220 - v * 44);
+    // 빠를수록 시작이 더 가파르게(스냅감) — cubic-bezier x1을 작게
+    // v=0 → (0.25, 0.9, 0.25, 1)   v=2.5 → (0.05, 1, 0.2, 1)
+    const x1 = (0.25 - v * 0.08).toFixed(3);
+    const y1 = (0.9 + v * 0.04).toFixed(3);
+    return `transform ${duration}ms cubic-bezier(${x1}, ${y1}, 0.2, 1)`;
+  };
 
   const currentIndexRef = useRef(currentIndex);
   const mediaCountRef = useRef(mediaList.length);
@@ -2179,7 +2193,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         pointerId: null,
         startIndex: currentIndexRef.current,
       };
-      setIsAnimating(false);
+      setTrackTransition("none");
     };
 
     const onTouchMove = (e: TouchEvent) => {
@@ -2231,7 +2245,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       }
 
       const width = rootRef.current?.clientWidth || 1;
-      const velocity = Math.abs(dx) / Math.max(dt, 1);
+      const velocity = Math.abs(dx) / Math.max(dt, 1); // px/ms
       // 더 쉽게 다음으로 넘어가도록 임계값 완화 + flick 민감도 ↑
       const distanceThreshold = width * 0.12;
       const isFlick = velocity > 0.18 && Math.abs(dx) > 14;
@@ -2244,12 +2258,15 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       }
       const clamped = Math.max(0, Math.min(mediaCountRef.current - 1, nextIndex));
 
-      setIsAnimating(true);
+      // 빠르게 휙 던졌을 땐 짧고 가파른 곡선으로 "촥!" 달라붙게
+      const snap = computeSnapTransition(velocity);
+      setTrackTransition(snap);
       setDragX(0);
       if (clamped !== currentIndexRef.current) {
         onIndexChange(clamped);
       }
-      window.setTimeout(() => setIsAnimating(false), 180);
+      // 다음 제스처 시작 전엔 transition을 다시 끊어둠
+      window.setTimeout(() => setTrackTransition("none"), 260);
     };
 
     const onTouchEnd = (e: TouchEvent) => {
@@ -2286,7 +2303,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       pointerId: null,
       startIndex: currentIndexRef.current,
     };
-    setIsAnimating(false);
+    setTrackTransition("none");
 
     const onMove = (ev: MouseEvent) => {
       const g = gestureRef.current;
@@ -2319,10 +2336,11 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         nextIndex = g.startIndex - 1;
       }
       const clamped = Math.max(0, Math.min(mediaCountRef.current - 1, nextIndex));
-      setIsAnimating(true);
+      const snap = computeSnapTransition(velocity);
+      setTrackTransition(snap);
       setDragX(0);
       if (clamped !== currentIndexRef.current) onIndexChange(clamped);
-      window.setTimeout(() => setIsAnimating(false), 180);
+      window.setTimeout(() => setTrackTransition("none"), 260);
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -2339,7 +2357,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         style={{
           width: `${mediaList.length * 100}%`,
           transform: `translate3d(calc(${-currentIndex * (100 / mediaList.length)}% + ${dragX}px), 0, 0)`,
-          transition: isAnimating ? "transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1)" : "none",
+          transition: trackTransition,
         }}
       >
         {mediaList.map((url, i) => {
