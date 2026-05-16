@@ -591,31 +591,31 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       key={post.id}
       onClick={() => onPostClick(post)}
       className="relative flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group overflow-hidden"
-      ref={(el) => {
-        if (!el) return;
-        if ((el as any).__cardDebugLogged) return;
-        (el as any).__cardDebugLogged = true;
-        const rect = el.getBoundingClientRect();
-        const cs = getComputedStyle(el);
-        console.log(`[card rank=${post.rank}] size:`, rect.width, 'x', rect.height,
-          ' position=', cs.position,
-          ' overflow=', cs.overflow,
-          ' isolation=', cs.isolation,
-        );
-      }}
     >
-      {/* [DEBUG] 카드 직접 자식으로 빨간 박스 - 카드 한가운데 박혀 보이는지 확인 */}
+      {/* Shine 효과: 카드 직접 자식으로 absolute 배치, animation만 따로 주입 */}
       <div
+        aria-hidden="true"
+        ref={(el) => {
+          if (!el) return;
+          // animation을 !important로 강제 주입 (어딘가 우선순위 충돌 회피)
+          el.style.setProperty(
+            'animation',
+            `trending-shine-sweep 7s linear ${shineDelay} infinite`,
+            'important'
+          );
+        }}
         style={{
           position: 'absolute',
-          top: '10px',
-          left: '30px',
-          width: '60px',
-          height: '40px',
-          background: 'red',
-          border: '4px solid black',
-          zIndex: 99999,
+          top: '-20%',
+          bottom: '-20%',
+          left: '-60%',
+          width: '50%',
           pointerEvents: 'none',
+          background:
+            'linear-gradient(100deg, rgba(99,102,241,0) 0%, rgba(129,140,248,0.85) 30%, rgba(196,181,253,1) 50%, rgba(129,140,248,0.85) 70%, rgba(99,102,241,0) 100%)',
+          transform: 'skewX(-20deg)',
+          zIndex: 20,
+          willChange: 'left, opacity',
         }}
       />
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
