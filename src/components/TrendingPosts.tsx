@@ -595,10 +595,16 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       <div
         className="trending-shine-overlay"
         aria-hidden="true"
+        style={{ ['--shine-delay' as any]: shineDelay }}
       >
         <div
-          className="trending-shine-bar"
-          style={{ ['--shine-delay' as any]: shineDelay }}
+          style={{
+            width: '100%',
+            height: '30px',
+            background: 'lime',
+            border: '3px solid magenta',
+          }}
+          data-debug="shine-bar-inline"
         />
       </div>
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
