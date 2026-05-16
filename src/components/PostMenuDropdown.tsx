@@ -34,6 +34,7 @@ const PostMenuDropdown = ({
   reportMessage = '신고가 접수되었습니다.',
 }: PostMenuDropdownProps) => {
   const { blockUser } = useBlockedUsers();
+  const [open, setOpen] = React.useState(false);
   const lastEditRunAtRef = React.useRef(0);
 
   const runEdit = (source: string, e: React.SyntheticEvent) => {
@@ -48,11 +49,12 @@ const PostMenuDropdown = ({
       scroll: { x: window.scrollX, y: window.scrollY },
     });
     e.stopPropagation();
-    onEdit?.(e);
+    setOpen(false);
+    requestAnimationFrame(() => onEdit?.(e));
   };
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button
           className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none"
@@ -84,11 +86,12 @@ const PostMenuDropdown = ({
           <>
             {!isAd && isMine && onEdit && (
               <DropdownMenuItem
-                onPointerDown={() =>
+                onPointerDown={(e) => {
                   console.log('[edit-scroll-bug] 수정하기 pointerDown', {
                     scroll: { x: window.scrollX, y: window.scrollY },
-                  })
-                }
+                  });
+                  runEdit('pointerDown', e);
+                }}
                 onPointerUp={(e) => {
                   console.log('[edit-scroll-bug] 수정하기 pointerUp', {
                     scroll: { x: window.scrollX, y: window.scrollY },
