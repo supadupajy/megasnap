@@ -102,6 +102,14 @@ const Write = () => {
     }
   });
   const [debugOpen, setDebugOpen] = useState(true);
+  const DEBUG_RESULT_KEY = 'write-debug-last-result';
+  const [debugResultUrl, setDebugResultUrl] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(DEBUG_RESULT_KEY);
+    } catch {
+      return null;
+    }
+  });
   const debugLog = (label: string, data?: unknown) => {
     const time = new Date().toISOString().split('T')[1]?.replace('Z', '') ?? '';
     let payload = '';
@@ -643,6 +651,21 @@ const Write = () => {
             fileToUpload = await compressImage(media.file).catch(() => media.file);
           }
           debugLog('upload:landscape:result', { size: fileToUpload.size, type: fileToUpload.type });
+          // 디버그: 업로드 결과 이미지를 dataURL로 저장해서 다음에 Write 화면 들어왔을 때 확인 가능하게
+          try {
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(fileToUpload);
+            });
+            // 너무 크면 저장 실패할 수 있으므로 try-catch
+            localStorage.setItem(DEBUG_RESULT_KEY, dataUrl);
+            setDebugResultUrl(dataUrl);
+            debugLog('upload:landscape:resultPreviewStored', { dataUrlLen: dataUrl.length });
+          } catch (err) {
+            debugLog('upload:landscape:resultPreviewStoreFailed', { msg: String(err) });
+          }
         } else {
           fileToUpload = await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file);
         }
@@ -1015,13 +1038,36 @@ const Write = () => {
             </button>
           </div>
           {debugOpen && (
-            <div className="max-h-48 overflow-y-auto px-2 py-1 leading-snug whitespace-pre-wrap break-all">
-              {debugLogs.length === 0 ? (
-                <div className="text-white/50">로그가 비어 있습니다. 가로 이미지를 선택하거나 줌/스크롤 후 업로드해 보세요.</div>
-              ) : (
-                debugLogs.map((line, i) => <div key={i}>{line}</div>)
+            <>
+              {debugResultUrl && (
+                <div className="px-2 py-1 border-b border-white/10">
+                  <div className="text-[11px] font-bold mb-1">마지막 업로드 결과 (가로 이미지)</div>
+                  <img
+                    src={debugResultUrl}
+                    alt="last upload result"
+                    style={{ width: '100%', height: 'auto', borderRadius: 6, display: 'block' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      try { localStorage.removeItem(DEBUG_RESULT_KEY); } catch {}
+                      setDebugResultUrl(null);
+                    }}
+                    className="mt-1 px-2 py-0.5 rounded bg-white/10 active:bg-white/20"
+                  >
+                    결과 미리보기 지우기
+                  </button>
+                </div>
               )}
-            </div>
+              <div className="max-h-48 overflow-y-auto px-2 py-1 leading-snug whitespace-pre-wrap break-all">
+                {debugLogs.length === 0 ? (
+                  <div className="text-white/50">로그가 비어 있습니다. 가로 이미지를 선택하거나 줌/스크롤 후 업로드해 보세요.</div>
+                ) : (
+                  debugLogs.map((line, i) => <div key={i}>{line}</div>)
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>
