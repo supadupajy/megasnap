@@ -249,6 +249,7 @@ const MapContainer = ({
   const lastDragEnd = useRef(0);
   const currentLevelRef = useRef<number>(6);
   const lastReportedLevelRef = useRef<number | null>(null);
+  const lastStableMapViewRef = useRef<{ center: { lat: number; lng: number }; level: number } | null>(null);
   const postsRef = useRef<any[]>(posts);
   const viewedPostIdsRef = useRef<Set<any>>(viewedPostIds);
   const internalViewedIdsRef = useRef<Set<string>>(new Set());
@@ -270,6 +271,24 @@ const MapContainer = ({
   const levelRef = useRef(6);
   useEffect(() => { centerRef.current = center; }, [center]);
   useEffect(() => { levelRef.current = level; }, [level]);
+
+  const isMapContainerVisible = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return false;
+    const rect = container.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && container.offsetWidth > 0 && container.offsetHeight > 0;
+  }, []);
+
+  const rememberStableMapView = useCallback((map: any) => {
+    try {
+      if (!isMapContainerVisible()) return;
+      const center = map.getCenter();
+      lastStableMapViewRef.current = {
+        center: { lat: center.getLat(), lng: center.getLng() },
+        level: map.getLevel(),
+      };
+    } catch {}
+  }, [isMapContainerVisible]);
 
   // 히트맵도 실제 지도 마커와 동일한 24시간 만료 룰을 적용한다.
   // 즉, DB에 남아 있어도 현재 지도에 표시되지 않는 만료 마커는 히트맵에서 제외한다.
@@ -313,10 +332,13 @@ const MapContainer = ({
 
       try {
         (window as any).__tocaCaptureEditMapDebug?.('map-relayout-before');
+        const stableView = lastStableMapViewRef.current;
         const currentCenter = map.getCenter();
-        const lat = currentCenter.getLat();
-        const lng = currentCenter.getLng();
+        const lat = stableView?.center.lat ?? currentCenter.getLat();
+        const lng = stableView?.center.lng ?? currentCenter.getLng();
+        const targetLevel = stableView?.level ?? map.getLevel();
         map.relayout();
+        map.setLevel(targetLevel, { animate: false });
         map.setCenter(new kakao.maps.LatLng(lat, lng));
         (window as any).__tocaCaptureEditMapDebug?.('map-relayout-after');
       } catch (e) {}
@@ -824,6 +846,7 @@ const MapContainer = ({
       map.setMinLevel(3);
       mapInstance.current = map;
       setMapInstanceState(map);
+      lastStableMapViewRef.current = { center: initialCenter, level: initialLevel };
 
       (window as any).__tocaGetMapDebugSnapshot = () => {
         try {
@@ -847,6 +870,7 @@ const MapContainer = ({
               scroll: { left: container.scrollLeft, top: container.scrollTop },
               className: container.className,
             } : null,
+            lastStableMapView: lastStableMapViewRef.current,
           };
         } catch (error) {
           return { error: String(error) };
@@ -862,6 +886,9 @@ const MapContainer = ({
       };
 
       const updateMapData = (forceInitial = false) => {
+        // 숨겨진 지도(display:none/0x0)에서 Kakao Map이 viewport 변화에 반응하면
+        // center/bounds가 한 점으로 무너지는 경우가 있다. 이 상태의 이벤트는 앱 상태에 절대 반영하지 않는다.
+        if (!isMapContainerVisible()) return;
         // 댓글 입력/키보드로 visualViewport가 바뀌는 동안 카카오맵이 idle/zoom_changed를 내보내도
         // 지도 상태를 앱에 보고하지 않음. 실제 사용자 지도 조작이 아니므로 위치 튐을 방지한다.
         if (!forceInitial && (window as any).__commentsDialogOpen) return;
@@ -874,6 +901,7 @@ const MapContainer = ({
           const currentCenter = map.getCenter();
           const sw = bounds.getSouthWest();
           const ne = bounds.getNorthEast();
+          if (sw.getLat() === ne.getLat() && sw.getLng() === ne.getLng()) return;
           const mapLevel = map.getLevel();
           currentLevelRef.current = mapLevel;
           lastReportedLevelRef.current = mapLevel;
@@ -887,11 +915,13 @@ const MapContainer = ({
             sw: { lat: sw.getLat(), lng: sw.getLng() },
             ne: { lat: ne.getLat(), lng: ne.getLng() }
           };
-          
+          const centerData = { lat: currentCenter.getLat(), lng: currentCenter.getLng() };
+
+          lastStableMapViewRef.current = { center: centerData, level: mapLevel };
           localStorage.setItem('map_bounds', JSON.stringify(boundsData));
           onMapChangeRef.current({
             bounds: boundsData,
-            center: { lat: currentCenter.getLat(), lng: currentCenter.getLng() },
+            center: centerData,
             level: mapLevel,
           });
         } catch (e) {}
@@ -946,6 +976,7 @@ const MapContainer = ({
         updateMapData();
       });
       kakao.maps.event.addListener(map, 'center_changed', () => {
+        if (isMapContainerVisible()) rememberStableMapView(map);
         (window as any).__tocaCaptureEditMapDebug?.('kakao-map-center_changed');
       });
 
