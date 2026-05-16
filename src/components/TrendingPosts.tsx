@@ -1184,8 +1184,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
               data-bottom-nav-keep="true"
               style={{ maxHeight: maxHeight ? undefined : '58vh', overscrollBehavior: 'none', touchAction: 'pan-y', contain: 'layout paint' }}
             >
-              {/* 상단 스톱바 (1위 위) — 가운데 정렬 */}
-              <div className="h-[3px] rounded-full mb-1 mx-auto" style={{ width: '60%', background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
+              {/* 상단 스톱바 (1위 위) — 상하 가운데 정렬 */}
+              <div className="h-[3px] rounded-full mx-8 my-2" style={{ background: 'linear-gradient(90deg, #6366f1 0%, #818cf8 40%, #a78bfa 70%, #7c3aed 100%)' }} />
 
               {visibleExpandedPosts.map((post) => (
                 <TrendingPostItem
@@ -1200,8 +1200,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
               ))}
 
-              {/* 하단 스톱바 (20위 아래) — 가운데 정렬 */}
-              <div className="h-[3px] rounded-full mt-1 mx-auto" style={{ width: '60%', background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
+              {/* 하단 스톱바 (20위 아래) — 상하 가운데 정렬 */}
+              <div className="h-[3px] rounded-full mx-8 my-2" style={{ background: 'linear-gradient(90deg, #7c3aed 0%, #a78bfa 30%, #818cf8 60%, #6366f1 100%)' }} />
             </div>
 
             {isExpanded && posts.length > 5 && showScrollDownArrow && (
