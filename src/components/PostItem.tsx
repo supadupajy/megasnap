@@ -82,27 +82,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
-  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { targetRef: editFormRef } = useKeyboardSafeScroll<HTMLDivElement>(isEditingContent);
-
-  // ─── [edit-scroll-bug fix] autoFocus 대신 ref + focus({preventScroll:true}) 로
-  // 포커스를 주어, 브라우저 기본 동작인 "포커스 대상으로 scrollIntoView"가
-  // 부모 컨테이너(또는 window) 좌표를 0으로 점프시키는 버그를 차단한다.
-  useEffect(() => {
-    if (!isEditingContent) return;
-    const el = editTextareaRef.current;
-    if (!el) return;
-    // raf로 미뤄야 DOM에 textarea가 실제로 mount된 뒤 focus를 줄 수 있다.
-    const id = requestAnimationFrame(() => {
-      try {
-        el.focus({ preventScroll: true });
-        console.log('[edit-scroll-bug] textarea focused with preventScroll=true');
-      } catch (err) {
-        console.warn('[edit-scroll-bug] textarea focus error', err);
-      }
-    });
-    return () => cancelAnimationFrame(id);
-  }, [isEditingContent]);
 
   const {
     scrollRef: imageScrollRef,
@@ -497,74 +477,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   const startContentEdit = (e: React.SyntheticEvent) => {
     e.stopPropagation();
-
-    // ─── [DEBUG: edit-scroll-bug] 수정하기 선택 직후 상태 스냅샷 ───
-    try {
-      const vv = window.visualViewport;
-      const de = document.scrollingElement || document.documentElement;
-      const active = document.activeElement as HTMLElement | null;
-      console.log('[edit-scroll-bug] startContentEdit RUN', {
-        postId: post.id,
-        pathname: location.pathname,
-        windowScroll: { x: window.scrollX, y: window.scrollY },
-        documentScroll: { left: de?.scrollLeft, top: de?.scrollTop },
-        bodyScroll: { left: document.body.scrollLeft, top: document.body.scrollTop },
-        innerSize: { w: window.innerWidth, h: window.innerHeight },
-        visualViewport: vv ? {
-          width: vv.width,
-          height: vv.height,
-          offsetTop: vv.offsetTop,
-          offsetLeft: vv.offsetLeft,
-          pageTop: vv.pageTop,
-          pageLeft: vv.pageLeft,
-          scale: vv.scale,
-        } : null,
-        activeElement: active ? {
-          tag: active.tagName,
-          id: active.id,
-          cls: active.className?.toString().slice(0, 120),
-        } : null,
-      });
-
-      // 다음 프레임/타이밍별로 같은 측정을 반복해서 어디서 스크롤이 튀는지 추적
-      const snapshot = (label: string) => {
-        const de2 = document.scrollingElement || document.documentElement;
-        const ae = document.activeElement as HTMLElement | null;
-        console.log(`[edit-scroll-bug] snapshot:${label}`, {
-          windowScroll: { x: window.scrollX, y: window.scrollY },
-          documentScroll: { left: de2?.scrollLeft, top: de2?.scrollTop },
-          bodyScroll: { left: document.body.scrollLeft, top: document.body.scrollTop },
-          activeElement: ae ? { tag: ae.tagName, id: ae.id } : null,
-        });
-      };
-      requestAnimationFrame(() => snapshot('raf1'));
-      setTimeout(() => snapshot('t50'), 50);
-      setTimeout(() => snapshot('t150'), 150);
-      setTimeout(() => snapshot('t400'), 400);
-      setTimeout(() => snapshot('t800'), 800);
-
-      // window/document에 scroll 리스너를 캡쳐 단계로 잠시 붙여서 누가 스크롤하는지 확인
-      const onAnyScroll = (ev: Event) => {
-        const t = ev.target as any;
-        const tagInfo = t && t.nodeType
-          ? { tag: t.tagName, id: t.id, cls: (t.className || '').toString().slice(0, 80) }
-          : (t === document ? 'document' : t === window ? 'window' : String(t));
-        console.log('[edit-scroll-bug] SCROLL event', {
-          target: tagInfo,
-          windowScroll: { x: window.scrollX, y: window.scrollY },
-          docScroll: { left: (document.scrollingElement || document.documentElement)?.scrollLeft, top: (document.scrollingElement || document.documentElement)?.scrollTop },
-        });
-      };
-      window.addEventListener('scroll', onAnyScroll, true);
-      // 1.5초 후 떼어내기 — 그 사이 발생한 스크롤만 추적
-      setTimeout(() => {
-        window.removeEventListener('scroll', onAnyScroll, true);
-        console.log('[edit-scroll-bug] scroll listener detached');
-      }, 1500);
-    } catch (err) {
-      console.warn('[edit-scroll-bug] debug snapshot failed', err);
-    }
-
     setEditContent(localContent);
     setIsEditingContent(true);
     setContentExpanded(true);
@@ -620,17 +532,9 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           onClick={(e) => e.stopPropagation()}
         >
           <Textarea
-            ref={editTextareaRef}
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
             disabled={isSavingContent}
-            onFocus={() => {
-              const de = document.scrollingElement || document.documentElement;
-              console.log('[edit-scroll-bug] textarea onFocus fired', {
-                windowScroll: { x: window.scrollX, y: window.scrollY },
-                docScroll: { left: de?.scrollLeft, top: de?.scrollTop },
-              });
-            }}
             className="min-h-[88px] resize-none rounded-2xl border-indigo-100 bg-indigo-50/40 text-sm text-gray-900 shadow-inner focus-visible:ring-2 focus-visible:ring-indigo-400"
           />
           <div className="flex items-center justify-end gap-2">

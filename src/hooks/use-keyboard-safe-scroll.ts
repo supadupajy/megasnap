@@ -66,6 +66,10 @@ export const useKeyboardSafeScroll = <T extends HTMLElement>(active: boolean) =>
 
       setKeyboardOffset(keyboardHeight);
 
+      // 수정 모드 진입만으로는 스크롤하지 않는다.
+      // 실제 키보드가 올라온 뒤에만 내부 스크롤 컨테이너를 보정한다.
+      if (keyboardHeight === 0) return;
+
       const rect = target.getBoundingClientRect();
       const bottomLimit = visibleBottom - SAFE_BOTTOM_MARGIN;
       const topLimit = visibleTop + SAFE_TOP_MARGIN;
@@ -92,9 +96,10 @@ export const useKeyboardSafeScroll = <T extends HTMLElement>(active: boolean) =>
 
       if (scrollableParent) {
         scrollableParent.scrollTo({ top: scrollableParent.scrollTop + delta, behavior: 'smooth' });
-      } else {
-        window.scrollBy({ top: delta, behavior: 'smooth' });
       }
+      // 중요: scrollable parent가 없을 때 window/body를 스크롤하지 않는다.
+      // 지도 화면은 항상 메모리에 살아있으므로 window.scrollBy가 발생하면
+      // 키보드 보정 과정에서 지도 레이어까지 같이 밀려 보일 수 있다.
     };
 
     const scheduleChecks = () => {
