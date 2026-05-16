@@ -592,7 +592,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       onClick={() => onPostClick(post)}
       className="relative flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group overflow-hidden"
     >
-      <span
+      <div
         className="trending-shine-overlay"
         style={{ ['--shine-delay' as any]: shineDelay }}
         aria-hidden="true"

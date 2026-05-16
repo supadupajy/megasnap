@@ -290,13 +290,13 @@
    각 카드는 rank에 따라 animation-delay를 다르게 줘서
    1위→2위→3위… 순서로 차례차례 빛이 흘러내리듯 보임. */
 @keyframes trending-shine-sweep {
-  /* 사이클 길이 대비 실제 빛이 지나가는 구간은 0~22% 정도로 짧게.
-     나머지 시간은 빛이 카드 바깥에 머물러 보이지 않음 → 은은한 주기감. */
-  0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
-  4%   { opacity: 0.9; }
-  18%  { transform: translateX(220%) skewX(-18deg); opacity: 0.9; }
-  22%  { transform: translateX(220%) skewX(-18deg); opacity: 0; }
-  100% { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+  /* 사이클(7s) 대비 빛이 카드 위를 가로지르는 구간은 약 0~30% 정도.
+     빛이 카드 흰 배경 위에서도 또렷이 보이도록 충분한 채도와 폭을 가짐. */
+  0%   { transform: translateX(-150%) skewX(-20deg); opacity: 0; }
+  5%   { opacity: 1; }
+  25%  { transform: translateX(260%) skewX(-20deg); opacity: 1; }
+  30%  { transform: translateX(260%) skewX(-20deg); opacity: 0; }
+  100% { transform: translateX(260%) skewX(-20deg); opacity: 0; }
 }
 
 .trending-shine-overlay {
@@ -305,24 +305,28 @@
   pointer-events: none;
   overflow: hidden;
   border-radius: inherit;
+  z-index: 5;
 }
 
 .trending-shine-overlay::before {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: -10%;
+  bottom: -10%;
   left: 0;
-  width: 35%;
+  width: 45%;
+  /* 흰 배경 위에서도 보이도록 인디고 톤이 살짝 섞인 광택 사용 */
   background: linear-gradient(
     100deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.55) 50%,
-    rgba(255, 255, 255, 0) 100%
+    rgba(99, 102, 241, 0) 0%,
+    rgba(165, 180, 252, 0.45) 35%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(165, 180, 252, 0.45) 65%,
+    rgba(99, 102, 241, 0) 100%
   );
-  filter: blur(2px);
-  transform: translateX(-120%) skewX(-18deg);
-  animation: trending-shine-sweep 9s linear infinite;
+  filter: blur(3px);
+  transform: translateX(-150%) skewX(-20deg);
+  animation: trending-shine-sweep 7s linear infinite;
   animation-delay: var(--shine-delay, 0s);
   will-change: transform, opacity;
 }
