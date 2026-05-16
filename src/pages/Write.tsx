@@ -79,6 +79,17 @@ const Write = () => {
   const landscapeScrollerRef = useRef<HTMLDivElement>(null);
   const landscapeImgRef = useRef<HTMLImageElement>(null);
   const landscapeScrollRafRef = useRef<number | null>(null);
+  const landscapeZoomRef = useRef(1);
+  const landscapePinchRef = useRef<{
+    active: boolean;
+    startDistance: number;
+    startZoom: number;
+    centerX: number;
+    centerY: number;
+    contentX: number;
+    contentY: number;
+  }>({ active: false, startDistance: 0, startZoom: 1, centerX: 0, centerY: 0, contentX: 0, contentY: 0 });
+  const [landscapeZoom, setLandscapeZoom] = useState(1);
   const cropPixelRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const currentZoomRef = useRef(1);
@@ -249,6 +260,11 @@ const Write = () => {
     currentZoomRef.current = mediaFiles[currentSlide]?.zoom ?? 1;
     activePointersRef.current.clear();
     setPreviewTransform(`translate3d(0px, 0px, 0) scale(${currentZoomRef.current})`);
+    // 가로 이미지 줌 초기화
+    const savedZoom = mediaFiles[currentSlide]?.zoom ?? 1;
+    landscapeZoomRef.current = isLandscapeImage(mediaFiles[currentSlide]) ? Math.max(1, savedZoom) : 1;
+    setLandscapeZoom(landscapeZoomRef.current);
+    landscapePinchRef.current.active = false;
     // ✅ 슬라이드 변경 시 로드 상태 초기화
     setImgLoaded(false);
   }, [currentSlide]);
@@ -308,7 +324,8 @@ const Write = () => {
     const media = mediaFiles[currentSlide];
     if (!isPortraitImage(media)) return;
     currentZoomRef.current = Math.max(1, Math.min(4, zoom));
-    applyPreviewPlacement();
+    const placement = applyPreviewPlacement();
+    if (placement) setPreviewTransform(placement.transform);
   };
 
   const applyPreviewPlacement = () => {
@@ -572,11 +589,13 @@ const Write = () => {
         
         // 이미지 업로드 처리:
         // - 세로 이미지: 3:4 프레임에 맞춰 사용자가 맞춘 위치로 크롭 후 업로드
-        // - 가로 이미지: 원본 비율 그대로 (잘리지 않게) 압축만 적용 후 업로드.
-        //   업로드 후에는 피드/디테일에서 'object-cover'로 표시되므로 원본 픽셀이 보존된다.
+        // - 가로 이미지(zoom=1): 원본 비율 그대로(잘리지 않게) 압축만 적용 후 업로드.
+        // - 가로 이미지(zoom>1): 사용자가 핀치 줌으로 본 영역을 3:4로 크롭 후 업로드.
         const fileToUpload = media.type === 'image'
           ? media.orientation === 'landscape'
-            ? await compressImage(media.file).catch(() => media.file)
+            ? (media.zoom ?? 1) > 1
+              ? await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
+              : await compressImage(media.file).catch(() => media.file)
             : await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
           : media.file;
 
@@ -741,19 +760,125 @@ const Write = () => {
       landscapeScrollRafRef.current = null;
       const img = landscapeImgRef.current;
       if (!img) return;
-      const maxScroll = Math.max(0, img.offsetWidth - scroller.clientWidth);
-      const cropX = maxScroll <= 0 ? 50 : (scroller.scrollLeft / maxScroll) * 100;
+      const maxScrollX = Math.max(0, img.offsetWidth - scroller.clientWidth);
+      const maxScrollY = Math.max(0, img.offsetHeight - scroller.clientHeight);
+      const cropX = maxScrollX <= 0 ? 50 : (scroller.scrollLeft / maxScrollX) * 100;
+      const cropY = maxScrollY <= 0 ? 50 : (scroller.scrollTop / maxScrollY) * 100;
       const current = useWriteStore.getState().mediaFiles;
       const newMedia = [...current];
       const target = newMedia[currentSlide];
       if (!target) return;
       newMedia[currentSlide] = {
         ...target,
-        crop: { x: cropX, y: 50 },
-        zoom: 1,
+        crop: { x: cropX, y: cropY },
+        zoom: landscapeZoomRef.current,
       };
       setMediaFiles(newMedia);
     });
+  };
+
+  const applyLandscapeZoom = (nextZoom: number, focal?: { x: number; y: number }) => {
+    const scroller = landscapeScrollerRef.current;
+    const img = landscapeImgRef.current;
+    if (!scroller || !img) return;
+    const clampedZoom = Math.max(1, Math.min(4, nextZoom));
+    const prevZoom = landscapeZoomRef.current || 1;
+    if (clampedZoom === prevZoom) return;
+
+    // 핀치 중심(focal) 기준으로 scrollLeft/scrollTop 보정해 확대 중심이 유지되도록 한다.
+    const rect = scroller.getBoundingClientRect();
+    const focalX = focal ? focal.x - rect.left : scroller.clientWidth / 2;
+    const focalY = focal ? focal.y - rect.top : scroller.clientHeight / 2;
+    const contentX = (scroller.scrollLeft + focalX) / prevZoom;
+    const contentY = (scroller.scrollTop + focalY) / prevZoom;
+
+    landscapeZoomRef.current = clampedZoom;
+    setLandscapeZoom(clampedZoom);
+
+    // 다음 페인트에서 새로운 이미지 크기를 기준으로 scroll 위치 보정
+    requestAnimationFrame(() => {
+      const s = landscapeScrollerRef.current;
+      if (!s) return;
+      s.scrollLeft = contentX * clampedZoom - focalX;
+      s.scrollTop = contentY * clampedZoom - focalY;
+    });
+  };
+
+  const getTouchListDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    return Math.hypot(
+      touches[0].clientX - touches[1].clientX,
+      touches[0].clientY - touches[1].clientY,
+    );
+  };
+
+  const handleLandscapeTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length >= 2) {
+      e.stopPropagation();
+      const distance = getTouchListDistance(e.touches);
+      const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      landscapePinchRef.current = {
+        active: true,
+        startDistance: distance,
+        startZoom: landscapeZoomRef.current,
+        centerX,
+        centerY,
+        contentX: 0,
+        contentY: 0,
+      };
+    }
+  };
+
+  const handleLandscapeTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length >= 2 && landscapePinchRef.current.active) {
+      e.stopPropagation();
+      e.preventDefault();
+      const distance = getTouchListDistance(e.touches);
+      if (landscapePinchRef.current.startDistance <= 0) return;
+      const ratio = distance / landscapePinchRef.current.startDistance;
+      const nextZoom = landscapePinchRef.current.startZoom * ratio;
+      const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      applyLandscapeZoom(nextZoom, { x: centerX, y: centerY });
+    }
+  };
+
+  const handleLandscapeTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length < 2 && landscapePinchRef.current.active) {
+      landscapePinchRef.current.active = false;
+      // 줌 변경 후 현재 scroll 위치를 crop에 반영
+      const scroller = landscapeScrollerRef.current;
+      const img = landscapeImgRef.current;
+      if (scroller && img) {
+        const maxScrollX = Math.max(0, img.offsetWidth - scroller.clientWidth);
+        const maxScrollY = Math.max(0, img.offsetHeight - scroller.clientHeight);
+        const cropX = maxScrollX <= 0 ? 50 : (scroller.scrollLeft / maxScrollX) * 100;
+        const cropY = maxScrollY <= 0 ? 50 : (scroller.scrollTop / maxScrollY) * 100;
+        const current = useWriteStore.getState().mediaFiles;
+        const newMedia = [...current];
+        const target = newMedia[currentSlide];
+        if (target) {
+          newMedia[currentSlide] = {
+            ...target,
+            crop: { x: cropX, y: cropY },
+            zoom: landscapeZoomRef.current,
+          };
+          setMediaFiles(newMedia);
+        }
+      }
+    }
+  };
+
+  const handleLandscapeWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    // 데스크톱 휠로 확대/축소 (Ctrl+휠 또는 그냥 휠)
+    if (!isCurrentLandscape) return;
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      applyLandscapeZoom(landscapeZoomRef.current * factor, { x: e.clientX, y: e.clientY });
+    }
   };
 
   return (
@@ -849,16 +974,27 @@ const Write = () => {
                       className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none bg-slate-100"
                       style={{
                         aspectRatio: '3 / 4',
-                        touchAction: isCurrentLandscape ? 'pan-x' : isCurrentPortrait ? 'none' : 'auto',
+                        touchAction: isCurrentLandscape ? 'pan-x pan-y' : isCurrentPortrait ? 'none' : 'auto',
                       }}
                     >
                       {isCurrentLandscape ? (
-                        // 가로 이미지: 위/아래는 프레임에 꽉 차고, 좌우는 원본 비율대로 넘쳐 가로 스크롤
+                        // 가로 이미지: 위/아래는 프레임에 꽉 차고, 좌우는 원본 비율대로 넘쳐 가로 스크롤.
+                        // 핀치 줌(>1) 시에는 위/아래도 넘쳐 상하 스크롤도 가능해진다.
                         <div
                           ref={landscapeScrollerRef}
                           onScroll={handleLandscapeScroll}
-                          className="absolute inset-0 overflow-x-auto overflow-y-hidden no-scrollbar"
-                          style={{ WebkitOverflowScrolling: 'touch' as any, touchAction: 'pan-x' }}
+                          onTouchStart={handleLandscapeTouchStart}
+                          onTouchMove={handleLandscapeTouchMove}
+                          onTouchEnd={handleLandscapeTouchEnd}
+                          onTouchCancel={handleLandscapeTouchEnd}
+                          onWheel={handleLandscapeWheel}
+                          className="absolute inset-0 no-scrollbar"
+                          style={{
+                            overflowX: 'auto',
+                            overflowY: landscapeZoom > 1 ? 'auto' : 'hidden',
+                            WebkitOverflowScrolling: 'touch' as any,
+                            touchAction: 'pan-x pan-y',
+                          }}
                         >
                           <img
                             ref={landscapeImgRef}
@@ -870,16 +1006,19 @@ const Write = () => {
                                 setImgLoaded(true);
                                 return;
                               }
-                              // 저장된 crop.x(0~100%)에 따라 scrollLeft 복원
+                              // 저장된 crop(0~100%)에 따라 scroll 위치 복원
                               const cropX = Math.max(0, Math.min(100, currentMedia.crop?.x ?? 50));
-                              const maxScroll = Math.max(0, img.offsetWidth - scroller.clientWidth);
-                              scroller.scrollLeft = (maxScroll * cropX) / 100;
+                              const cropY = Math.max(0, Math.min(100, currentMedia.crop?.y ?? 50));
+                              const maxScrollX = Math.max(0, img.offsetWidth - scroller.clientWidth);
+                              const maxScrollY = Math.max(0, img.offsetHeight - scroller.clientHeight);
+                              scroller.scrollLeft = (maxScrollX * cropX) / 100;
+                              scroller.scrollTop = (maxScrollY * cropY) / 100;
                               setImgLoaded(true);
                             }}
                             draggable={false}
                             style={{
                               display: 'block',
-                              height: '100%',
+                              height: `${100 * landscapeZoom}%`,
                               width: 'auto',
                               maxWidth: 'none',
                               userSelect: 'none',
