@@ -495,7 +495,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     }, 0);
   };
 
-  const startContentEdit = (e: React.MouseEvent) => {
+  const startContentEdit = (e: React.SyntheticEvent) => {
     e.stopPropagation();
 
     // ─── [DEBUG: edit-scroll-bug] 수정하기 선택 직후 상태 스냅샷 ───

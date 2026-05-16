@@ -16,7 +16,7 @@ interface PostMenuDropdownProps {
   isAd: boolean;
   postOwnerId?: string;
   zIndexClass?: string;
-  onEdit?: (e: React.MouseEvent) => void;
+  onEdit?: (e: React.SyntheticEvent) => void;
   onDelete?: (e: React.MouseEvent) => void;
   onAfterBlock?: () => void;
   reportMessage?: string;
@@ -34,6 +34,22 @@ const PostMenuDropdown = ({
   reportMessage = '신고가 접수되었습니다.',
 }: PostMenuDropdownProps) => {
   const { blockUser } = useBlockedUsers();
+  const lastEditRunAtRef = React.useRef(0);
+
+  const runEdit = (source: string, e: React.SyntheticEvent) => {
+    const now = Date.now();
+    if (now - lastEditRunAtRef.current < 300) {
+      console.log('[edit-scroll-bug] 수정하기 duplicate ignored', { source });
+      return;
+    }
+    lastEditRunAtRef.current = now;
+    console.log('[edit-scroll-bug] 수정하기 runEdit', {
+      source,
+      scroll: { x: window.scrollX, y: window.scrollY },
+    });
+    e.stopPropagation();
+    onEdit?.(e);
+  };
 
   return (
     <DropdownMenu modal={false}>
@@ -73,23 +89,23 @@ const PostMenuDropdown = ({
                     scroll: { x: window.scrollX, y: window.scrollY },
                   })
                 }
-                onPointerUp={() =>
+                onPointerUp={(e) => {
                   console.log('[edit-scroll-bug] 수정하기 pointerUp', {
                     scroll: { x: window.scrollX, y: window.scrollY },
-                  })
-                }
+                  });
+                  runEdit('pointerUp', e);
+                }}
                 onSelect={(e) => {
-                  console.log('[edit-scroll-bug] 수정하기 onSelect(Radix) -> run onEdit', {
+                  console.log('[edit-scroll-bug] 수정하기 onSelect(Radix)', {
                     scroll: { x: window.scrollX, y: window.scrollY },
                   });
-                  e.stopPropagation();
-                  onEdit(e as unknown as React.MouseEvent);
+                  runEdit('onSelect', e as unknown as React.SyntheticEvent);
                 }}
                 onClick={(e) => {
                   console.log('[edit-scroll-bug] 수정하기 onClick', {
                     scroll: { x: window.scrollX, y: window.scrollY },
                   });
-                  e.stopPropagation();
+                  runEdit('onClick', e);
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none"
               >
