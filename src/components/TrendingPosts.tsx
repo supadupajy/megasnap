@@ -608,6 +608,30 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       >
         <div
           className="trending-shine-bar"
+          ref={(el) => {
+            if (!el) return;
+            // [DEBUG] 같은 노드에 핸들러가 중복 등록되지 않도록 한 번만 부착
+            if ((el as any).__shineDebugAttached) return;
+            (el as any).__shineDebugAttached = true;
+
+            const tag = `[shine rank=${post.rank}]`;
+            console.log(`${tag} 🔧 mounted. computed animation =`,
+              getComputedStyle(el).animation,
+              'animationName =', getComputedStyle(el).animationName,
+              'animationDuration =', getComputedStyle(el).animationDuration,
+              'animationDelay =', getComputedStyle(el).animationDelay,
+            );
+
+            el.addEventListener('animationstart', (e) => {
+              console.log(`${tag} ▶️ animationstart`, (e as AnimationEvent).animationName);
+            });
+            el.addEventListener('animationiteration', (e) => {
+              console.log(`${tag} 🔁 iteration`, (e as AnimationEvent).animationName);
+            });
+            el.addEventListener('animationend', (e) => {
+              console.log(`${tag} ⏹ animationend`, (e as AnimationEvent).animationName);
+            });
+          }}
           style={{
             position: 'absolute',
             top: '-20%',
