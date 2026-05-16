@@ -594,9 +594,13 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
     >
       <div
         className="trending-shine-overlay"
-        style={{ ['--shine-delay' as any]: shineDelay }}
         aria-hidden="true"
-      />
+      >
+        <div
+          className="trending-shine-bar"
+          style={{ ['--shine-delay' as any]: shineDelay }}
+        />
+      </div>
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
         {post.rank === 1 ? (
           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', fontSize: '14px', fontWeight: 900, lineHeight: 1, color: '#D97706' }}>

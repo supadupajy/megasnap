@@ -306,20 +306,31 @@
   z-index: 20;
 }
 
-.trending-shine-overlay::before {
-  content: '';
+.trending-shine-bar {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 20%;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
   width: 50%;
-  /* [TEST 2] animation 없이, 카드 안에 빨간 띠가 가만히 보이는지 확인 */
-  background: red;
+  pointer-events: none;
+  /* 인디고/바이올렛 톤의 광택 — 흰 카드 배경 위에서도 또렷이 보이는 채도 */
+  background: linear-gradient(
+    100deg,
+    rgba(99, 102, 241, 0) 0%,
+    rgba(129, 140, 248, 0.75) 30%,
+    rgba(167, 139, 250, 0.95) 50%,
+    rgba(129, 140, 248, 0.75) 70%,
+    rgba(99, 102, 241, 0) 100%
+  );
+  transform: skewX(-20deg);
+  animation: trending-shine-sweep 7s linear infinite;
+  animation-delay: var(--shine-delay, 0s);
+  will-change: left, opacity;
 }
 
 /* prefers-reduced-motion 사용자에게는 애니메이션 비활성화 */
 @media (prefers-reduced-motion: reduce) {
-  .trending-shine-overlay::before {
+  .trending-shine-bar {
     animation: none;
     opacity: 0;
   }
