@@ -143,6 +143,12 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   // 포스트별 좋아요/저장 로컬 상태
   const [likeMap, setLikeMap] = useState<Record<string, { liked: boolean; count: number }>>({});
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
+  // 댓글 다이얼로그에서 변경된 결과를 슬라이드에 전파하기 위한 오버라이드 맵.
+  // (각 ReelSlide는 활성화 시 자체적으로 fetch 하지만, 다이얼로그에서 추가/삭제 직후에는
+  //  같은 슬라이드의 effect가 재실행되지 않으므로 명시적으로 오버라이드를 내려줘야 한다.)
+  const [commentMetaMap, setCommentMetaMap] = useState<
+    Record<string, { count: number; hasMine: boolean }>
+  >({});
   // 내 포스팅 수정 후 즉시 슬라이드에 반영하기 위한 로컬 content 덮어쓰기 맵
   const [contentMap, setContentMap] = useState<Record<string, string>>({});
 
@@ -788,7 +794,17 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         initialComments={[]}
         authUser={authUser}
         profile={null}
-        onCommentsChange={() => {}}
+        onCommentsChange={(comments) => {
+          if (!commentsPostId) return;
+          const uid = authUser?.id;
+          setCommentMetaMap((prev) => ({
+            ...prev,
+            [commentsPostId]: {
+              count: comments.length,
+              hasMine: !!uid && comments.some((c) => c.userId === uid),
+            },
+          }));
+        }}
       />
 
       {/* 내 포스팅 삭제 확인 다이얼로그 */}
@@ -1220,6 +1236,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   // (로딩 중에 회색 재생 버튼이 떠서 버그처럼 보이는 문제 방지)
   const [videoFirstFrameReady, setVideoFirstFrameReady] = useState(false);
   const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
+  // 현재 로그인 사용자가 이 포스트에 댓글을 남겼는지 (댓글 아이콘 인디고 표시용)
+  // 초기값은 부모(Flicks 등)가 사전 fetch해서 넘겨준 post.hasUserCommented 사용,
+  // 활성화 시 fetchCommentsByPostId 결과로 정확히 재계산한다.
+  const [hasUserCommented, setHasUserCommented] = useState<boolean>(!!post.hasUserCommented);
 
   // 영상 타임라인 상태
   const [currentTime, setCurrentTime] = useState(0);
@@ -1393,20 +1413,26 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     };
   }, [activeMediaUrl, isScrubbing, isActive, activeIsVideo]);
 
-  // 댓글 수 fetch (활성화 시 1회)
+  // 댓글 수 + 내가 댓글을 남긴 포스팅인지 fetch (활성화 시 1회)
   useEffect(() => {
     if (!isActive) return;
     if (!isPersistedPostId(post.id)) return;
     let cancelled = false;
     fetchCommentsByPostId(post.id)
       .then((cs) => {
-        if (!cancelled) setCommentsCount(cs.length);
+        if (cancelled) return;
+        setCommentsCount(cs.length);
+        if (authUserId) {
+          setHasUserCommented(cs.some((c) => c.userId === authUserId));
+        } else {
+          setHasUserCommented(false);
+        }
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [isActive, post.id]);
+  }, [isActive, post.id, authUserId]);
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -1706,9 +1732,19 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
                 type="button"
                 onClick={onCommentClick}
                 aria-label={`댓글 ${commentsCount.toLocaleString()}개`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 text-sm font-black text-white backdrop-blur-md transition-all hover:bg-white/20 active:scale-95"
+                className={cn(
+                  "inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-black backdrop-blur-md transition-all active:scale-95",
+                  hasUserCommented
+                    ? "border-indigo-300/50 bg-indigo-500/20 text-white shadow-sm"
+                    : "border-white/20 bg-white/10 text-white hover:bg-white/20"
+                )}
               >
-                <MessageCircle className="h-[18px] w-[18px] text-white" />
+                <MessageCircle
+                  className={cn(
+                    "h-[18px] w-[18px] transition-colors",
+                    hasUserCommented ? "fill-indigo-400 text-indigo-300" : "text-white"
+                  )}
+                />
                 <span className="tabular-nums leading-none">{formatCount(commentsCount)}</span>
               </button>
 

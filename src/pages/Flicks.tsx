@@ -8,6 +8,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage } from '@/lib/utils';
+import { fetchLikedPostIds } from '@/utils/like-utils';
 import ReelsViewer from '@/components/ReelsViewer';
 
 const getTierFromFollowers = (followers: number) => {
@@ -62,11 +63,68 @@ const Flicks = () => {
       const { data, error } = await supabase.rpc('get_flicks_pool', { limit_count: 200 });
       if (error) throw error;
 
-      const mapped: Post[] = (data || []).map((p: any) => {
+      const rows: any[] = data || [];
+      const postIds = rows.map((p) => p.id);
+      const userId = authUser?.id || null;
+
+      // 좋아요/댓글/저장 상태를 병렬로 조회해 영속화된 상태를 정확히 반영
+      // - likedIds: 현재 사용자가 좋아요한 post id 집합
+      // - commentedIds: 현재 사용자가 댓글을 남긴 post id 집합 (댓글 아이콘 인디고 표시용)
+      // - savedIds: 현재 사용자가 저장한 post id 집합 (북마크 표시용)
+      // - commentCountMap: 각 포스트의 전체 댓글 수
+      const [likedIds, commentedIds, savedIds, commentCountMap] = await Promise.all([
+        fetchLikedPostIds(postIds, userId),
+        (async (): Promise<Set<string>> => {
+          if (!userId || postIds.length === 0) return new Set();
+          const { data: rows, error: err } = await supabase
+            .from('comments')
+            .select('post_id')
+            .eq('user_id', userId)
+            .in('post_id', postIds);
+          if (err) {
+            console.error('[Flicks] fetch user comments error:', err);
+            return new Set();
+          }
+          return new Set((rows || []).map((r: any) => String(r.post_id)));
+        })(),
+        (async (): Promise<Set<string>> => {
+          if (!userId || postIds.length === 0) return new Set();
+          const { data: rows, error: err } = await supabase
+            .from('saved_posts')
+            .select('post_id')
+            .eq('user_id', userId)
+            .in('post_id', postIds);
+          if (err) {
+            console.error('[Flicks] fetch saved posts error:', err);
+            return new Set();
+          }
+          return new Set((rows || []).map((r: any) => String(r.post_id)));
+        })(),
+        (async (): Promise<Map<string, number>> => {
+          if (postIds.length === 0) return new Map();
+          const { data: rows, error: err } = await supabase
+            .from('comments')
+            .select('post_id')
+            .in('post_id', postIds);
+          if (err) {
+            console.error('[Flicks] fetch comments count error:', err);
+            return new Map();
+          }
+          const map = new Map<string, number>();
+          (rows || []).forEach((r: any) => {
+            const key = String(r.post_id);
+            map.set(key, (map.get(key) || 0) + 1);
+          });
+          return map;
+        })(),
+      ]);
+
+      const mapped: Post[] = rows.map((p: any) => {
         const borderType = p.hot_since ? 'popular' : 'none';
         const isAd = p.content?.trim().startsWith('[AD]');
         const finalImage = p.image_url || getFallbackImage(String(p.id));
         const finalImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : [finalImage];
+        const idKey = String(p.id);
         return {
           id: p.id,
           isAd,
@@ -78,7 +136,7 @@ const Flicks = () => {
           lat: p.latitude,
           lng: p.longitude,
           likes: Number(p.likes || 0),
-          commentsCount: 0,
+          commentsCount: commentCountMap.get(idKey) || 0,
           comments: [],
           image: finalImage,
           image_url: finalImage,
@@ -86,8 +144,9 @@ const Flicks = () => {
           latitude: p.latitude,
           longitude: p.longitude,
           videoUrl: p.video_url,
-          isLiked: false,
-          isSaved: false,
+          isLiked: likedIds.has(idKey),
+          isSaved: savedIds.has(idKey),
+          hasUserCommented: commentedIds.has(idKey),
           createdAt: new Date(p.created_at),
           borderType: borderType as any,
           category: p.category || 'none',
@@ -106,7 +165,7 @@ const Flicks = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [blockedIds]);
+  }, [blockedIds, authUser?.id]);
 
   useEffect(() => {
     if (authLoading) return;
