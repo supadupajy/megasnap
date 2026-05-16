@@ -1984,7 +1984,9 @@ const ReelContentEditOverlay: React.FC<ReelContentEditOverlayProps> = ({
 // ─── Reels 영상 요소 ──────────────────────────────────────
 // 안드로이드 Chrome/WebView에서 <video>가 첫 프레임을 그리기 전
 // 잠깐 회색 placeholder가 깜빡이는 문제를 방지하기 위해
-// `playing` 이벤트가 발생할 때까지 video를 opacity 0으로 숨겨둔다.
+// 투명 poster로 네이티브 placeholder를 막고, 첫 프레임 준비 전까지 video를 숨겨둔다.
+const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
 interface ReelsVideoProps {
   src: string;
   videoRef?: React.RefObject<HTMLVideoElement>;
@@ -2077,6 +2079,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         ref={setRefs}
         src={src}
         className="absolute inset-0 w-full h-full object-cover video-hq"
+        poster={TRANSPARENT_POSTER}
         playsInline
         loop
         muted={muted}

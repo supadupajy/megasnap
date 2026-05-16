@@ -3,6 +3,8 @@ import { useVideoMuted } from '@/hooks/use-video-muted';
 import { cn } from '@/lib/utils';
 import VideoOverlayControls from './VideoOverlayControls';
 
+const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+
 interface VideoPlayerProps {
   src: string;
   className?: string;
@@ -117,6 +119,7 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
         ref={videoRef}
         src={src}
         className={cn(className ?? 'w-full h-full object-cover', 'video-hq')}
+        poster={TRANSPARENT_POSTER}
         autoPlay
         loop
         muted={muted}

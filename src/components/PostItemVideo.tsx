@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 
 import VideoOverlayControls from './VideoOverlayControls';
+import { useVideoMuted } from '@/hooks/use-video-muted';
+
+const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
 interface PostItemVideoProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -22,6 +25,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
 }) => {
   const [userPaused, setUserPaused] = useState(false);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
+  const [muted] = useVideoMuted();
 
   useEffect(() => {
     setUserPaused(false);
@@ -84,7 +88,9 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         ref={videoRef}
         src={src}
         className="absolute inset-0 z-[1] w-full h-full object-cover bg-gray-200 post-item-video video-hq"
+        poster={TRANSPARENT_POSTER}
         loop
+        muted={muted}
         playsInline
         preload="auto"
         disablePictureInPicture
