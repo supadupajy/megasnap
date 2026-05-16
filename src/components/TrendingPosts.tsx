@@ -610,16 +610,27 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           className="trending-shine-bar"
           ref={(el) => {
             if (!el) return;
+
+            // [중요] 어딘가에서 animation을 none으로 덮어쓰고 있어서, !important로 강제 주입.
+            // React inline style은 !important를 지원하지 않으므로 setProperty로 직접 박는다.
+            el.style.setProperty(
+              'animation',
+              `trending-shine-sweep 7s linear ${shineDelay} infinite`,
+              'important'
+            );
+
             // [DEBUG] 같은 노드에 핸들러가 중복 등록되지 않도록 한 번만 부착
             if ((el as any).__shineDebugAttached) return;
             (el as any).__shineDebugAttached = true;
 
             const tag = `[shine rank=${post.rank}]`;
-            console.log(`${tag} 🔧 mounted. computed animation =`,
-              getComputedStyle(el).animation,
-              'animationName =', getComputedStyle(el).animationName,
-              'animationDuration =', getComputedStyle(el).animationDuration,
-              'animationDelay =', getComputedStyle(el).animationDelay,
+            // 강제 주입 후 computed style 재확인
+            const cs = getComputedStyle(el);
+            console.log(`${tag} 🔧 mounted (after !important inject). computed:`,
+              'animation=', cs.animation,
+              'animationName=', cs.animationName,
+              'animationDuration=', cs.animationDuration,
+              'animationDelay=', cs.animationDelay,
             );
 
             el.addEventListener('animationstart', (e) => {
@@ -642,8 +653,6 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
             background:
               'linear-gradient(100deg, rgba(99,102,241,0) 0%, rgba(129,140,248,0.85) 30%, rgba(196,181,253,1) 50%, rgba(129,140,248,0.85) 70%, rgba(99,102,241,0) 100%)',
             transform: 'skewX(-20deg)',
-            // delay를 shorthand에 함께 넣어 확실히 적용 (CSS 변수 호환 이슈 회피)
-            animation: `trending-shine-sweep 7s linear ${shineDelay} infinite`,
             willChange: 'left, opacity',
           }}
         />
