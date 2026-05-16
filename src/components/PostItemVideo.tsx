@@ -9,19 +9,23 @@ const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAA
 interface PostItemVideoProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   src: string;
+  /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일 (피드의 이미지 URL). */
+  posterUrl?: string;
 }
 
 /**
  * 리스트뷰용 영상 플레이어 컴포넌트.
  * - 영상 영역 탭 → 재생/일시정지 토글
  * - 일시정지 시 중앙에 큰 플레이 아이콘 오버레이
- * - 별도 이미지 썸네일 대신 비디오가 디코드한 첫 프레임부터 노출
+ * - 영상이 첫 프레임을 디코드하기 전에는 posterUrl 썸네일을 보여주고,
+ *   준비되면 비디오로 부드럽게 페이드인한다 (흰/회색 빈 박스 방지)
  *
  * 음소거 토글/타임라인/스크럽 등 공통 컨트롤은 VideoOverlayControls가 처리한다.
  */
 const PostItemVideo: React.FC<PostItemVideoProps> = ({
   videoRef,
   src,
+  posterUrl,
 }) => {
   const [userPaused, setUserPaused] = useState(false);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
@@ -82,13 +86,30 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   };
 
   return (
-    <div className="relative h-full w-full bg-gray-200">
-      <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
+    <div className="relative h-full w-full bg-neutral-900">
+      {/* 첫 프레임 디코드 전 보여줄 썸네일.
+          posterUrl이 있을 때만 <img>로 깔아 두고, 영상이 준비되면 부드럽게 사라진다.
+          이렇게 별도 <img>로 두는 이유: <video poster>는 영상이 잠시라도 재생되면 사라지지만,
+          우리는 영상 페이드인이 끝날 때까지 썸네일을 유지해 깜빡임을 없애기 위함. */}
+      {posterUrl && (
+        <img
+          src={posterUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            opacity: firstFrameReady ? 0 : 1,
+            transition: 'opacity 200ms ease-out',
+          }}
+          draggable={false}
+        />
+      )}
+
       <video
         ref={videoRef}
         src={src}
-        className="absolute inset-0 z-[1] w-full h-full object-cover bg-gray-200 post-item-video video-hq"
-        poster={TRANSPARENT_POSTER}
+        className="absolute inset-0 z-[1] w-full h-full object-cover post-item-video video-hq"
+        poster={posterUrl || TRANSPARENT_POSTER}
         loop
         muted={muted}
         playsInline
@@ -100,7 +121,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         onClick={handleVideoTap}
         style={{
           opacity: firstFrameReady ? 1 : 0,
-          transition: 'opacity 120ms ease-out',
+          transition: 'opacity 200ms ease-out',
         }}
       />
 
