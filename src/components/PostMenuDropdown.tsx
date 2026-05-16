@@ -78,14 +78,18 @@ const PostMenuDropdown = ({
                     scroll: { x: window.scrollX, y: window.scrollY },
                   })
                 }
-                onSelect={() =>
-                  console.log('[edit-scroll-bug] 수정하기 onSelect(Radix)')
-                }
+                onSelect={(e) => {
+                  console.log('[edit-scroll-bug] 수정하기 onSelect(Radix) -> run onEdit', {
+                    scroll: { x: window.scrollX, y: window.scrollY },
+                  });
+                  e.stopPropagation();
+                  onEdit(e as unknown as React.MouseEvent);
+                }}
                 onClick={(e) => {
                   console.log('[edit-scroll-bug] 수정하기 onClick', {
                     scroll: { x: window.scrollX, y: window.scrollY },
                   });
-                  onEdit(e);
+                  e.stopPropagation();
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none"
               >

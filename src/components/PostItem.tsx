@@ -498,12 +498,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const startContentEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // ─── [DEBUG: edit-scroll-bug] 수정하기 클릭 직후 상태 스냅샷 ───
+    // ─── [DEBUG: edit-scroll-bug] 수정하기 선택 직후 상태 스냅샷 ───
     try {
       const vv = window.visualViewport;
       const de = document.scrollingElement || document.documentElement;
       const active = document.activeElement as HTMLElement | null;
-      console.log('[edit-scroll-bug] startContentEdit CLICK', {
+      console.log('[edit-scroll-bug] startContentEdit RUN', {
         postId: post.id,
         pathname: location.pathname,
         windowScroll: { x: window.scrollX, y: window.scrollY },
