@@ -9,6 +9,8 @@ interface MediaFile {
   crop?: { x: number; y: number };
   zoom?: number;
   orientation?: 'landscape' | 'portrait';
+  // 가로 이미지에서 사용자가 보고 있는 원본 픽셀 영역 (정확한 업로드 크롭을 위해 저장)
+  landscapeViewport?: { sx: number; sy: number; sw: number; sh: number };
 }
 
 interface WriteStore {

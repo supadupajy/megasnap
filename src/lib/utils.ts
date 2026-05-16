@@ -295,6 +295,80 @@ export const cropImageToAspectRatio = (
   });
 };
 
+/**
+ * 원본 이미지의 특정 사각형(sx, sy, sw, sh)을 그대로 잘라 3:4 캔버스에 그려 업로드용 파일을 만든다.
+ * - 사각형 비율이 3:4가 아니어도 letterbox(상하 또는 좌우 여백) 없이 비율을 유지해 contain 방식으로 배치.
+ * - 가로 이미지의 미리보기 가시 영역을 그대로 업로드할 때 사용.
+ */
+export const cropImageBySourceRect = (
+  file: File,
+  sourceRect: { sx: number; sy: number; sw: number; sh: number },
+  aspectRatio = 3 / 4,
+  maxHeight = 1920,
+  quality = 0.86
+): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const { sx, sy, sw, sh } = sourceRect;
+      if (sw <= 0 || sh <= 0) {
+        reject(new Error('잘못된 크롭 영역입니다.'));
+        return;
+      }
+
+      const outputH = Math.min(maxHeight, Math.round(sh));
+      const outputW = Math.round(outputH * aspectRatio);
+
+      // 가시 영역(sw:sh)을 출력 캔버스(outputW:outputH) 안에 contain으로 배치
+      const fitScale = Math.min(outputW / sw, outputH / sh);
+      const drawW = Math.round(sw * fitScale);
+      const drawH = Math.round(sh * fitScale);
+      const drawX = Math.round((outputW - drawW) / 2);
+      const drawY = Math.round((outputH - drawH) / 2);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = outputW;
+      canvas.height = outputH;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        reject(new Error('Canvas context를 생성할 수 없습니다.'));
+        return;
+      }
+
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(0, 0, outputW, outputH);
+      ctx.drawImage(img, sx, sy, sw, sh, drawX, drawY, drawW, drawH);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('이미지 크롭에 실패했습니다.'));
+            return;
+          }
+          const baseName = file.name.replace(/\.[^.]+$/, '');
+          const cropped = new File([blob], `${baseName}-viewport.jpg`, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(cropped);
+        },
+        'image/jpeg',
+        quality
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('이미지를 로드할 수 없습니다.'));
+    };
+
+    img.src = url;
+  });
+};
+
 export const createVideoThumbnail = async (file: File): Promise<Blob> => {
   const objectUrl = URL.createObjectURL(file);
 

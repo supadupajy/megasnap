@@ -6,7 +6,7 @@ import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn, compressImage, createVideoThumbnail, cropImageToAspectRatio } from '@/lib/utils';
+import { cn, compressImage, createVideoThumbnail, cropImageBySourceRect, cropImageToAspectRatio } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
@@ -27,6 +27,8 @@ interface MediaFile {
   crop?: { x: number; y: number };
   zoom?: number;
   orientation?: 'landscape' | 'portrait';
+  // 가로 이미지에서 사용자가 보고 있는 원본 픽셀 영역 (정확한 업로드 크롭을 위해 저장)
+  landscapeViewport?: { sx: number; sy: number; sw: number; sh: number };
 }
 
 const CATEGORIES = [
@@ -589,15 +591,26 @@ const Write = () => {
         
         // 이미지 업로드 처리:
         // - 세로 이미지: 3:4 프레임에 맞춰 사용자가 맞춘 위치로 크롭 후 업로드
-        // - 가로 이미지(zoom=1): 원본 비율 그대로(잘리지 않게) 압축만 적용 후 업로드.
-        // - 가로 이미지(zoom>1): 사용자가 핀치 줌으로 본 영역을 3:4로 크롭 후 업로드.
-        const fileToUpload = media.type === 'image'
-          ? media.orientation === 'landscape'
-            ? (media.zoom ?? 1) > 1
-              ? await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
-              : await compressImage(media.file).catch(() => media.file)
-            : await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
-          : media.file;
+        // - 가로 이미지: 미리보기에 보이는 영역(landscapeViewport)을 그대로 잘라 업로드.
+        //   landscapeViewport가 없으면(미리보기 미진입 등) 원본 그대로 압축만 적용.
+        let fileToUpload: File;
+        if (media.type !== 'image') {
+          fileToUpload = media.file;
+        } else if (media.orientation === 'landscape') {
+          console.log('[Write][upload] landscape image', {
+            zoom: media.zoom,
+            crop: media.crop,
+            landscapeViewport: media.landscapeViewport,
+            naturalSize: 'will be read in cropper',
+          });
+          if (media.landscapeViewport) {
+            fileToUpload = await cropImageBySourceRect(media.file, media.landscapeViewport).catch(() => media.file);
+          } else {
+            fileToUpload = await compressImage(media.file).catch(() => media.file);
+          }
+        } else {
+          fileToUpload = await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file);
+        }
 
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, fileToUpload, {
           cacheControl: '3600',
@@ -753,6 +766,25 @@ const Write = () => {
   const isCurrentPortrait = isPortraitImage(currentMedia);
   const canGoNext = mediaFiles.length > 0 && !hasTooManyVideos;
 
+  // 현재 스크롤러의 가시 영역을 원본 이미지 픽셀 좌표로 환산한다.
+  // 미리보기와 업로드가 정확히 같은 영역을 사용하도록 보장하기 위한 핵심 계산.
+  const computeLandscapeViewport = () => {
+    const scroller = landscapeScrollerRef.current;
+    const img = landscapeImgRef.current;
+    if (!scroller || !img) return null;
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    if (!natW || !natH) return null;
+    // 화면상 이미지 픽셀 → 원본 픽셀 변환 비율
+    // (이미지의 화면 폭/높이는 비율 유지되어 같은 scale)
+    const scale = img.offsetHeight > 0 ? natH / img.offsetHeight : 1;
+    const sx = Math.max(0, scroller.scrollLeft * scale);
+    const sy = Math.max(0, scroller.scrollTop * scale);
+    const sw = Math.min(natW - sx, scroller.clientWidth * scale);
+    const sh = Math.min(natH - sy, scroller.clientHeight * scale);
+    return { sx, sy, sw, sh };
+  };
+
   const handleLandscapeScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scroller = e.currentTarget;
     if (landscapeScrollRafRef.current) return;
@@ -764,6 +796,7 @@ const Write = () => {
       const maxScrollY = Math.max(0, img.offsetHeight - scroller.clientHeight);
       const cropX = maxScrollX <= 0 ? 50 : (scroller.scrollLeft / maxScrollX) * 100;
       const cropY = maxScrollY <= 0 ? 50 : (scroller.scrollTop / maxScrollY) * 100;
+      const viewport = computeLandscapeViewport();
       const current = useWriteStore.getState().mediaFiles;
       const newMedia = [...current];
       const target = newMedia[currentSlide];
@@ -772,6 +805,7 @@ const Write = () => {
         ...target,
         crop: { x: cropX, y: cropY },
         zoom: landscapeZoomRef.current,
+        landscapeViewport: viewport ?? target.landscapeViewport,
       };
       setMediaFiles(newMedia);
     });
@@ -855,6 +889,7 @@ const Write = () => {
         const maxScrollY = Math.max(0, img.offsetHeight - scroller.clientHeight);
         const cropX = maxScrollX <= 0 ? 50 : (scroller.scrollLeft / maxScrollX) * 100;
         const cropY = maxScrollY <= 0 ? 50 : (scroller.scrollTop / maxScrollY) * 100;
+        const viewport = computeLandscapeViewport();
         const current = useWriteStore.getState().mediaFiles;
         const newMedia = [...current];
         const target = newMedia[currentSlide];
@@ -863,6 +898,7 @@ const Write = () => {
             ...target,
             crop: { x: cropX, y: cropY },
             zoom: landscapeZoomRef.current,
+            landscapeViewport: viewport ?? target.landscapeViewport,
           };
           setMediaFiles(newMedia);
         }
@@ -1014,6 +1050,23 @@ const Write = () => {
                               scroller.scrollLeft = (maxScrollX * cropX) / 100;
                               scroller.scrollTop = (maxScrollY * cropY) / 100;
                               setImgLoaded(true);
+
+                              // 초기 viewport 저장 (사용자가 한 번도 스크롤/줌 하지 않은 경우에도 정확한 업로드를 보장)
+                              const viewport = computeLandscapeViewport();
+                              if (viewport) {
+                                const current = useWriteStore.getState().mediaFiles;
+                                const newMedia = [...current];
+                                const target = newMedia[currentSlide];
+                                if (target) {
+                                  newMedia[currentSlide] = {
+                                    ...target,
+                                    landscapeViewport: viewport,
+                                    zoom: landscapeZoomRef.current,
+                                    crop: { x: cropX, y: cropY },
+                                  };
+                                  setMediaFiles(newMedia);
+                                }
+                              }
                             }}
                             draggable={false}
                             style={{
