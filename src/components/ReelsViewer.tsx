@@ -2205,11 +2205,11 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         e.stopPropagation();
         e.preventDefault();
 
-        // 끝에서 더 못 가도록 저항 적용
+        // 끝에서 더 못 가도록 저항 적용 + 드래그 중 살짝 끈적한 느낌(0.88x)
         const atStart = g.startIndex === 0 && dx > 0;
         const atEnd = g.startIndex === mediaCountRef.current - 1 && dx < 0;
-        let visualDx = dx;
-        if (atStart || atEnd) visualDx = dx * 0.25;
+        let visualDx = dx * 0.88;
+        if (atStart || atEnd) visualDx = dx * 0.22;
         setDragX(visualDx);
       }
       // 세로면 아무것도 안 하고 부모가 처리하도록 둠
@@ -2232,8 +2232,9 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
 
       const width = rootRef.current?.clientWidth || 1;
       const velocity = Math.abs(dx) / Math.max(dt, 1);
-      const distanceThreshold = width * 0.2;
-      const isFlick = velocity > 0.3 && Math.abs(dx) > 30;
+      // 더 쉽게 다음으로 넘어가도록 임계값 완화 + flick 민감도 ↑
+      const distanceThreshold = width * 0.12;
+      const isFlick = velocity > 0.18 && Math.abs(dx) > 14;
 
       let nextIndex = g.startIndex;
       if (dx < -distanceThreshold || (isFlick && dx < 0)) {
@@ -2248,7 +2249,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       if (clamped !== currentIndexRef.current) {
         onIndexChange(clamped);
       }
-      window.setTimeout(() => setIsAnimating(false), 240);
+      window.setTimeout(() => setIsAnimating(false), 180);
     };
 
     const onTouchEnd = (e: TouchEvent) => {
@@ -2294,8 +2295,8 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       g.lastX = ev.clientX;
       const atStart = g.startIndex === 0 && dx > 0;
       const atEnd = g.startIndex === mediaCountRef.current - 1 && dx < 0;
-      let visualDx = dx;
-      if (atStart || atEnd) visualDx = dx * 0.25;
+      let visualDx = dx * 0.88;
+      if (atStart || atEnd) visualDx = dx * 0.22;
       setDragX(visualDx);
     };
     const onUp = () => {
@@ -2309,8 +2310,8 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       g.locked = null;
       const width = rootRef.current?.clientWidth || 1;
       const velocity = Math.abs(dx) / Math.max(dt, 1);
-      const distanceThreshold = width * 0.2;
-      const isFlick = velocity > 0.3 && Math.abs(dx) > 30;
+      const distanceThreshold = width * 0.12;
+      const isFlick = velocity > 0.18 && Math.abs(dx) > 14;
       let nextIndex = g.startIndex;
       if (dx < -distanceThreshold || (isFlick && dx < 0)) {
         nextIndex = g.startIndex + 1;
@@ -2321,7 +2322,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
       setIsAnimating(true);
       setDragX(0);
       if (clamped !== currentIndexRef.current) onIndexChange(clamped);
-      window.setTimeout(() => setIsAnimating(false), 240);
+      window.setTimeout(() => setIsAnimating(false), 180);
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -2338,7 +2339,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         style={{
           width: `${mediaList.length * 100}%`,
           transform: `translate3d(calc(${-currentIndex * (100 / mediaList.length)}% + ${dragX}px), 0, 0)`,
-          transition: isAnimating ? "transform 240ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none",
+          transition: isAnimating ? "transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1)" : "none",
         }}
       >
         {mediaList.map((url, i) => {
