@@ -347,11 +347,11 @@ const Messages = () => {
           <div className="flex justify-end">
             <button
               onClick={handleBack}
-              className="flex items-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
-              style={{ gap: '6px', padding: '8px 16px' }}
+              aria-label="닫기"
+              className="flex items-center justify-center bg-white rounded-full shadow-sm border border-gray-100 active:scale-95 transition-transform shrink-0 overflow-hidden"
+              style={{ padding: '8px' }}
             >
               <X className="w-4 h-4 text-gray-900 shrink-0" />
-              <span className="text-sm font-normal text-gray-900 whitespace-nowrap">닫기</span>
             </button>
           </div>
         </div>

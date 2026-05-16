@@ -534,10 +534,7 @@ const Notifications = () => {
                     </span>
                   </>
                 ) : (
-                  <>
-                    <X className="w-4 h-4 shrink-0" />
-                    <span className="text-sm font-normal whitespace-nowrap">닫기</span>
-                  </>
+                  <X className="w-4 h-4 shrink-0" />
                 )}
               </div>
             </motion.button>
