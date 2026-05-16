@@ -707,13 +707,13 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             <div className="flex items-center gap-3 cursor-pointer group" onClick={handleUserClick}>
               <PostUserAvatar name={user.name} avatar={user.avatar} postId={post.id} userId={user.id} isAd={isAd} size="md" />
               <div className="flex flex-col">
-                <div className="flex items-center gap-1.5 py-0.5">
-                  <p className="text-sm font-bold text-gray-900 leading-[1.25] group-hover:text-indigo-600 transition-colors">
+                <div className="flex items-center gap-1.5 py-0.5 leading-none">
+                  <p className="text-sm font-bold text-gray-900 leading-none m-0 group-hover:text-indigo-600 transition-colors">
                     {user.name}
                   </p>
                   {post.isFriendPost && (
                     <UserCheck
-                      className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                      className="w-3.5 h-3.5 text-amber-500 shrink-0 block"
                       aria-label="친구"
                     />
                   )}
@@ -780,11 +780,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           {/* Content Section - 일반 */}
           <div className="px-4 pt-2 pb-4 space-y-1">
             <div className="flex gap-2 items-start">
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+              <div className="flex items-center gap-1.5 shrink-0 leading-none">
+                <span className="text-sm font-bold text-gray-900 whitespace-nowrap leading-none cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
                 {post.isFriendPost && (
                   <UserCheck
-                    className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                    className="w-3.5 h-3.5 text-amber-500 shrink-0 block"
                     aria-label="친구"
                   />
                 )}
