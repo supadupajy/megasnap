@@ -241,11 +241,7 @@ const ProfileEdit = () => {
 
       showSuccess('프로필이 업데이트되었습니다! ✨');
       await refreshProfile();
-      // navigate(-1) 대신 명시적으로 /profile로 이동.
-      // 이전 페이지 로직(-1)에 의존하면 history 상태에 따라 지도(/)로 튕길 수 있고,
-      // Index 페이지가 다시 보여질 때 routeState 정리 등으로 카메라가 의도치 않게
-      // 좌상단(기본 위치)으로 이동되는 부작용이 발생할 수 있어 직접 경로를 지정한다.
-      navigate('/profile', { replace: true });
+      navigate(-1);
     } catch (err: any) {
       console.error('Error updating profile:', err);
       showError('프로필 저장 중 오류가 발생했습니다.');
@@ -266,7 +262,7 @@ const ProfileEdit = () => {
       <div className="shrink-0 bg-white">
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
-            onClick={() => navigate('/profile', { replace: true })}
+            onClick={() => navigate(-1)}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
             aria-label="뒤로가기"
           >
