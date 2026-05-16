@@ -6,7 +6,7 @@ import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn, createVideoThumbnail, cropImageToAspectRatio } from '@/lib/utils';
+import { cn, containImageInAspectRatio, createVideoThumbnail, cropImageToAspectRatio } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
@@ -36,6 +36,8 @@ const CATEGORIES = [
   { key: 'place', label: '명소', Icon: TreePine },
   { key: 'animal', label: '동물', Icon: PawPrint },
 ] as const;
+
+const shouldCropImage = (media?: MediaFile) => media?.type === 'image' && media.orientation !== 'landscape';
 
 const Write = () => {
   const navigate = useNavigate();
@@ -296,7 +298,7 @@ const Write = () => {
 
   const updateCurrentMediaTransform = (zoom = currentZoomRef.current) => {
     const media = mediaFiles[currentSlide];
-    if (!media || media.type !== 'image') return;
+    if (!shouldCropImage(media)) return;
     currentZoomRef.current = Math.max(1, Math.min(4, zoom));
     applyPreviewPlacement();
   };
@@ -316,7 +318,7 @@ const Write = () => {
 
   const commitCurrentMediaPlacement = () => {
     const media = mediaFiles[currentSlide];
-    if (!media || media.type !== 'image') return;
+    if (!shouldCropImage(media)) return;
     const placement = applyPreviewPlacement();
     if (!placement) return;
     setPreviewTransform(placement.transform);
@@ -327,7 +329,7 @@ const Write = () => {
 
   const applyDrag = (deltaX: number, deltaY: number) => {
     const media = mediaFiles[currentSlide];
-    if (!media || media.type !== 'image') return;
+    if (!shouldCropImage(media)) return;
     const { maxX, maxY } = getMaxOffset();
     cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x - deltaX));
     cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y - deltaY));
@@ -349,7 +351,7 @@ const Write = () => {
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    if (!shouldCropImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
 
     if (e.touches.length >= 2) {
@@ -368,7 +370,7 @@ const Write = () => {
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    if (!shouldCropImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
 
     if (e.touches.length >= 2) {
@@ -385,7 +387,7 @@ const Write = () => {
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    if (!shouldCropImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
 
     if (e.touches.length === 1) {
@@ -402,7 +404,7 @@ const Write = () => {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'touch') return;
-    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    if (!shouldCropImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -459,7 +461,7 @@ const Write = () => {
   };
 
   const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (mediaFiles[currentSlide]?.type !== 'image') return;
+    if (!shouldCropImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
     updateCurrentMediaTransform(currentZoomRef.current * (e.deltaY < 0 ? 1.06 : 0.94));
     commitCurrentMediaPlacement();
@@ -467,7 +469,7 @@ const Write = () => {
 
   const handleDragStart = (clientX: number, clientY: number) => {
     const media = mediaFiles[currentSlide];
-    if (!media || media.type !== 'image') return;
+    if (!shouldCropImage(media)) return;
     const img = imgRef.current;
     const container = containerRef.current;
     if (img && container && img.naturalWidth) {
@@ -560,15 +562,18 @@ const Write = () => {
         const fileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
-        // 이미지인 경우 3:4 프레임에서 사용자가 맞춘 위치 그대로 잘라서 업로드
+        // 세로 이미지는 기존처럼 3:4 프레임에서 사용자가 맞춘 위치로 크롭한다.
+        // 가로 이미지는 원본 전체가 보이도록 3:4 캔버스 안에 맞춰 넣어 좌우 크롭을 방지한다.
         const fileToUpload = media.type === 'image'
-          ? await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
+          ? media.orientation === 'landscape'
+            ? await containImageInAspectRatio(media.file).catch(() => media.file)
+            : await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
           : media.file;
 
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, fileToUpload, {
           cacheControl: '3600',
           upsert: false,
-          contentType: media.type === 'image' ? 'image/jpeg' : (media.file.type || 'video/mp4')
+          contentType: fileToUpload.type || (media.type === 'image' ? 'image/jpeg' : 'video/mp4')
         });
 
         if (uploadError) throw uploadError;
@@ -714,6 +719,8 @@ const Write = () => {
   };
 
   const currentMedia = mediaFiles[currentSlide];
+  const isCurrentCroppableImage = shouldCropImage(currentMedia);
+  const isCurrentLandscapeImage = currentMedia?.type === 'image' && currentMedia.orientation === 'landscape';
   const canGoNext = mediaFiles.length > 0 && !hasTooManyVideos;
 
   return (
@@ -778,7 +785,7 @@ const Write = () => {
                   <div className="flex items-center gap-1.5 px-1">
                     <p className="text-sm font-black text-gray-400 uppercase tracking-widest">미디어 첨부</p>
                     <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">(필수)</span>
-                    {mediaFiles.length > 0 && currentMedia?.type === 'image' && (
+                    {mediaFiles.length > 0 && isCurrentCroppableImage && (
                       <span className="ml-1 rounded-full bg-indigo-50 px-2 py-1 text-[10px] font-black text-indigo-600">드래그로 위치 조정</span>
                     )}
                     <div className="ml-auto flex items-center gap-2">
@@ -807,7 +814,7 @@ const Write = () => {
                     <div
                       ref={containerRef}
                       className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none bg-slate-100"
-                      style={{ aspectRatio: '3 / 4', touchAction: currentMedia?.type === 'image' ? 'none' : 'auto' }}
+                      style={{ aspectRatio: '3 / 4', touchAction: isCurrentCroppableImage ? 'none' : 'auto' }}
                     >
                       {currentMedia?.type === 'image' ? (
                         <img
@@ -815,12 +822,16 @@ const Write = () => {
                           src={currentMedia.url}
                           className="pointer-events-none"
                           onLoad={(e) => {
-                            const img = e.currentTarget;
+                            if (isCurrentLandscapeImage) {
+                              currentZoomRef.current = 1;
+                              cropPixelRef.current = { x: 0, y: 0 };
+                              setPreviewTransform('none');
+                              setImgLoaded(true);
+                              return;
+                            }
+
                             const container = containerRef.current;
                             if (!container) return;
-                            const conW = container.offsetWidth;
-                            const conH = container.offsetHeight;
-                            const scale = Math.max(conW / img.naturalWidth, conH / img.naturalHeight);
                             currentZoomRef.current = currentMedia.zoom ?? 1;
                             cropPixelRef.current = percentToPixel(currentMedia.crop ?? { x: 50, y: 50 }, currentZoomRef.current);
                             const placement = applyPreviewPlacement();
@@ -834,9 +845,9 @@ const Write = () => {
                             left: 0,
                             width: '100%',
                             height: '100%',
-                            objectFit: 'cover',
+                            objectFit: isCurrentLandscapeImage ? 'contain' : 'cover',
                             objectPosition: '50% 50%',
-                            transform: previewTransform,
+                            transform: isCurrentLandscapeImage ? 'none' : previewTransform,
                             transformOrigin: 'center center',
                             // ✅ 로드 전엔 invisible, 로드 후 보임
                             opacity: imgLoaded ? 1 : 0,
@@ -866,8 +877,8 @@ const Write = () => {
                       <div
                         className="absolute inset-0 z-10"
                         style={{
-                          cursor: currentMedia?.type === 'image' ? (isDragging ? 'grabbing' : 'grab') : 'default',
-                          touchAction: currentMedia?.type === 'image' ? 'none' : 'auto',
+                          cursor: isCurrentCroppableImage ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                          touchAction: isCurrentCroppableImage ? 'none' : 'auto',
                           WebkitUserSelect: 'none',
                           userSelect: 'none',
                         }}
