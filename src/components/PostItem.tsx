@@ -6,7 +6,7 @@ import {
   MapPin,
   Check,
   X,
-  UserCheck,
+  User as UserIcon,
 } from 'lucide-react';
 import { cn, getFallbackImage, formatRelativeTime, getOptimizedFeedImage } from '@/lib/utils';
 
@@ -712,8 +712,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                     {user.name}
                   </p>
                   {post.isFriendPost && (
-                    <span className="inline-flex items-center justify-center h-[1.25em] shrink-0" aria-label="친구">
-                      <UserCheck className="w-3.5 h-3.5 text-amber-500" strokeWidth={2.5} />
+                    <span className="inline-flex items-center justify-center h-[1.25em] shrink-0 -translate-y-[2px]" aria-label="친구">
+                      <UserIcon className="w-3.5 h-3.5 text-amber-500" strokeWidth={2.5} />
                     </span>
                   )}
                 </div>
