@@ -591,72 +591,33 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       key={post.id}
       onClick={() => onPostClick(post)}
       className="relative flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group overflow-hidden"
+      ref={(el) => {
+        if (!el) return;
+        if ((el as any).__cardDebugLogged) return;
+        (el as any).__cardDebugLogged = true;
+        const rect = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        console.log(`[card rank=${post.rank}] size:`, rect.width, 'x', rect.height,
+          ' position=', cs.position,
+          ' overflow=', cs.overflow,
+          ' isolation=', cs.isolation,
+        );
+      }}
     >
+      {/* [DEBUG] 카드 직접 자식으로 빨간 박스 - 카드 한가운데 박혀 보이는지 확인 */}
       <div
-        aria-hidden="true"
         style={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: '10px',
+          left: '30px',
+          width: '60px',
+          height: '40px',
+          background: 'red',
+          border: '4px solid black',
+          zIndex: 99999,
           pointerEvents: 'none',
-          overflow: 'hidden',
-          borderRadius: 'inherit',
-          zIndex: 20,
         }}
-      >
-        <div
-          className="trending-shine-bar"
-          ref={(el) => {
-            if (!el) return;
-
-            // [중요] 어딘가에서 animation을 none으로 덮어쓰고 있어서, !important로 강제 주입.
-            // React inline style은 !important를 지원하지 않으므로 setProperty로 직접 박는다.
-            el.style.setProperty(
-              'animation',
-              `trending-shine-sweep 7s linear ${shineDelay} infinite`,
-              'important'
-            );
-
-            // [DEBUG] 같은 노드에 핸들러가 중복 등록되지 않도록 한 번만 부착
-            if ((el as any).__shineDebugAttached) return;
-            (el as any).__shineDebugAttached = true;
-
-            const tag = `[shine rank=${post.rank}]`;
-            // 강제 주입 후 computed style 재확인
-            const cs = getComputedStyle(el);
-            console.log(`${tag} 🔧 mounted (after !important inject). computed:`,
-              'animation=', cs.animation,
-              'animationName=', cs.animationName,
-              'animationDuration=', cs.animationDuration,
-              'animationDelay=', cs.animationDelay,
-            );
-
-            el.addEventListener('animationstart', (e) => {
-              console.log(`${tag} ▶️ animationstart`, (e as AnimationEvent).animationName);
-            });
-            el.addEventListener('animationiteration', (e) => {
-              console.log(`${tag} 🔁 iteration`, (e as AnimationEvent).animationName);
-            });
-            el.addEventListener('animationend', (e) => {
-              console.log(`${tag} ⏹ animationend`, (e as AnimationEvent).animationName);
-            });
-          }}
-          style={{
-            position: 'absolute',
-            top: '-20%',
-            bottom: '-20%',
-            left: '-60%',
-            width: '50%',
-            pointerEvents: 'none',
-            // [DEBUG] 띠가 정말 그려지고 움직이는지 확인 — 단색 빨강 + 검은 테두리
-            background: 'red',
-            border: '3px solid black',
-            willChange: 'left, opacity',
-          }}
-        />
-      </div>
+      />
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
         {post.rank === 1 ? (
           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', fontSize: '14px', fontWeight: 900, lineHeight: 1, color: '#D97706' }}>
