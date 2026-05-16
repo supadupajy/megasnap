@@ -6,7 +6,7 @@ import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, C
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn, createVideoThumbnail, cropImageToAspectRatio } from '@/lib/utils';
+import { cn, compressImage, createVideoThumbnail, cropImageToAspectRatio } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { postDraftStore } from '@/utils/post-draft-store';
@@ -38,6 +38,10 @@ const CATEGORIES = [
 ] as const;
 
 const isImageMedia = (media?: MediaFile) => media?.type === 'image';
+const isPortraitImage = (media?: MediaFile) =>
+  media?.type === 'image' && media.orientation !== 'landscape';
+const isLandscapeImage = (media?: MediaFile) =>
+  media?.type === 'image' && media.orientation === 'landscape';
 
 const Write = () => {
   const navigate = useNavigate();
@@ -72,6 +76,9 @@ const Write = () => {
   const dragStartRef = useRef({ x: 0, y: 0 });
   const imgRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const landscapeScrollerRef = useRef<HTMLDivElement>(null);
+  const landscapeImgRef = useRef<HTMLImageElement>(null);
+  const landscapeScrollRafRef = useRef<number | null>(null);
   const cropPixelRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const currentZoomRef = useRef(1);
@@ -229,6 +236,7 @@ const Write = () => {
     return () => {
       if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
       if (scrollAnimationRef.current) cancelAnimationFrame(scrollAnimationRef.current);
+      if (landscapeScrollRafRef.current) cancelAnimationFrame(landscapeScrollRafRef.current);
     };
   }, []);
 
@@ -298,7 +306,7 @@ const Write = () => {
 
   const updateCurrentMediaTransform = (zoom = currentZoomRef.current) => {
     const media = mediaFiles[currentSlide];
-    if (!isImageMedia(media)) return;
+    if (!isPortraitImage(media)) return;
     currentZoomRef.current = Math.max(1, Math.min(4, zoom));
     applyPreviewPlacement();
   };
@@ -318,7 +326,7 @@ const Write = () => {
 
   const commitCurrentMediaPlacement = () => {
     const media = mediaFiles[currentSlide];
-    if (!isImageMedia(media)) return;
+    if (!isPortraitImage(media)) return;
     const placement = applyPreviewPlacement();
     if (!placement) return;
     setPreviewTransform(placement.transform);
@@ -329,7 +337,7 @@ const Write = () => {
 
   const applyDrag = (deltaX: number, deltaY: number) => {
     const media = mediaFiles[currentSlide];
-    if (!isImageMedia(media)) return;
+    if (!isPortraitImage(media)) return;
     const { maxX, maxY } = getMaxOffset();
     cropPixelRef.current.x = Math.max(-maxX, Math.min(maxX, cropPixelRef.current.x - deltaX));
     cropPixelRef.current.y = Math.max(-maxY, Math.min(maxY, cropPixelRef.current.y - deltaY));
@@ -351,7 +359,7 @@ const Write = () => {
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isImageMedia(mediaFiles[currentSlide])) return;
+    if (!isPortraitImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
 
     if (e.touches.length >= 2) {
@@ -370,7 +378,7 @@ const Write = () => {
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isImageMedia(mediaFiles[currentSlide])) return;
+    if (!isPortraitImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
 
     if (e.touches.length >= 2) {
@@ -387,7 +395,7 @@ const Write = () => {
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isImageMedia(mediaFiles[currentSlide])) return;
+    if (!isPortraitImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
 
     if (e.touches.length === 1) {
@@ -404,7 +412,7 @@ const Write = () => {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.pointerType === 'touch') return;
-    if (!isImageMedia(mediaFiles[currentSlide])) return;
+    if (!isPortraitImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -461,7 +469,7 @@ const Write = () => {
   };
 
   const handleWheelZoom = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!isImageMedia(mediaFiles[currentSlide])) return;
+    if (!isPortraitImage(mediaFiles[currentSlide])) return;
     e.stopPropagation();
     updateCurrentMediaTransform(currentZoomRef.current * (e.deltaY < 0 ? 1.06 : 0.94));
     commitCurrentMediaPlacement();
@@ -469,7 +477,7 @@ const Write = () => {
 
   const handleDragStart = (clientX: number, clientY: number) => {
     const media = mediaFiles[currentSlide];
-    if (!isImageMedia(media)) return;
+    if (!isPortraitImage(media)) return;
     const img = imgRef.current;
     const container = containerRef.current;
     if (img && container && img.naturalWidth) {
@@ -562,11 +570,14 @@ const Write = () => {
         const fileName = `${timestamp}-${index}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = `${authUser.id}/${fileName}`;
         
-        // 이미지인 경우 3:4 프레임에서 사용자가 맞춘 위치 그대로 잘라서 업로드한다.
-        // - 세로 이미지: 위/아래 위치 조정
-        // - 가로 이미지: 좌/우 위치 조정 (위/아래는 자동으로 프레임에 꽉 참)
+        // 이미지 업로드 처리:
+        // - 세로 이미지: 3:4 프레임에 맞춰 사용자가 맞춘 위치로 크롭 후 업로드
+        // - 가로 이미지: 원본 비율 그대로 (잘리지 않게) 압축만 적용 후 업로드.
+        //   업로드 후에는 피드/디테일에서 'object-cover'로 표시되므로 원본 픽셀이 보존된다.
         const fileToUpload = media.type === 'image'
-          ? await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
+          ? media.orientation === 'landscape'
+            ? await compressImage(media.file).catch(() => media.file)
+            : await cropImageToAspectRatio(media.file, media.crop ?? { x: 50, y: 50 }, media.zoom ?? 1).catch(() => media.file)
           : media.file;
 
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(filePath, fileToUpload, {
@@ -719,7 +730,31 @@ const Write = () => {
 
   const currentMedia = mediaFiles[currentSlide];
   const isCurrentImage = isImageMedia(currentMedia);
+  const isCurrentLandscape = isLandscapeImage(currentMedia);
+  const isCurrentPortrait = isPortraitImage(currentMedia);
   const canGoNext = mediaFiles.length > 0 && !hasTooManyVideos;
+
+  const handleLandscapeScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scroller = e.currentTarget;
+    if (landscapeScrollRafRef.current) return;
+    landscapeScrollRafRef.current = requestAnimationFrame(() => {
+      landscapeScrollRafRef.current = null;
+      const img = landscapeImgRef.current;
+      if (!img) return;
+      const maxScroll = Math.max(0, img.offsetWidth - scroller.clientWidth);
+      const cropX = maxScroll <= 0 ? 50 : (scroller.scrollLeft / maxScroll) * 100;
+      const current = useWriteStore.getState().mediaFiles;
+      const newMedia = [...current];
+      const target = newMedia[currentSlide];
+      if (!target) return;
+      newMedia[currentSlide] = {
+        ...target,
+        crop: { x: cropX, y: 50 },
+        zoom: 1,
+      };
+      setMediaFiles(newMedia);
+    });
+  };
 
   return (
     <div className="h-[100dvh] bg-white flex flex-col relative overflow-hidden">
@@ -812,14 +847,54 @@ const Write = () => {
                     <div
                       ref={containerRef}
                       className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none bg-slate-100"
-                      style={{ aspectRatio: '3 / 4', touchAction: isCurrentImage ? 'none' : 'auto' }}
+                      style={{
+                        aspectRatio: '3 / 4',
+                        touchAction: isCurrentLandscape ? 'pan-x' : isCurrentPortrait ? 'none' : 'auto',
+                      }}
                     >
-                      {currentMedia?.type === 'image' ? (
+                      {isCurrentLandscape ? (
+                        // 가로 이미지: 위/아래는 프레임에 꽉 차고, 좌우는 원본 비율대로 넘쳐 가로 스크롤
+                        <div
+                          ref={landscapeScrollerRef}
+                          onScroll={handleLandscapeScroll}
+                          className="absolute inset-0 overflow-x-auto overflow-y-hidden no-scrollbar"
+                          style={{ WebkitOverflowScrolling: 'touch' as any, touchAction: 'pan-x' }}
+                        >
+                          <img
+                            ref={landscapeImgRef}
+                            src={currentMedia.url}
+                            onLoad={() => {
+                              const scroller = landscapeScrollerRef.current;
+                              const img = landscapeImgRef.current;
+                              if (!scroller || !img) {
+                                setImgLoaded(true);
+                                return;
+                              }
+                              // 저장된 crop.x(0~100%)에 따라 scrollLeft 복원
+                              const cropX = Math.max(0, Math.min(100, currentMedia.crop?.x ?? 50));
+                              const maxScroll = Math.max(0, img.offsetWidth - scroller.clientWidth);
+                              scroller.scrollLeft = (maxScroll * cropX) / 100;
+                              setImgLoaded(true);
+                            }}
+                            draggable={false}
+                            style={{
+                              display: 'block',
+                              height: '100%',
+                              width: 'auto',
+                              maxWidth: 'none',
+                              userSelect: 'none',
+                              opacity: imgLoaded ? 1 : 0,
+                              transition: 'opacity 0.15s ease',
+                              ...({ WebkitUserDrag: 'none' } as React.CSSProperties),
+                            }}
+                          />
+                        </div>
+                      ) : currentMedia?.type === 'image' ? (
                         <img
                           ref={imgRef}
                           src={currentMedia.url}
                           className="pointer-events-none"
-                          onLoad={(e) => {
+                          onLoad={() => {
                             const container = containerRef.current;
                             if (!container) return;
                             currentZoomRef.current = currentMedia.zoom ?? 1;
@@ -863,28 +938,30 @@ const Write = () => {
                         </div>
                       )}
 
-                      {/* 드래그 오버레이 */}
-                      <div
-                        className="absolute inset-0 z-10"
-                        style={{
-                          cursor: isCurrentImage ? (isDragging ? 'grabbing' : 'grab') : 'default',
-                          touchAction: isCurrentImage ? 'none' : 'auto',
-                          WebkitUserSelect: 'none',
-                          userSelect: 'none',
-                        }}
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerEnd}
-                        onPointerCancel={handlePointerEnd}
-                        onPointerLeave={(e) => {
-                          if (e.pointerType === 'mouse') handlePointerEnd(e);
-                        }}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                        onTouchCancel={handleTouchEnd}
-                        onWheel={handleWheelZoom}
-                      />
+                      {/* 드래그 오버레이 (세로 이미지 전용) */}
+                      {isCurrentPortrait && (
+                        <div
+                          className="absolute inset-0 z-10"
+                          style={{
+                            cursor: isDragging ? 'grabbing' : 'grab',
+                            touchAction: 'none',
+                            WebkitUserSelect: 'none',
+                            userSelect: 'none',
+                          }}
+                          onPointerDown={handlePointerDown}
+                          onPointerMove={handlePointerMove}
+                          onPointerUp={handlePointerEnd}
+                          onPointerCancel={handlePointerEnd}
+                          onPointerLeave={(e) => {
+                            if (e.pointerType === 'mouse') handlePointerEnd(e);
+                          }}
+                          onTouchStart={handleTouchStart}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchCancel={handleTouchEnd}
+                          onWheel={handleWheelZoom}
+                        />
+                      )}
 
                       {/* 삭제 버튼 */}
                       <button
