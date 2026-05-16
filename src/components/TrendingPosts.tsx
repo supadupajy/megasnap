@@ -650,9 +650,9 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
             left: '-60%',
             width: '50%',
             pointerEvents: 'none',
-            background:
-              'linear-gradient(100deg, rgba(99,102,241,0) 0%, rgba(129,140,248,0.85) 30%, rgba(196,181,253,1) 50%, rgba(129,140,248,0.85) 70%, rgba(99,102,241,0) 100%)',
-            transform: 'skewX(-20deg)',
+            // [DEBUG] 띠가 정말 그려지고 움직이는지 확인 — 단색 빨강 + 검은 테두리
+            background: 'red',
+            border: '3px solid black',
             willChange: 'left, opacity',
           }}
         />
