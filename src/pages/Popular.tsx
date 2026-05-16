@@ -192,20 +192,25 @@ const Popular = () => {
 
       const currentViewedIds = new Set<string>((viewedData || []).map((v: any) => v.post_id));
 
-      // 2) 인기 컨텐츠 200개 (랜덤 셔플)
-      const { data: popularData, error: popularError } = await supabase.rpc('get_popular_posts', { limit_count: 200 });
-      if (popularError) throw popularError;
-
-      const shuffledPopular: Post[] = shuffle((popularData || []).map((p: any) => mapPost(p, false)));
-
-      // 3) 팔로잉 목록
+      // 2) 팔로잉 목록 (인기 컨텐츠 매핑 시 친구 여부 판별에 사용)
       const { data: followsData } = await supabase
         .from('follows')
         .select('following_id')
         .eq('follower_id', userId);
 
       const followingIds = (followsData || []).map((f: any) => f.following_id);
+      const followingIdSet = new Set<string>(followingIds);
 
+      // 3) 인기 컨텐츠 200개 (랜덤 셔플)
+      // 인기 컨텐츠에 포함된 포스트라도 작성자가 팔로잉 대상이면 친구로 표시
+      const { data: popularData, error: popularError } = await supabase.rpc('get_popular_posts', { limit_count: 200 });
+      if (popularError) throw popularError;
+
+      const shuffledPopular: Post[] = shuffle(
+        (popularData || []).map((p: any) => mapPost(p, followingIdSet.has(p.user_id)))
+      );
+
+      // 4) 친구 포스팅 fetch
       let allFriendPosts: Post[] = [];
 
       if (followingIds.length > 0) {
