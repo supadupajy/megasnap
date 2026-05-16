@@ -287,14 +287,18 @@
 }
 
 /* 실시간 트렌드 카드 위로 좌→우로 흐르는 광택 효과.
-   각 카드는 rank에 따라 animation-delay를 다르게 줘서
-   1위→2위→3위… 순서로 차례차례 빛이 흘러내리듯 보임. */
+   사이클 전체는 30초 — 그중 약 5.83%(약 1.75s)만 실제 shine이 발생하고
+   나머지 94%는 카드 바깥에 머물러 보이지 않음.
+   각 카드의 animation-delay를 (rank-1)*1.5s 로 주면:
+   - 한 카드의 shine(≈1s) 종료 후 0.5s 쉬고 다음 카드 시작
+   - 1위~20위 순차 완료 후 다시 1위 시작
+*/
 @keyframes trending-shine-sweep {
-  0%   { left: -60%; opacity: 0; }
-  6%   { opacity: 1; }
-  45%  { left: 100%; opacity: 1; }
-  52%  { left: 100%; opacity: 0; }
-  100% { left: 100%; opacity: 0; }
+  0%     { left: -60%; opacity: 0; }
+  0.5%   { opacity: 1; }
+  5.0%   { left: 100%; opacity: 1; }
+  5.83%  { left: 100%; opacity: 0; }
+  100%   { left: 100%; opacity: 0; }
 }
 
 /* 위치/스타일은 JSX inline style로 직접 지정.

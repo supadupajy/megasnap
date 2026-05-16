@@ -581,10 +581,12 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
     );
   };
 
-  // 실시간 트렌드 카드에 1위부터 0.2초씩 엇갈리게 흐르는 광택(shine) 효과.
-  // 사이클 길이는 CSS에서 9s, 빛이 카드를 가로지르는 구간은 그중 일부 → 1위부터 20위까지
-  // 순차적으로 차르륵 흘러내리듯 보임. 화면 밖일 때는 GPU 합성만 일어나고 비용은 낮다.
-  const shineDelay = `${((post.rank ?? 1) - 1) * 0.2}s`;
+  // 실시간 트렌드 카드에 차례차례 흐르는 은은한 광택(shine) 효과.
+  // - 사이클 총 길이: 30s
+  // - 실제 shine 가시 구간: ≈1.75s (그중 좌→우 통과는 ≈1s)
+  // - stagger: 1.5s — 앞 카드의 shine이 끝난 뒤 0.5s 쉬고 다음 카드가 시작
+  //   (1위→2위→…→20위 한 사이클 완료 시간 ≈ 1.5*19 + 1.75 ≈ 30s)
+  const shineDelay = `${((post.rank ?? 1) - 1) * 1.5}s`;
 
   return (
     <div
@@ -592,7 +594,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       onClick={() => onPostClick(post)}
       className="relative flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group overflow-hidden"
     >
-      {/* Shine 효과: 카드 직접 자식으로 absolute 배치, animation만 따로 주입 */}
+      {/* Shine 효과: 카드 직접 자식으로 absolute 배치, animation은 !important로 강제 주입 */}
       <div
         aria-hidden="true"
         ref={(el) => {
@@ -600,7 +602,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           // animation을 !important로 강제 주입 (어딘가 우선순위 충돌 회피)
           el.style.setProperty(
             'animation',
-            `trending-shine-sweep 7s linear ${shineDelay} infinite`,
+            `trending-shine-sweep 30s linear ${shineDelay} infinite`,
             'important'
           );
         }}
@@ -609,11 +611,13 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           top: '-20%',
           bottom: '-20%',
           left: '-60%',
-          width: '50%',
+          width: '55%',
           pointerEvents: 'none',
+          // 양 끝이 완전히 투명해지도록 부드러운 그라데이션 + 가운데 톤다운 (보일듯 말듯)
           background:
-            'linear-gradient(100deg, rgba(99,102,241,0) 0%, rgba(129,140,248,0.85) 30%, rgba(196,181,253,1) 50%, rgba(129,140,248,0.85) 70%, rgba(99,102,241,0) 100%)',
+            'linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(199,210,254,0.10) 25%, rgba(196,181,253,0.30) 50%, rgba(199,210,254,0.10) 75%, rgba(255,255,255,0) 100%)',
           transform: 'skewX(-20deg)',
+          filter: 'blur(2px)',
           zIndex: 20,
           willChange: 'left, opacity',
         }}
