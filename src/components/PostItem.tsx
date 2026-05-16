@@ -60,7 +60,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [isNewRealtime, setIsNewRealtime] = useState(post.isNewRealtime || false);
   const [imgError, setImgError] = useState(false);
   const [currentImage, setCurrentImage] = useState(getOptimizedFeedImage(post.image_url || post.image, post.id));
-  const [videoLoaded, setVideoLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
@@ -313,10 +312,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         <PostItemVideo
           videoRef={videoRef}
           src={post.videoUrl}
-          posterImage={currentImage}
-          showPoster={!videoLoaded || !isVisible || !isReadyToPlay}
-          onLoadedData={() => setVideoLoaded(true)}
-          onImageError={handleImageError}
         />
       );
     }

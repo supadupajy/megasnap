@@ -25,11 +25,16 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
   const [muted, setMuted] = useVideoMuted();
 
   useEffect(() => {
+    setIsReady(false);
     const el = videoRef.current;
     if (!el) return;
 
-    const handlePlaying = () => setIsReady(true);
-    el.addEventListener('playing', handlePlaying);
+    const handleReady = () => setIsReady(true);
+    el.addEventListener('loadeddata', handleReady);
+    el.addEventListener('canplay', handleReady);
+    el.addEventListener('playing', handleReady);
+
+    if (el.readyState >= 2) handleReady();
 
     // 일부 환경에서 autoplay가 지연될 수 있어 수동 play() 호출
     const playPromise = el.play();
@@ -40,7 +45,9 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
     }
 
     return () => {
-      el.removeEventListener('playing', handlePlaying);
+      el.removeEventListener('loadeddata', handleReady);
+      el.removeEventListener('canplay', handleReady);
+      el.removeEventListener('playing', handleReady);
     };
   }, [src]);
 

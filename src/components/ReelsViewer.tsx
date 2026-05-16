@@ -1512,7 +1512,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       }}
     >
       {/* 배경 블러 — 3:4 메인 영상의 좌우 여백을 자연스럽게 채워주는 레이어 */}
-      {fallbackImage && (
+      {fallbackImage && (!hasVideo || videoFirstFrameReady) && (
         <img
           src={fallbackImage}
           alt=""
@@ -1627,7 +1627,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             onIndexChange={setMediaIndex}
             videoRef={videoRef}
             muted={muted}
-            poster={fallbackImage}
             isSlideActive={isActive}
           />
 
@@ -1991,7 +1990,6 @@ interface ReelsVideoProps {
   videoRef?: React.RefObject<HTMLVideoElement>;
   muted: boolean;
   preload: "none" | "metadata" | "auto";
-  poster?: string;
   isCurrent: boolean;
 }
 
@@ -2000,7 +1998,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   videoRef,
   muted,
   preload,
-  poster,
   isCurrent,
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
@@ -2025,8 +2022,9 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   useEffect(() => {
     const el = localRef.current;
     if (!el) return;
-    const handlePlaying = () => setIsReady(true);
+    const markReady = () => setIsReady(true);
     const handleCanPlay = () => {
+      markReady();
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
       if (isCurrent && el.paused) {
         el.play().catch(() => {
@@ -2036,13 +2034,14 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         });
       }
     };
-    el.addEventListener("playing", handlePlaying);
+    el.addEventListener("loadeddata", markReady);
+    el.addEventListener("playing", markReady);
     el.addEventListener("canplay", handleCanPlay);
-    el.addEventListener("loadeddata", handleCanPlay);
+    if (el.readyState >= 2) markReady();
     return () => {
-      el.removeEventListener("playing", handlePlaying);
+      el.removeEventListener("loadeddata", markReady);
+      el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
-      el.removeEventListener("loadeddata", handleCanPlay);
     };
   }, [src, isCurrent]);
 
@@ -2082,10 +2081,9 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         loop
         muted={muted}
         preload={preload}
-        poster={poster}
         style={{
           opacity: isCurrent && !isReady ? 0 : 1,
-          transition: "opacity 150ms ease-out",
+          transition: "opacity 120ms ease-out",
         }}
       />
       {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 */}
@@ -2105,7 +2103,6 @@ interface MediaCarouselProps {
   onIndexChange: (idx: number) => void;
   videoRef: React.RefObject<HTMLVideoElement>;
   muted: boolean;
-  poster?: string;
   // 부모 ReelSlide가 현재 활성 슬라이드인지 여부.
   // false면 캐러셀 내부의 비디오가 canplay/loadeddata 이벤트로 자동 재생되는 것을 차단한다.
   // (여러 슬라이드가 동시에 DOM에 마운트되어 있어도 활성 슬라이드만 영상을 재생하기 위함)
@@ -2118,7 +2115,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   onIndexChange,
   videoRef,
   muted,
-  poster,
   isSlideActive,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -2360,8 +2356,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   videoRef={isPlayable ? videoRef : undefined}
                   src={url}
                   muted={isPlayable ? muted : true}
-                  preload={isPlayable ? "metadata" : "none"}
-                  poster={poster}
+                  preload={isPlayable ? "auto" : "none"}
                   isCurrent={isPlayable}
                 />
               ) : (
