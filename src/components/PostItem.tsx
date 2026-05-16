@@ -6,6 +6,7 @@ import {
   MapPin,
   Check,
   X,
+  UserCheck,
 } from 'lucide-react';
 import { cn, getFallbackImage, formatRelativeTime, getOptimizedFeedImage } from '@/lib/utils';
 
@@ -710,6 +711,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                   <p className="text-sm font-bold text-gray-900 leading-[1.25] group-hover:text-indigo-600 transition-colors">
                     {user.name}
                   </p>
+                  {post.isFriendPost && (
+                    <UserCheck
+                      className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                      aria-label="친구"
+                    />
+                  )}
                 </div>
                 <div
                   className={cn(
@@ -775,6 +782,12 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             <div className="flex gap-2 items-start">
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-sm font-bold text-gray-900 whitespace-nowrap cursor-pointer hover:text-indigo-600 transition-colors" onClick={handleUserClick}>{user.name}</span>
+                {post.isFriendPost && (
+                  <UserCheck
+                    className="w-3.5 h-3.5 text-amber-500 shrink-0"
+                    aria-label="친구"
+                  />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 {renderContentBody()}
