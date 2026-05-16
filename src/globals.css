@@ -286,6 +286,55 @@
   100%    { transform: rotateY(360deg); }
 }
 
+/* 실시간 트렌드 카드 위로 좌→우로 흐르는 광택 효과.
+   각 카드는 rank에 따라 animation-delay를 다르게 줘서
+   1위→2위→3위… 순서로 차례차례 빛이 흘러내리듯 보임. */
+@keyframes trending-shine-sweep {
+  /* 사이클 길이 대비 실제 빛이 지나가는 구간은 0~22% 정도로 짧게.
+     나머지 시간은 빛이 카드 바깥에 머물러 보이지 않음 → 은은한 주기감. */
+  0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
+  4%   { opacity: 0.9; }
+  18%  { transform: translateX(220%) skewX(-18deg); opacity: 0.9; }
+  22%  { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+  100% { transform: translateX(220%) skewX(-18deg); opacity: 0; }
+}
+
+.trending-shine-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.trending-shine-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  filter: blur(2px);
+  transform: translateX(-120%) skewX(-18deg);
+  animation: trending-shine-sweep 9s linear infinite;
+  animation-delay: var(--shine-delay, 0s);
+  will-change: transform, opacity;
+}
+
+/* prefers-reduced-motion 사용자에게는 애니메이션 비활성화 */
+@media (prefers-reduced-motion: reduce) {
+  .trending-shine-overlay::before {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 .animate-ad-breathing {
   animation: ad-spin 4s ease-in-out infinite;
   transform-origin: center center;

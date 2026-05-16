@@ -581,12 +581,22 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
     );
   };
 
+  // 실시간 트렌드 카드에 1위부터 0.2초씩 엇갈리게 흐르는 광택(shine) 효과.
+  // 사이클 길이는 CSS에서 9s, 빛이 카드를 가로지르는 구간은 그중 일부 → 1위부터 20위까지
+  // 순차적으로 차르륵 흘러내리듯 보임. 화면 밖일 때는 GPU 합성만 일어나고 비용은 낮다.
+  const shineDelay = `${((post.rank ?? 1) - 1) * 0.2}s`;
+
   return (
     <div
       key={post.id}
       onClick={() => onPostClick(post)}
-      className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group"
+      className="relative flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 active:scale-[0.98] transition-all cursor-pointer group overflow-hidden"
     >
+      <span
+        className="trending-shine-overlay"
+        style={{ ['--shine-delay' as any]: shineDelay }}
+        aria-hidden="true"
+      />
       <div className="w-6 text-center shrink-0 flex items-center justify-center">
         {post.rank === 1 ? (
           <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', fontSize: '14px', fontWeight: 900, lineHeight: 1, color: '#D97706' }}>
