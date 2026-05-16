@@ -2292,9 +2292,13 @@ const Index = () => {
 
                       if (displayedPostCount > 0) {
                         // 포스트 목록 미리 계산
-                        const adIds = mapVisibleMarkers.filter(p => p.isAd).map(p => p.id);
+                        // 준비 중(isAdPending) 광고는 "여기보기" 컨텐츠 리스트에서 제외한다.
+                        // (지도에는 "준비중" 마커로 표시되지만, 광고가 아직 시작되지 않았으므로
+                        //  컨텐츠로 노출되어선 안 됨)
+                        const listSource = mapVisibleMarkers.filter(p => !p.isAdPending);
+                        const adIds = listSource.filter(p => p.isAd).map(p => p.id);
                         setPostListOpenedViewedIds(new Set([...viewedIds, ...adIds]));
-                        const boundsFiltered = mapVisibleMarkers;
+                        const boundsFiltered = listSource;
                         // 일반 포스팅만 시간 순 정렬
                         const normalPosts = boundsFiltered.filter(p => !p.isAd);
 
