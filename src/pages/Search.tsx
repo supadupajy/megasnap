@@ -81,7 +81,6 @@ const Search = () => {
     const trimmed = query.trim();
     if (!trimmed) {
       if (!authUser) return;
-      setIsSearching(true);
       try {
         const { data } = await supabase
           .from('profiles')
@@ -91,8 +90,8 @@ const Search = () => {
           .order('nickname', { ascending: true })
           .limit(50);
         setUsers(data || []);
-      } finally {
-        setIsSearching(false);
+      } catch (err) {
+        console.error('[Search] empty query fetch error:', err);
       }
       return;
     }
