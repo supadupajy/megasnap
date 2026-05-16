@@ -613,11 +613,10 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           left: '-60%',
           width: '55%',
           pointerEvents: 'none',
-          // 양 끝이 완전히 투명해지도록 부드러운 그라데이션 + 가운데 톤다운 (보일듯 말듯)
+          // 광고 마커(.shine-overlay)와 동일한 흰색 반투명 그라데이션 사용
           background:
-            'linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(199,210,254,0.10) 25%, rgba(196,181,253,0.30) 50%, rgba(199,210,254,0.10) 75%, rgba(255,255,255,0) 100%)',
+            'linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%)',
           transform: 'skewX(-20deg)',
-          filter: 'blur(2px)',
           zIndex: 20,
           willChange: 'left, opacity',
         }}
