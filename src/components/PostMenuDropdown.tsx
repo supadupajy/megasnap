@@ -61,7 +61,12 @@ const PostMenuDropdown = ({
           <>
             {!isAd && isMine && onEdit && (
               <DropdownMenuItem
-                onClick={onEdit}
+                onClick={(e) => {
+                  console.log('[edit-scroll-bug] DropdownMenuItem "수정하기" clicked', {
+                    windowScroll: { x: window.scrollX, y: window.scrollY },
+                  });
+                  onEdit(e);
+                }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none"
               >
                 <Pencil className="w-4 h-4 text-indigo-600" />
