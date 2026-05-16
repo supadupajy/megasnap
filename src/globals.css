@@ -305,6 +305,25 @@
   overflow: hidden;
   border-radius: inherit;
   z-index: 20;
+  /* [DEBUG] overlay 영역이 DOM에 실제로 깔려 있는지 확인하기 위한 임시 보더 */
+  border: 1px dashed red;
+  background: rgba(255, 0, 0, 0.08);
+}
+
+/* [DEBUG] overlay의 ::before가 정말 렌더링되는지 확인하기 위해
+   사이클 밖(opacity 0) 구간에서도 살짝 보이도록 base opacity를 줌 */
+.trending-shine-overlay::after {
+  content: 'shine';
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 9px;
+  font-weight: 900;
+  color: red;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0 3px;
+  border-radius: 4px;
+  z-index: 1;
 }
 
 .trending-shine-overlay::before {
