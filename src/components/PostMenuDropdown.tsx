@@ -40,7 +40,14 @@ const PostMenuDropdown = ({
       <DropdownMenuTrigger asChild>
         <button
           className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            console.log('[edit-scroll-bug] dropdown trigger clicked', {
+              isMine,
+              isAd,
+              hasOnEdit: !!onEdit,
+            });
+            e.stopPropagation();
+          }}
         >
           <MoreHorizontal className="w-5 h-5" />
         </button>
@@ -61,9 +68,22 @@ const PostMenuDropdown = ({
           <>
             {!isAd && isMine && onEdit && (
               <DropdownMenuItem
+                onPointerDown={() =>
+                  console.log('[edit-scroll-bug] 수정하기 pointerDown', {
+                    scroll: { x: window.scrollX, y: window.scrollY },
+                  })
+                }
+                onPointerUp={() =>
+                  console.log('[edit-scroll-bug] 수정하기 pointerUp', {
+                    scroll: { x: window.scrollX, y: window.scrollY },
+                  })
+                }
+                onSelect={() =>
+                  console.log('[edit-scroll-bug] 수정하기 onSelect(Radix)')
+                }
                 onClick={(e) => {
-                  console.log('[edit-scroll-bug] DropdownMenuItem "수정하기" clicked', {
-                    windowScroll: { x: window.scrollX, y: window.scrollY },
+                  console.log('[edit-scroll-bug] 수정하기 onClick', {
+                    scroll: { x: window.scrollX, y: window.scrollY },
                   });
                   onEdit(e);
                 }}

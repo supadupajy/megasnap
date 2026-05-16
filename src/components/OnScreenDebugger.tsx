@@ -22,7 +22,8 @@ type LogEntry = {
   text: string;
 };
 
-const FILTER_TAG = "[edit-scroll-bug]";
+// 필터에 매치되는 키워드 (대소문자 무시, 부분 문자열)
+const FILTER_KEYWORDS = ["edit-scroll", "edit-scroll-bug"];
 const MAX_LOGS = 500;
 
 // 모든 인자를 사람이 읽을 수 있는 한 줄 문자열로 변환
@@ -102,6 +103,15 @@ const patchConsole = () => {
 // 즉시 console patch (컴포넌트 mount 이전 로그도 캡쳐)
 if (typeof window !== "undefined") {
   patchConsole();
+  // 자가진단: 로드 시점에 합성 로그 한 줄을 기록해서 디버거가 살아있는지 확인
+  pushLog("info", [
+    "[edit-scroll-bug] OnScreenDebugger loaded & console patched",
+    {
+      ua: navigator.userAgent,
+      url: location.href,
+      ts: new Date().toISOString(),
+    },
+  ]);
 }
 
 const formatTime = (ts: number) => {
@@ -136,9 +146,12 @@ const OnScreenDebugger: React.FC = () => {
     if (el) el.scrollTop = el.scrollHeight;
   });
 
-  const visible = showAll
-    ? buffer
-    : buffer.filter((l) => l.text.includes(FILTER_TAG));
+  const matchFilter = (text: string) => {
+    const lower = text.toLowerCase();
+    return FILTER_KEYWORDS.some((k) => lower.includes(k.toLowerCase()));
+  };
+
+  const visible = showAll ? buffer : buffer.filter((l) => matchFilter(l.text));
 
   const allText = visible
     .map((l) => `[${formatTime(l.ts)}] [${l.level.toUpperCase()}] ${l.text}`)
@@ -193,7 +206,7 @@ const OnScreenDebugger: React.FC = () => {
           width: 44,
           height: 44,
           borderRadius: 22,
-          background: visible.length > 0 ? "#dc2626" : "#374151",
+          background: buffer.length > 0 ? "#dc2626" : "#374151",
           color: "white",
           fontSize: 11,
           fontWeight: 700,
@@ -208,7 +221,7 @@ const OnScreenDebugger: React.FC = () => {
       >
         DBG
         <span style={{ position: "absolute", bottom: 2, fontSize: 9, fontWeight: 600 }}>
-          {visible.length}
+          {buffer.length}
         </span>
       </button>
 
@@ -287,7 +300,7 @@ const OnScreenDebugger: React.FC = () => {
               <div style={{ opacity: 0.6, padding: 12, textAlign: "center" }}>
                 {showAll
                   ? "아직 로그가 없습니다."
-                  : `"${FILTER_TAG}" 태그 로그가 없습니다. "전체" 버튼을 눌러 모든 로그를 보세요.`}
+                  : `"${FILTER_KEYWORDS.join(", ")}" 키워드 로그가 없습니다. "전체" 버튼을 눌러 모든 로그를 보세요.`}
               </div>
             ) : (
               visible.map((l) => (
