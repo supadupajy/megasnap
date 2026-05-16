@@ -290,20 +290,6 @@ const Index = () => {
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [isTrendingExpanded, setIsTrendingExpanded] = useState(false);
   const isTrendingExpandedRef = useRef(false);
-
-  // 지도 탭(/)을 떠났다가 다시 돌아온 경우 트렌딩 리스트를 닫는다.
-  // (지도 탭 내에서 컨텐츠를 눌러 ReelsViewer를 띄울 때는 path가 그대로 '/'이므로 유지됨)
-  const wasOnIndexPathRef = useRef<boolean>(true);
-  useEffect(() => {
-    const pathIsIndex =
-      location.pathname === '/' ||
-      !/^\/(login|auth|terms|privacy-policy|popular|nearby-posts|search|post-search|video-search|notifications|messages|chat|friends|profile|post|user-profile|settings|write|flicks)(\/|$)/.test(location.pathname);
-    if (pathIsIndex && !wasOnIndexPathRef.current) {
-      // 다른 탭을 다녀온 뒤 지도 탭으로 복귀 → 트렌딩 리스트 닫기
-      setIsTrendingExpanded(false);
-    }
-    wasOnIndexPathRef.current = pathIsIndex;
-  }, [location.pathname]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPostListOpen, setIsPostListOpen] = useState(false);
