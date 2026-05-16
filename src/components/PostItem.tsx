@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
 import { Post } from '@/types';
 import {
   MapPin,
@@ -82,6 +82,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tapStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const { targetRef: editFormRef } = useKeyboardSafeScroll<HTMLDivElement>(isEditingContent);
 
   const {
@@ -107,6 +108,45 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     return ownerId === authUser.id || ownerId === 'me';
   }, [authUser?.id, post.owner_id, post.user_id]);
   const canEditContent = location.pathname === '/profile';
+
+  const getScrollableParent = (element: HTMLElement) => {
+    let parent = element.parentElement;
+    while (parent && parent !== document.body) {
+      const style = window.getComputedStyle(parent);
+      const canScroll = /(auto|scroll|overlay)/.test(style.overflowY);
+      if (canScroll && parent.scrollHeight > parent.clientHeight) return parent;
+      parent = parent.parentElement;
+    }
+    return null;
+  };
+
+  useLayoutEffect(() => {
+    if (!isEditingContent) return;
+
+    const form = editFormRef.current;
+    const textarea = editTextareaRef.current;
+    if (!form || !textarea) return;
+
+    const scrollParent = getScrollableParent(form);
+    if (scrollParent) {
+      const parentRect = scrollParent.getBoundingClientRect();
+      const formRect = form.getBoundingClientRect();
+      const topMargin = 96;
+      const bottomMargin = 160;
+      const overflowTop = formRect.top - parentRect.top - topMargin;
+      const overflowBottom = formRect.bottom - (parentRect.bottom - bottomMargin);
+      const delta = overflowTop < 0 ? overflowTop : overflowBottom > 0 ? overflowBottom : 0;
+
+      if (Math.abs(delta) > 1) {
+        scrollParent.scrollTo({
+          top: scrollParent.scrollTop + delta,
+          behavior: 'smooth',
+        });
+      }
+    }
+
+    textarea.focus({ preventScroll: true });
+  }, [isEditingContent]);
 
   // 리스트 진입 시 첫 번째 항목의 자동 재생이 누락되는 것을 방지하기 위한 약간의 지연
   useEffect(() => {
@@ -532,6 +572,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           onClick={(e) => e.stopPropagation()}
         >
           <Textarea
+            ref={editTextareaRef}
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
             disabled={isSavingContent}

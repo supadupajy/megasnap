@@ -48,16 +48,11 @@ export const useKeyboardSafeScroll = <T extends HTMLElement>(active: boolean) =>
       return;
     }
 
-    console.log('[edit-scroll-bug] useKeyboardSafeScroll ACTIVATED');
-
     let timers: number[] = [];
 
     const scrollTargetIntoSafeArea = () => {
       const target = targetRef.current;
-      if (!target) {
-        console.log('[edit-scroll-bug] scrollTargetIntoSafeArea: no target');
-        return;
-      }
+      if (!target) return;
 
       const viewport = window.visualViewport;
       const visibleTop = viewport?.offsetTop ?? 0;
@@ -77,23 +72,9 @@ export const useKeyboardSafeScroll = <T extends HTMLElement>(active: boolean) =>
       const topOverflow = rect.top - topLimit;
       const delta = bottomOverflow > 0 ? bottomOverflow : topOverflow < 0 ? topOverflow : 0;
 
-      console.log('[edit-scroll-bug] safeArea check', {
-        rect: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
-        visibleTop, visibleBottom, keyboardHeight,
-        bottomOverflow, topOverflow, delta,
-      });
-
       if (Math.abs(delta) < 1) return;
 
       const scrollableParent = getScrollableParent(target);
-      console.log('[edit-scroll-bug] scrolling by safeArea', {
-        usingParent: !!scrollableParent,
-        parentTag: scrollableParent?.tagName,
-        parentCls: scrollableParent?.className?.toString().slice(0, 120),
-        parentScrollTop: scrollableParent?.scrollTop,
-        delta,
-      });
-
       if (scrollableParent) {
         scrollableParent.scrollTo({ top: scrollableParent.scrollTop + delta, behavior: 'smooth' });
       }

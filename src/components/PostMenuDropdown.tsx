@@ -37,20 +37,13 @@ const PostMenuDropdown = ({
   const [open, setOpen] = React.useState(false);
   const lastEditRunAtRef = React.useRef(0);
 
-  const runEdit = (source: string, e: React.SyntheticEvent) => {
+  const runEdit = (e: React.SyntheticEvent) => {
     const now = Date.now();
-    if (now - lastEditRunAtRef.current < 300) {
-      console.log('[edit-scroll-bug] 수정하기 duplicate ignored', { source });
-      return;
-    }
+    if (now - lastEditRunAtRef.current < 300) return;
     lastEditRunAtRef.current = now;
-    console.log('[edit-scroll-bug] 수정하기 runEdit', {
-      source,
-      scroll: { x: window.scrollX, y: window.scrollY },
-    });
     e.stopPropagation();
     setOpen(false);
-    requestAnimationFrame(() => onEdit?.(e));
+    onEdit?.(e);
   };
 
   return (
@@ -58,14 +51,7 @@ const PostMenuDropdown = ({
       <DropdownMenuTrigger asChild>
         <button
           className="w-9 h-9 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all outline-none"
-          onClick={(e) => {
-            console.log('[edit-scroll-bug] dropdown trigger clicked', {
-              isMine,
-              isAd,
-              hasOnEdit: !!onEdit,
-            });
-            e.stopPropagation();
-          }}
+          onClick={(e) => e.stopPropagation()}
         >
           <MoreHorizontal className="w-5 h-5" />
         </button>
@@ -76,40 +62,15 @@ const PostMenuDropdown = ({
           'w-36 rounded-2xl p-1.5 shadow-xl border-gray-100 bg-white/95 backdrop-blur-md',
           zIndexClass
         )}
-        // 메뉴가 닫힐 때 Radix가 트리거 버튼으로 포커스를 되돌리는 기본 동작을 차단.
-        // 이 동작이 살아있으면 "수정하기" 탭 → Textarea autoFocus → 곧바로 Radix가
-        // 트리거 버튼으로 포커스를 빼앗아 키보드가 잠깐 내려갔다 → autoFocus 재시도로
-        // 다시 올라오는 플리커링이 발생한다.
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {(isMine || isAdmin) ? (
           <>
             {!isAd && isMine && onEdit && (
               <DropdownMenuItem
-                onPointerDown={(e) => {
-                  console.log('[edit-scroll-bug] 수정하기 pointerDown', {
-                    scroll: { x: window.scrollX, y: window.scrollY },
-                  });
-                  runEdit('pointerDown', e);
-                }}
-                onPointerUp={(e) => {
-                  console.log('[edit-scroll-bug] 수정하기 pointerUp', {
-                    scroll: { x: window.scrollX, y: window.scrollY },
-                  });
-                  runEdit('pointerUp', e);
-                }}
-                onSelect={(e) => {
-                  console.log('[edit-scroll-bug] 수정하기 onSelect(Radix)', {
-                    scroll: { x: window.scrollX, y: window.scrollY },
-                  });
-                  runEdit('onSelect', e as unknown as React.SyntheticEvent);
-                }}
-                onClick={(e) => {
-                  console.log('[edit-scroll-bug] 수정하기 onClick', {
-                    scroll: { x: window.scrollX, y: window.scrollY },
-                  });
-                  runEdit('onClick', e);
-                }}
+                onPointerDown={runEdit}
+                onSelect={(e) => runEdit(e as unknown as React.SyntheticEvent)}
+                onClick={runEdit}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer focus:bg-indigo-50 outline-none"
               >
                 <Pencil className="w-4 h-4 text-indigo-600" />
