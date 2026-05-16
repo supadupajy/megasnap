@@ -10,9 +10,16 @@ const SplashScreen = () => {
   const { ad, loading, now } = useAd('splash');
 
   // 기간 기반으로 현재 or 다음 광고 슬롯 결정
-  // 광고가 없거나 비활성이면 구인 슬롯 사용
-  const slot = !loading 
-    ? (ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT)
+  // - 광고가 없거나 비활성이면 구인 슬롯 사용
+  // - 시작 시간 전(isPending) 슬롯은 스플래시에 표시할 콘텐츠가 없으므로
+  //   "광고 준비 중" 회색 박스 대신 광고 문의 배너(RECRUITMENT_SLOT)를 보여준다.
+  const slot = !loading
+    ? (() => {
+        if (!ad || !ad.is_active) return RECRUITMENT_SLOT;
+        const resolved = resolveActiveSlot(ad, now);
+        if (resolved.isPending) return RECRUITMENT_SLOT;
+        return resolved;
+      })()
     : null;
 
   return (

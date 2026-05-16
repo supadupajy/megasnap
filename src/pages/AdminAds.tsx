@@ -926,6 +926,10 @@ const AdminAds = () => {
         navigate('/', {
           state: {
             center: { lat: savedAd.lat, lng: savedAd.lng },
+            // 저장한 광고 마커가 잘 보이도록 동(洞) 단위 정도의 줌(level 4)으로 진입.
+            // routeState.zoom 으로 전달하면 Index의 `else if (routeState.center)` 분기에서
+            // 한 번만 setCurrentZoom이 호출되어 smoothMoveTo와 충돌하지 않는다.
+            zoom: 4,
             adMarkerSaved: true,
             adMarkerId: `ad-map-marker-${savedAd.id}`,
           },

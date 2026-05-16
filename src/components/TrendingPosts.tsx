@@ -707,7 +707,9 @@ const TrendingAdBanner: React.FC = () => {
   }
 
   // 광고가 없거나 비활성이면 구인 슬롯 사용
-  const slot = ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
+  // 시작 시간 전(isPending) 슬롯은 표시할 콘텐츠가 없으므로 광고 문의 배너로 폴백한다.
+  const resolvedSlot = ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
+  const slot = resolvedSlot.isPending ? RECRUITMENT_SLOT : resolvedSlot;
 
   // 구인 슬롯인 경우 별도 UI
   if (slot.isRecruitment) {

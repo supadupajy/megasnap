@@ -1898,9 +1898,13 @@ const Index = () => {
         setIsSelectingAdLocation(true);
       }, 300);
     }
-    if (routeState.adMarkerSaved && routeState.center) {
-      setMapCenter(routeState.center);
-      setCurrentZoom(4);
+    if (routeState.adMarkerSaved) {
+      // 광고 저장 직후에는 새 마커가 보이도록 하이라이트만 띄운다.
+      // (지도 중심/줌은 위쪽 `else if (routeState.center)` 분기에서 이미 처리됨.
+      //  여기서 setMapCenter/setCurrentZoom을 다시 호출하면 smoothMoveTo가
+      //  중복 트리거되어 카카오맵의 이동/줌 상태가 꼬이고 지도가 멈춘 것처럼 보이는
+      //  버그가 발생함. 또한 routeState.zoom과 무관하게 4로 강제 줌하면 광고 위치가
+      //  엉뚱한 영역으로 튀어 보이는 문제도 있어 강제 줌을 제거함.)
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: routeState.adMarkerId || 'ad-map-marker', duration: 3000 } }));
       }, 1000);
