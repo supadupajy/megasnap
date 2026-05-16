@@ -1,0 +1,1 @@
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS video_urls text[] DEFAULT '{}'::text[];

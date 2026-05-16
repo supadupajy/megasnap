@@ -144,6 +144,7 @@ const Flicks = () => {
           latitude: p.latitude,
           longitude: p.longitude,
           videoUrl: p.video_url,
+          videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
           isLiked: likedIds.has(idKey),
           isSaved: savedIds.has(idKey),
           hasUserCommented: commentedIds.has(idKey),

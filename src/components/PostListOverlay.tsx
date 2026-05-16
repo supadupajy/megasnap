@@ -263,7 +263,7 @@ const PostListOverlay = ({
       // profiles JOIN을 첫 쿼리에서 함께 처리 (별도 profiles 쿼리 제거)
       let { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
         .gte('latitude', latMin)
         .lte('latitude', latMax)
         .gte('longitude', lngMin)
@@ -308,6 +308,7 @@ const PostListOverlay = ({
           image_url: finalImage,
           images: finalImages,
           videoUrl: p.video_url,
+          videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
           createdAt: new Date(p.created_at),
           category: p.category || 'none',
           commentsCount: 0, comments: [],

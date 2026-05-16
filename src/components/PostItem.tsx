@@ -29,6 +29,7 @@ import PostItemVideo from './PostItemVideo';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 import { useKeyboardSafeScroll } from '@/hooks/use-keyboard-safe-scroll';
+import { getPostMediaItems } from '@/utils/post-media';
 
 interface PostItemProps {
   post: Post;
@@ -304,19 +305,24 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   // 브라우저는 사용자 상호작용 없는 소리 있는 자동 재생을 차단하므로 무음 재생이 필수입니다.
 
-  const renderMedia = () => {
-    // 일반 업로드 동영상 처리 (광고는 영상 재생 금지)
-    if (!isAd && post.videoUrl) {
+  const displayMedia = useMemo(() => {
+    return getPostMediaItems(post).map((item) => (
+      item.type === 'image'
+        ? { ...item, url: getOptimizedFeedImage(item.url, post.id) }
+        : { ...item, posterUrl: item.posterUrl ? getOptimizedFeedImage(item.posterUrl, post.id) : undefined }
+    ));
+  }, [post]);
 
+  const renderMedia = () => {
+    if (displayMedia.length === 1 && displayMedia[0].type === 'video') {
       return (
         <PostItemVideo
           videoRef={videoRef}
-          src={post.videoUrl}
+          src={displayMedia[0].url}
         />
       );
     }
 
-    // 3. 일반 이미지 슬라이더 처리
     return (
       <div className="relative w-full h-full bg-gray-200 group/slider">
         <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
@@ -324,7 +330,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           ref={imageScrollRef}
           className={cn(
             "relative z-[1] flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar cursor-grab",
-            isDragging && "cursor-grabbing snap-none" // 드래그 중에는 스냅 일시 중지하여 부드럽게
+            isDragging && "cursor-grabbing snap-none"
           )}
           onScroll={handleImageScroll}
           onMouseDown={onMouseDown}
@@ -332,26 +338,43 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           onMouseLeave={onMouseUp}
           onMouseMove={onMouseMove}
         >
-          {displayImages.map((img, index) => (
+          {displayMedia.map((media, index) => (
             <div
-              key={index}
+              key={`${media.type}-${index}`}
               className="relative w-full h-full shrink-0 snap-center snap-always bg-gray-200"
             >
               <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
-              <img
-                src={img}
-                alt={`Content ${index}`}
-                loading="lazy"
-                decoding="async"
-                className="relative z-[1] w-full h-full object-cover bg-gray-200 pointer-events-none"
-                onError={handleImageError}
-              />
+              {media.type === 'video' ? (
+                <video
+                  src={media.url}
+                  poster={media.posterUrl}
+                  className="relative z-[1] w-full h-full object-cover bg-gray-200 video-hq"
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  controls
+                  controlsList="nodownload noplaybackrate noremoteplayback"
+                  disablePictureInPicture
+                  disableRemotePlayback={true}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <img
+                  src={media.url}
+                  alt={`Content ${index}`}
+                  loading="lazy"
+                  decoding="async"
+                  className="relative z-[1] w-full h-full object-cover bg-gray-200 pointer-events-none"
+                  onError={handleImageError}
+                />
+              )}
             </div>
           ))}
         </div>
 
         <ImageSliderDots
-          count={displayImages.length}
+          count={displayMedia.length}
           currentIndex={currentImageIndex}
           activeWidthClass="w-4"
           inactiveColorClass="bg-white/50"
@@ -361,14 +384,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       </div>
     );
   };
-
-  // 이미지 슬라이더 데이터 준비 (피드용 최적화 URL 적용)
-  const displayImages = useMemo(() => {
-    const baseImages = isAd
-      ? [post.image_url || post.image]
-      : (Array.isArray(post.images) && post.images.length > 0 ? post.images : [post.image_url || post.image]);
-    return baseImages.map((img) => getOptimizedFeedImage(img, post.id));
-  }, [post.images, post.image, post.image_url, isAd, post.id]);
 
   const handleImageError = async () => {
     if (imgError) return;

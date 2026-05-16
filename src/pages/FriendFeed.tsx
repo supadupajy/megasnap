@@ -42,6 +42,7 @@ const mapPostImmediate = (p: any): Post => {
     images: finalImages,
     latitude: p.latitude, longitude: p.longitude,
     videoUrl: p.video_url,
+    videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
     isLiked: false, isSaved: false,
     createdAt: new Date(p.created_at),
     borderType: borderType as any,
@@ -192,7 +193,7 @@ const FriendFeed = () => {
       // 3단계: 팔로잉 유저들의 포스트 + profiles JOIN으로 실제 닉네임/아바타 가져오기
       const { data, error } = await supabase
         .from('posts')
-        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
+        .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
         .in('user_id', ids)
         .order('created_at', { ascending: false })
         .range(0, PAGE_SIZE - 1);
@@ -222,7 +223,7 @@ const FriendFeed = () => {
 
     const { data, error } = await supabase
       .from('posts')
-      .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
+      .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
       .in('user_id', followingIds)
       .order('created_at', { ascending: false })
       .range(from, to);

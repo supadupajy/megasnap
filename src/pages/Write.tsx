@@ -612,6 +612,8 @@ const Write = () => {
 
       const uploadedUrls = uploadedMedia.map((item) => item.url);
       const previewUrls = uploadedMedia.map((item) => item.previewUrl);
+      const videoUrls = uploadedMedia.map((item) => item.type === 'video' ? item.url : null);
+      const firstVideoUrl = uploadedMedia.find((item) => item.type === 'video')?.url ?? null;
 
       // 위치 정보는 사용자가 명시적으로 선택한 경우에만 저장한다.
       // 선택하지 않았을 때 지도 중심/마지막 위치를 fallback으로 넣으면
@@ -621,9 +623,6 @@ const Write = () => {
       const postLat = hasSelectedLocation ? initialLocation.lat : null;
       const postLng = hasSelectedLocation ? initialLocation.lng : null;
 
-      const firstUploadedMedia = uploadedMedia[0];
-      const isFirstMediaVideo = firstUploadedMedia?.type === 'video';
-      
       const postData = {
         content: content.trim(),
         location_name: hasSelectedLocation ? (address || '위치 선택됨') : '위치 미지정',
@@ -635,7 +634,8 @@ const Write = () => {
         user_name: profile?.nickname || '탐험가',
         user_avatar: profile?.avatar_url,
         category,
-        video_url: isFirstMediaVideo ? firstUploadedMedia.url : null,
+        video_url: firstVideoUrl,
+        video_urls: videoUrls,
         hashtags,
       };
 
@@ -673,6 +673,7 @@ const Write = () => {
         image_url: previewUrls[0],
         images: previewUrls,
         videoUrl: createdPost.video_url,
+        videoUrls,
         createdAt: new Date(createdPost.created_at),
         category: createdPost.category,
         hashtags: createdPost.hashtags || hashtags,

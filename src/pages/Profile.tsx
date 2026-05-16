@@ -134,6 +134,7 @@ const Profile = () => {
       image: finalImage, image_url: finalImage,
       images: finalImages,
       videoUrl: p.video_url,
+      videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
       isLiked, isSaved,
       createdAt: new Date(p.created_at),
       borderType,
@@ -147,13 +148,13 @@ const Profile = () => {
       const [myPostsRes, savedPostsRes, adSavedRes, followersRes, followingRes, profileRes] = await Promise.all([
         supabase
           .from('posts')
-          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id')
+          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id')
           .eq('user_id', uid)
           .order('created_at', { ascending: false })
           .limit(50),
         supabase
           .from('saved_posts')
-          .select('post_id, posts(id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, profiles(nickname, avatar_url))')
+          .select('post_id, posts(id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, profiles(nickname, avatar_url))')
           .eq('user_id', uid)
           .limit(20),
         supabase

@@ -32,6 +32,7 @@ import { useKeyboardOffset } from '@/hooks/use-keyboard-offset';
 import { useKeyboardSafeScroll } from '@/hooks/use-keyboard-safe-scroll';
 import { invalidateAdCache } from '@/hooks/use-ad';
 import { formatRelativeTime } from '@/lib/utils';
+import { getPostMediaItems } from '@/utils/post-media';
 
 interface PostDetailProps {
   posts: any[];
@@ -393,29 +394,22 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   const isAd = currentPost?.isAd || false;
 
-  const rawDisplayImages = (() => {
-    if (!currentPost) return [];
-    let baseImages: string[] = [];
-    if (Array.isArray(currentPost.images) && currentPost.images.length > 0) {
-      baseImages = currentPost.images.filter((img: any) => !isDummyUrl(img));
-    }
-    const singleImg = currentPost.image_url || currentPost.image;
-    if (baseImages.length === 0 && singleImg && !isDummyUrl(singleImg)) {
-      baseImages = [singleImg];
-    }
-    if (baseImages.length === 0) {
-      baseImages = [displayImage];
-    }
-    return baseImages;
-  })();
-
-  const displayImages = currentPost
-    ? rawDisplayImages.map((img) => getOptimizedDetailImage(img, currentPost.id))
+  const rawDisplayMedia = currentPost ? getPostMediaItems(currentPost) : [];
+  const effectiveRawDisplayMedia = rawDisplayMedia.length > 0
+    ? rawDisplayMedia
+    : [{ type: 'image' as const, url: displayImage }];
+  const displayMedia = currentPost
+    ? effectiveRawDisplayMedia.map((item) => (
+      item.type === 'image'
+        ? { ...item, url: item.url.startsWith('http') ? getOptimizedDetailImage(item.url, currentPost.id) : item.url }
+        : { ...item, posterUrl: item.posterUrl ? getOptimizedDetailImage(item.posterUrl, currentPost.id) : undefined }
+    ))
     : [];
+  const activeMedia = effectiveRawDisplayMedia[currentImageIndex] || effectiveRawDisplayMedia[0];
 
   const mediaAspectRatio = useMediaAspectRatio(
-    currentPost?.videoUrl && !currentPost?.isAd ? currentPost.videoUrl : (rawDisplayImages[currentImageIndex] || rawDisplayImages[0]),
-    currentPost?.videoUrl && !currentPost?.isAd ? 'video' : 'image'
+    activeMedia?.url || displayImage,
+    activeMedia?.type || 'image'
   );
 
   const postDisplayName = currentPost?.user?.name || '익명';
@@ -739,7 +733,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     );
   };
 
-  const renderImageSlider = () => {
+  const renderMediaSlider = () => {
     return (
     <div className="absolute inset-0 w-full h-full z-10">
       <div
@@ -754,28 +748,43 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         onMouseLeave={onMouseUp}
         onMouseMove={onMouseMove}
       >
-        {displayImages.map((img, index) => (
+        {displayMedia.map((media, index) => (
           <div
-            key={index}
+            key={`${media.type}-${index}`}
             className="w-full h-full shrink-0 snap-center relative"
             style={{ scrollSnapStop: 'always' }}
           >
-            <img
-              src={img}
-              alt={`Post content ${index + 1}`}
-              className="w-full h-full object-cover pointer-events-none"
-              draggable={false}
-              onError={(e) => {
-                const target = e.currentTarget;
-                const fallback = getFallbackImage(currentPost.id);
-                if (target.src !== fallback) target.src = fallback;
-              }}
-            />
+            {media.type === 'video' ? (
+              index === currentImageIndex ? (
+                <VideoPlayer src={media.url} />
+              ) : (
+                <video
+                  src={media.url}
+                  poster={media.posterUrl}
+                  className="w-full h-full object-cover video-hq"
+                  muted
+                  playsInline
+                  preload="metadata"
+                />
+              )
+            ) : (
+              <img
+                src={media.url}
+                alt={`Post content ${index + 1}`}
+                className="w-full h-full object-cover pointer-events-none"
+                draggable={false}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  const fallback = getFallbackImage(currentPost.id);
+                  if (target.src !== fallback) target.src = fallback;
+                }}
+              />
+            )}
           </div>
         ))}
       </div>
       <ImageSliderDots
-        count={displayImages.length}
+        count={displayMedia.length}
         currentIndex={currentImageIndex}
         activeWidthClass="w-6"
         inactiveColorClass="bg-white/40"
@@ -791,11 +800,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       className="relative rounded-3xl overflow-hidden bg-black shadow-inner transition-[height] duration-300"
       style={{ aspectRatio: mediaAspectRatio }}
     >
-      {currentPost.videoUrl && !currentPost.isAd ? (
-        <VideoPlayer src={currentPost.videoUrl} />
-      ) : (
-        renderImageSlider()
-      )}
+      {renderMediaSlider()}
     </div>
   );
 

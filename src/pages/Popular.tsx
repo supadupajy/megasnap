@@ -134,6 +134,7 @@ const mapPost = (p: any, isFriend = false): Post => {
     images: finalImages,
     latitude: p.latitude, longitude: p.longitude,
     videoUrl: p.video_url,
+    videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
     isLiked: false, isSaved: false,
     createdAt: new Date(p.created_at),
     borderType: borderType as any,
@@ -216,7 +217,7 @@ const Popular = () => {
       if (followingIds.length > 0) {
         const { data: friendData } = await supabase
           .from('posts')
-          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
+          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar, hot_since, profiles!posts_user_id_fkey(nickname, avatar_url, followers)')
           .in('user_id', followingIds)
           .order('created_at', { ascending: false })
           .limit(500);

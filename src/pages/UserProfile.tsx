@@ -124,6 +124,7 @@ const UserProfile = () => {
       image_url: finalImage,
       images: finalImages.length > 0 ? finalImages : [finalImage],
       videoUrl: p.video_url,
+      videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
       isLiked: likedSet.has(p.id),
       isSaved: savedSet.has(p.id),
       createdAt: new Date(p.created_at),
@@ -197,7 +198,7 @@ const UserProfile = () => {
             .single(),
           supabase
             .from('posts')
-            .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar')
+            .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar')
             .eq('user_id', profileUserId)
             .order('created_at', { ascending: false })
             .limit(100),

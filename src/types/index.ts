@@ -47,6 +47,7 @@ export interface Post {
   isSaved?: boolean;
   hasUserCommented?: boolean; // 현재 로그인 사용자가 이 포스트에 댓글을 남겼는지 여부
   videoUrl?: string;
+  videoUrls?: (string | null)[];
 
   category: string;
   createdAt: Date;

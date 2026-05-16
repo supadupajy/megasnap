@@ -18,6 +18,7 @@ interface SearchPost {
   image_url: string | null;
   images: string[];
   video_url: string | null;
+  video_urls?: (string | null)[];
   likes: number;
   created_at: string;
   user_name: string;
@@ -29,7 +30,7 @@ interface SearchPost {
 const CACHE_KEY_QUERY = 'postSearch_query';
 const CACHE_KEY_RESULTS = 'postSearch_results';
 
-const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)';
+const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)';
 
 const sanitizePostgrestSearchTerm = (term: string) =>
   term.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -88,6 +89,7 @@ const PostDetailFullPage = ({
       image_url: finalImage,
       images: finalImages,
       videoUrl: p.video_url,
+      videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
       isLiked: likedSet.has(p.id),
       isSaved: savedSet.has(p.id),
       createdAt: new Date(p.created_at),
@@ -271,7 +273,7 @@ const PostSearch = () => {
       const textQuery = textTerm
         ? supabase
             .from('posts')
-            .select('id, content, image_url, images, video_url, likes, created_at, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)')
+            .select('id, content, image_url, images, video_url, video_urls, likes, created_at, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)')
             .or(`content.ilike.%${textTerm}%,location_name.ilike.%${textTerm}%`)
             .order('likes', { ascending: false })
             .limit(50)
@@ -280,7 +282,7 @@ const PostSearch = () => {
       const hashtagQuery = hashtag
         ? supabase
             .from('posts')
-            .select('id, content, image_url, images, video_url, likes, created_at, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)')
+            .select('id, content, image_url, images, video_url, video_urls, likes, created_at, user_name, user_avatar, hashtags, profiles!posts_user_id_fkey(nickname, avatar_url)')
             .contains('hashtags', [hashtag])
             .order('likes', { ascending: false })
             .limit(50)

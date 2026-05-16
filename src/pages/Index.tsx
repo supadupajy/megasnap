@@ -265,7 +265,7 @@ const Index = () => {
 
     supabase
       .from('posts')
-      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, image_url, user_id, user_name, user_avatar, images, content, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
+      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, video_urls, image_url, user_id, user_name, user_avatar, images, content, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
       .in('user_id', ids)
       .limit(500)
       .then(({ data, error }) => {
@@ -524,6 +524,7 @@ const Index = () => {
       : (prev?.images && prev.images.length > 0 ? prev.images : [img]);
     const images = isAd ? [img] : rawImages;
     const videoUrl = isAd ? undefined : (p.video_url ?? prev?.videoUrl);
+    const videoUrls = isAd ? undefined : (Array.isArray(p.video_urls) ? p.video_urls : prev?.videoUrls);
 
     return {
       id: p.id,
@@ -552,6 +553,7 @@ const Index = () => {
       images,
       isLiked: p.isLiked ?? prev?.isLiked ?? false,
       videoUrl,
+      videoUrls,
       category: isAd ? 'food' : (p.category ?? prev?.category ?? 'none'),
       createdAt: p.created_at ? new Date(p.created_at) : (prev?.createdAt ?? new Date()),
       borderType,
@@ -1464,7 +1466,7 @@ const Index = () => {
       const [{ data, error }, { count: commentsCount }] = await Promise.all([
         supabase
           .from('posts')
-          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
+          .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
           .eq('id', lightPost.id)
           .single(),
         supabase
@@ -1834,7 +1836,7 @@ const Index = () => {
         try {
           const { data, error } = await supabase
             .from('posts')
-            .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
+            .select('id, content, image_url, images, location_name, latitude, longitude, likes, category, video_url, video_urls, created_at, user_id, user_name, user_avatar, hot_since, profiles:user_id(nickname, avatar_url, followers)')
             .eq('id', routeState.postId)
             .single();
 

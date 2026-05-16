@@ -36,7 +36,7 @@ export const fetchPostsInBounds = async (
 
     const { data, error } = await supabase
       .from('posts')
-      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, image_url, user_id, user_name, user_avatar, images, content, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
+      .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, video_urls, image_url, user_id, user_name, user_avatar, images, content, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
 
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
@@ -287,7 +287,7 @@ export const fetchExpiredPostsInBounds = async (
 
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, image_url, video_url, created_at, user_id, category')
+      .select('id, latitude, longitude, image_url, video_url, video_urls, created_at, user_id, category')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
@@ -317,6 +317,7 @@ export const fetchExpiredPostsInBounds = async (
       lng: row.longitude,
       image_url: row.image_url,
       videoUrl: row.video_url,
+      videoUrls: Array.isArray(row.video_urls) ? row.video_urls : undefined,
       created_at: row.created_at,
       user_id: row.user_id,
       category: row.category,
