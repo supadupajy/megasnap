@@ -481,14 +481,29 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                   <div className="p-7 flex flex-col items-center gap-5">
                     <div className="text-center">
                       <p className="text-lg font-black text-gray-900 mb-1">광고 준비 중</p>
-                      <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                      {/*
+                        준비 중 광고의 브랜드 식별 정보.
+                        - user.name 은 ad.brand_name 으로 매핑되어 있고, "광고"는 폴백 라벨이므로 제외.
+                        - 브랜드 로고(avatar)가 있으면 함께 표시해 어떤 브랜드가 준비 중인지 한눈에 보이게 한다.
+                      */}
+                      {currentPost.user?.name && currentPost.user.name !== '광고' && (
+                        <div className="mt-2 inline-flex items-center gap-2 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-full">
+                          {currentPost.user.avatar ? (
+                            <img
+                              src={currentPost.user.avatar}
+                              alt={currentPost.user.name}
+                              className="w-5 h-5 rounded-full object-cover bg-white border border-slate-200"
+                              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          ) : null}
+                          <span className="text-xs font-black text-slate-700 tracking-tight">
+                            {currentPost.user.name}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-sm text-gray-500 font-medium leading-relaxed mt-3">
                         광고 시작 시간이 되면<br />자동으로 활성화됩니다.
                       </p>
-                      {currentPost.user?.name && currentPost.user.name !== '광고' && (
-                        <p className="text-xs text-slate-400 font-bold mt-3 bg-slate-50 px-3 py-1.5 rounded-full inline-block">
-                          {currentPost.user.name}
-                        </p>
-                      )}
                     </div>
                     <button onClick={onClose} className="w-full h-12 bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm active:scale-95 transition-all">
                       닫기
