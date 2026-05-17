@@ -423,26 +423,17 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
             }
 
             finish(() => resolve(blob));
-          }, 'image/jpeg', 0.82);
+          }, 'image/jpeg', 0.86);
         } catch (error) {
           fail(error);
         }
       };
 
-      const moveToCaptureFrame = () => {
-        const duration = Number.isFinite(video.duration) ? video.duration : 0;
-
-        if (duration <= 0.2) {
-          capture();
-          return;
-        }
-
-        const seekTime = Math.min(Math.max(duration * 0.15, 0.1), duration - 0.1);
-
-        try {
-          video.currentTime = seekTime;
-        } catch {
-          capture();
+      const captureFirstFrame = () => {
+        if ('requestVideoFrameCallback' in video) {
+          video.requestVideoFrameCallback(() => capture());
+        } else {
+          window.setTimeout(capture, 80);
         }
       };
 
@@ -453,10 +444,11 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       video.preload = 'auto';
       video.muted = true;
       video.playsInline = true;
+      video.currentTime = 0;
       video.src = objectUrl;
 
-      video.addEventListener('loadedmetadata', moveToCaptureFrame, { once: true });
-      video.addEventListener('seeked', capture, { once: true });
+      video.addEventListener('loadeddata', captureFirstFrame, { once: true });
+      video.addEventListener('canplay', captureFirstFrame, { once: true });
       video.addEventListener('error', () => fail(), { once: true });
       video.load();
     });

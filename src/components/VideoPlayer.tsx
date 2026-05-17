@@ -8,6 +8,7 @@ const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAA
 interface VideoPlayerProps {
   src: string;
   className?: string;
+  posterUrl?: string;
 }
 
 /**
@@ -17,7 +18,7 @@ interface VideoPlayerProps {
  *
  * 음소거 토글/타임라인/스크럽 등 공통 컨트롤은 VideoOverlayControls가 처리한다.
  */
-const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
+const VideoPlayer = ({ src, className, posterUrl }: VideoPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
   // 외부 오버레이(댓글/태그 검색)가 떠 있는 동안 재생을 잠시 멈춰두기 위한 ref
@@ -115,11 +116,25 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
 
   return (
     <>
+      {posterUrl && (
+        <img
+          src={posterUrl}
+          alt=""
+          aria-hidden="true"
+          className={cn(className ?? 'w-full h-full object-cover', 'absolute inset-0')}
+          draggable={false}
+          style={{
+            opacity: isReady ? 0 : 1,
+            transition: 'opacity 180ms ease-out',
+          }}
+        />
+      )}
+
       <video
         ref={videoRef}
         src={src}
-        className={cn(className ?? 'w-full h-full object-cover', 'video-hq')}
-        poster={TRANSPARENT_POSTER}
+        className={cn(className ?? 'w-full h-full object-cover', 'relative z-[1] video-hq')}
+        poster={posterUrl || TRANSPARENT_POSTER}
         autoPlay
         loop
         muted={muted}
@@ -127,7 +142,7 @@ const VideoPlayer = ({ src, className }: VideoPlayerProps) => {
         preload="auto"
         style={{
           opacity: isReady ? 1 : 0,
-          transition: 'opacity 150ms ease-out',
+          transition: 'opacity 180ms ease-out',
         }}
       />
 

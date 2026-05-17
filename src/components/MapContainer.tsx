@@ -1072,8 +1072,11 @@ const MapContainer = ({
       const existingOverlay = overlaysRef.current.get(post.id);
       const isMineKey = !!(authUser && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUser.id));
       const isAdPendingKey = !!(post as any).isAdPending;
+      const firstVideoUrl = !post.isAd
+        ? (post.videoUrl || (Array.isArray(post.videoUrls) ? post.videoUrls.find((url) => typeof url === 'string' && url.trim()) : ''))
+        : '';
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
-      const hasThumbKey = (!post.isAd && post.videoUrl) ? (videoThumbCacheRef.current.has(post.id) ? '1' : '0') : '';
+      const hasThumbKey = firstVideoUrl ? (videoThumbCacheRef.current.has(post.id) ? '1' : '0') : '';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
@@ -1126,14 +1129,14 @@ const MapContainer = ({
         overlaysRef.current.set(post.id, overlay);
 
         // 비디오 포스트이고 썸네일이 없으면 비동기로 추출
-        if (!post.isAd && post.videoUrl) {
+        if (firstVideoUrl) {
           const cachedThumb = videoThumbCacheRef.current.get(post.id);
           if (cachedThumb) {
             // 이미 캐시된 썸네일이 있으면 즉시 적용
             const img = content.querySelector('img') as HTMLImageElement | null;
             if (img) img.src = cachedThumb;
           } else {
-            extractVideoThumbRef.current(post.id, post.videoUrl);
+            extractVideoThumbRef.current(post.id, firstVideoUrl);
           }
         }
       } else {
@@ -1219,7 +1222,10 @@ const MapContainer = ({
             if (pNow) {
               const isMineKeyNow = !!(authUserRef.current && String(((pNow as any).owner_id || (pNow as any).user_id || '')) === String(authUserRef.current.id));
               const isAdPendingKeyNow = !!(pNow as any).isAdPending;
-              const hasThumbKeyNow = (!pNow.isAd && pNow.videoUrl) ? (videoThumbCacheRef.current.has(pNow.id) ? '1' : '0') : '';
+              const firstVideoUrlNow = !pNow.isAd
+                ? (pNow.videoUrl || (Array.isArray(pNow.videoUrls) ? pNow.videoUrls.find((url) => typeof url === 'string' && url.trim()) : ''))
+                : '';
+              const hasThumbKeyNow = firstVideoUrlNow ? (videoThumbCacheRef.current.has(pNow.id) ? '1' : '0') : '';
               const nowStateKey = `${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}-${hasThumbKeyNow}`;
               content.innerHTML = getMarkerInnerHtmlRef.current(pNow, false);
               content.setAttribute('data-content-state', nowStateKey);
@@ -1256,7 +1262,10 @@ const MapContainer = ({
               if (p2) {
                 const isMineKey2 = !!(authUserRef.current && String(((p2 as any).owner_id || (p2 as any).user_id || '')) === String(authUserRef.current.id));
                 const isAdPendingKey2 = !!(p2 as any).isAdPending;
-                const hasThumbKey2 = (!p2.isAd && p2.videoUrl) ? (videoThumbCacheRef.current.has(p2.id) ? '1' : '0') : '';
+                const firstVideoUrl2 = !p2.isAd
+                  ? (p2.videoUrl || (Array.isArray(p2.videoUrls) ? p2.videoUrls.find((url) => typeof url === 'string' && url.trim()) : ''))
+                  : '';
+                const hasThumbKey2 = firstVideoUrl2 ? (videoThumbCacheRef.current.has(p2.id) ? '1' : '0') : '';
                 const finalStateKey = `${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}-${hasThumbKey2}`;
                 content.classList.remove('marker-appear-animation');
                 content.innerHTML = getMarkerInnerHtmlRef.current(p2, false);
@@ -1995,12 +2004,10 @@ const MapContainer = ({
     videoThumbPendingRef.current.add(postId);
 
     const video = document.createElement('video');
-    // crossOrigin을 설정하면 Supabase storage에서 CORS preflight가 필요해 실패할 수 있음
-    // → 설정하지 않으면 canvas.toDataURL()이 tainted canvas 오류를 낼 수 있지만
-    //   같은 origin(supabase.co)이면 문제없음. 외부 URL은 어차피 실패 처리됨.
+    video.crossOrigin = 'anonymous';
     video.muted = true;
     video.playsInline = true;
-    video.preload = 'metadata';
+    video.preload = 'auto';
 
     const cleanup = () => {
       video.src = '';
@@ -2042,18 +2049,16 @@ const MapContainer = ({
       }
     };
 
-    const onMetadata = () => {
-      const duration = Number.isFinite(video.duration) ? video.duration : 0;
-      if (duration <= 0.2) {
-        capture();
-        return;
+    const captureFirstFrame = () => {
+      if ('requestVideoFrameCallback' in video) {
+        video.requestVideoFrameCallback(() => capture());
+      } else {
+        window.setTimeout(capture, 80);
       }
-      const seekTime = Math.min(Math.max(duration * 0.15, 0.1), duration - 0.1);
-      try { video.currentTime = seekTime; } catch { capture(); }
     };
 
-    video.addEventListener('loadedmetadata', onMetadata, { once: true });
-    video.addEventListener('seeked', capture, { once: true });
+    video.addEventListener('loadeddata', captureFirstFrame, { once: true });
+    video.addEventListener('canplay', captureFirstFrame, { once: true });
     video.addEventListener('error', () => {
       cleanup();
       videoThumbPendingRef.current.delete(postId);
@@ -2093,9 +2098,12 @@ const MapContainer = ({
     const currentUser = authUserRef.current;
     const isMine = !!(currentUser && String((post.owner_id || post.user_id || '')) === String(currentUser.id));
 
-    // 광고가 아니고 videoUrl이 있으면 재생 아이콘만 표시
+    // 광고가 아니고 영상이 있으면 재생 아이콘 표시
 
-    const hasVideo = !isAd && !!post.videoUrl;
+    const firstVideoUrl = !isAd
+      ? (post.videoUrl || (Array.isArray(post.videoUrls) ? post.videoUrls.find((url: unknown) => typeof url === 'string' && url.trim()) : ''))
+      : '';
+    const hasVideo = !!firstVideoUrl;
 
     const isBrokenUrl = (url: string) => {
       if (!url || url === 'null' || url === 'undefined') return true;
@@ -2115,14 +2123,17 @@ const MapContainer = ({
     };
 
     let displayImage = post.image_url || post.image;
+    const firstStoredThumbnail = Array.isArray(post.images)
+      ? post.images.find((url: unknown) => typeof url === 'string' && !isBrokenUrl(url) && !isVideoUrl(url) && !isMockUrl(url))
+      : '';
 
     // image_url이 비디오 URL이거나 목업 URL이면 썸네일로 사용 불가
     if (isBrokenUrl(displayImage) || isVideoUrl(displayImage) || isMockUrl(displayImage)) {
-      displayImage = '';
+      displayImage = firstStoredThumbnail || '';
     }
 
-    // 비디오 포스트이고 캐시된 썸네일이 있으면 즉시 사용 (깜빡임 방지)
-    if (hasVideo && !displayImage) {
+    // 비디오 포스트이고 캐시된 첫 프레임이 있으면 저장된 썸네일보다 우선 사용한다.
+    if (hasVideo) {
       const cached = videoThumbCacheRef.current.get(post.id);
       if (cached) displayImage = cached;
     }

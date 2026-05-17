@@ -354,20 +354,31 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             >
               <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
               {media.type === 'video' ? (
-                <video
-                  src={media.url}
-                  poster={media.posterUrl}
-                  className="relative z-[1] w-full h-full object-cover bg-gray-200 video-hq"
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  controls
-                  controlsList="nodownload noplaybackrate noremoteplayback"
-                  disablePictureInPicture
-                  disableRemotePlayback={true}
-                  onClick={(e) => e.stopPropagation()}
-                />
+                <>
+                  {media.posterUrl && (
+                    <img
+                      src={media.posterUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      draggable={false}
+                    />
+                  )}
+                  <video
+                    src={media.url}
+                    poster={media.posterUrl}
+                    className="relative z-[1] w-full h-full object-cover bg-gray-200 video-hq"
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    controls
+                    controlsList="nodownload noplaybackrate noremoteplayback"
+                    disablePictureInPicture
+                    disableRemotePlayback={true}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </>
               ) : (
                 <img
                   src={media.url}

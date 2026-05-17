@@ -785,16 +785,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           >
             {media.type === 'video' ? (
               index === currentImageIndex ? (
-                <VideoPlayer src={media.url} />
+                <VideoPlayer src={media.url} posterUrl={media.posterUrl} />
               ) : (
-                <video
-                  src={media.url}
-                  poster={media.posterUrl}
-                  className="w-full h-full object-cover video-hq"
-                  muted
-                  playsInline
-                  preload="metadata"
-                />
+                <>
+                  {media.posterUrl && (
+                    <img
+                      src={media.posterUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      draggable={false}
+                    />
+                  )}
+                  <video
+                    src={media.url}
+                    poster={media.posterUrl}
+                    className="relative z-[1] w-full h-full object-cover video-hq"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                </>
               )
             ) : (
               <img
