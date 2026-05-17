@@ -48,17 +48,6 @@ const MARKER_EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // 1분마다 만료/타이�
 // 24시간이 지나 활성 마커에서 사라진 포스트들을 회색 잔상으로 표시.
 // DB에 수천개가 있어도 한 화면에는 아래 개수까지만 그려서 부하를 최소화한다.
 const GHOST_MARKER_MAX_VISIBLE = 30;
-const MARKER_ANIMATION_DEBUG_MAX_LOGS = 40;
-
-type MarkerAnimationDebugLog = {
-  seq: number;
-  time: string;
-  id: string;
-  path: string;
-  reason: string;
-  classes?: string;
-  details?: Record<string, unknown>;
-};
 
 // 카운트다운 링 사각 둥근 테두리 파라미터 (60×60 마커 inner box 안쪽)
 // inner box: width=60, height=60, border-radius=20, border=4.5px
@@ -235,11 +224,6 @@ const MapContainer = ({
   const [mapInstanceState, setMapInstanceState] = useState<any>(null);
   const [userLocationPixel, setUserLocationPixel] = useState<{ x: number; y: number } | null>(null);
   const [markerExpiryNow, setMarkerExpiryNow] = useState(() => Date.now());
-  const [markerAnimationDebugLogs, setMarkerAnimationDebugLogs] = useState<MarkerAnimationDebugLog[]>([]);
-  const [isMarkerAnimationDebuggerCollapsed, setIsMarkerAnimationDebuggerCollapsed] = useState(false);
-  const markerAnimationDebugSeqRef = useRef(0);
-  const markerAnimationDebugPendingRef = useRef<MarkerAnimationDebugLog[]>([]);
-  const markerAnimationDebugFlushTimerRef = useRef<number | null>(null);
 
   // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
   const [uiState, setUiState] = useState<'idle' | 'pressing' | 'hidden'>('idle');
@@ -402,40 +386,6 @@ const MapContainer = ({
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
-  const flushMarkerAnimationDebugLogs = useCallback(() => {
-    markerAnimationDebugFlushTimerRef.current = null;
-    const pending = markerAnimationDebugPendingRef.current;
-    if (pending.length === 0) return;
-
-    markerAnimationDebugPendingRef.current = [];
-    setMarkerAnimationDebugLogs((prev) => [
-      ...pending,
-      ...prev,
-    ].slice(0, MARKER_ANIMATION_DEBUG_MAX_LOGS));
-  }, []);
-
-  const pushMarkerAnimationDebugLog = useCallback((entry: Omit<MarkerAnimationDebugLog, 'seq' | 'time'>) => {
-    const seq = markerAnimationDebugSeqRef.current + 1;
-    markerAnimationDebugSeqRef.current = seq;
-    const now = new Date();
-    const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
-
-    markerAnimationDebugPendingRef.current.unshift({ seq, time, ...entry });
-
-    if (markerAnimationDebugFlushTimerRef.current === null) {
-      markerAnimationDebugFlushTimerRef.current = window.setTimeout(flushMarkerAnimationDebugLogs, 350);
-    }
-  }, [flushMarkerAnimationDebugLogs]);
-
-  useEffect(() => {
-    return () => {
-      if (markerAnimationDebugFlushTimerRef.current !== null) {
-        window.clearTimeout(markerAnimationDebugFlushTimerRef.current);
-        markerAnimationDebugFlushTimerRef.current = null;
-      }
-    };
-  }, []);
-
   const isOverlayInsideViewport = useCallback((overlay: any) => {
 
     const map = mapInstance.current;
@@ -482,20 +432,6 @@ const MapContainer = ({
     // 혹시 남아있을 수 있는 과거 진입/이탈 keyframe 클래스를 정리
     content.classList.remove('marker-viewport-appearing', 'marker-viewport-disappearing');
 
-    pushMarkerAnimationDebugLog({
-      id,
-      path: isVisible ? 'viewport-pop-in' : 'viewport-hide',
-      reason: isVisible
-        ? '기존 마커가 지도 화면 안으로 들어와 marker-appear-animation 팝 경로를 탐'
-        : '기존 마커가 지도 화면 밖으로 나가 hidden 처리됨',
-      classes: content.className,
-      details: {
-        wasVisible,
-        isVisible,
-        level: currentLevelRef.current,
-      },
-    });
-
     if (isVisible) {
       content.classList.remove('marker-viewport-hidden', 'markers-hidden', 'markers-revealing');
       content.classList.remove('marker-appear-animation');
@@ -505,7 +441,7 @@ const MapContainer = ({
       content.classList.remove('marker-appear-animation');
       content.classList.add('marker-viewport-hidden');
     }
-  }, [clearViewportAnimationTimer, pushMarkerAnimationDebugLog]);
+  }, [clearViewportAnimationTimer]);
 
   const updateMarkerViewportVisibility = useCallback((animate = true) => {
     if (!mapInstance.current || currentLevelRef.current >= 7) {
@@ -549,15 +485,9 @@ const MapContainer = ({
 
   // ── 마커 DOM 직접 숨김/표시 (클래스 토글로 !important CSS 활용) ──────
   const hideAllMarkersDom = useCallback(() => {
-    overlaysRef.current.forEach((overlay, id) => {
+    overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        pushMarkerAnimationDebugLog({
-          id: String(id),
-          path: 'global-hide',
-          reason: '롱프레스/지도 보기 모드로 전체 마커 숨김',
-          classes: content.className,
-        });
         content.classList.remove('markers-revealing');
         content.classList.add('markers-hidden');
         // 배지도 함께 숨김
@@ -577,18 +507,12 @@ const MapContainer = ({
       const c = searchOverlayRef.current.getContent() as HTMLElement;
       if (c) { c.style.transition = 'opacity 0.25s ease-out'; c.style.opacity = '0'; }
     }
-  }, [pushMarkerAnimationDebugLog]);
+  }, []);
 
   const showAllMarkersDom = useCallback(() => {
-    overlaysRef.current.forEach((overlay, id) => {
+    overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        pushMarkerAnimationDebugLog({
-          id: String(id),
-          path: 'global-reveal-pop',
-          reason: '전체 숨김이 풀리며 marker-appear-animation 팝 경로를 탐',
-          classes: content.className,
-        });
         content.classList.remove('markers-hidden', 'markers-revealing', 'marker-viewport-hidden');
         content.classList.remove('marker-appear-animation');
         void content.offsetWidth;
@@ -612,7 +536,7 @@ const MapContainer = ({
       const c = searchOverlayRef.current.getContent() as HTMLElement;
       if (c) { c.style.transition = 'none'; c.style.opacity = '1'; }
     }
-  }, [pushMarkerAnimationDebugLog]);
+  }, []);
 
   // ── 롱프레스 취소 ──────────────────────────────────────────────────────
   const cancelLongPress = useCallback(() => {
@@ -1179,41 +1103,6 @@ const MapContainer = ({
         content.setAttribute('data-content-state', contentStateKey);
         content.setAttribute('data-position-state', positionStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        pushMarkerAnimationDebugLog({
-          id: String(post.id),
-          path: shouldAnimateMarkerAppear ? 'new-overlay-pop' : 'new-overlay-no-pop',
-          reason: shouldAnimateMarkerAppear
-            ? '새 마커가 현재 화면 안에서 생성되어 marker-appear-animation 적용'
-            : isInsideViewport
-              ? '캐시된 마커로 판단되어 팝 애니메이션 생략'
-              : '생성 시점에 화면 밖으로 판단되어 hidden 상태로 시작',
-          classes: content.className,
-          details: {
-            isInsideViewport,
-            isCachedOnMount: cachedMarkerIdsOnMountRef.current.has(String(post.id)),
-            isNewRealtime: !!post.isNewRealtime,
-            isAd: !!isAdPost,
-            level: currentLevelRef.current,
-          },
-        });
-        content.addEventListener('animationstart', (event) => {
-          pushMarkerAnimationDebugLog({
-            id: String(post.id),
-            path: 'css-animation-start',
-            reason: `CSS 애니메이션 시작: ${event.animationName}`,
-            classes: content.className,
-            details: { animationName: event.animationName },
-          });
-        });
-        content.addEventListener('animationend', (event) => {
-          pushMarkerAnimationDebugLog({
-            id: String(post.id),
-            path: 'css-animation-end',
-            reason: `CSS 애니메이션 종료: ${event.animationName}`,
-            classes: content.className,
-            details: { animationName: event.animationName },
-          });
-        });
         content.onclick = (e) => {
           e.stopPropagation();
           if (isDragging.current) return;
@@ -1223,12 +1112,6 @@ const MapContainer = ({
         // 숨김 상태면 즉시 숨김 클래스 적용
 
         if (markersHiddenRef.current) {
-          pushMarkerAnimationDebugLog({
-            id: String(post.id),
-            path: 'created-while-global-hidden',
-            reason: '전체 마커 숨김 상태에서 생성되어 markers-hidden 즉시 적용',
-            classes: content.className,
-          });
           content.classList.add('markers-hidden');
         }
 
@@ -1277,7 +1160,7 @@ const MapContainer = ({
     });
 
     scheduleMarkerViewportVisibilityUpdate(false);
-  }, [posts, isMapReady, authUser, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer, pushMarkerAnimationDebugLog]);
+  }, [posts, isMapReady, authUser, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer]);
 
   useEffect(() => {
     if (!isMapReady) return;
@@ -1346,27 +1229,10 @@ const MapContainer = ({
             // pop-pop 등장을 한 번 더 강제 재생한다. 모바일에서 지도 bounds 안정화 전에
             // 일시적으로 viewport 밖으로 판정되어 페이드 경로를 타는 경우도 여기서 보정한다.
             if (pNow?.isNewRealtime || forcePop) {
-              pushMarkerAnimationDebugLog({
-                id: String(postId),
-                path: 'highlight-force-pop',
-                reason: forcePop
-                  ? '위치보기/포커스 하이라이트라 marker-appear-animation 강제 재시작'
-                  : '새 실시간 포스트라 marker-appear-animation 강제 재시작',
-                classes: content.className,
-                details: { forcePop, isNewRealtime: !!pNow?.isNewRealtime },
-              });
               content.classList.remove('marker-viewport-hidden', 'markers-hidden', 'markers-revealing');
               content.classList.remove('marker-appear-animation');
               void content.offsetWidth;
               content.classList.add('marker-appear-animation');
-            } else {
-              pushMarkerAnimationDebugLog({
-                id: String(postId),
-                path: 'highlight-no-pop',
-                reason: '일반 하이라이트라 팝 애니메이션 재시작 없음',
-                classes: content.className,
-                details: { forcePop, isNewRealtime: !!pNow?.isNewRealtime },
-              });
             }
 
             // marker-appear-animation은 유지 — 새 컨텐츠 생성 시 pop! 등장이
@@ -1419,7 +1285,7 @@ const MapContainer = ({
 
     window.addEventListener('highlight-marker', handleHighlight);
     return () => window.removeEventListener('highlight-marker', handleHighlight);
-  }, [pushMarkerAnimationDebugLog]);
+  }, []);
 
   useEffect(() => {
     if (!mapInstance.current || !isMapReady) return;
@@ -2630,77 +2496,6 @@ const MapContainer = ({
         className="w-full h-full select-none"
         style={{ position: 'relative' }}
       ></div>
-
-      <div className="absolute left-2 top-[calc(env(safe-area-inset-top,0px)+132px)] z-[16000] w-[min(92vw,380px)] rounded-2xl border border-black/10 bg-black/75 text-white shadow-2xl backdrop-blur-md pointer-events-auto overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-black leading-none">마커 애니메이션 디버거</p>
-            <p className="mt-1 text-[9px] text-white/60 leading-none">최근 {markerAnimationDebugLogs.length}개 · 위가 최신</p>
-          </div>
-          <button
-            type="button"
-            className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold active:scale-95"
-            onClick={() => setIsMarkerAnimationDebuggerCollapsed((prev) => !prev)}
-          >
-            {isMarkerAnimationDebuggerCollapsed ? '열기' : '접기'}
-          </button>
-          <button
-            type="button"
-            className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold active:scale-95"
-            onClick={() => {
-              markerAnimationDebugPendingRef.current = [];
-              setMarkerAnimationDebugLogs([]);
-            }}
-          >
-            지우기
-          </button>
-          <button
-            type="button"
-            className="rounded-full bg-indigo-500 px-2 py-1 text-[10px] font-bold active:scale-95"
-            onClick={() => {
-              const text = markerAnimationDebugLogs
-                .map((log) => `#${log.seq} ${log.time} ${log.id} ${log.path} ${log.reason} ${log.classes ?? ''} ${log.details ? JSON.stringify(log.details) : ''}`)
-                .join('\n');
-              navigator.clipboard?.writeText(text).catch(() => {});
-            }}
-          >
-            복사
-          </button>
-        </div>
-        {!isMarkerAnimationDebuggerCollapsed && (
-          <div className="max-h-[32vh] overflow-y-auto overscroll-contain px-2 py-2 space-y-1.5 text-left">
-            {markerAnimationDebugLogs.length === 0 ? (
-              <div className="rounded-xl bg-white/10 px-3 py-2 text-[10px] text-white/70">
-                마커를 조금 움직이거나 위치보기로 열면 여기에 기록됩니다.
-              </div>
-            ) : markerAnimationDebugLogs.map((log) => (
-              <div key={log.seq} className="rounded-xl bg-white/10 px-2.5 py-2">
-                <div className="flex items-center gap-1.5 text-[10px] leading-tight">
-                  <span className="font-black text-indigo-200">#{log.seq}</span>
-                  <span className="text-white/55">{log.time}</span>
-                  <span className="ml-auto rounded-full bg-white/10 px-1.5 py-0.5 font-bold text-[9px]">{log.path}</span>
-                </div>
-                <div className="mt-1 break-all text-[10px] font-bold leading-snug text-white/90">
-                  {log.id}
-                </div>
-                <div className="mt-0.5 text-[9px] leading-snug text-white/70">
-                  {log.reason}
-                </div>
-                {log.details && (
-                  <pre className="mt-1 max-h-12 overflow-hidden whitespace-pre-wrap break-words text-[8px] leading-tight text-emerald-100/80">
-                    {JSON.stringify(log.details)}
-                  </pre>
-                )}
-                {log.classes && (
-                  <div className="mt-1 break-all text-[8px] leading-tight text-white/40">
-                    {log.classes}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* 현재 위치 마커: 카카오맵 div 뒤에 DOM 배치 + 높은 zIndex로 항상 최상단 표시 */}
       {userLocation && userLocationPixel && !hideUserLocation && (
