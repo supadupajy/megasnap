@@ -2022,13 +2022,9 @@ const Index = () => {
 
   useEffect(() => {
     const handlePostSearchQuery = () => {
-      setSelectedPostId(null);
       setIsPostListOpen(false);
       setIsTrendingExpanded(false);
       setTrendingReelsInitialPost(null);
-      if (history.state?.postDetailOpen) {
-        history.replaceState({ ...history.state, postDetailOpen: false }, '');
-      }
     };
 
     window.addEventListener('post-search-query', handlePostSearchQuery);

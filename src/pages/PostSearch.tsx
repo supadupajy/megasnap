@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash, X, Loader2 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { getFallbackImage, getOptimizedMarkerImage, formatCount } from '@/lib/utils';
+import { getFallbackImage, getOptimizedFeedImage, formatCount } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
+import Header from '@/components/Header';
 import PostItem from '@/components/PostItem';
 import { Post } from '@/types';
 import { toggleLikeInDb } from '@/utils/like-utils';
@@ -377,15 +378,17 @@ const PostSearch = () => {
     const raw = Array.isArray(post.images) && post.images.length > 0
       ? post.images[0]
       : post.image_url;
-    return raw ? getOptimizedMarkerImage(raw, post.id) : getFallbackImage(post.id);
+    return raw ? getOptimizedFeedImage(raw, post.id) : getFallbackImage(post.id);
   };
 
   const activeTag = getSearchHashtag(searchQuery);
 
   return (
     <div className="fixed inset-0 z-[30000] bg-white flex flex-col overflow-hidden">
+      <Header />
+
       {/* 고정 상단 헤더 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[30100] bg-white">
+      <div className="fixed top-[calc(env(safe-area-inset-top,0px)+64px)] inset-x-0 z-[30100] bg-white">
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
             onClick={() => navigate(-1)}

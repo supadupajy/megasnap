@@ -97,7 +97,11 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     // 더미 히스토리 항목 추가 (뒤로가기 시 이 항목이 pop됨)
     history.pushState({ postDetailOpen: true }, '');
 
-    const handlePopState = () => {
+    const handlePopState = (event: PopStateEvent) => {
+      // 태그 검색 화면에서 뒤로 돌아와 PostDetail 더미 히스토리 항목으로 복귀하는 경우에는
+      // 상세를 닫지 않아야 "지도마커 컨텐츠 → 태그 검색 → 뒤로가기 → 지도마커 컨텐츠" 흐름이 유지된다.
+      if (event.state?.postDetailOpen) return;
+
       // X버튼으로 닫는 중이면 popstate 무시 (이미 onClose 호출됨)
       if (isClosingByButtonRef.current) {
         isClosingByButtonRef.current = false;
