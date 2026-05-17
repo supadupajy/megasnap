@@ -359,7 +359,7 @@ const Chat = () => {
         <div className="h-16 px-4 flex items-center justify-between gap-2 max-w-lg mx-auto">
           <div className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform" onClick={() => navigate('/')} >
             <h1 className="text-2xl font-black tracking-tighter italic shrink-0">
-              <span className="text-gray-900">Toca</span><span className="text-yellow-500">Toca</span>
+              <span className="text-gray-900">Snap</span><span className="text-yellow-500">Pop</span>
             </h1>
           </div>
           <HeaderAdBanner />

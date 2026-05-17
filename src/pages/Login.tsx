@@ -172,7 +172,7 @@ const Login = () => {
               className="text-4xl font-black text-gray-900 tracking-tighter"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              Toca<span className="text-yellow-500">Toca</span>
+              Snap<span className="text-yellow-500">Pop</span>
             </h1>
             <p className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
               Be here, Be seen.
