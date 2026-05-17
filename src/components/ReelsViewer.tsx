@@ -1582,6 +1582,23 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover blur-3xl scale-125 opacity-100 pointer-events-none"
+          onLoad={() => {
+            if (isActive) {
+              // [DEBUG-FLICKS-FLICKER] 블러 배경 이미지 로드 완료
+              console.log('[DEBUG-FLICKS-FLICKER] blur fallbackImage onLoad', {
+                postId: post.id,
+                isActive,
+                fallbackImageLast: fallbackImage.slice(-40),
+                timestamp: performance.now().toFixed(1),
+              });
+            }
+          }}
+          onError={() => {
+            console.log('[DEBUG-FLICKS-FLICKER] blur fallbackImage onError', {
+              postId: post.id,
+              fallbackImageLast: fallbackImage.slice(-40),
+            });
+          }}
         />
       )}
 
@@ -1698,6 +1715,22 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               typeof initialVideoTime === "number" && initialVideoTime > 0.1
             }
           />
+          {/* [DEBUG-FLICKS-FLICKER] ReelSlide → MediaCarousel suppressVideoPoster 결정 로그 */}
+          {(() => {
+            if (isActive && hasVideo) {
+              console.log('[DEBUG-FLICKS-FLICKER] ReelSlide active video render', {
+                postId: post.id,
+                isActive,
+                hasVideo,
+                initialVideoTime,
+                suppressVideoPoster:
+                  typeof initialVideoTime === "number" && initialVideoTime > 0.1,
+                fallbackImageLast: fallbackImage ? fallbackImage.slice(-40) : null,
+                activeMediaUrlLast: activeMediaUrl.slice(-40),
+              });
+            }
+            return null;
+          })()}
 
           {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
           <ImageSliderDots
@@ -2085,6 +2118,70 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   // isCurrent && 아직 첫 프레임 렌더 전이면 로딩 스피너를 보여줌 (200ms 그레이스)
   const [showSpinner, setShowSpinner] = useState(false);
 
+  // [DEBUG-FLICKS-FLICKER] 마운트 시점 & 디코드 완료까지 시간 측정
+  const mountTimeRef = useRef<number>(0);
+  useEffect(() => {
+    mountTimeRef.current = performance.now();
+    console.log('[DEBUG-FLICKS-FLICKER] ReelsVideo mounted', {
+      src: src.slice(-40),
+      isCurrent,
+      suppressPoster,
+      posterUrl: posterUrl ? posterUrl.slice(-40) : null,
+      preload,
+      mountAt: mountTimeRef.current.toFixed(1),
+    });
+
+    // 마운트 직후 video 요소가 DOM에 붙은 시점에 모든 부모 레이어의 computed background를 출력
+    requestAnimationFrame(() => {
+      const v = localRef.current;
+      if (!v) {
+        console.log('[DEBUG-FLICKS-FLICKER] localRef.current is null after rAF');
+        return;
+      }
+      const computed = getComputedStyle(v);
+      console.log('[DEBUG-FLICKS-FLICKER] video element computed style', {
+        backgroundColor: computed.backgroundColor,
+        opacity: computed.opacity,
+        readyState: v.readyState,
+        currentTime: v.currentTime,
+        paused: v.paused,
+        videoWidth: v.videoWidth,
+        videoHeight: v.videoHeight,
+        rect: v.getBoundingClientRect().toJSON
+          ? v.getBoundingClientRect().toJSON()
+          : {
+              top: v.getBoundingClientRect().top,
+              left: v.getBoundingClientRect().left,
+              width: v.getBoundingClientRect().width,
+              height: v.getBoundingClientRect().height,
+            },
+      });
+
+      // 부모 체인을 거슬러 올라가며 각 레이어의 배경색/opacity 확인 (흰색 범인 찾기)
+      let node: HTMLElement | null = v;
+      let depth = 0;
+      const chain: any[] = [];
+      while (node && depth < 12) {
+        const cs = getComputedStyle(node);
+        chain.push({
+          depth,
+          tag: node.tagName,
+          className:
+            typeof node.className === 'string'
+              ? node.className.slice(0, 80)
+              : '(non-string)',
+          backgroundColor: cs.backgroundColor,
+          opacity: cs.opacity,
+        });
+        node = node.parentElement;
+        depth++;
+      }
+      console.log('[DEBUG-FLICKS-FLICKER] ancestor chain (video → root)', chain);
+    });
+  // 마운트 시 1회만 실행 (deps 일부러 비움)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const setRefs = useCallback(
     (el: HTMLVideoElement | null) => {
       localRef.current = el;
@@ -2098,6 +2195,23 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   useEffect(() => {
     setIsReady(false);
   }, [src]);
+
+  // [DEBUG-FLICKS-FLICKER] isReady 상태 변화 추적 (디코드 완료까지의 ms)
+  useEffect(() => {
+    if (isReady && mountTimeRef.current > 0) {
+      const elapsed = performance.now() - mountTimeRef.current;
+      console.log('[DEBUG-FLICKS-FLICKER] isReady=true', {
+        src: src.slice(-40),
+        elapsedFromMount: elapsed.toFixed(1) + 'ms',
+        suppressPoster,
+      });
+    } else if (!isReady) {
+      console.log('[DEBUG-FLICKS-FLICKER] isReady=false', {
+        src: src.slice(-40),
+        suppressPoster,
+      });
+    }
+  }, [isReady, src, suppressPoster]);
 
   useEffect(() => {
     const el = localRef.current;
@@ -2118,12 +2232,56 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     el.addEventListener("playing", markReady);
     el.addEventListener("canplay", handleCanPlay);
     if (el.readyState >= 2) markReady();
+
+    // [DEBUG-FLICKS-FLICKER] 모든 video 이벤트 추적
+    const debugEvents = [
+      'loadstart',
+      'durationchange',
+      'loadedmetadata',
+      'loadeddata',
+      'progress',
+      'canplay',
+      'canplaythrough',
+      'playing',
+      'play',
+      'pause',
+      'waiting',
+      'stalled',
+      'suspend',
+      'emptied',
+      'error',
+    ];
+    const debugHandlers: Array<{ name: string; handler: () => void }> = [];
+    debugEvents.forEach((name) => {
+      const handler = () => {
+        const elapsed =
+          mountTimeRef.current > 0
+            ? (performance.now() - mountTimeRef.current).toFixed(1) + 'ms'
+            : 'n/a';
+        console.log(`[DEBUG-FLICKS-FLICKER] video event: ${name}`, {
+          src: src.slice(-40),
+          elapsedFromMount: elapsed,
+          readyState: el.readyState,
+          currentTime: el.currentTime.toFixed(2),
+          videoWidth: el.videoWidth,
+          videoHeight: el.videoHeight,
+          paused: el.paused,
+          suppressPoster,
+        });
+      };
+      debugHandlers.push({ name, handler });
+      el.addEventListener(name, handler);
+    });
+
     return () => {
       el.removeEventListener("loadeddata", markReady);
       el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
+      debugHandlers.forEach(({ name, handler }) => {
+        el.removeEventListener(name, handler);
+      });
     };
-  }, [src, isCurrent]);
+  }, [src, isCurrent, suppressPoster]);
 
   // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
   // (비활성 슬라이드의 영상이 백그라운드에서 계속 재생되어 소리가 겹치는 문제 방지)

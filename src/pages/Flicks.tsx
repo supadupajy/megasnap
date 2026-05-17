@@ -97,6 +97,18 @@ const Flicks = () => {
     flicksLastExitPath !== null &&
     isResumeRoute(flicksLastExitPath);
 
+  // [DEBUG-FLICKS-FLICKER] Flicks 마운트 시점 캐시/resume 상태
+  console.log('[DEBUG-FLICKS-FLICKER] Flicks mount eval', {
+    hasCache: !!flicksCache,
+    flicksLastExitPath,
+    isResume:
+      flicksLastExitPath !== null ? isResumeRoute(flicksLastExitPath) : false,
+    cachedValid,
+    cachedActivePostId: flicksCache?.activePostId ?? null,
+    cachedActiveVideoTime: flicksCache?.activeVideoTime ?? null,
+    cachedPoolLen: flicksCache?.videoPool.length ?? 0,
+  });
+
   // 한 번 마운트하면 exit path는 소비된 셈이므로 다시 null로 (다음 cycle을 위해)
   // 단, 캐시가 유효하지 않아 새로 페치하더라도 동일하게 리셋되어야 일관됨
   useEffect(() => {
@@ -263,9 +275,18 @@ const Flicks = () => {
     return () => {
       const nextPath = typeof window !== 'undefined' ? window.location.pathname : '';
       flicksLastExitPath = nextPath;
-      if (!isResumeRoute(nextPath)) {
+      const willResume = isResumeRoute(nextPath);
+      if (!willResume) {
         flicksCache = null;
       }
+      // [DEBUG-FLICKS-FLICKER] Flicks 언마운트 시 다음 경로 기록
+      console.log('[DEBUG-FLICKS-FLICKER] Flicks unmount', {
+        nextPath,
+        willResume,
+        cacheKept: willResume,
+        cachedActivePostId: flicksCache?.activePostId ?? null,
+        cachedActiveVideoTime: flicksCache?.activeVideoTime ?? null,
+      });
     };
   }, []);
 
