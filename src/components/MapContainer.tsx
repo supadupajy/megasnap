@@ -471,6 +471,44 @@ const MapContainer = ({
     });
   }, [updateMarkerViewportVisibility]);
 
+  const attachMarkerAnimationDebug = useCallback((content: HTMLElement, postId: string, phase: string) => {
+    const startedAt = performance.now();
+    const logState = (event: string, animationEvent?: AnimationEvent) => {
+      const wrapper = content.querySelector('.marker-content-wrapper') as HTMLElement | null;
+      const target = content.querySelector('.marker-scaling-target') as HTMLElement | null;
+      const wrapperStyle = wrapper ? window.getComputedStyle(wrapper) : null;
+      const targetStyle = target ? window.getComputedStyle(target) : null;
+
+      console.log('[MapContainer][marker-animation]', {
+        event,
+        postId,
+        phase,
+        animationName: animationEvent?.animationName,
+        elapsedTime: animationEvent?.elapsedTime,
+        pseudoElement: animationEvent?.pseudoElement,
+        msFromAttach: Math.round(performance.now() - startedAt),
+        contentClass: content.className,
+        wrapperAnimation: wrapperStyle?.animation,
+        wrapperTransform: wrapperStyle?.transform,
+        targetTransform: targetStyle?.transform,
+      });
+    };
+
+    const onAnimationStart = (event: AnimationEvent) => logState('animationstart', event);
+    const onAnimationEnd = (event: AnimationEvent) => logState('animationend', event);
+
+    content.addEventListener('animationstart', onAnimationStart);
+    content.addEventListener('animationend', onAnimationEnd);
+    logState('debug-attached');
+    requestAnimationFrame(() => logState('next-frame'));
+
+    window.setTimeout(() => {
+      logState('debug-detached');
+      content.removeEventListener('animationstart', onAnimationStart);
+      content.removeEventListener('animationend', onAnimationEnd);
+    }, 4200);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (viewportAnimationFrameRef.current !== null) {
@@ -1098,6 +1136,9 @@ const MapContainer = ({
         content.setAttribute('data-content-state', contentStateKey);
         content.setAttribute('data-position-state', positionStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
+        if (shouldAnimateMarkerAppear || isNew) {
+          attachMarkerAnimationDebug(content, String(post.id), 'create-overlay');
+        }
         content.onclick = (e) => {
           e.stopPropagation();
           if (isDragging.current) return;
@@ -1154,10 +1195,11 @@ const MapContainer = ({
     });
 
     scheduleMarkerViewportVisibilityUpdate(false);
-  }, [posts, isMapReady, authUser, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer]);
+  }, [posts, isMapReady, authUser, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer, attachMarkerAnimationDebug]);
 
   useEffect(() => {
     if (!isMapReady) return;
+
     // 조회 상태는 포스트 리스트/상세 오버레이에서만 사용하고,
     // 지도 마커 DOM은 이미 로딩된 모양을 유지한다.
     // viewedPostIds 변경 때마다 innerHTML을 교체하면 지도 복귀 시 마커가 다시 로딩되는 것처럼 보인다.
@@ -1215,6 +1257,7 @@ const MapContainer = ({
               const nowStateKey = `${pNow.borderType}-${pNow.isAd}-${!!pNow.isNewRealtime}-${isMineKeyNow}-${isAdPendingKeyNow}-${pNow.likes}-${hasThumbKeyNow}`;
               content.innerHTML = getMarkerInnerHtmlRef.current(pNow, false);
               content.setAttribute('data-content-state', nowStateKey);
+              attachMarkerAnimationDebug(content, String(postId), 'highlight-start-innerhtml');
               scheduleOverlapBadgeUpdateRef.current();
             }
             // marker-appear-animation은 유지 — 새 컨텐츠 생성 시 pop! 등장이
@@ -1223,10 +1266,17 @@ const MapContainer = ({
             // highlighted 추가
             content.classList.remove('highlighted');
             content.classList.add('highlighted');
+            console.log('[MapContainer][marker-animation]', {
+              event: 'highlight-class-added',
+              postId: String(postId),
+              duration,
+              contentClass: content.className,
+            });
             highlightingIdsRef.current.add(postId);
             overlay.setZIndex(99999);
 
             setTimeout(() => {
+
               if (!content || !content.classList.contains('highlighted')) {
                 highlightingIdsRef.current.delete(postId);
                 return;
@@ -1239,15 +1289,27 @@ const MapContainer = ({
                 const isAdPendingKey2 = !!(p2 as any).isAdPending;
                 const hasThumbKey2 = (!p2.isAd && p2.videoUrl) ? (videoThumbCacheRef.current.has(p2.id) ? '1' : '0') : '';
                 const finalStateKey = `${p2.borderType}-${p2.isAd}-${!!p2.isNewRealtime}-${isMineKey2}-${isAdPendingKey2}-${p2.likes}-${hasThumbKey2}`;
+                console.log('[MapContainer][marker-animation]', {
+                  event: 'highlight-timeout-before-final-innerhtml',
+                  postId: String(postId),
+                  contentClass: content.className,
+                });
                 content.innerHTML = getMarkerInnerHtmlRef.current(p2, false);
                 content.setAttribute('data-content-state', finalStateKey);
+                attachMarkerAnimationDebug(content, String(postId), 'highlight-end-innerhtml');
                 scheduleOverlapBadgeUpdateRef.current();
               }
               content.classList.remove('highlighted');
+              console.log('[MapContainer][marker-animation]', {
+                event: 'highlight-class-removed',
+                postId: String(postId),
+                contentClass: content.className,
+              });
               highlightingIdsRef.current.delete(postId);
               overlay.setZIndex(p2?.isAd ? 500 : p2?.borderType !== 'none' ? 400 : 300);
             }, duration);
             return;
+
           }
         }
 
@@ -1264,10 +1326,11 @@ const MapContainer = ({
 
     window.addEventListener('highlight-marker', handleHighlight);
     return () => window.removeEventListener('highlight-marker', handleHighlight);
-  }, []);
+  }, [attachMarkerAnimationDebug]);
 
   useEffect(() => {
     if (!mapInstance.current || !isMapReady) return;
+
     const map = mapInstance.current;
     const kakao = (window as any).kakao;
 
