@@ -26,6 +26,7 @@ import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
 import HashtagText from './HashtagText';
 import PostItemVideo from './PostItemVideo';
+import VideoThumbnailPreview from './VideoThumbnailPreview';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 import { useKeyboardSafeScroll } from '@/hooks/use-keyboard-safe-scroll';
@@ -354,31 +355,31 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             >
               <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
               {media.type === 'video' ? (
-                <>
-                  {media.posterUrl && (
-                    <img
-                      src={media.posterUrl}
-                      alt=""
-                      aria-hidden="true"
-                      className="absolute inset-0 w-full h-full object-cover"
-                      draggable={false}
-                    />
-                  )}
+                index === currentImageIndex ? (
                   <video
+                    key={media.url}
+                    ref={videoRef}
                     src={media.url}
                     poster={media.posterUrl}
                     className="relative z-[1] w-full h-full object-cover bg-gray-200 video-hq"
+                    autoPlay={autoPlayVideo}
                     muted
                     loop
                     playsInline
-                    preload="metadata"
+                    preload="auto"
                     controls
                     controlsList="nodownload noplaybackrate noremoteplayback"
                     disablePictureInPicture
                     disableRemotePlayback={true}
                     onClick={(e) => e.stopPropagation()}
                   />
-                </>
+                ) : (
+                  <VideoThumbnailPreview
+                    src={media.url}
+                    startTime={0.12}
+                    className="relative z-[1] w-full h-full object-cover bg-gray-200"
+                  />
+                )
               ) : (
                 <img
                   src={media.url}

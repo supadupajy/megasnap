@@ -2049,7 +2049,7 @@ const MapContainer = ({
       }
     };
 
-    const captureFirstFrame = () => {
+    const captureDecodedFrame = () => {
       if ('requestVideoFrameCallback' in video) {
         video.requestVideoFrameCallback(() => capture());
       } else {
@@ -2057,8 +2057,23 @@ const MapContainer = ({
       }
     };
 
-    video.addEventListener('loadeddata', captureFirstFrame, { once: true });
-    video.addEventListener('canplay', captureFirstFrame, { once: true });
+    const moveToFirstVisibleFrame = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      const targetTime = duration > 0.2 ? Math.min(0.12, duration - 0.05) : 0;
+
+      if (targetTime <= 0) {
+        captureDecodedFrame();
+        return;
+      }
+
+      try { video.currentTime = targetTime; } catch { captureDecodedFrame(); }
+    };
+
+    video.addEventListener('loadedmetadata', moveToFirstVisibleFrame, { once: true });
+    video.addEventListener('seeked', captureDecodedFrame, { once: true });
+    video.addEventListener('loadeddata', () => {
+      if (Number.isFinite(video.duration) && video.duration <= 0.2) captureDecodedFrame();
+    }, { once: true });
     video.addEventListener('error', () => {
       cleanup();
       videoThumbPendingRef.current.delete(postId);
@@ -2238,12 +2253,15 @@ const MapContainer = ({
       : '';
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
-    // 이미지가 없는 비디오 마커: 썸네일 추출 중 로딩 상태 표시
-    const imgContent = optimizedDisplayImage
-      ? `<img src="${optimizedDisplayImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-      : (hasVideo
-        ? `<div style="width:100%;height:100%;background:#1e1b4b;display:flex;align-items:center;justify-content:center;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#a5b4fc'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
-        : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`);
+    const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
+    const markerVideoSrc = hasVideo ? `${firstVideoUrl}#t=0.12` : '';
+    const imgContent = cachedVideoThumb
+      ? `<img src="${cachedVideoThumb}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+      : hasVideo
+        ? `<video src="${markerVideoSrc}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;background:#e5e7eb;" />`
+        : optimizedDisplayImage
+          ? `<img src="${optimizedDisplayImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+          : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">

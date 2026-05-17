@@ -429,11 +429,27 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
         }
       };
 
-      const captureFirstFrame = () => {
+      const captureDecodedFrame = () => {
         if ('requestVideoFrameCallback' in video) {
           video.requestVideoFrameCallback(() => capture());
         } else {
           window.setTimeout(capture, 80);
+        }
+      };
+
+      const moveToFirstVisibleFrame = () => {
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        const targetTime = duration > 0.2 ? Math.min(0.12, duration - 0.05) : 0;
+
+        if (targetTime <= 0) {
+          captureDecodedFrame();
+          return;
+        }
+
+        try {
+          video.currentTime = targetTime;
+        } catch {
+          captureDecodedFrame();
         }
       };
 
@@ -444,11 +460,13 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       video.preload = 'auto';
       video.muted = true;
       video.playsInline = true;
-      video.currentTime = 0;
       video.src = objectUrl;
 
-      video.addEventListener('loadeddata', captureFirstFrame, { once: true });
-      video.addEventListener('canplay', captureFirstFrame, { once: true });
+      video.addEventListener('loadedmetadata', moveToFirstVisibleFrame, { once: true });
+      video.addEventListener('seeked', captureDecodedFrame, { once: true });
+      video.addEventListener('loadeddata', () => {
+        if (Number.isFinite(video.duration) && video.duration <= 0.2) captureDecodedFrame();
+      }, { once: true });
       video.addEventListener('error', () => fail(), { once: true });
       video.load();
     });
