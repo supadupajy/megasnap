@@ -97,6 +97,12 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     if (userPausedRef.current) return;
 
     const play = () => {
+      if (Number.isFinite(video.duration) && video.duration > 0.45 && video.currentTime < 0.05) {
+        try {
+          video.currentTime = Math.min(0.35, video.duration - 0.05);
+        } catch {}
+      }
+
       video.play().catch(() => {
         video.muted = true;
         setMuted(true);

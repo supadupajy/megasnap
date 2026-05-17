@@ -6,6 +6,7 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
 import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
 import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
+import { isGeneratedVideoThumbnailUrl } from '@/utils/post-media';
 import HeatmapOverlay from '@/components/HeatmapOverlay';
 
 interface MapContainerProps {
@@ -57,12 +58,22 @@ const isMockMarkerImageUrl = (url: unknown) => {
 
 const getStoredMarkerThumbnail = (post: any) => {
   const primary = post?.image_url || post?.image;
-  if (!isBrokenMarkerImageUrl(primary) && !isMarkerVideoUrl(primary) && !isMockMarkerImageUrl(primary)) {
+  if (
+    !isBrokenMarkerImageUrl(primary) &&
+    !isMarkerVideoUrl(primary) &&
+    !isMockMarkerImageUrl(primary) &&
+    !isGeneratedVideoThumbnailUrl(primary)
+  ) {
     return primary;
   }
 
   if (!Array.isArray(post?.images)) return '';
-  return post.images.find((url: unknown) => !isBrokenMarkerImageUrl(url) && !isMarkerVideoUrl(url) && !isMockMarkerImageUrl(url)) || '';
+  return post.images.find((url: unknown) => (
+    !isBrokenMarkerImageUrl(url) &&
+    !isMarkerVideoUrl(url) &&
+    !isMockMarkerImageUrl(url) &&
+    !isGeneratedVideoThumbnailUrl(typeof url === 'string' ? url : undefined)
+  )) || '';
 };
 
 const LONG_PRESS_DURATION = 1000; // 1초
@@ -2145,7 +2156,7 @@ const MapContainer = ({
 
       const duration = Number.isFinite(video.duration) ? video.duration : 0;
       const rawTimes = duration > 0.2
-        ? [0.12, 0.35, 0.7, 1.2, 2].filter((time) => time < duration - 0.05)
+        ? [0.35, 0.7, 1.2, 2].filter((time) => time < duration - 0.05)
         : [0];
       candidateTimes = Array.from(new Set(rawTimes.length > 0 ? rawTimes : [0]));
       candidateIndex = 0;

@@ -13,6 +13,20 @@ export const isVideoUrl = (url: string | undefined | null): boolean => {
   return /\.(mp4|mov|webm|avi|m4v)(\?|#|$)/i.test(url);
 };
 
+export const isGeneratedVideoThumbnailUrl = (url: string | undefined | null): boolean => {
+  if (!url) return false;
+  try {
+    return /-thumb\.(jpe?g|png|webp)(\?|#|$)/i.test(new URL(url).pathname);
+  } catch {
+    return /-thumb\.(jpe?g|png|webp)(\?|#|$)/i.test(url);
+  }
+};
+
+const getTrustedPosterUrl = (url: string | undefined): string | undefined => {
+  if (!isValidMediaUrl(url)) return undefined;
+  return isGeneratedVideoThumbnailUrl(url) ? undefined : url;
+};
+
 export const getPostMediaItems = (post: Post | any): PostMediaItem[] => {
   if (!post) return [];
 
@@ -41,7 +55,7 @@ export const getPostMediaItems = (post: Post | any): PostMediaItem[] => {
       const imageUrl = alignedImages[index];
 
       if (isValidMediaUrl(videoUrl)) {
-        items.push({ type: 'video', url: videoUrl, posterUrl: imageUrl });
+        items.push({ type: 'video', url: videoUrl, posterUrl: getTrustedPosterUrl(imageUrl) });
       } else if (isValidMediaUrl(imageUrl)) {
         items.push({ type: 'image', url: imageUrl });
       }
@@ -52,7 +66,7 @@ export const getPostMediaItems = (post: Post | any): PostMediaItem[] => {
 
   if (isValidMediaUrl(post.videoUrl) || isValidMediaUrl(post.video_url)) {
     const videoUrl = (post.videoUrl || post.video_url) as string;
-    return [{ type: 'video', url: videoUrl, posterUrl: singleImage ?? images[0] }];
+    return [{ type: 'video', url: videoUrl, posterUrl: getTrustedPosterUrl(singleImage ?? images[0]) }];
   }
 
   const imageItems = (images.length > 0 ? images : singleImage ? [singleImage] : [])

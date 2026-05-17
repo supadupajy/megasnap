@@ -380,6 +380,8 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       const video = document.createElement('video');
       let settled = false;
       let timeoutId: number | undefined;
+      let candidateTimes: number[] = [];
+      let candidateIndex = 0;
 
       const cleanup = () => {
         if (timeoutId) window.clearTimeout(timeoutId);
@@ -402,6 +404,41 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
         });
       };
 
+      const isMostlyBlackFrame = (context: CanvasRenderingContext2D, width: number, height: number) => {
+        const data = context.getImageData(0, 0, width, height).data;
+        let brightPixels = 0;
+        let sampledPixels = 0;
+
+        for (let i = 0; i < data.length; i += 4 * 16) {
+          const luminance = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+          if (luminance > 32) brightPixels += 1;
+          sampledPixels += 1;
+        }
+
+        return sampledPixels > 0 && brightPixels / sampledPixels < 0.04;
+      };
+
+      const seekNextCandidate = () => {
+        const nextTime = candidateTimes[candidateIndex];
+        candidateIndex += 1;
+
+        if (typeof nextTime !== 'number') {
+          fail();
+          return;
+        }
+
+        if (nextTime <= 0) {
+          captureDecodedFrame();
+          return;
+        }
+
+        try {
+          video.currentTime = nextTime;
+        } catch {
+          captureDecodedFrame();
+        }
+      };
+
       const capture = () => {
         try {
           const canvas = document.createElement('canvas');
@@ -416,6 +453,11 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
           }
 
           context.drawImage(video, 0, 0, width, height);
+          if (isMostlyBlackFrame(context, width, height) && candidateIndex < candidateTimes.length) {
+            seekNextCandidate();
+            return;
+          }
+
           canvas.toBlob((blob) => {
             if (!blob) {
               fail();
@@ -429,28 +471,22 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
         }
       };
 
-      const captureDecodedFrame = () => {
+      function captureDecodedFrame() {
         if ('requestVideoFrameCallback' in video) {
           video.requestVideoFrameCallback(() => capture());
         } else {
           window.setTimeout(capture, 80);
         }
-      };
+      }
 
       const moveToFirstVisibleFrame = () => {
         const duration = Number.isFinite(video.duration) ? video.duration : 0;
-        const targetTime = duration > 0.2 ? Math.min(0.12, duration - 0.05) : 0;
-
-        if (targetTime <= 0) {
-          captureDecodedFrame();
-          return;
-        }
-
-        try {
-          video.currentTime = targetTime;
-        } catch {
-          captureDecodedFrame();
-        }
+        const rawTimes = duration > 0.2
+          ? [0.35, 0.7, 1.2, 2].filter((time) => time < duration - 0.05)
+          : [0];
+        candidateTimes = rawTimes.length > 0 ? rawTimes : [0];
+        candidateIndex = 0;
+        seekNextCandidate();
       };
 
       timeoutId = window.setTimeout(() => {
@@ -463,10 +499,7 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       video.src = objectUrl;
 
       video.addEventListener('loadedmetadata', moveToFirstVisibleFrame, { once: true });
-      video.addEventListener('seeked', captureDecodedFrame, { once: true });
-      video.addEventListener('loadeddata', () => {
-        if (Number.isFinite(video.duration) && video.duration <= 0.2) captureDecodedFrame();
-      }, { once: true });
+      video.addEventListener('seeked', captureDecodedFrame);
       video.addEventListener('error', () => fail(), { once: true });
       video.load();
     });

@@ -24,6 +24,7 @@ import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
 import HashtagText from './HashtagText';
 import PostItemVideo from './PostItemVideo';
+import VideoThumbnailPreview from './VideoThumbnailPreview';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
@@ -783,7 +784,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           return (
           <div
             key={`${media.type}-${index}`}
-            className="w-full h-full shrink-0 snap-center relative bg-cover bg-center"
+            className="w-full h-full shrink-0 snap-center relative bg-gray-200 bg-cover bg-center"
             style={{
               scrollSnapStop: 'always',
               backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
@@ -799,16 +800,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                   debugLabel={`detail:${currentPost.id}:media-${index}:active-true`}
                 />
               ) : (
-                <img
-                  src={media.posterUrl || getFallbackImage(currentPost.id)}
-                  alt={`Post video thumbnail ${index + 1}`}
+                <VideoThumbnailPreview
+                  src={media.url}
                   className="w-full h-full object-cover pointer-events-none"
-                  draggable={false}
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    const fallback = getFallbackImage(currentPost.id);
-                    if (target.src !== fallback) target.src = fallback;
-                  }}
+                  startTime={0.8}
                 />
               )
             ) : (
@@ -847,7 +842,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
     return (
       <div
-        className="relative rounded-3xl overflow-hidden bg-cover bg-center shadow-inner transition-[height] duration-300"
+        className="relative rounded-3xl overflow-hidden bg-gray-200 bg-cover bg-center shadow-inner transition-[height] duration-300"
         style={{
           aspectRatio: mediaAspectRatio,
           backgroundImage: activeBackgroundUrl ? `url(${activeBackgroundUrl})` : undefined,

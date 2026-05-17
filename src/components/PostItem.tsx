@@ -26,6 +26,7 @@ import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
 import HashtagText from './HashtagText';
 import PostItemVideo from './PostItemVideo';
+import VideoThumbnailPreview from './VideoThumbnailPreview';
 import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 import { useKeyboardSafeScroll } from '@/hooks/use-keyboard-safe-scroll';
@@ -364,14 +365,22 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             >
               <div className="absolute inset-0 bg-gray-200/0" aria-hidden="true" />
               {media.type === 'video' ? (
-                <PostItemVideo
-                  videoRef={index === currentImageIndex ? videoRef : undefined}
-                  src={media.url}
-                  posterUrl={media.posterUrl}
-                  autoPlay={index === currentImageIndex && !!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
-                  showControls={index === currentImageIndex}
-                  debugLabel={`feed:${post.id}:media-${index}:active-${index === currentImageIndex}`}
-                />
+                index === currentImageIndex ? (
+                  <PostItemVideo
+                    videoRef={videoRef}
+                    src={media.url}
+                    posterUrl={media.posterUrl}
+                    autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
+                    showControls
+                    debugLabel={`feed:${post.id}:media-${index}:active-true`}
+                  />
+                ) : (
+                  <VideoThumbnailPreview
+                    src={media.url}
+                    className="relative z-[1] w-full h-full object-cover bg-gray-200 pointer-events-none"
+                    startTime={0.8}
+                  />
+                )
               ) : (
                 <img
                   src={media.url}
