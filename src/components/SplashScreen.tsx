@@ -58,7 +58,7 @@ const SplashScreen = () => {
           >
             <img
               src="/tocatoca-logo.png"
-              alt="TocaToca"
+              alt="SnapPop"
               className="w-full h-full object-cover"
             />
           </motion.div>
@@ -111,7 +111,7 @@ const SplashScreen = () => {
                   {/* 이메일 버튼 */}
                   <div className="flex items-center gap-3 bg-white/70 rounded-xl px-3 py-2.5 border border-amber-200/60">
                     <Mail className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span className="flex-1 text-[13px] font-bold text-gray-900 tracking-tight">support@thetocatoca.com</span>
+                    <span className="flex-1 text-[13px] font-bold text-gray-900 tracking-tight">support@thesnappop.com</span>
                     <div className="w-6 h-6 bg-yellow-200 rounded-lg flex items-center justify-center">
                       <svg className="w-3 h-3 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </div>

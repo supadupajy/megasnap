@@ -25,7 +25,7 @@ const SearchAdBanner = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full h-[120px] bg-gradient-to-br from-yellow-100 via-amber-50 to-orange-100 rounded-[24px] mb-8 shadow-sm shadow-amber-100 border border-amber-200/60 cursor-pointer relative overflow-hidden px-5 py-4 flex flex-col justify-between"
-        onClick={() => window.open('mailto:support@thetocatoca.com', '_blank')}
+        onClick={() => window.open('mailto:support@thesnappop.com', '_blank')}
       >
         {/* 장식 원형 */}
         <div className="absolute -top-6 -right-6 w-28 h-28 bg-yellow-300/30 rounded-full pointer-events-none" />
@@ -42,7 +42,7 @@ const SearchAdBanner = () => {
         {/* 이메일 버튼 */}
         <div className="flex items-center gap-2.5 bg-white/70 rounded-xl px-3 py-2 border border-amber-200/60">
           <Mail className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-          <span className="flex-1 text-[12px] font-bold text-gray-900 tracking-tight">support@thetocatoca.com</span>
+          <span className="flex-1 text-[12px] font-bold text-gray-900 tracking-tight">support@thesnappop.com</span>
           <div className="w-5 h-5 bg-yellow-200 rounded-lg flex items-center justify-center">
             <svg className="w-2.5 h-2.5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </div>

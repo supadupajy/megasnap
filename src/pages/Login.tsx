@@ -163,7 +163,7 @@ const Login = () => {
           >
             <img
               src="/tocatoca-logo.png"
-              alt="TocaToca"
+              alt="SnapPop"
               className="w-full h-full object-cover"
             />
           </motion.div>

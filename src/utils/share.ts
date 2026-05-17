@@ -74,7 +74,7 @@ export const handleShare = async (
   if (navigator.share) {
     try {
       await navigator.share({
-        title: 'TocaToca 포스팅',
+        title: 'SnapPop 포스팅',
         url: shareUrl,
       });
       showSuccess('포스팅 주소가 복사되었습니다.');
