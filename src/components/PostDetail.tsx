@@ -65,28 +65,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   // X버튼으로 닫는 중임을 표시 (popstate 핸들러에서 중복 onClose 방지)
   const isClosingByButtonRef = useRef(false);
 
+  const shouldKeepOpenForTagSearch = () => {
+    try {
+      return sessionStorage.getItem('postSearch_returnToPostDetail') === '1';
+    } catch {
+      return false;
+    }
+  };
+
+  const handleDialogOpenChange = useCallback((open: boolean) => {
+    if (open) return;
+    if (shouldKeepOpenForTagSearch()) return;
+    onCloseRef.current?.();
+  }, []);
+
   // ── window 플래그: App.tsx Capacitor backButton 핸들러에서 참조 ──
   // 광고 포스트가 열렸을 때는 BottomNav를 숨기기 위해 isAd 정보도 함께 전달
   const isAdForFlag = currentPost?.isAd || false;
   useEffect(() => {
     (window as any).__isPostDetailOpen = isOpen;
     (window as any).__isPostDetailAd = isOpen && isAdForFlag;
-    console.log('[TagSearchDebug][PostDetailVisibility] set open', {
-      isOpen,
-      isAd: isAdForFlag,
-      postId: currentPost?.id,
-      pathname: location.pathname,
-      historyState: history.state,
-    });
     window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: isOpen, isAd: isAdForFlag } }));
     return () => {
       if (isOpen) {
-        console.log('[TagSearchDebug][PostDetailVisibility] cleanup close flag', {
-          postId: currentPost?.id,
-          pathname: location.pathname,
-          historyState: history.state,
-          returnToPostDetail: sessionStorage.getItem('postSearch_returnToPostDetail'),
-        });
+        if (shouldKeepOpenForTagSearch()) return;
         (window as any).__isPostDetailOpen = false;
         (window as any).__isPostDetailAd = false;
         window.dispatchEvent(new CustomEvent('post-detail-visibility', { detail: { open: false, isAd: false } }));
@@ -98,12 +100,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
   useEffect(() => {
     if (!isOpen) return;
     const handleCloseByBack = () => {
-      console.log('[TagSearchDebug][PostDetail] close-post-detail-by-back received', {
-        postId: currentPost?.id,
-        pathname: location.pathname,
-        historyState: history.state,
-        returnToPostDetail: sessionStorage.getItem('postSearch_returnToPostDetail'),
-      });
       onCloseRef.current?.();
     };
     window.addEventListener('close-post-detail-by-back', handleCloseByBack);
@@ -115,48 +111,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
     // 더미 히스토리 항목 추가 (뒤로가기 시 이 항목이 pop됨)
     history.pushState({ postDetailOpen: true }, '');
-    console.log('[TagSearchDebug][PostDetailHistory] push dummy state', {
-      postId: currentPost?.id,
-      pathname: location.pathname,
-      historyState: history.state,
-    });
 
     const handlePopState = (event: PopStateEvent) => {
-      const returnFlag = sessionStorage.getItem('postSearch_returnToPostDetail');
-      console.log('[TagSearchDebug][PostDetailPopState] received', {
-        eventState: event.state,
-        historyState: history.state,
-        returnFlag,
-        isClosingByButton: isClosingByButtonRef.current,
-        postId: currentPost?.id,
-        pathname: location.pathname,
-      });
-
       // 태그 검색 화면에서 뒤로 돌아오는 첫 popstate는 상세를 닫지 않는다.
       // 일부 WebView/React Router 조합에서는 같은 URL 더미 state가 event.state에 안정적으로
       // 남지 않아 sessionStorage 플래그도 함께 사용한다.
       try {
-        if (returnFlag === '1') {
+        if (sessionStorage.getItem('postSearch_returnToPostDetail') === '1') {
           sessionStorage.removeItem('postSearch_returnToPostDetail');
-          console.log('[TagSearchDebug][PostDetailPopState] keep open by return flag');
           return;
         }
       } catch {}
 
       // 태그 검색 화면에서 뒤로 돌아와 PostDetail 더미 히스토리 항목으로 복귀하는 경우에는
       // 상세를 닫지 않아야 "지도마커 컨텐츠 → 태그 검색 → 뒤로가기 → 지도마커 컨텐츠" 흐름이 유지된다.
-      if (event.state?.postDetailOpen) {
-        console.log('[TagSearchDebug][PostDetailPopState] keep open by event.state.postDetailOpen');
-        return;
-      }
+      if (event.state?.postDetailOpen) return;
 
       // X버튼으로 닫는 중이면 popstate 무시 (이미 onClose 호출됨)
       if (isClosingByButtonRef.current) {
         isClosingByButtonRef.current = false;
-        console.log('[TagSearchDebug][PostDetailPopState] ignore because closing by button');
         return;
       }
-      console.log('[TagSearchDebug][PostDetailPopState] close detail via onClose');
       onCloseRef.current?.();
     };
 
@@ -489,7 +464,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
   if (currentPost.isAdPending) {
     return (
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
         <DialogPortal>
           <DialogOverlay className="z-[12999] bg-black/40" />
           <DialogPrimitive.Content
@@ -939,7 +914,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
       */}
       <Dialog
         open={isOpen}
-        onOpenChange={(open) => !open && onClose()}
+        onOpenChange={handleDialogOpenChange}
         modal={!isCommentsDialogOpen}
       >
         <DialogPortal>

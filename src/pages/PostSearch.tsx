@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Search as SearchIcon, ChevronLeft, ImageIcon, Play, Heart, Hash, X, Loader2 } from 'lucide-react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedFeedImage, formatCount } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
@@ -252,7 +252,6 @@ const PostDetailFullPage = ({
 // ── 포스팅 검색 페이지 ─────────────────────────────────────────────
 const PostSearch = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialUrlQuery = searchParams.get('q')?.trim() || '';
   const initialSearchQuery = getInitialPostSearchQuery(searchParams);
@@ -270,25 +269,9 @@ const PostSearch = () => {
   const skipNextDebounceRef = useRef(false);
 
   useEffect(() => {
-    console.log('[TagSearchDebug][PostSearch] mount', {
-      pathname: location.pathname,
-      search: location.search,
-      historyState: history.state,
-      postDetailOpen: (window as any).__isPostDetailOpen,
-      returnToPostDetail: sessionStorage.getItem('postSearch_returnToPostDetail'),
-      initialSearchQuery,
-      initialUrlQuery,
-    });
     document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
     return () => {
-      console.log('[TagSearchDebug][PostSearch] unmount', {
-        pathname: location.pathname,
-        search: location.search,
-        historyState: history.state,
-        postDetailOpen: (window as any).__isPostDetailOpen,
-        returnToPostDetail: sessionStorage.getItem('postSearch_returnToPostDetail'),
-      });
       document.documentElement.style.overflow = '';
       document.body.style.overflow = '';
     };
@@ -417,16 +400,7 @@ const PostSearch = () => {
       <div className="fixed top-[calc(env(safe-area-inset-top,0px)+64px)] inset-x-0 z-[30100] bg-white">
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
-            onClick={() => {
-              console.log('[TagSearchDebug][PostSearch] header back click', {
-                pathname: location.pathname,
-                search: location.search,
-                historyState: history.state,
-                postDetailOpen: (window as any).__isPostDetailOpen,
-                returnToPostDetail: sessionStorage.getItem('postSearch_returnToPostDetail'),
-              });
-              navigate(-1);
-            }}
+            onClick={() => navigate(-1)}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
           >
             <ChevronLeft className="w-6 h-6" />
