@@ -97,18 +97,6 @@ const Flicks = () => {
     flicksLastExitPath !== null &&
     isResumeRoute(flicksLastExitPath);
 
-  // [DEBUG-FLICKS-FLICKER] Flicks 마운트 시점 캐시/resume 상태
-  console.log('[DEBUG-FLICKS-FLICKER] Flicks mount eval', {
-    hasCache: !!flicksCache,
-    flicksLastExitPath,
-    isResume:
-      flicksLastExitPath !== null ? isResumeRoute(flicksLastExitPath) : false,
-    cachedValid,
-    cachedActivePostId: flicksCache?.activePostId ?? null,
-    cachedActiveVideoTime: flicksCache?.activeVideoTime ?? null,
-    cachedPoolLen: flicksCache?.videoPool.length ?? 0,
-  });
-
   // 한 번 마운트하면 exit path는 소비된 셈이므로 다시 null로 (다음 cycle을 위해)
   // 단, 캐시가 유효하지 않아 새로 페치하더라도 동일하게 리셋되어야 일관됨
   useEffect(() => {
@@ -270,23 +258,20 @@ const Flicks = () => {
   // Unmount 시 다음 라우트를 기록.
   // - 알림/메시지로 빠져나갔다 → 다음 mount에서 캐시 복원해 이어 재생
   // - 그 외 경로(하단 탭 다른 메뉴 등)로 이탈 → 캐시 무효화, 다음 진입 시 새 영상
+  // - StrictMode dev/HMR에서 발생하는 가짜 unmount(여전히 /flicks에 있는 상태)는 무시한다.
   // React Router는 라우트 전환이 일어난 뒤 unmount하므로 이 시점에는 window.location.pathname이 이미 새 경로로 갱신돼 있다.
   useEffect(() => {
     return () => {
       const nextPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      // 현재 경로가 여전히 /flicks라면 실제 라우트 이동이 아닌 StrictMode/HMR 이중 마운트 cleanup이므로 캐시를 건드리지 않는다.
+      if (nextPath === '/flicks' || nextPath.startsWith('/flicks/')) {
+        return;
+      }
       flicksLastExitPath = nextPath;
       const willResume = isResumeRoute(nextPath);
       if (!willResume) {
         flicksCache = null;
       }
-      // [DEBUG-FLICKS-FLICKER] Flicks 언마운트 시 다음 경로 기록
-      console.log('[DEBUG-FLICKS-FLICKER] Flicks unmount', {
-        nextPath,
-        willResume,
-        cacheKept: willResume,
-        cachedActivePostId: flicksCache?.activePostId ?? null,
-        cachedActiveVideoTime: flicksCache?.activeVideoTime ?? null,
-      });
     };
   }, []);
 
