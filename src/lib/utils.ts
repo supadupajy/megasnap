@@ -34,16 +34,16 @@ const MARKER_IMAGE_TRANSFORM = {
 // Supabase image render가 추가로 정사각형으로 크롭하지 않도록 한다.
 // (정사각형으로 두면 가로 이미지의 좌우, 또는 세로 이미지의 위아래가 잘려 사용자가 의도한 구도와 달라진다.)
 const FEED_IMAGE_TRANSFORM = {
-  width: 600,
-  height: 800,
-  quality: 75,
+  width: 1200,
+  height: 1600,
+  quality: 88,
   resize: 'cover' as const,
 };
 
 const DETAIL_IMAGE_TRANSFORM = {
-  width: 900,
-  height: 1200,
-  quality: 85,
+  width: 1440,
+  height: 1920,
+  quality: 90,
   resize: 'cover' as const,
 };
 

@@ -1,0 +1,1 @@
+SELECT id, image_url, video_url, video_urls FROM public.get_popular_posts(1);

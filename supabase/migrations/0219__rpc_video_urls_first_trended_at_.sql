@@ -1,0 +1,1 @@
+SELECT id, image_url, video_url, video_urls, first_trended_at FROM public.get_trending_posts(1);
