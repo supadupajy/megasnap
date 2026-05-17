@@ -38,17 +38,6 @@ interface MapContainerProps {
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
-const shortDebugUrl = (url: unknown) => {
-  if (typeof url !== 'string' || !url) return url;
-  try {
-    const parsed = new URL(url);
-    const parts = parsed.pathname.split('/').filter(Boolean);
-    return `${parsed.hostname}/${parts.slice(-2).join('/')}`;
-  } catch {
-    return url.slice(0, 120);
-  }
-};
-
 const isBrokenMarkerImageUrl = (url: unknown) => {
   if (typeof url !== 'string') return true;
   if (!url || url === 'null' || url === 'undefined') return true;
@@ -1135,12 +1124,6 @@ const MapContainer = ({
       const positionStateKey = `${post.lat},${post.lng}`;
 
       if (shouldDelayVideoMarker) {
-        console.info('[video-flicker-debug]', 'marker-render-delayed-until-thumb', {
-          postId: post.id,
-          videoUrl: shortDebugUrl(firstVideoUrl),
-          hasStoredVideoPoster: !!storedVideoPoster,
-          hasCachedVideoThumb: !!cachedVideoThumb,
-        });
         if (existingOverlay) {
           existingOverlay.setMap(null);
           overlaysRef.current.delete(post.id);
@@ -2070,16 +2053,9 @@ const MapContainer = ({
   // ── 비디오 마커 썸네일 비동기 추출 및 마커 img 교체 ──────────
   // ref에 함수를 저장해서 마커 생성 useEffect에서 항상 최신 함수를 참조할 수 있게 함
   extractVideoThumbRef.current = (postId: string, videoUrl: string) => {
-    if (videoThumbCacheRef.current.has(postId)) {
-      console.info('[video-flicker-debug]', 'marker-thumb-extract-skip-cached', { postId, videoUrl: shortDebugUrl(videoUrl) });
-      return;
-    }
-    if (videoThumbPendingRef.current.has(postId)) {
-      console.info('[video-flicker-debug]', 'marker-thumb-extract-skip-pending', { postId, videoUrl: shortDebugUrl(videoUrl) });
-      return;
-    }
+    if (videoThumbCacheRef.current.has(postId)) return;
+    if (videoThumbPendingRef.current.has(postId)) return;
     videoThumbPendingRef.current.add(postId);
-    console.info('[video-flicker-debug]', 'marker-thumb-extract-start', { postId, videoUrl: shortDebugUrl(videoUrl) });
 
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
@@ -2102,20 +2078,9 @@ const MapContainer = ({
       video.load();
     };
 
-    const finish = (reason = 'finish') => {
+    const finish = (_reason?: string) => {
       if (isDone) return;
       isDone = true;
-      console.info('[video-flicker-debug]', 'marker-thumb-extract-finish', {
-        postId,
-        reason,
-        readyState: video.readyState,
-        networkState: video.networkState,
-        currentTime: Number(video.currentTime.toFixed(3)),
-        duration: Number.isFinite(video.duration) ? Number(video.duration.toFixed(3)) : String(video.duration),
-        videoWidth: video.videoWidth,
-        videoHeight: video.videoHeight,
-        hasCachedThumb: videoThumbCacheRef.current.has(postId),
-      });
       cleanup();
       videoThumbPendingRef.current.delete(postId);
     };
@@ -2145,14 +2110,6 @@ const MapContainer = ({
       if (!dataUrl) return;
 
       const img = content.querySelector('[data-video-marker-img="true"]') as HTMLImageElement | null;
-      console.info('[video-flicker-debug]', 'marker-thumb-apply', {
-        postId,
-        hasImg: !!img,
-        beforeSrc: shortDebugUrl(img?.getAttribute('src') || ''),
-        beforeOpacity: img?.style.opacity,
-        contentState: content.getAttribute('data-content-state'),
-        className: content.className,
-      });
       if (img) {
         img.src = dataUrl;
         img.style.opacity = '1';
@@ -2172,14 +2129,6 @@ const MapContainer = ({
         finish('no-candidate-time');
         return;
       }
-
-      console.info('[video-flicker-debug]', 'marker-thumb-seek-candidate', {
-        postId,
-        nextTime,
-        candidateIndex,
-        readyState: video.readyState,
-        duration: Number.isFinite(video.duration) ? Number(video.duration.toFixed(3)) : String(video.duration),
-      });
 
       if (nextTime <= 0) {
         captureDecodedFrame();
@@ -2201,15 +2150,6 @@ const MapContainer = ({
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
         const isBlack = isMostlyBlackFrame(ctx, canvas.width, canvas.height);
-        console.info('[video-flicker-debug]', 'marker-thumb-capture', {
-          postId,
-          candidateIndex,
-          isBlack,
-          currentTime: Number(video.currentTime.toFixed(3)),
-          readyState: video.readyState,
-          videoWidth: video.videoWidth,
-          videoHeight: video.videoHeight,
-        });
 
         if (isBlack && candidateIndex < candidateTimes.length) {
           seekNextCandidate();
@@ -2221,11 +2161,7 @@ const MapContainer = ({
         setVideoThumbRevision((revision) => revision + 1);
         finish('captured');
         refreshMarkerWithCachedThumb();
-      } catch (error) {
-        console.info('[video-flicker-debug]', 'marker-thumb-capture-error', {
-          postId,
-          message: error instanceof Error ? error.message : String(error),
-        });
+      } catch {
         finish('capture-error');
       }
     };
@@ -2399,18 +2335,6 @@ const MapContainer = ({
 
     const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
     const markerImage = cachedVideoThumb || optimizedDisplayImage;
-    if (hasVideo) {
-      console.info('[video-flicker-debug]', 'marker-render-video', {
-        postId: post.id,
-        videoUrl: shortDebugUrl(firstVideoUrl),
-        storedDisplayImage: shortDebugUrl(displayImage),
-        optimizedDisplayImage: shortDebugUrl(optimizedDisplayImage),
-        hasCachedVideoThumb: !!cachedVideoThumb,
-        markerImage: shortDebugUrl(markerImage),
-        willRenderHiddenImg: !markerImage,
-        innerBoxBackground,
-      });
-    }
     const imgContent = markerImage
       ? `<img ${hasVideo ? 'data-video-marker-img="true"' : ''} src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;opacity:1;" />`
       : hasVideo

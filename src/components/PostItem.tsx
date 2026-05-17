@@ -326,27 +326,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     ));
   }, [post]);
 
-  useEffect(() => {
-    const activeMedia = displayMedia[currentImageIndex];
-    const scroller = imageScrollRef.current;
-    console.info('[video-flicker-debug]', 'feed-media-state', {
-      postId: post.id,
-      currentImageIndex,
-      mediaCount: displayMedia.length,
-      activeMedia,
-      autoPlayVideo,
-      isVisible,
-      isReadyToPlay,
-      isOverlayOpen,
-      scroller: scroller ? {
-        scrollLeft: scroller.scrollLeft,
-        clientWidth: scroller.clientWidth,
-        scrollWidth: scroller.scrollWidth,
-        bg: window.getComputedStyle(scroller).backgroundColor,
-      } : null,
-    });
-  }, [autoPlayVideo, currentImageIndex, displayMedia, imageScrollRef, isOverlayOpen, isReadyToPlay, isVisible, post.id]);
-
   const renderMedia = () => {
     if (displayMedia.length === 1 && displayMedia[0].type === 'video') {
       return (
@@ -355,7 +334,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           src={displayMedia[0].url}
           posterUrl={displayMedia[0].posterUrl}
           autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
-          debugLabel={`feed:${post.id}:single-video`}
         />
       );
     }
@@ -392,7 +370,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                       src={media.url}
                       className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                       startTime={0.8}
-                      debugLabel={`feed:${post.id}:media-${index}:base-thumb`}
                     />
                   </div>
                   {index === currentImageIndex && (
@@ -403,7 +380,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                         posterUrl={media.posterUrl}
                         autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
                         showControls
-                        debugLabel={`feed:${post.id}:media-${index}:active-true`}
                       />
                     </div>
                   )}

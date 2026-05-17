@@ -6,24 +6,12 @@ import { useVideoMuted } from '@/hooks/use-video-muted';
 
 const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
-const shortDebugUrl = (url?: string) => {
-  if (!url) return url;
-  try {
-    const parsed = new URL(url);
-    const parts = parsed.pathname.split('/').filter(Boolean);
-    return `${parsed.hostname}/${parts.slice(-2).join('/')}`;
-  } catch {
-    return url.slice(0, 120);
-  }
-};
-
 interface PostItemVideoProps {
   videoRef?: React.RefObject<HTMLVideoElement | null>;
   src: string;
   posterUrl?: string;
   autoPlay?: boolean;
   showControls?: boolean;
-  debugLabel?: string;
 }
 
 const PostItemVideo: React.FC<PostItemVideoProps> = ({
@@ -32,7 +20,6 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   posterUrl,
   autoPlay = false,
   showControls = true,
-  debugLabel = 'post-item-video',
 }) => {
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const userPausedRef = useRef(false);
@@ -48,52 +35,17 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     setFirstFrameReady(value);
   };
 
-  const log = useCallback((event: string, extra: Record<string, unknown> = {}) => {
-    const video = localVideoRef.current;
-    const computed = video && typeof window !== 'undefined' ? window.getComputedStyle(video) : null;
-    console.info('[video-flicker-debug]', event, {
-      label: debugLabel,
-      src: shortDebugUrl(src),
-      posterUrl: shortDebugUrl(posterUrl),
-      autoPlay,
-      firstFrameReady: firstFrameReadyRef.current,
-      video: video ? {
-        readyState: video.readyState,
-        networkState: video.networkState,
-        currentTime: Number(video.currentTime.toFixed(3)),
-        duration: Number.isFinite(video.duration) ? Number(video.duration.toFixed(3)) : String(video.duration),
-        paused: video.paused,
-        seeking: video.seeking,
-        videoWidth: video.videoWidth,
-        videoHeight: video.videoHeight,
-        inlineOpacity: video.style.opacity,
-        computedOpacity: computed?.opacity,
-        computedBg: computed?.backgroundColor,
-        visibility: computed?.visibility,
-      } : null,
-      ...extra,
-    });
-  }, [autoPlay, debugLabel, posterUrl, src]);
-
   const setVideoRefs = useCallback((el: HTMLVideoElement | null) => {
     localVideoRef.current = el;
     if (videoRef) {
       (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
     }
-    console.info('[video-flicker-debug]', el ? 'active-video-ref-attached' : 'active-video-ref-detached', {
-      label: debugLabel,
-      src: shortDebugUrl(src),
-      posterUrl: shortDebugUrl(posterUrl),
-      readyState: el?.readyState,
-      networkState: el?.networkState,
-    });
-  }, [debugLabel, posterUrl, src, videoRef]);
+  }, [videoRef]);
 
   const revealAfterPaintedFrame = useCallback((video: HTMLVideoElement) => {
     const token = revealTokenRef.current;
     const reveal = () => {
       if (token !== revealTokenRef.current) return;
-      if (!firstFrameReadyRef.current) log('active-video-first-frame-ready');
       setFrameReady(true);
     };
 
@@ -102,14 +54,13 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     } else {
       window.requestAnimationFrame(reveal);
     }
-  }, [log]);
+  }, []);
 
   useEffect(() => {
     userPausedRef.current = false;
     revealTokenRef.current += 1;
     setUserPaused(false);
     setFrameReady(false);
-    log('active-video-src-reset');
   }, [src]);
 
   useEffect(() => {
@@ -123,73 +74,44 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     if (!video) return;
 
     const handleLoadedData = () => {
-      log('active-video-loadeddata');
       if (!autoPlay) setFrameReady(true);
     };
     const handlePlaying = () => {
       userPausedRef.current = false;
       setUserPaused(false);
-      log('active-video-playing');
       revealAfterPaintedFrame(video);
     };
-    const handleWaiting = () => log('active-video-waiting');
-    const handleCanPlay = () => log('active-video-canplay');
-    const handleError = () => log('active-video-error', { code: video.error?.code, message: video.error?.message });
 
     video.addEventListener('loadeddata', handleLoadedData);
     video.addEventListener('playing', handlePlaying);
-    video.addEventListener('waiting', handleWaiting);
-    video.addEventListener('canplay', handleCanPlay);
-    video.addEventListener('error', handleError);
     return () => {
       video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('playing', handlePlaying);
-      video.removeEventListener('waiting', handleWaiting);
-      video.removeEventListener('canplay', handleCanPlay);
-      video.removeEventListener('error', handleError);
     };
-  }, [autoPlay, log, revealAfterPaintedFrame, src]);
+  }, [autoPlay, revealAfterPaintedFrame, src]);
 
   useEffect(() => {
     const video = localVideoRef.current;
     if (!video) return;
 
-    log('active-video-autoplay-effect-enter');
-
     if (!autoPlay) {
-      if (!video.paused) {
-        log('active-video-autoplay-off-pause');
-        video.pause();
-      }
+      if (!video.paused) video.pause();
       return;
     }
 
-    if (userPausedRef.current) {
-      log('active-video-autoplay-skip-user-paused');
-      return;
-    }
+    if (userPausedRef.current) return;
 
     const play = () => {
       if (Number.isFinite(video.duration) && video.duration > 0.45 && video.currentTime < 0.05) {
         try {
-          const target = Math.min(0.35, video.duration - 0.05);
-          log('active-video-autoplay-seek-before-play', { target });
-          video.currentTime = target;
-        } catch (error) {
-          log('active-video-autoplay-seek-failed', { message: error instanceof Error ? error.message : String(error) });
-        }
+          video.currentTime = Math.min(0.35, video.duration - 0.05);
+        } catch {}
       }
 
-      log('active-video-play-request');
-      video.play().then(() => {
-        log('active-video-play-success');
-      }).catch(() => {
-        log('active-video-play-failed-retry-muted');
+      video.play().catch(() => {
         video.muted = true;
         setMuted(true);
-        video.play().then(() => log('active-video-play-retry-success')).catch((error) => {
-          log('active-video-play-retry-failed', { message: error instanceof Error ? error.message : String(error) });
-        });
+        video.play().catch(() => {});
       });
     };
 
@@ -198,10 +120,9 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       return;
     }
 
-    log('active-video-wait-canplay-for-play');
     video.addEventListener('canplay', play, { once: true });
     return () => video.removeEventListener('canplay', play);
-  }, [autoPlay, log, setMuted, src]);
+  }, [autoPlay, setMuted, src]);
 
   const handleVideoTap = (e: React.MouseEvent) => {
     e.stopPropagation();
