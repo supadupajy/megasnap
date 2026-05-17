@@ -2600,7 +2600,7 @@ const MapContainer = ({
         style={{ position: 'relative' }}
       ></div>
 
-      <div className="absolute left-2 top-[calc(env(safe-area-inset-top,0px)+76px)] z-[16000] w-[min(92vw,380px)] rounded-2xl border border-black/10 bg-black/75 text-white shadow-2xl backdrop-blur-md pointer-events-auto overflow-hidden">
+      <div className="absolute left-2 top-[calc(env(safe-area-inset-top,0px)+132px)] z-[16000] w-[min(92vw,380px)] rounded-2xl border border-black/10 bg-black/75 text-white shadow-2xl backdrop-blur-md pointer-events-auto overflow-hidden">
         <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
           <div className="flex-1 min-w-0">
             <p className="text-[11px] font-black leading-none">마커 애니메이션 디버거</p>
