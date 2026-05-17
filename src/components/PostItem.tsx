@@ -381,27 +381,31 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             return (
             <div
               key={`${media.type}-${index}`}
-              className="relative w-full h-full shrink-0 snap-center snap-always bg-neutral-950 bg-cover bg-center"
+              className="relative w-full h-full shrink-0 snap-center snap-always overflow-hidden bg-neutral-950 bg-cover bg-center"
               style={{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined }}
             >
               <div className="absolute inset-0 bg-gray-200/0" aria-hidden="true" />
               {media.type === 'video' ? (
                 <>
-                  <VideoThumbnailPreview
-                    src={media.url}
-                    className="absolute inset-0 z-[1] w-full h-full object-cover pointer-events-none"
-                    startTime={0.8}
-                    debugLabel={`feed:${post.id}:media-${index}:base-thumb`}
-                  />
-                  {index === currentImageIndex && (
-                    <PostItemVideo
-                      videoRef={videoRef}
+                  <div className="absolute inset-0 z-[1] pointer-events-none">
+                    <VideoThumbnailPreview
                       src={media.url}
-                      posterUrl={media.posterUrl}
-                      autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
-                      showControls
-                      debugLabel={`feed:${post.id}:media-${index}:active-true`}
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                      startTime={0.8}
+                      debugLabel={`feed:${post.id}:media-${index}:base-thumb`}
                     />
+                  </div>
+                  {index === currentImageIndex && (
+                    <div className="absolute inset-0 z-[2]">
+                      <PostItemVideo
+                        videoRef={videoRef}
+                        src={media.url}
+                        posterUrl={media.posterUrl}
+                        autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
+                        showControls
+                        debugLabel={`feed:${post.id}:media-${index}:active-true`}
+                      />
+                    </div>
                   )}
                 </>
               ) : (

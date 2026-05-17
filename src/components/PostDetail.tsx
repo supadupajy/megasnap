@@ -802,7 +802,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           return (
           <div
             key={`${media.type}-${index}`}
-            className="w-full h-full shrink-0 snap-center relative bg-neutral-950 bg-cover bg-center"
+            className="w-full h-full shrink-0 snap-center relative overflow-hidden bg-neutral-950 bg-cover bg-center"
             style={{
               scrollSnapStop: 'always',
               backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
@@ -810,20 +810,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           >
             {media.type === 'video' ? (
               <>
-                <VideoThumbnailPreview
-                  src={media.url}
-                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                  startTime={0.8}
-                  debugLabel={`detail:${currentPost.id}:media-${index}:base-thumb`}
-                />
-                {index === currentImageIndex && (
-                  <PostItemVideo
+                <div className="absolute inset-0 z-[1] pointer-events-none">
+                  <VideoThumbnailPreview
                     src={media.url}
-                    posterUrl={media.posterUrl}
-                    autoPlay
-                    showControls
-                    debugLabel={`detail:${currentPost.id}:media-${index}:active-true`}
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    startTime={0.8}
+                    debugLabel={`detail:${currentPost.id}:media-${index}:base-thumb`}
                   />
+                </div>
+                {index === currentImageIndex && (
+                  <div className="absolute inset-0 z-[2]">
+                    <PostItemVideo
+                      src={media.url}
+                      posterUrl={media.posterUrl}
+                      autoPlay
+                      showControls
+                      debugLabel={`detail:${currentPost.id}:media-${index}:active-true`}
+                    />
+                  </div>
                 )}
               </>
             ) : (
