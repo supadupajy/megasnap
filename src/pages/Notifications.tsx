@@ -482,8 +482,13 @@ const Notifications: React.FC<NotificationsProps> = ({ onClose }) => {
         setSwipedId(null);
       }}
     >
-      <div className="pt-16">
-        <div className="sticky top-16 z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100">
+      {/* 글로벌 헤더(높이 4rem) + 모바일 상태바(safe-area-inset-top)만큼 자리를 비워둔다.
+          이 영역이 부족하면 모바일에서 알림 타이틀이 글로벌 헤더 뒤로 들어가 보이는 문제가 생긴다. */}
+      <div style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))' }}>
+        <div
+          className="sticky z-40 bg-gray-50 grid grid-cols-[1fr_auto_1fr] items-center px-4 h-14 border-b border-gray-100"
+          style={{ top: 'calc(4rem + env(safe-area-inset-top, 0px))' }}
+        >
           {/* 왼쪽: 전체 선택 (선택 모드일 때) */}
           <div className="flex items-center">
             <AnimatePresence>

@@ -346,7 +346,9 @@ const Messages: React.FC<MessagesProps> = ({ onClose }) => {
     <div
       className="h-screen min-h-0 w-full max-w-full overflow-hidden bg-white flex flex-col"
       style={{
-        paddingTop: '4rem',
+        // 글로벌 헤더(높이 4rem) + 모바일 상태바(safe-area-inset-top)만큼 자리를 비워둔다.
+        // 이 영역이 부족하면 모바일에서 메시지 타이틀이 글로벌 헤더 뒤로 들어가 보인다.
+        paddingTop: 'calc(4rem + env(safe-area-inset-top, 0px))',
         paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))',
       }}
       onClick={() => setSwipedId(null)}

@@ -218,9 +218,18 @@ const AnimatedRoutes = () => {
       setIsAdPostDetailOpen(!!detail.open && !!detail.isAd);
     };
 
-    const handleNotificationsOpen = () => setIsNotificationsOpen(true);
+    // 알림/메시지 오버레이는 mutually exclusive:
+    // 한쪽이 열려 있을 때 다른 쪽을 열려고 하면 먼저 열려 있던 것을 닫고 새 것을 연다.
+    // 이렇게 하면 두 오버레이가 동시에 떠 있는 상태가 생기지 않으므로 z-index/플래그 꼬임이 없다.
+    const handleNotificationsOpen = () => {
+      setIsMessagesOpen(false);
+      setIsNotificationsOpen(true);
+    };
     const handleNotificationsClose = () => setIsNotificationsOpen(false);
-    const handleMessagesOpen = () => setIsMessagesOpen(true);
+    const handleMessagesOpen = () => {
+      setIsNotificationsOpen(false);
+      setIsMessagesOpen(true);
+    };
     const handleMessagesClose = () => setIsMessagesOpen(false);
 
     window.addEventListener('open-post-list-overlay', handleOpen);

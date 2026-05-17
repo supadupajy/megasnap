@@ -19,15 +19,15 @@ interface MessagesOverlayProps {
 const MessagesOverlay: React.FC<MessagesOverlayProps> = ({ open, onClose }) => {
   useEffect(() => {
     if (!open) return;
+    // 알림/메시지 오버레이는 App.tsx에서 mutually exclusive하게 관리되므로
+    // 동시에 두 개가 떠 있는 케이스는 없다 → 단순히 자기 자신만 flag 처리.
     (window as any).__isMessagesOverlayOpen = true;
     (window as any).__isAppOverlayOpen = true;
     window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: true } }));
     return () => {
       (window as any).__isMessagesOverlayOpen = false;
-      if (!(window as any).__isNotificationsOverlayOpen) {
-        (window as any).__isAppOverlayOpen = false;
-        window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: false } }));
-      }
+      (window as any).__isAppOverlayOpen = false;
+      window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: false } }));
     };
   }, [open]);
 

@@ -24,16 +24,15 @@ interface NotificationsOverlayProps {
 const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({ open, onClose }) => {
   useEffect(() => {
     if (!open) return;
+    // 알림/메시지 오버레이는 App.tsx에서 mutually exclusive하게 관리되므로
+    // 동시에 두 개가 떠 있는 케이스는 없다 → 단순히 자기 자신만 flag 처리.
     (window as any).__isNotificationsOverlayOpen = true;
     (window as any).__isAppOverlayOpen = true;
     window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: true } }));
     return () => {
       (window as any).__isNotificationsOverlayOpen = false;
-      // 메시지 오버레이가 같이 떠 있는 경우엔 app-overlay는 계속 열린 것으로 본다.
-      if (!(window as any).__isMessagesOverlayOpen) {
-        (window as any).__isAppOverlayOpen = false;
-        window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: false } }));
-      }
+      (window as any).__isAppOverlayOpen = false;
+      window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: false } }));
     };
   }, [open]);
 
