@@ -369,10 +369,22 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
 
   return (
     <div className="relative h-full w-full bg-transparent" data-video-debug-label={debugLabel}>
+      {posterUrl && (
+        <img
+          src={posterUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 z-[1] w-full h-full object-cover pointer-events-none"
+          draggable={false}
+          onLoad={() => debugLog('poster-load')}
+          onError={() => debugLog('poster-error')}
+        />
+      )}
+
       <video
         ref={setVideoRefs}
         src={src}
-        className="absolute inset-0 z-[1] w-full h-full object-cover post-item-video video-hq"
+        className="absolute inset-0 z-[2] w-full h-full object-cover post-item-video video-hq"
         poster={posterUrl || TRANSPARENT_POSTER}
         loop
         muted={muted}
@@ -384,26 +396,10 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         disableRemotePlayback={true}
         onClick={handleVideoTap}
         style={{
-          opacity: 1,
+          visibility: firstFrameReady ? 'visible' : 'hidden',
           backgroundColor: 'transparent',
         }}
       />
-
-      {posterUrl && (
-        <img
-          src={posterUrl}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 z-[2] w-full h-full object-cover pointer-events-none"
-          style={{
-            opacity: firstFrameReady ? 0 : 1,
-            transition: 'opacity 120ms ease-out',
-          }}
-          draggable={false}
-          onLoad={() => debugLog('poster-load')}
-          onError={() => debugLog('poster-error')}
-        />
-      )}
 
       {showControls && userPaused && firstFrameReady && (
         <div
