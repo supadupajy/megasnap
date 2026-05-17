@@ -303,8 +303,11 @@ const AnimatedRoutes = () => {
         return;
       }
 
-      // 1순위: PostDetail이 열려 있으면 닫기
-      if ((window as any).__isPostDetailOpen === true) {
+      // 1순위: PostDetail이 실제로 보이는 지도 화면에서만 닫기.
+      // /post-search 같은 다른 라우트에서는 Index 안의 PostDetail이 display:none으로 숨겨져 있을 뿐
+      // 플래그는 true로 남아 있을 수 있다. 이때 PostDetail을 먼저 닫으면
+      // "지도마커 상세 → 태그 검색 → 뒤로가기 → 지도마커 상세" 흐름이 깨진다.
+      if (showIndex && (window as any).__isPostDetailOpen === true) {
         window.dispatchEvent(new CustomEvent('close-post-detail-by-back'));
         return;
       }
