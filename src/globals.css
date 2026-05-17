@@ -182,27 +182,31 @@
   visibility: visible !important;
 }
 
-/* 마커 등장: 아래서 튀어오르며 스르륵 나타남 (내부 wrapper에 적용) */
+/* 마커 등장: 경쾌하게 pop! 하고 튀어나옴 (내부 wrapper에 적용) */
 @keyframes marker-appear {
-  0%   { opacity: 0; transform: scale(0.85) translateY(8px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
+  0%   { opacity: 0; transform: scale(0); }
+  50%  { opacity: 1; transform: scale(1.2); }
+  75%  { transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-/* 광고 마커 등장: 더 화려하게 */
+/* 광고 마커 등장: 더 화려하게 pop-pop! */
 @keyframes ad-marker-appear {
-  0%   { opacity: 0; transform: scale(0.15) translateY(24px) rotate(-10deg); }
-  50%  { opacity: 1; transform: scale(1.12) translateY(-6px) rotate(3deg); }
-  70%  { transform: scale(0.95) translateY(2px) rotate(-1deg); }
-  85%  { transform: scale(1.04) translateY(-1px) rotate(0.5deg); }
-  100% { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
+  0%   { opacity: 0; transform: scale(0) rotate(-15deg); }
+  45%  { opacity: 1; transform: scale(1.25) rotate(5deg); }
+  65%  { transform: scale(0.9) rotate(-2deg); }
+  85%  { transform: scale(1.06) rotate(1deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 .marker-appear-animation .marker-content-wrapper {
-  animation: marker-appear 0.4s ease-out forwards;
+  animation: marker-appear 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: 50% 80%;
 }
 
 .marker-appear-animation.is-ad .marker-content-wrapper {
-  animation: ad-marker-appear 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  animation: ad-marker-appear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: 50% 80%;
 }
 
 /* marker-appear-animation 클래스가 없으면 opacity:1 기본값 보장 */
@@ -234,17 +238,18 @@
   transition: opacity 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
 
-/* 마커 사라짐: 위로 살짝 뜨다가 스르륵 사라짐 (내부 wrapper에 적용) */
+/* 마커 사라짐: 살짝 부풀었다가 pop! 하고 사라짐 (내부 wrapper에 적용) */
 @keyframes marker-disappear {
-  0%   { opacity: 1; transform: scale(1) translateY(0); }
-  100% { opacity: 0; transform: scale(0.85) translateY(8px); }
+  0%   { opacity: 1; transform: scale(1); }
+  30%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(0); }
 }
 
-/* 광고 마커 사라짐: 더 극적으로 */
+/* 광고 마커 사라짐: 더 극적인 pop! */
 @keyframes ad-marker-disappear {
-  0%   { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
-  15%  { opacity: 1; transform: scale(1.1) translateY(-7px) rotate(-3deg); }
-  100% { opacity: 0; transform: scale(0.2) translateY(16px) rotate(8deg); }
+  0%   { opacity: 1; transform: scale(1) rotate(0deg); }
+  25%  { opacity: 1; transform: scale(1.25) rotate(-5deg); }
+  100% { opacity: 0; transform: scale(0) rotate(10deg); }
 }
 
 .marker-disappear-animation {
@@ -252,11 +257,13 @@
 }
 
 .marker-disappear-animation .marker-content-wrapper {
-  animation: marker-disappear 0.4s ease-in forwards;
+  animation: marker-disappear 0.32s cubic-bezier(0.55, -0.2, 0.7, 0.4) forwards;
+  transform-origin: 50% 80%;
 }
 
 .marker-disappear-animation.is-ad .marker-content-wrapper {
-  animation: ad-marker-disappear 0.5s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+  animation: ad-marker-disappear 0.4s cubic-bezier(0.55, -0.2, 0.7, 0.4) forwards;
+  transform-origin: 50% 80%;
 }
 
 /* 한 번 지도에 나타난 마커는 viewport를 들락거려도 등장 애니메이션을
@@ -861,27 +868,30 @@ video.post-item-video::-webkit-media-text-track-container {
   pointer-events: none !important;
 }
 
-/* 고스트 마커 등장 애니메이션 — 일반 마커의 marker-appear와 동일한 타이밍/이징.
-   최종 opacity가 0.7이라는 점만 다름. */
+/* 고스트 마커 등장 — 경쾌한 pop 효과. 최종 opacity가 0.7. */
 @keyframes ghost-marker-appear {
-  0%   { opacity: 0;   transform: scale(0.85) translateY(8px); }
-  100% { opacity: 0.7; transform: scale(1)    translateY(0); }
+  0%   { opacity: 0;   transform: scale(0); }
+  50%  { opacity: 0.7; transform: scale(1.15); }
+  75%  { transform: scale(0.94); }
+  100% { opacity: 0.7; transform: scale(1); }
 }
 
 .ghost-marker-container.ghost-marker-appear-animation {
-  animation: ghost-marker-appear 0.4s ease-out forwards;
+  animation: ghost-marker-appear 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: 50% 50%;
 }
 
-/* 고스트 마커 사라짐 — 일반 마커 marker-disappear와 동일한 타이밍/이징.
-   시작 opacity가 0.7이라는 점만 다름. 스르륵 위로 살짝 뜨면서 페이드 아웃. */
+/* 고스트 마커 사라짐 — pop! 살짝 부풀었다가 사라짐. */
 @keyframes ghost-marker-disappear {
-  0%   { opacity: 0.7; transform: scale(1) translateY(0); }
-  100% { opacity: 0;   transform: scale(0.85) translateY(8px); }
+  0%   { opacity: 0.7; transform: scale(1); }
+  30%  { opacity: 0.7; transform: scale(1.15); }
+  100% { opacity: 0;   transform: scale(0); }
 }
 
 .ghost-marker-container.ghost-disappear {
   pointer-events: none;
-  animation: ghost-marker-disappear 0.4s ease-in forwards;
+  animation: ghost-marker-disappear 0.32s cubic-bezier(0.55, -0.2, 0.7, 0.4) forwards;
+  transform-origin: 50% 50%;
 }
 
 .ghost-marker-dot {
