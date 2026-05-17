@@ -40,6 +40,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   const wasPlayingBeforeScrubRef = useRef(false);
   const firstTimeUpdateLoggedRef = useRef(false);
   const frameVisibleRef = useRef(false);
+  const revealTokenRef = useRef(0);
   const propsSnapshotRef = useRef({
     debugLabel,
     src,
@@ -131,6 +132,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     userPausedRef.current = false;
     firstTimeUpdateLoggedRef.current = false;
     frameVisibleRef.current = false;
+    revealTokenRef.current += 1;
     setUserPaused(false);
     setFirstFrameReady(false);
 
@@ -138,7 +140,27 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     debugLog('src-effect-reset', { initialReadyState: video?.readyState, initialNetworkState: video?.networkState });
     if (!video) return;
 
-    const markReadyToShowVideo = (reason: string) => {
+    const coverWithPoster = (reason: string) => {
+      revealTokenRef.current += 1;
+      frameVisibleRef.current = false;
+      setFirstFrameReady(false);
+      debugLog('poster-cover', { reason });
+    };
+
+    const markReadyToShowVideo = (reason: string, token: number) => {
+      if (token !== revealTokenRef.current) {
+        debugLog('first-frame-visible-cancelled', { reason, token, currentToken: revealTokenRef.current });
+        return;
+      }
+      if (video.paused || video.seeking || video.readyState < 3) {
+        debugLog('first-frame-visible-delayed', {
+          reason,
+          paused: video.paused,
+          seeking: video.seeking,
+          readyState: video.readyState,
+        });
+        return;
+      }
       if (frameVisibleRef.current) return;
       frameVisibleRef.current = true;
       setFirstFrameReady(true);
@@ -147,14 +169,20 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
 
     const revealAfterPaintedFrame = (reason: string) => {
       if (frameVisibleRef.current) return;
+      const token = revealTokenRef.current;
       const requestVideoFrameCallback = video.requestVideoFrameCallback?.bind(video);
       if (requestVideoFrameCallback) {
-        requestVideoFrameCallback(() => markReadyToShowVideo(`${reason}:video-frame-callback`));
+        requestVideoFrameCallback(() => markReadyToShowVideo(`${reason}:video-frame-callback`, token));
+      } else {
+        window.requestAnimationFrame(() => markReadyToShowVideo(`${reason}:raf-fallback`, token));
       }
     };
 
     const handleLoadedData = () => debugLog('loadeddata');
-    const handleCanPlay = () => debugLog('canplay');
+    const handleCanPlay = () => {
+      debugLog('canplay');
+      if (!video.paused && !video.seeking) revealAfterPaintedFrame('canplay');
+    };
     const handlePlaying = () => {
       userPausedRef.current = false;
       setUserPaused(false);
@@ -163,14 +191,17 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     };
     const handleLoadedMetadata = () => debugLog('loadedmetadata');
     const handleCanPlayThrough = () => debugLog('canplaythrough');
-    const handleWaiting = () => debugLog('waiting');
-    const handleStalled = () => debugLog('stalled');
+    const handleWaiting = () => coverWithPoster('waiting');
+    const handleStalled = () => coverWithPoster('stalled');
     const handleSuspend = () => debugLog('suspend');
     const handlePlay = () => debugLog('play-event');
     const handlePause = () => debugLog('pause-event');
-    const handleSeeking = () => debugLog('seeking');
-    const handleSeeked = () => debugLog('seeked');
-    const handleEmptied = () => debugLog('emptied');
+    const handleSeeking = () => coverWithPoster('seeking');
+    const handleSeeked = () => {
+      debugLog('seeked');
+      if (!video.paused && video.readyState >= 3) revealAfterPaintedFrame('seeked');
+    };
+    const handleEmptied = () => coverWithPoster('emptied');
     const handleAbort = () => debugLog('abort');
     const handleResize = () => debugLog('resize');
     const handleError = () => debugLog('error-event', {
@@ -183,7 +214,6 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         debugLog('first-timeupdate');
       }
       revealAfterPaintedFrame('timeupdate');
-      if (!video.requestVideoFrameCallback) markReadyToShowVideo('timeupdate:fallback');
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
