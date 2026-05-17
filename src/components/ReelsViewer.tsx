@@ -1306,26 +1306,34 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     return getFallbackImage(String(post.id));
   }, [mediaList, post.id, post.image_url, post.image]);
 
-  // 댓글 다이얼로그가 떠 있는 동안 영상을 잠시 일시정지
+  // 댓글 다이얼로그 또는 알림/메시지 전역 오버레이가 떠 있는 동안 영상을 잠시 일시정지.
+  // 닫히면 다시 재생된다 (현재 위치 유지).
   const [isOverlayOpen, setIsOverlayOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return !!(window as any).__commentsDialogOpen;
+    return !!(window as any).__commentsDialogOpen || !!(window as any).__isAppOverlayOpen;
   });
 
   useEffect(() => {
     let commentsOpen = !!(window as any).__commentsDialogOpen;
-    const apply = () => setIsOverlayOpen(commentsOpen);
+    let appOverlayOpen = !!(window as any).__isAppOverlayOpen;
+    const apply = () => setIsOverlayOpen(commentsOpen || appOverlayOpen);
 
     const handleComments = (e: Event) => {
       commentsOpen = !!(e as CustomEvent).detail?.open;
       apply();
     };
+    const handleAppOverlay = (e: Event) => {
+      appOverlayOpen = !!(e as CustomEvent).detail?.open;
+      apply();
+    };
 
     window.addEventListener('comments-dialog-visibility', handleComments);
+    window.addEventListener('app-overlay-visibility', handleAppOverlay);
     apply();
 
     return () => {
       window.removeEventListener('comments-dialog-visibility', handleComments);
+      window.removeEventListener('app-overlay-visibility', handleAppOverlay);
     };
   }, []);
 

@@ -64,10 +64,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
-  // 외부 오버레이(댓글 시트)가 떠 있는 동안 비디오를 잠시 멈추기 위한 상태
+  // 외부 오버레이(댓글 시트 또는 알림/메시지 전역 오버레이)가 떠 있는 동안 비디오를 잠시 멈추기 위한 상태
   const [isOverlayOpen, setIsOverlayOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return !!(window as any).__commentsDialogOpen;
+    return !!(window as any).__commentsDialogOpen || !!(window as any).__isAppOverlayOpen;
   });
   // 오버레이가 열릴 때 비디오가 재생 중이었는지 기억해두고, 닫힐 때 다시 재생
   const wasPlayingBeforeOverlayRef = useRef(false);
@@ -242,14 +242,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     }
   }, [isVisible, isReadyToPlay, isOverlayOpen]);
 
-  // 댓글 다이얼로그가 열려있는 동안 비디오를 멈추기 위한 추적
+  // 댓글 다이얼로그 또는 알림/메시지 전역 오버레이가 열려있는 동안 비디오를 멈추기 위한 추적.
+  // 둘 중 하나라도 열려 있으면 일시정지, 모두 닫히면 재생 재개.
   useEffect(() => {
     if (!autoPlayVideo) return;
 
     let commentsOpen = !!(window as any).__commentsDialogOpen;
+    let appOverlayOpen = !!(window as any).__isAppOverlayOpen;
 
     const applyOverlayState = () => {
-      const nextOpen = commentsOpen;
+      const nextOpen = commentsOpen || appOverlayOpen;
       setIsOverlayOpen((prev) => {
         if (prev === nextOpen) return prev;
 
@@ -275,12 +277,18 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
       commentsOpen = !!(e as CustomEvent).detail?.open;
       applyOverlayState();
     };
+    const handleAppOverlay = (e: Event) => {
+      appOverlayOpen = !!(e as CustomEvent).detail?.open;
+      applyOverlayState();
+    };
 
     window.addEventListener('comments-dialog-visibility', handleComments);
+    window.addEventListener('app-overlay-visibility', handleAppOverlay);
     applyOverlayState();
 
     return () => {
       window.removeEventListener('comments-dialog-visibility', handleComments);
+      window.removeEventListener('app-overlay-visibility', handleAppOverlay);
     };
   }, [autoPlayVideo, isVisible, isReadyToPlay]);
 

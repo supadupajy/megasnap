@@ -20,8 +20,14 @@ const MessagesOverlay: React.FC<MessagesOverlayProps> = ({ open, onClose }) => {
   useEffect(() => {
     if (!open) return;
     (window as any).__isMessagesOverlayOpen = true;
+    (window as any).__isAppOverlayOpen = true;
+    window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: true } }));
     return () => {
       (window as any).__isMessagesOverlayOpen = false;
+      if (!(window as any).__isNotificationsOverlayOpen) {
+        (window as any).__isAppOverlayOpen = false;
+        window.dispatchEvent(new CustomEvent('app-overlay-visibility', { detail: { open: false } }));
+      }
     };
   }, [open]);
 
@@ -36,7 +42,7 @@ const MessagesOverlay: React.FC<MessagesOverlayProps> = ({ open, onClose }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[13000] bg-white"
+          className="fixed inset-0 z-[12500] bg-white"
         >
           <Messages onClose={onClose} />
         </motion.div>
