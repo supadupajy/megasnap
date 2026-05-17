@@ -69,18 +69,40 @@ type FlicksCache = {
 };
 let flicksCache: FlicksCache | null = null;
 
+// Flicks → 이 경로로 나갔다가 → 같은 경로에서 다시 Flicks로 돌아오면 이어 재생.
+// 그 외 라우트로 이탈하면 캐시를 무효화해서 다음 진입 시 새 영상이 나오게 한다.
+const FLICKS_RESUME_ROUTES = ['/notifications', '/messages'];
+
+const isResumeRoute = (pathname: string): boolean =>
+  FLICKS_RESUME_ROUTES.some((p) => pathname === p || pathname.startsWith(p + '/'));
+
+// Flicks가 unmount될 때 어떤 경로로 빠져나갔는지 기록.
+// 다음에 Flicks가 mount될 때 이 값이 resume route였을 때만 캐시 복원.
+let flicksLastExitPath: string | null = null;
+
 const Flicks = () => {
   const navigate = useNavigate();
   const { user: authUser, loading: authLoading } = useAuth();
   const { blockedIds } = useBlockedUsers();
   const blockedKey = Array.from(blockedIds).sort().join(',');
 
-  // 캐시가 현재 사용자/차단목록과 일치하면 즉시 복원 (재셔플/재페치 없이)
+  // 캐시가 현재 사용자/차단목록과 일치하고,
+  // 직전에 Flicks에서 빠져나간 경로가 알림/메시지(=resume route)였을 때만 즉시 복원.
+  // → 알림/메시지에서 X로 돌아오는 케이스에서만 이어 재생, 다른 메뉴 갔다 오면 새 영상.
   const cachedValid =
     !!flicksCache &&
     flicksCache.authUserId === (authUser?.id ?? null) &&
     flicksCache.blockedKey === blockedKey &&
-    flicksCache.videoPool.length > 0;
+    flicksCache.videoPool.length > 0 &&
+    flicksLastExitPath !== null &&
+    isResumeRoute(flicksLastExitPath);
+
+  // 한 번 마운트하면 exit path는 소비된 셈이므로 다시 null로 (다음 cycle을 위해)
+  // 단, 캐시가 유효하지 않아 새로 페치하더라도 동일하게 리셋되어야 일관됨
+  useEffect(() => {
+    flicksLastExitPath = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [videoPool, setVideoPool] = useState<Post[]>(
     cachedValid ? flicksCache!.videoPool : []
@@ -232,6 +254,20 @@ const Flicks = () => {
     hasLoaded.current = true;
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
+
+  // Unmount 시 다음 라우트를 기록.
+  // - 알림/메시지로 빠져나갔다 → 다음 mount에서 캐시 복원해 이어 재생
+  // - 그 외 경로(하단 탭 다른 메뉴 등)로 이탈 → 캐시 무효화, 다음 진입 시 새 영상
+  // React Router는 라우트 전환이 일어난 뒤 unmount하므로 이 시점에는 window.location.pathname이 이미 새 경로로 갱신돼 있다.
+  useEffect(() => {
+    return () => {
+      const nextPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      flicksLastExitPath = nextPath;
+      if (!isResumeRoute(nextPath)) {
+        flicksCache = null;
+      }
+    };
+  }, []);
 
   // 마운트 시 초기 포스트/초기 시간 결정 (cached일 때만 의미 있음; 새 fetch면 fetchVideoPool이 캐시를 덮어쓴 후 ReelsViewer가 첫 슬라이드부터 시작)
   if (videoPool.length > 0 && !initialPostRef.current) {

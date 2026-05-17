@@ -2173,7 +2173,9 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         ref={setRefs}
         src={src}
         className="absolute inset-0 w-full h-full object-cover video-hq"
-        poster={posterUrl || TRANSPARENT_POSTER}
+        // suppressPoster일 땐 native poster도 띄우지 않음 (썸네일 깜빡임 원천 차단).
+        // 그 외엔 1x1 투명 poster로 회색 placeholder 깜빡임만 막는다.
+        poster={suppressPoster ? TRANSPARENT_POSTER : (posterUrl || TRANSPARENT_POSTER)}
         playsInline
         loop
         muted={muted}
