@@ -1573,8 +1573,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         height: lockedHeight != null ? `${lockedHeight}px` : embedded ? "100%" : "100dvh",
       }}
     >
-      {/* 배경 블러 — 3:4 메인 영상의 좌우 여백을 자연스럽게 채워주는 레이어 */}
-      {fallbackImage && (!hasVideo || videoFirstFrameReady) && (
+      {/* 배경 블러 — 3:4 메인 영상의 좌우 여백을 자연스럽게 채워주는 레이어.
+          영상 첫 프레임 준비 여부와 무관하게 즉시 렌더링한다.
+          (페이지 재진입 시 영상이 다시 디코드되는 짧은 순간에도 블러가 유지되어 화면이 튀지 않음) */}
+      {fallbackImage && (
         <img
           src={fallbackImage}
           alt=""
@@ -1691,6 +1693,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             muted={muted}
             isSlideActive={isActive}
             videoPosterUrl={fallbackImage}
+            // 페이지 재진입 시(initialVideoTime > 0) 썸네일 깜빡임 방지: 바로 영상으로 페이드인
+            suppressVideoPoster={
+              typeof initialVideoTime === "number" && initialVideoTime > 0.1
+            }
           />
 
           {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
@@ -2058,6 +2064,11 @@ interface ReelsVideoProps {
   isCurrent: boolean;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
   posterUrl?: string;
+  /** "이어 재생" 모드 — 페이지 재진입처럼 처음부터 시작이 아닐 때.
+   * 이 경우 썸네일을 띄우지 않고 바로 영상으로 페이드인하여 화면 튐을 방지한다.
+   * (썸네일이 잠깐 보였다 영상으로 바뀌는 깜빡임 제거. 그 짧은 디코드 시간엔
+   *  부모 슬라이드의 blur 배경이 메워줘서 시각적으로 튀지 않음.) */
+  suppressPoster?: boolean;
 }
 
 const ReelsVideo: React.FC<ReelsVideoProps> = ({
@@ -2067,6 +2078,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   preload,
   isCurrent,
   posterUrl,
+  suppressPoster = false,
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
@@ -2142,8 +2154,9 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   return (
     <>
       {/* 첫 프레임 디코드 전엔 posterUrl을 깔아 둠 (흰/회색 빈 화면 방지).
-          isReady가 되면 부드럽게 사라진다. */}
-      {posterUrl && (
+          isReady가 되면 부드럽게 사라진다.
+          단 suppressPoster=true(=이어 재생 모드)면 썸네일 깜빡임을 막기 위해 아예 렌더하지 않음. */}
+      {posterUrl && !suppressPoster && (
         <img
           src={posterUrl}
           alt=""
@@ -2166,12 +2179,14 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         muted={muted}
         preload={preload}
         style={{
-          opacity: isCurrent && !isReady ? 0 : 1,
+          // suppressPoster일 땐 영상을 숨기지 않고 즉시 보이도록 둔다.
+          // (poster를 안 띄우는 대신 부모의 blur 배경이 디코드 동안 메움)
+          opacity: !suppressPoster && isCurrent && !isReady ? 0 : 1,
           transition: "opacity 200ms ease-out",
         }}
       />
-      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 */}
-      {isCurrent && !isReady && showSpinner && (
+      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 (이어 재생 모드 제외) */}
+      {!suppressPoster && isCurrent && !isReady && showSpinner && (
         <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none bg-black/20">
           <div className="w-12 h-12 rounded-full border-[3px] border-white/30 border-t-white animate-spin" />
         </div>
@@ -2193,6 +2208,8 @@ interface MediaCarouselProps {
   isSlideActive: boolean;
   /** 영상 슬라이드용 fallback 썸네일 (첫 프레임 디코드 전 빈 화면 방지). */
   videoPosterUrl?: string;
+  /** 영상 "이어 재생" 모드 — 썸네일을 띄우지 않고 바로 영상 페이드인 (페이지 재진입 시). */
+  suppressVideoPoster?: boolean;
 }
 
 const MediaCarousel: React.FC<MediaCarouselProps> = ({
@@ -2203,6 +2220,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   muted,
   isSlideActive,
   videoPosterUrl,
+  suppressVideoPoster,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [dragX, setDragX] = useState(0);
@@ -2465,6 +2483,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   preload={isPlayable ? "auto" : "none"}
                   isCurrent={isPlayable}
                   posterUrl={videoPosterUrl}
+                  suppressPoster={isPlayable && suppressVideoPoster}
                 />
               ) : (
                 <img
