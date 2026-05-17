@@ -275,8 +275,18 @@ const AnimatedRoutes = () => {
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      console.log('[TagSearchDebug][AppBack] backButton', {
+        pathname: location.pathname,
+        showIndex,
+        canGoBack,
+        historyState: history.state,
+        postDetailOpen: (window as any).__isPostDetailOpen,
+        returnToPostDetail: sessionStorage.getItem('postSearch_returnToPostDetail'),
+      });
+
       // 0순위(최상): 알림/메시지 전역 오버레이가 떠 있으면 그것부터 닫기
       if ((window as any).__isNotificationsOverlayOpen === true) {
+        console.log('[TagSearchDebug][AppBack] close notifications overlay');
         window.dispatchEvent(new CustomEvent('close-notifications-overlay'));
         return;
       }
@@ -308,12 +318,14 @@ const AnimatedRoutes = () => {
       // 플래그는 true로 남아 있을 수 있다. 이때 PostDetail을 먼저 닫으면
       // "지도마커 상세 → 태그 검색 → 뒤로가기 → 지도마커 상세" 흐름이 깨진다.
       if (showIndex && (window as any).__isPostDetailOpen === true) {
+        console.log('[TagSearchDebug][AppBack] close visible PostDetail');
         window.dispatchEvent(new CustomEvent('close-post-detail-by-back'));
         return;
       }
 
       // 2순위: window 플래그로 PostListOverlay 열림 여부를 즉시 확인 (타이밍 이슈 없음)
       if (location.pathname === '/' && (window as any).__isPostListOpen === true) {
+        console.log('[TagSearchDebug][AppBack] close post list overlay');
         window.dispatchEvent(new CustomEvent('close-post-list-overlay'));
         return;
       }
@@ -332,10 +344,15 @@ const AnimatedRoutes = () => {
       } 
       // 4순위: 그 외 페이지는 이전 페이지로
       else if (canGoBack) {
+        console.log('[TagSearchDebug][AppBack] history.back()', {
+          pathname: location.pathname,
+          historyState: history.state,
+        });
         window.history.back();
-      } 
+      }
       // 5순위: 히스토리가 없으면 메인으로
       else {
+        console.log('[TagSearchDebug][AppBack] navigate home fallback');
         navigate('/');
       }
     });

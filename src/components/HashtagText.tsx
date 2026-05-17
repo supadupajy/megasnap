@@ -58,6 +58,13 @@ const HashtagText: React.FC<HashtagTextProps> = ({
         sessionStorage.setItem('postSearch_returnToPostDetail', '1');
         history.replaceState({ ...(history.state || {}), postDetailOpen: true }, '');
       }
+
+      console.log('[TagSearchDebug][HashtagClick]', {
+        query,
+        postDetailOpen: (window as any).__isPostDetailOpen,
+        historyState: history.state,
+        returnToPostDetail: sessionStorage.getItem('postSearch_returnToPostDetail'),
+      });
     } catch {}
 
     // 포스팅 검색 페이지로 이동 (URL 쿼리에 검색어 전달).
