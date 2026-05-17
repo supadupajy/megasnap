@@ -2172,7 +2172,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       <video
         ref={setRefs}
         src={src}
-        className="absolute inset-0 w-full h-full object-cover video-hq"
+        className="absolute inset-0 w-full h-full object-cover video-hq bg-black"
         // suppressPoster일 땐 native poster도 띄우지 않음 (썸네일 깜빡임 원천 차단).
         // 그 외엔 1x1 투명 poster로 회색 placeholder 깜빡임만 막는다.
         poster={suppressPoster ? TRANSPARENT_POSTER : (posterUrl || TRANSPARENT_POSTER)}
@@ -2185,6 +2185,9 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           // (poster를 안 띄우는 대신 부모의 blur 배경이 디코드 동안 메움)
           opacity: !suppressPoster && isCurrent && !isReady ? 0 : 1,
           transition: "opacity 200ms ease-out",
+          // 디코드 전 브라우저 기본 흰 배경이 잠깐 보이는 현상 방지.
+          // (특히 이어 재생 시 suppressPoster=true라 poster도 안 깔리므로 필수)
+          backgroundColor: "#000",
         }}
       />
       {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 (이어 재생 모드 제외) */}
@@ -2474,7 +2477,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
           return (
             <div
               key={`${url}-${i}`}
-              className="relative h-full shrink-0"
+              className="relative h-full shrink-0 bg-black"
               style={{ width: `${100 / mediaList.length}%` }}
             >
               {isVid ? (
