@@ -238,6 +238,8 @@ const MapContainer = ({
   const [markerAnimationDebugLogs, setMarkerAnimationDebugLogs] = useState<MarkerAnimationDebugLog[]>([]);
   const [isMarkerAnimationDebuggerCollapsed, setIsMarkerAnimationDebuggerCollapsed] = useState(false);
   const markerAnimationDebugSeqRef = useRef(0);
+  const markerAnimationDebugPendingRef = useRef<MarkerAnimationDebugLog[]>([]);
+  const markerAnimationDebugFlushTimerRef = useRef<number | null>(null);
 
   // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
   const [uiState, setUiState] = useState<'idle' | 'pressing' | 'hidden'>('idle');
@@ -400,16 +402,38 @@ const MapContainer = ({
     currentLevelRef.current = currentLevel;
   }, [currentLevel]);
 
+  const flushMarkerAnimationDebugLogs = useCallback(() => {
+    markerAnimationDebugFlushTimerRef.current = null;
+    const pending = markerAnimationDebugPendingRef.current;
+    if (pending.length === 0) return;
+
+    markerAnimationDebugPendingRef.current = [];
+    setMarkerAnimationDebugLogs((prev) => [
+      ...pending,
+      ...prev,
+    ].slice(0, MARKER_ANIMATION_DEBUG_MAX_LOGS));
+  }, []);
+
   const pushMarkerAnimationDebugLog = useCallback((entry: Omit<MarkerAnimationDebugLog, 'seq' | 'time'>) => {
     const seq = markerAnimationDebugSeqRef.current + 1;
     markerAnimationDebugSeqRef.current = seq;
     const now = new Date();
     const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}.${now.getMilliseconds().toString().padStart(3, '0')}`;
 
-    setMarkerAnimationDebugLogs((prev) => [
-      { seq, time, ...entry },
-      ...prev,
-    ].slice(0, MARKER_ANIMATION_DEBUG_MAX_LOGS));
+    markerAnimationDebugPendingRef.current.unshift({ seq, time, ...entry });
+
+    if (markerAnimationDebugFlushTimerRef.current === null) {
+      markerAnimationDebugFlushTimerRef.current = window.setTimeout(flushMarkerAnimationDebugLogs, 350);
+    }
+  }, [flushMarkerAnimationDebugLogs]);
+
+  useEffect(() => {
+    return () => {
+      if (markerAnimationDebugFlushTimerRef.current !== null) {
+        window.clearTimeout(markerAnimationDebugFlushTimerRef.current);
+        markerAnimationDebugFlushTimerRef.current = null;
+      }
+    };
   }, []);
 
   const isOverlayInsideViewport = useCallback((overlay: any) => {
@@ -2616,7 +2640,10 @@ const MapContainer = ({
           <button
             type="button"
             className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold active:scale-95"
-            onClick={() => setMarkerAnimationDebugLogs([])}
+            onClick={() => {
+              markerAnimationDebugPendingRef.current = [];
+              setMarkerAnimationDebugLogs([]);
+            }}
           >
             지우기
           </button>
