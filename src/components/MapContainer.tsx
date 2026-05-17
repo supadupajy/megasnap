@@ -1219,6 +1219,14 @@ const MapContainer = ({
               content.setAttribute('data-content-state', nowStateKey);
               scheduleOverlapBadgeUpdateRef.current();
             }
+            // 새로 업로드한 컨텐츠는 highlight 시점에 pop-pop 등장을 한 번 더 강제 재생한다.
+            // 지도 이동/마커 생성 타이밍에 따라 최초 appear 클래스가 소비돼도 업로드 완료 애니메이션이 보장된다.
+            if (pNow?.isNewRealtime) {
+              content.classList.remove('marker-appear-animation');
+              void content.offsetWidth;
+              content.classList.add('marker-appear-animation');
+            }
+
             // marker-appear-animation은 유지 — 새 컨텐츠 생성 시 pop! 등장이
             // 끊기지 않도록 그대로 두고, highlighted와 동시에 재생되도록 한다.
             // (.highlighted.marker-appear-animation은 CSS에서 등장 애니메이션을 허용)

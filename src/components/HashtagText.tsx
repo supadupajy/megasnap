@@ -52,6 +52,7 @@ const HashtagText: React.FC<HashtagTextProps> = ({
     try {
       sessionStorage.setItem('postSearch_query', query);
       sessionStorage.removeItem('postSearch_results');
+      window.dispatchEvent(new CustomEvent('post-search-query', { detail: { query } }));
     } catch {}
 
     // 포스팅 검색 페이지로 이동 (URL 쿼리에 검색어 전달).

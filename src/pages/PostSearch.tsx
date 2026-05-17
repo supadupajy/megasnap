@@ -242,6 +242,7 @@ const PostSearch = () => {
 
   const debounceInitRef = useRef(false);
   const initialSearchRanRef = useRef(false);
+  const skipNextDebounceRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.style.overflow = 'hidden';
@@ -309,22 +310,42 @@ const PostSearch = () => {
     }
   }, []);
 
-  // 초기 진입: URL query(?q=...) 또는 sessionStorage 캐시 복원
   useEffect(() => {
-    if (initialSearchRanRef.current) return;
-    initialSearchRanRef.current = true;
+    const handleTagSearch = (event: Event) => {
+      const query = (event as CustomEvent<{ query?: string }>).detail?.query?.trim();
+      if (!query) return;
+      setSelectedPostId(null);
+      skipNextDebounceRef.current = true;
+      setSearchQuery(query);
+      handleSearch(query);
+    };
 
+    window.addEventListener('post-search-query', handleTagSearch);
+    return () => window.removeEventListener('post-search-query', handleTagSearch);
+  }, [handleSearch]);
+
+  // 초기 진입: URL query(?q=...) 또는 sessionStorage 캐시 복원
+  // 상세 화면에서 태그를 눌러 같은 /post-search 경로로 다시 이동해도
+  // URL query 변화를 즉시 반영하고 상세 오버레이를 닫아 검색창이 맨 위에 보이게 한다.
+  useEffect(() => {
     const urlQuery = searchParams.get('q')?.trim() || '';
 
     if (urlQuery) {
+      setSelectedPostId(null);
+      skipNextDebounceRef.current = true;
       setSearchQuery(urlQuery);
       try {
         sessionStorage.setItem(CACHE_KEY_QUERY, urlQuery);
         sessionStorage.removeItem(CACHE_KEY_RESULTS);
       } catch {}
       handleSearch(urlQuery);
+      initialSearchRanRef.current = true;
+      debounceInitRef.current = true;
       return;
     }
+
+    if (initialSearchRanRef.current) return;
+    initialSearchRanRef.current = true;
 
     // 캐시 복원
     try {
@@ -342,6 +363,10 @@ const PostSearch = () => {
   useEffect(() => {
     if (!debounceInitRef.current) {
       debounceInitRef.current = true;
+      return;
+    }
+    if (skipNextDebounceRef.current) {
+      skipNextDebounceRef.current = false;
       return;
     }
     const timer = setTimeout(() => handleSearch(searchQuery), 400);

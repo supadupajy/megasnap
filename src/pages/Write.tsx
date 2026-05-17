@@ -738,6 +738,7 @@ const Write = () => {
         category: createdPost.category,
         hashtags: createdPost.hashtags || hashtags,
         borderType: 'none',
+        isNewRealtime: true,
       };
 
       showSuccess('게시물이 등록되었습니다! ✨');

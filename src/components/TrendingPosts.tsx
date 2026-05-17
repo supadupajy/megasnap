@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, ChevronUp, Flame, Heart, Eye, ExternalLink, Sparkles, Mail, ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { cn, getOptimizedMarkerImage, getOptimizedBannerImage, formatCount } from "@/lib/utils";
+import { cn, getOptimizedFeedImage, getOptimizedMarkerImage, getOptimizedBannerImage, formatCount } from "@/lib/utils";
 import { Post } from "@/types";
 import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
@@ -406,7 +406,7 @@ const PostThumbnail: React.FC<{
     return (
       <div className={cn("relative w-full h-full", className)}>
         <img
-          src={getOptimizedMarkerImage(imageUrl, post.id)}
+          src={getOptimizedFeedImage(imageUrl, post.id)}
           alt=""
           loading="lazy"
           decoding="async"
@@ -433,7 +433,7 @@ const PostThumbnail: React.FC<{
   return (
     <div className={cn("relative w-full h-full", className)}>
       <img
-        src={getOptimizedMarkerImage(imageUrl, post.id)}
+        src={getOptimizedFeedImage(imageUrl, post.id)}
         alt=""
         loading="lazy"
         decoding="async"
