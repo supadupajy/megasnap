@@ -2,7 +2,6 @@
 
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import Notifications from '@/pages/Notifications';
 
 interface NotificationsOverlayProps {
@@ -37,22 +36,12 @@ const NotificationsOverlay: React.FC<NotificationsOverlayProps> = ({ open, onClo
   }, [open]);
 
   if (typeof document === 'undefined') return null;
+  if (!open) return null;
 
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="notifications-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          className="fixed inset-0 z-[12500] bg-white"
-        >
-          <Notifications onClose={onClose} />
-        </motion.div>
-      )}
-    </AnimatePresence>,
+    <div className="fixed inset-0 z-[12500] bg-white">
+      <Notifications onClose={onClose} />
+    </div>,
     document.body
   );
 };
