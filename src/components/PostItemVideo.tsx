@@ -136,17 +136,17 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     debugLog('src-effect-reset', { initialReadyState: video?.readyState, initialNetworkState: video?.networkState });
     if (!video) return;
 
-    const markReady = (reason: string) => {
+    const markReadyToShowVideo = (reason: string) => {
       setFirstFrameReady(true);
-      debugLog('first-frame-ready', { reason });
+      debugLog('first-frame-visible', { reason });
     };
 
-    const handleLoadedData = () => markReady('loadeddata');
-    const handleCanPlay = () => markReady('canplay');
+    const handleLoadedData = () => debugLog('loadeddata');
+    const handleCanPlay = () => debugLog('canplay');
     const handlePlaying = () => {
       userPausedRef.current = false;
       setUserPaused(false);
-      markReady('playing');
+      markReadyToShowVideo('playing');
     };
     const handleLoadedMetadata = () => debugLog('loadedmetadata');
     const handleCanPlayThrough = () => debugLog('canplaythrough');
@@ -165,9 +165,11 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       message: video.error?.message,
     });
     const handleTimeUpdate = () => {
-      if (firstTimeUpdateLoggedRef.current) return;
-      firstTimeUpdateLoggedRef.current = true;
-      debugLog('first-timeupdate');
+      if (!firstTimeUpdateLoggedRef.current) {
+        firstTimeUpdateLoggedRef.current = true;
+        debugLog('first-timeupdate');
+      }
+      markReadyToShowVideo('timeupdate');
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -187,8 +189,6 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     video.addEventListener('resize', handleResize);
     video.addEventListener('error', handleError);
     video.addEventListener('timeupdate', handleTimeUpdate);
-
-    if (video.readyState >= 2) markReady('already-ready');
 
     return () => {
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
@@ -357,8 +357,8 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         onClick={handleVideoTap}
         style={{
           opacity: firstFrameReady ? 1 : 0,
-          transition: 'opacity 180ms ease-out',
-          backgroundColor: '#000',
+          transition: 'opacity 120ms ease-out',
+          backgroundColor: 'transparent',
         }}
       />
 
