@@ -436,6 +436,19 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     : [];
   const activeMedia = effectiveRawDisplayMedia[currentImageIndex] || effectiveRawDisplayMedia[0];
 
+  useEffect(() => {
+    if (!currentPost) return;
+    console.info('[video-debug]', 'detail-slider-index', {
+      postId: currentPost.id,
+      currentImageIndex,
+      mediaCount: displayMedia.length,
+      activeType: activeMedia?.type,
+      isOpen,
+      scrollLeft: imageScrollRef.current?.scrollLeft,
+      clientWidth: imageScrollRef.current?.clientWidth,
+    });
+  }, [activeMedia?.type, currentImageIndex, currentPost?.id, displayMedia.length, imageScrollRef, isOpen]);
+
   const mediaAspectRatio = useMediaAspectRatio(
     activeMedia?.url || displayImage,
     activeMedia?.type || 'image'
@@ -789,6 +802,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                 posterUrl={media.posterUrl}
                 autoPlay={index === currentImageIndex}
                 showControls={index === currentImageIndex}
+                debugLabel={`detail:${currentPost.id}:media-${index}:active-${index === currentImageIndex}`}
               />
             ) : (
               <img

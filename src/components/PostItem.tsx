@@ -325,6 +325,22 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     ));
   }, [post]);
 
+  useEffect(() => {
+    const activeMedia = displayMedia[currentImageIndex];
+    console.info('[video-debug]', 'feed-slider-index', {
+      postId: post.id,
+      currentImageIndex,
+      mediaCount: displayMedia.length,
+      activeType: activeMedia?.type,
+      autoPlayVideo,
+      isVisible,
+      isReadyToPlay,
+      isOverlayOpen,
+      scrollLeft: imageScrollRef.current?.scrollLeft,
+      clientWidth: imageScrollRef.current?.clientWidth,
+    });
+  }, [autoPlayVideo, currentImageIndex, displayMedia, imageScrollRef, isOverlayOpen, isReadyToPlay, isVisible, post.id]);
+
   const renderMedia = () => {
     if (displayMedia.length === 1 && displayMedia[0].type === 'video') {
       return (
@@ -333,6 +349,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           src={displayMedia[0].url}
           posterUrl={displayMedia[0].posterUrl}
           autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
+          debugLabel={`feed:${post.id}:single-video`}
         />
       );
     }
@@ -365,6 +382,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                   posterUrl={media.posterUrl}
                   autoPlay={index === currentImageIndex && !!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
                   showControls={index === currentImageIndex}
+                  debugLabel={`feed:${post.id}:media-${index}:active-${index === currentImageIndex}`}
                 />
               ) : (
                 <img
