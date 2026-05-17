@@ -38,9 +38,15 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   const userPausedRef = useRef(false);
   const wasPlayingBeforeScrubRef = useRef(false);
   const revealTokenRef = useRef(0);
+  const firstFrameReadyRef = useRef(false);
   const [userPaused, setUserPaused] = useState(false);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
   const [muted, setMuted] = useVideoMuted();
+
+  const setFrameReady = (value: boolean) => {
+    firstFrameReadyRef.current = value;
+    setFirstFrameReady(value);
+  };
 
   const log = useCallback((event: string, extra: Record<string, unknown> = {}) => {
     const video = localVideoRef.current;
@@ -50,7 +56,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       src: shortDebugUrl(src),
       posterUrl: shortDebugUrl(posterUrl),
       autoPlay,
-      firstFrameReady,
+      firstFrameReady: firstFrameReadyRef.current,
       video: video ? {
         readyState: video.readyState,
         networkState: video.networkState,
@@ -67,7 +73,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       } : null,
       ...extra,
     });
-  }, [autoPlay, debugLabel, firstFrameReady, posterUrl, src]);
+  }, [autoPlay, debugLabel, posterUrl, src]);
 
   const setVideoRefs = useCallback((el: HTMLVideoElement | null) => {
     localVideoRef.current = el;
@@ -87,8 +93,8 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     const token = revealTokenRef.current;
     const reveal = () => {
       if (token !== revealTokenRef.current) return;
-      log('active-video-first-frame-ready');
-      setFirstFrameReady(true);
+      if (!firstFrameReadyRef.current) log('active-video-first-frame-ready');
+      setFrameReady(true);
     };
 
     if (video.requestVideoFrameCallback) {
@@ -102,9 +108,9 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     userPausedRef.current = false;
     revealTokenRef.current += 1;
     setUserPaused(false);
-    setFirstFrameReady(false);
+    setFrameReady(false);
     log('active-video-src-reset');
-  }, [log, src]);
+  }, [src]);
 
   useEffect(() => {
     const video = localVideoRef.current;
@@ -118,7 +124,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
 
     const handleLoadedData = () => {
       log('active-video-loadeddata');
-      if (!autoPlay) setFirstFrameReady(true);
+      if (!autoPlay) setFrameReady(true);
     };
     const handlePlaying = () => {
       userPausedRef.current = false;
@@ -130,12 +136,11 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     const handleCanPlay = () => log('active-video-canplay');
     const handleError = () => log('active-video-error', { code: video.error?.code, message: video.error?.message });
 
+    video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('playing', handlePlaying);
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('error', handleError);
-
-    video.addEventListener('loadeddata', handleLoadedData);
-    video.addEventListener('playing', handlePlaying);
     return () => {
       video.removeEventListener('loadeddata', handleLoadedData);
       video.removeEventListener('playing', handlePlaying);

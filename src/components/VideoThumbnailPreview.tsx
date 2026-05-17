@@ -25,7 +25,13 @@ const VideoThumbnailPreview = ({
 }: VideoThumbnailPreviewProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const instanceIdRef = useRef(Math.random().toString(36).slice(2, 8));
+  const isReadyRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
+
+  const setReady = (value: boolean) => {
+    isReadyRef.current = value;
+    setIsReady(value);
+  };
 
   const log = useCallback((event: string, extra: Record<string, unknown> = {}) => {
     const video = videoRef.current;
@@ -38,7 +44,7 @@ const VideoThumbnailPreview = ({
       instanceId: instanceIdRef.current,
       src: shortUrl(src),
       startTime,
-      isReady,
+      isReady: isReadyRef.current,
       video: video ? {
         readyState: video.readyState,
         networkState: video.networkState,
@@ -60,12 +66,12 @@ const VideoThumbnailPreview = ({
       } : null,
       ...extra,
     });
-  }, [debugLabel, isReady, src, startTime]);
+  }, [debugLabel, src, startTime]);
 
   useEffect(() => {
-    setIsReady(false);
+    setReady(false);
     log('thumb-reset');
-  }, [log, src, startTime]);
+  }, [src, startTime]);
 
   useEffect(() => {
     log('thumb-mount');
@@ -77,8 +83,8 @@ const VideoThumbnailPreview = ({
     if (!el) return;
 
     const show = (reason: string) => {
-      log('thumb-ready', { reason });
-      setIsReady(true);
+      if (!isReadyRef.current) log('thumb-ready', { reason });
+      setReady(true);
       requestAnimationFrame(() => log('thumb-ready-after-raf', { reason }));
     };
 
