@@ -2004,6 +2004,7 @@ const MapContainer = ({
     videoThumbPendingRef.current.add(postId);
 
     const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
     video.muted = true;
     video.playsInline = true;
     video.preload = 'auto';
@@ -2293,12 +2294,11 @@ const MapContainer = ({
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
     const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
-    const markerVideoSrc = hasVideo ? `${firstVideoUrl}#t=0.12` : '';
     const markerImage = hasVideo ? cachedVideoThumb : optimizedDisplayImage;
     const imgContent = markerImage
       ? `<img src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
       : hasVideo
-        ? `<video src="${markerVideoSrc}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;background:#e5e7eb;" />`
+        ? `<div style="width:100%;height:100%;background:#eef2ff;display:flex;align-items:center;justify-content:center;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#4f46e5'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
         : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
@@ -2306,19 +2306,17 @@ const MapContainer = ({
         ${isAd ? adGlowLayer : ''}
         ${isAd ? adFlipWrapperStart : ''}
         ${isAd ? adLabelHtml : labelHtml}
-        <div style="position:relative;width:60px;height:60px;z-index:2;">
-          <div class="${influencerClass}" style="${innerBoxStyle}">
-            ${isAd ? adSparklesHtml : ''}
-            <div style="width:100%;height:100%;position:relative;border-radius:${isAd ? '15px' : '16px'};overflow:hidden;" class="${shineClass}">
-              ${imgContent}
-              <div style="position:absolute;bottom:3px;right:3px;background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:8px;z-index:5;line-height:1;display:flex;align-items:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
-                <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
-                <span>${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</span>
-              </div>
-              ${videoIconHtml}
+        <div class="${influencerClass}" style="${innerBoxStyle}">
+          ${isAd ? adSparklesHtml : ''}
+          <div style="width:100%;height:100%;position:relative;border-radius:${isAd ? '15px' : '16px'};overflow:hidden;" class="${shineClass}">
+            ${imgContent}
+            <div style="position:absolute;bottom:3px;right:3px;background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:8px;z-index:5;line-height:1;display:flex;align-items:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+              <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+              <span>${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</span>
             </div>
+            ${videoIconHtml}
+            ${countdownRingHtml}
           </div>
-          ${countdownRingHtml}
         </div>
         ${isAd ? adFlipWrapperEnd : ''}
       </div>
