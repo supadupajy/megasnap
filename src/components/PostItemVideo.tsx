@@ -11,6 +11,7 @@ interface PostItemVideoProps {
   src: string;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일 (피드의 이미지 URL). */
   posterUrl?: string;
+  autoPlay?: boolean;
 }
 
 /**
@@ -26,45 +27,77 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   videoRef,
   src,
   posterUrl,
+  autoPlay = false,
 }) => {
   const [userPaused, setUserPaused] = useState(false);
+  const userPausedRef = useRef(false);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
-  const [muted] = useVideoMuted();
+  const [muted, setMuted] = useVideoMuted();
 
   useEffect(() => {
+    userPausedRef.current = false;
     setUserPaused(false);
     setFirstFrameReady(false);
 
     const v = videoRef.current;
     if (!v) return;
 
+    const tryPlay = () => {
+      if (!autoPlay || userPausedRef.current) return;
+      v.play().catch(() => {
+        v.muted = true;
+        setMuted(true);
+        v.play().catch(() => {});
+      });
+    };
     const markReady = () => setFirstFrameReady(true);
+    const onCanPlay = () => {
+      markReady();
+      tryPlay();
+    };
     const onPlaying = () => {
       setUserPaused(false);
       markReady();
     };
 
     v.addEventListener('loadeddata', markReady);
-    v.addEventListener('canplay', markReady);
+    v.addEventListener('canplay', onCanPlay);
     v.addEventListener('playing', onPlaying);
 
-    if (v.readyState >= 2) markReady();
+    if (v.readyState >= 2) {
+      markReady();
+      tryPlay();
+    }
 
     return () => {
       v.removeEventListener('loadeddata', markReady);
-      v.removeEventListener('canplay', markReady);
+      v.removeEventListener('canplay', onCanPlay);
       v.removeEventListener('playing', onPlaying);
     };
-  }, [videoRef, src]);
+  }, [videoRef, src, autoPlay]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = muted;
+  }, [videoRef, muted]);
+
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (!autoPlay) v.pause();
+  }, [videoRef, autoPlay]);
 
   const handleVideoTap = (e: React.MouseEvent) => {
     e.stopPropagation();
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) {
+      userPausedRef.current = false;
       setUserPaused(false);
       v.play().catch(() => {});
     } else {
+      userPausedRef.current = true;
       setUserPaused(true);
       v.pause();
     }

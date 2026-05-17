@@ -213,7 +213,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
         if (videoRef.current) {
           // 외부 오버레이가 떠 있으면 자동 재생을 보류
           if (entry.isIntersecting && isReadyToPlay && !isOverlayOpen) {
-            videoRef.current.play().catch(e => console.error("[PostItem] Video play error:", e));
+            videoRef.current.play().catch(() => {
+              if (!videoRef.current) return;
+              videoRef.current.muted = true;
+              videoRef.current.play().catch(() => {});
+            });
           } else {
             videoRef.current.pause();
           }
@@ -329,6 +333,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           videoRef={videoRef}
           src={displayMedia[0].url}
           posterUrl={displayMedia[0].posterUrl}
+          autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
         />
       );
     }
@@ -360,6 +365,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                     videoRef={videoRef}
                     src={media.url}
                     posterUrl={media.posterUrl}
+                    autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
                   />
                 ) : (
                   <VideoThumbnailPreview
