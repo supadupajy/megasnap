@@ -340,8 +340,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     }
 
     return (
-      <div className="relative w-full h-full bg-gray-200 group/slider">
-        <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
+      <div className="relative w-full h-full bg-transparent group/slider">
+        <div className="absolute inset-0 bg-transparent" aria-hidden="true" />
         <div
           ref={imageScrollRef}
           className={cn(
@@ -360,7 +360,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             return (
             <div
               key={`${media.type}-${index}`}
-              className="relative w-full h-full shrink-0 snap-center snap-always bg-gray-200 bg-cover bg-center"
+              className="relative w-full h-full shrink-0 snap-center snap-always bg-transparent bg-cover bg-center"
               style={{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined }}
             >
               <div className="absolute inset-0 bg-gray-200/0" aria-hidden="true" />
@@ -377,7 +377,7 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 ) : (
                   <VideoThumbnailPreview
                     src={media.url}
-                    className="relative z-[1] w-full h-full object-cover bg-gray-200 pointer-events-none"
+                    className="relative z-[1] w-full h-full object-cover pointer-events-none"
                     startTime={0.8}
                   />
                 )

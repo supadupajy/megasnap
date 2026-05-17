@@ -3,51 +3,65 @@ import { useEffect, useRef, useState } from 'react';
 interface VideoThumbnailPreviewProps {
   src: string;
   className?: string;
-  /** 미리보기로 보여줄 시작 시간(초). 기본 0.5초 */
   startTime?: number;
 }
 
-/**
- * 자동재생하지 않는 영상 썸네일(첫 프레임 미리보기) 용도.
- * 안드로이드 Chrome/WebView에서 <video>가 첫 프레임을 그리기 전에
- * 큰 재생버튼/회색 placeholder가 잠깐 깜빡이는 문제를 방지하기 위해
- * `loadeddata` 이벤트가 발생할 때까지 video를 opacity 0으로 숨겨둔다.
- */
 const VideoThumbnailPreview = ({
   src,
   className,
-  startTime = 0.5,
+  startTime = 0.8,
 }: VideoThumbnailPreviewProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     setIsReady(false);
-  }, [src]);
+  }, [src, startTime]);
 
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    const handleLoaded = () => setIsReady(true);
-    el.addEventListener('loadeddata', handleLoaded);
-    return () => {
-      el.removeEventListener('loadeddata', handleLoaded);
+
+    const show = () => setIsReady(true);
+    const seekToPreviewFrame = () => {
+      if (!Number.isFinite(el.duration) || el.duration <= 0.25) return;
+      const target = Math.min(startTime, el.duration - 0.05);
+      if (target > 0 && Math.abs(el.currentTime - target) > 0.05) {
+        try {
+          el.currentTime = target;
+        } catch {}
+      }
     };
-  }, [src]);
+
+    el.addEventListener('loadedmetadata', seekToPreviewFrame);
+    el.addEventListener('loadeddata', show);
+    el.addEventListener('seeked', show);
+    el.addEventListener('canplay', show);
+
+    return () => {
+      el.removeEventListener('loadedmetadata', seekToPreviewFrame);
+      el.removeEventListener('loadeddata', show);
+      el.removeEventListener('seeked', show);
+      el.removeEventListener('canplay', show);
+    };
+  }, [src, startTime]);
 
   return (
-    <video
-      ref={videoRef}
-      src={`${src}#t=${startTime}`}
-      className={`${className ?? ''} video-hq`.trim()}
-      muted
-      playsInline
-      preload="metadata"
-      style={{
-        opacity: isReady ? 1 : 0,
-        transition: 'opacity 150ms ease-out',
-      }}
-    />
+    <div className="relative h-full w-full overflow-hidden bg-transparent">
+      <video
+        ref={videoRef}
+        src={src}
+        className={`${className ?? ''} video-hq`.trim()}
+        muted
+        playsInline
+        preload="auto"
+        style={{
+          opacity: isReady ? 1 : 0,
+          transition: 'opacity 80ms linear',
+          backgroundColor: 'transparent',
+        }}
+      />
+    </div>
   );
 };
 

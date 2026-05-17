@@ -784,7 +784,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           return (
           <div
             key={`${media.type}-${index}`}
-            className="w-full h-full shrink-0 snap-center relative bg-gray-200 bg-cover bg-center"
+            className="w-full h-full shrink-0 snap-center relative bg-transparent bg-cover bg-center"
             style={{
               scrollSnapStop: 'always',
               backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
@@ -842,7 +842,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
     return (
       <div
-        className="relative rounded-3xl overflow-hidden bg-gray-200 bg-cover bg-center shadow-inner transition-[height] duration-300"
+        className="relative rounded-3xl overflow-hidden bg-transparent bg-cover bg-center shadow-inner transition-[height] duration-300"
         style={{
           aspectRatio: mediaAspectRatio,
           backgroundImage: activeBackgroundUrl ? `url(${activeBackgroundUrl})` : undefined,

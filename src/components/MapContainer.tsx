@@ -2092,14 +2092,17 @@ const MapContainer = ({
       const content = overlay.getContent() as HTMLElement;
       if (!content) return;
 
-      const post = postsRef.current.find(p => p.id === postId);
-      if (!post) return;
+      const dataUrl = videoThumbCacheRef.current.get(postId);
+      if (!dataUrl) return;
 
-      const isMineKey = !!(authUserRef.current && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUserRef.current.id));
-      const isAdPendingKey = !!(post as any).isAdPending;
-      const newStateKey = `${post.borderType}-${post.isAd}-${!!post.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${post.likes}-1`;
-      content.innerHTML = getMarkerInnerHtmlRef.current(post, false);
-      content.setAttribute('data-content-state', newStateKey);
+      const img = content.querySelector('[data-video-marker-img="true"]') as HTMLImageElement | null;
+      if (img) {
+        img.src = dataUrl;
+        img.style.opacity = '1';
+      }
+
+      const state = content.getAttribute('data-content-state');
+      if (state) content.setAttribute('data-content-state', state.replace(/-[01]$/, '-1'));
     };
 
     const seekNextCandidate = () => {
@@ -2266,7 +2269,10 @@ const MapContainer = ({
 
     const adGlowLayer = '';
 
-    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};background-color:#e5e7eb;box-sizing:border-box;overflow:hidden;`;
+    const innerBoxBackground = hasVideo && !optimizedDisplayImage && !videoThumbCacheRef.current.get(post.id)
+      ? 'background:linear-gradient(135deg,#111827,#374151);'
+      : 'background-color:#e5e7eb;';
+    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
 
     // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
     // 광고/광고대기 마커에는 표시하지 않음. createdAt이 없는 포스트도 skip.
@@ -2313,8 +2319,10 @@ const MapContainer = ({
     const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
     const markerImage = cachedVideoThumb || optimizedDisplayImage;
     const imgContent = markerImage
-      ? `<img src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-      : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
+      ? `<img ${hasVideo ? 'data-video-marker-img="true"' : ''} src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;opacity:1;" />`
+      : hasVideo
+        ? `<img data-video-marker-img="true" alt="" style="width:100%;height:100%;object-fit:cover;display:block;opacity:0;" />`
+        : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
