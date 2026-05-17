@@ -274,6 +274,7 @@ const MapContainer = ({
   const [mapInstanceState, setMapInstanceState] = useState<any>(null);
   const [userLocationPixel, setUserLocationPixel] = useState<{ x: number; y: number } | null>(null);
   const [markerExpiryNow, setMarkerExpiryNow] = useState(() => Date.now());
+  const [videoThumbRevision, setVideoThumbRevision] = useState(0);
 
   // ── 마커 숨김 관련 상태 (React state는 UI 표시용만, 실제 동작은 ref로) ──
   const [uiState, setUiState] = useState<'idle' | 'pressing' | 'hidden'>('idle');
@@ -1126,10 +1127,29 @@ const MapContainer = ({
         ? (post.videoUrl || (Array.isArray(post.videoUrls) ? post.videoUrls.find((url) => typeof url === 'string' && url.trim()) : ''))
         : '';
       const storedVideoPoster = firstVideoUrl ? getStoredMarkerThumbnail(post) : '';
+      const cachedVideoThumb = firstVideoUrl ? videoThumbCacheRef.current.get(post.id) : '';
+      const shouldDelayVideoMarker = !!firstVideoUrl && !storedVideoPoster && !cachedVideoThumb;
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
-      const hasThumbKey = firstVideoUrl ? (videoThumbCacheRef.current.has(post.id) ? '1' : '0') : '';
+      const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
+
+      if (shouldDelayVideoMarker) {
+        console.info('[video-flicker-debug]', 'marker-render-delayed-until-thumb', {
+          postId: post.id,
+          videoUrl: shortDebugUrl(firstVideoUrl),
+          hasStoredVideoPoster: !!storedVideoPoster,
+          hasCachedVideoThumb: !!cachedVideoThumb,
+        });
+        if (existingOverlay) {
+          existingOverlay.setMap(null);
+          overlaysRef.current.delete(post.id);
+          viewportVisibilityRef.current.delete(String(post.id));
+          clearViewportAnimationTimer(String(post.id));
+        }
+        extractVideoThumbRef.current(post.id, firstVideoUrl);
+        return;
+      }
 
       if (!existingOverlay) {
         const content = document.createElement('div');
@@ -1214,7 +1234,7 @@ const MapContainer = ({
     });
 
     scheduleMarkerViewportVisibilityUpdate(false);
-  }, [posts, isMapReady, authUser, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer]);
+  }, [posts, isMapReady, authUser, videoThumbRevision, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer]);
 
   useEffect(() => {
     if (!isMapReady) return;
@@ -2198,6 +2218,7 @@ const MapContainer = ({
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.86);
         videoThumbCacheRef.current.set(postId, dataUrl);
+        setVideoThumbRevision((revision) => revision + 1);
         finish('captured');
         refreshMarkerWithCachedThumb();
       } catch (error) {
