@@ -36,6 +36,26 @@ const POST_COLUMNS = 'id, content, image_url, images, location_name, latitude, l
 const sanitizePostgrestSearchTerm = (term: string) =>
   term.replace(/[,%()]/g, ' ').replace(/\s+/g, ' ').trim();
 
+const getInitialPostSearchQuery = (searchParams: URLSearchParams) => {
+  const urlQuery = searchParams.get('q')?.trim() || '';
+  if (urlQuery) return urlQuery;
+  try {
+    return sessionStorage.getItem(CACHE_KEY_QUERY) || '';
+  } catch {
+    return '';
+  }
+};
+
+const getInitialPostSearchResults = (hasUrlQuery: boolean): SearchPost[] => {
+  if (hasUrlQuery) return [];
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY_RESULTS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
 // ── 검색 결과 클릭 시 뜨는 PostDetail 페이지 레이아웃 ─────────────────
 // 페이지 전체를 덮어 검색 결과를 가린 상태로 상세를 보여준다.
 const PostDetailFullPage = ({
@@ -233,11 +253,14 @@ const PostDetailFullPage = ({
 const PostSearch = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const initialUrlQuery = searchParams.get('q')?.trim() || '';
+  const initialSearchQuery = getInitialPostSearchQuery(searchParams);
+  const initialResults = getInitialPostSearchResults(!!initialUrlQuery);
 
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [results, setResults] = useState<SearchPost[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>(() => initialSearchQuery);
+  const [results, setResults] = useState<SearchPost[]>(() => initialResults);
+  const [isSearching, setIsSearching] = useState(() => !!initialUrlQuery);
+  const [hasSearched, setHasSearched] = useState<boolean>(() => !!initialSearchQuery);
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
 
@@ -310,20 +333,6 @@ const PostSearch = () => {
       setIsSearching(false);
     }
   }, []);
-
-  useEffect(() => {
-    const handleTagSearch = (event: Event) => {
-      const query = (event as CustomEvent<{ query?: string }>).detail?.query?.trim();
-      if (!query) return;
-      setSelectedPostId(null);
-      skipNextDebounceRef.current = true;
-      setSearchQuery(query);
-      handleSearch(query);
-    };
-
-    window.addEventListener('post-search-query', handleTagSearch);
-    return () => window.removeEventListener('post-search-query', handleTagSearch);
-  }, [handleSearch]);
 
   // 초기 진입: URL query(?q=...) 또는 sessionStorage 캐시 복원
   // 상세 화면에서 태그를 눌러 같은 /post-search 경로로 다시 이동해도

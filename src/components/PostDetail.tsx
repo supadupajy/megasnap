@@ -98,6 +98,16 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     history.pushState({ postDetailOpen: true }, '');
 
     const handlePopState = (event: PopStateEvent) => {
+      // 태그 검색 화면에서 뒤로 돌아오는 첫 popstate는 상세를 닫지 않는다.
+      // 일부 WebView/React Router 조합에서는 같은 URL 더미 state가 event.state에 안정적으로
+      // 남지 않아 sessionStorage 플래그도 함께 사용한다.
+      try {
+        if (sessionStorage.getItem('postSearch_returnToPostDetail') === '1') {
+          sessionStorage.removeItem('postSearch_returnToPostDetail');
+          return;
+        }
+      } catch {}
+
       // 태그 검색 화면에서 뒤로 돌아와 PostDetail 더미 히스토리 항목으로 복귀하는 경우에는
       // 상세를 닫지 않아야 "지도마커 컨텐츠 → 태그 검색 → 뒤로가기 → 지도마커 컨텐츠" 흐름이 유지된다.
       if (event.state?.postDetailOpen) return;

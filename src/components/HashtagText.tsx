@@ -52,7 +52,12 @@ const HashtagText: React.FC<HashtagTextProps> = ({
     try {
       sessionStorage.setItem('postSearch_query', query);
       sessionStorage.removeItem('postSearch_results');
-      window.dispatchEvent(new CustomEvent('post-search-query', { detail: { query } }));
+
+      // 지도마커 상세에서 태그 검색으로 이동한 뒤 뒤로가면 상세를 유지해야 한다.
+      if ((window as any).__isPostDetailOpen === true) {
+        sessionStorage.setItem('postSearch_returnToPostDetail', '1');
+        history.replaceState({ ...(history.state || {}), postDetailOpen: true }, '');
+      }
     } catch {}
 
     // 포스팅 검색 페이지로 이동 (URL 쿼리에 검색어 전달).
