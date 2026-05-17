@@ -58,8 +58,6 @@ const Write = () => {
   const { content, setContent, category, setCategory, clear, mediaFiles, setMediaFiles } = useWriteStore();
   const hashtags = useMemo(() => extractHashtags(content), [content]);
   const highlightedContentParts = useMemo(() => content.split(HASHTAG_INLINE_REGEX), [content]);
-  const selectedVideoCount = useMemo(() => mediaFiles.filter((media) => media.type === 'video').length, [mediaFiles]);
-  const hasTooManyVideos = selectedVideoCount > 1;
   
   const [currentPage, setCurrentPage] = useState<1 | 2>(
 
@@ -100,6 +98,7 @@ const Write = () => {
     contentX: number;
     contentY: number;
   }>({ active: false, startDistance: 0, startZoom: 1, centerX: 0, centerY: 0, contentX: 0, contentY: 0 });
+  const previewSwipeRef = useRef({ x: 0, y: 0 });
   const [landscapeZoom, setLandscapeZoom] = useState(1);
   const cropPixelRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
@@ -580,11 +579,6 @@ const Write = () => {
       return;
     }
 
-    if (hasTooManyVideos) {
-      showError('영상은 1개만 업로드 가능합니다.');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -771,7 +765,27 @@ const Write = () => {
   const isCurrentImage = isImageMedia(currentMedia);
   const isCurrentLandscape = isLandscapeImage(currentMedia);
   const isCurrentPortrait = isPortraitImage(currentMedia);
-  const canGoNext = mediaFiles.length > 0 && !hasTooManyVideos;
+  const canGoNext = mediaFiles.length > 0;
+
+  const handlePreviewSwipeStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (currentMedia?.type !== 'video' || mediaFiles.length < 2) return;
+    const touch = e.touches[0];
+    previewSwipeRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handlePreviewSwipeEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (currentMedia?.type !== 'video' || mediaFiles.length < 2) return;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - previewSwipeRef.current.x;
+    const deltaY = touch.clientY - previewSwipeRef.current.y;
+    if (Math.abs(deltaX) < 45 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return;
+
+    setCurrentSlide((prev) => (
+      deltaX < 0
+        ? Math.min(mediaFiles.length - 1, prev + 1)
+        : Math.max(0, prev - 1)
+    ));
+  };
 
   // 현재 스크롤러의 가시 영역을 원본 이미지 픽셀 좌표로 환산한다.
   // 미리보기와 업로드가 정확히 같은 영역을 사용하도록 보장하기 위한 핵심 계산.
@@ -1017,8 +1031,10 @@ const Write = () => {
                       className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none bg-slate-100"
                       style={{
                         aspectRatio: '3 / 4',
-                        touchAction: isCurrentLandscape ? 'pan-x pan-y' : isCurrentPortrait ? 'none' : 'auto',
+                        touchAction: isCurrentLandscape ? 'pan-x pan-y' : isCurrentPortrait ? 'none' : 'pan-y',
                       }}
+                      onTouchStart={handlePreviewSwipeStart}
+                      onTouchEnd={handlePreviewSwipeEnd}
                     >
                       {isCurrentLandscape ? (
                         // 가로 이미지: 위/아래는 프레임에 꽉 차고, 좌우는 원본 비율대로 넘쳐 가로 스크롤.
@@ -1127,14 +1143,6 @@ const Write = () => {
                           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
                           autoPlay muted loop playsInline
                         />
-                      )}
-
-                      {hasTooManyVideos && (
-                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/45 px-6 text-center pointer-events-none">
-                          <p className="rounded-2xl bg-black/55 px-5 py-3 text-sm font-black text-white shadow-lg backdrop-blur-sm">
-                            영상은 1개만 업로드 가능합니다.
-                          </p>
-                        </div>
                       )}
 
                       {/* 드래그 오버레이 (세로 이미지 전용) */}
@@ -1338,7 +1346,7 @@ const Write = () => {
             {currentPage === 2 && (
               <div ref={submitAreaRef} className="-mt-2">
                 {(() => {
-                  const isDisabled = isSubmitting || !content.trim() || mediaFiles.length === 0 || hasTooManyVideos;
+                  const isDisabled = isSubmitting || !content.trim() || mediaFiles.length === 0;
                   return (
                     <button
                       type="button"
