@@ -23,8 +23,7 @@ import PostCategoryBadge from './PostCategoryBadge';
 import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
 import HashtagText from './HashtagText';
-import VideoPlayer from './VideoPlayer';
-import VideoThumbnailPreview from './VideoThumbnailPreview';
+import PostItemVideo from './PostItemVideo';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
@@ -785,15 +784,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             style={{ scrollSnapStop: 'always' }}
           >
             {media.type === 'video' ? (
-              index === currentImageIndex ? (
-                <VideoPlayer src={media.url} posterUrl={media.posterUrl} />
-              ) : (
-                <VideoThumbnailPreview
-                  src={media.url}
-                  startTime={0.12}
-                  className="w-full h-full object-cover bg-gray-200"
-                />
-              )
+              <PostItemVideo
+                src={media.url}
+                posterUrl={media.posterUrl}
+                autoPlay={index === currentImageIndex}
+                showControls={index === currentImageIndex}
+              />
             ) : (
               <img
                 src={media.url}
