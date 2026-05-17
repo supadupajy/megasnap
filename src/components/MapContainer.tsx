@@ -48,7 +48,6 @@ const MARKER_EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // 1분마다 만료/타이�
 // 24시간이 지나 활성 마커에서 사라진 포스트들을 회색 잔상으로 표시.
 // DB에 수천개가 있어도 한 화면에는 아래 개수까지만 그려서 부하를 최소화한다.
 const GHOST_MARKER_MAX_VISIBLE = 30;
-const DEBUG_MARKER_ANIMATION = true;
 
 // 카운트다운 링 사각 둥근 테두리 파라미터 (60×60 마커 inner box 안쪽)
 // inner box: width=60, height=60, border-radius=20, border=4.5px
@@ -436,17 +435,6 @@ const MapContainer = ({
     // 혹시 남아있을 수 있는 과거 진입/이탈 keyframe 클래스를 정리
     content.classList.remove('marker-viewport-appearing', 'marker-viewport-disappearing');
 
-    if (DEBUG_MARKER_ANIMATION) {
-      console.log('[MapContainer] Marker animation debug', {
-        id,
-        path: isVisible ? 'viewport-fade-in' : 'viewport-fade-out',
-        reason: 'existing overlay crossed viewport boundary',
-        wasVisible,
-        isVisible,
-        classesBefore: content.className,
-      });
-    }
-
     if (isVisible) {
       content.classList.remove('marker-viewport-hidden');
     } else {
@@ -496,17 +484,9 @@ const MapContainer = ({
 
   // ── 마커 DOM 직접 숨김/표시 (클래스 토글로 !important CSS 활용) ──────
   const hideAllMarkersDom = useCallback(() => {
-    overlaysRef.current.forEach((overlay, id) => {
+    overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        if (DEBUG_MARKER_ANIMATION) {
-          console.log('[MapContainer] Marker animation debug', {
-            id,
-            path: 'global-hide',
-            reason: 'hideAllMarkersDom called, usually long press/map view mode',
-            classesBefore: content.className,
-          });
-        }
         content.classList.remove('markers-revealing');
         content.classList.add('markers-hidden');
         // 배지도 함께 숨김
@@ -529,17 +509,9 @@ const MapContainer = ({
   }, []);
 
   const showAllMarkersDom = useCallback(() => {
-    overlaysRef.current.forEach((overlay, id) => {
+    overlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        if (DEBUG_MARKER_ANIMATION) {
-          console.log('[MapContainer] Marker animation debug', {
-            id,
-            path: 'global-reveal-fade',
-            reason: 'showAllMarkersDom called after markers were globally hidden',
-            classesBefore: content.className,
-          });
-        }
         content.classList.remove('markers-hidden');
         content.classList.add('markers-revealing');
         // 배지 복원
@@ -1126,22 +1098,6 @@ const MapContainer = ({
         content.setAttribute('data-content-state', contentStateKey);
         content.setAttribute('data-position-state', positionStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
-        if (DEBUG_MARKER_ANIMATION) {
-          console.log('[MapContainer] Marker animation debug', {
-            id: post.id,
-            path: shouldAnimateMarkerAppear ? 'new-overlay-pop' : 'new-overlay-no-pop',
-            reason: shouldAnimateMarkerAppear
-              ? 'overlay was newly created inside viewport and was not restored from map cache'
-              : isInsideViewport
-                ? 'overlay was restored from cached marker ids, so pop animation is skipped'
-                : 'overlay was created outside viewport, starts hidden and will fade in when entering viewport',
-            isInsideViewport,
-            isCachedOnMount: cachedMarkerIdsOnMountRef.current.has(String(post.id)),
-            isNewRealtime: !!post.isNewRealtime,
-            isAd: !!isAdPost,
-            classesAfterCreate: content.className,
-          });
-        }
         content.onclick = (e) => {
           e.stopPropagation();
           if (isDragging.current) return;
@@ -1266,24 +1222,9 @@ const MapContainer = ({
             // 새로 업로드한 컨텐츠는 highlight 시점에 pop-pop 등장을 한 번 더 강제 재생한다.
             // 지도 이동/마커 생성 타이밍에 따라 최초 appear 클래스가 소비돼도 업로드 완료 애니메이션이 보장된다.
             if (pNow?.isNewRealtime) {
-              if (DEBUG_MARKER_ANIMATION) {
-                console.log('[MapContainer] Marker animation debug', {
-                  id: postId,
-                  path: 'highlight-forced-pop',
-                  reason: 'new realtime post is highlighted, replaying marker-appear-animation',
-                  classesBefore: content.className,
-                });
-              }
               content.classList.remove('marker-appear-animation');
               void content.offsetWidth;
               content.classList.add('marker-appear-animation');
-            } else if (DEBUG_MARKER_ANIMATION) {
-              console.log('[MapContainer] Marker animation debug', {
-                id: postId,
-                path: 'highlight-no-pop',
-                reason: 'existing marker is highlighted only, pop animation is not replayed',
-                classesBefore: content.className,
-              });
             }
 
             // marker-appear-animation은 유지 — 새 컨텐츠 생성 시 pop! 등장이
