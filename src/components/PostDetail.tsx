@@ -790,11 +790,17 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         onMouseLeave={onMouseUp}
         onMouseMove={onMouseMove}
       >
-        {displayMedia.map((media, index) => (
+        {displayMedia.map((media, index) => {
+          const backgroundUrl = media.type === 'video' ? media.posterUrl : media.url;
+
+          return (
           <div
             key={`${media.type}-${index}`}
-            className="w-full h-full shrink-0 snap-center relative"
-            style={{ scrollSnapStop: 'always' }}
+            className="w-full h-full shrink-0 snap-center relative bg-cover bg-center"
+            style={{
+              scrollSnapStop: 'always',
+              backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
+            }}
           >
             {media.type === 'video' ? (
               <PostItemVideo
@@ -818,7 +824,8 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               />
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
       <ImageSliderDots
         count={displayMedia.length}
@@ -832,14 +839,23 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     );
   };
 
-  const renderMediaArea = () => (
-    <div
-      className="relative rounded-3xl overflow-hidden bg-black shadow-inner transition-[height] duration-300"
-      style={{ aspectRatio: mediaAspectRatio }}
-    >
-      {renderMediaSlider()}
-    </div>
-  );
+  const renderMediaArea = () => {
+    const activeBackgroundUrl = activeMedia?.type === 'video'
+      ? activeMedia.posterUrl
+      : activeMedia?.url;
+
+    return (
+      <div
+        className="relative rounded-3xl overflow-hidden bg-cover bg-center shadow-inner transition-[height] duration-300"
+        style={{
+          aspectRatio: mediaAspectRatio,
+          backgroundImage: activeBackgroundUrl ? `url(${activeBackgroundUrl})` : undefined,
+        }}
+      >
+        {renderMediaSlider()}
+      </div>
+    );
+  };
 
   const renderActionButtons = () => {
     // 댓글이 아직 로드되지 않았다면 currentPost.commentsCount를 그대로 사용 (깜빡임 방지).

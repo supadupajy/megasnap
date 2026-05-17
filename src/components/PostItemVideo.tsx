@@ -39,6 +39,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   const userPausedRef = useRef(false);
   const wasPlayingBeforeScrubRef = useRef(false);
   const firstTimeUpdateLoggedRef = useRef(false);
+  const frameVisibleRef = useRef(false);
   const propsSnapshotRef = useRef({
     debugLabel,
     src,
@@ -129,6 +130,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   useEffect(() => {
     userPausedRef.current = false;
     firstTimeUpdateLoggedRef.current = false;
+    frameVisibleRef.current = false;
     setUserPaused(false);
     setFirstFrameReady(false);
 
@@ -137,8 +139,18 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     if (!video) return;
 
     const markReadyToShowVideo = (reason: string) => {
+      if (frameVisibleRef.current) return;
+      frameVisibleRef.current = true;
       setFirstFrameReady(true);
       debugLog('first-frame-visible', { reason });
+    };
+
+    const revealAfterPaintedFrame = (reason: string) => {
+      if (frameVisibleRef.current) return;
+      const requestVideoFrameCallback = video.requestVideoFrameCallback?.bind(video);
+      if (requestVideoFrameCallback) {
+        requestVideoFrameCallback(() => markReadyToShowVideo(`${reason}:video-frame-callback`));
+      }
     };
 
     const handleLoadedData = () => debugLog('loadeddata');
@@ -146,7 +158,8 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     const handlePlaying = () => {
       userPausedRef.current = false;
       setUserPaused(false);
-      markReadyToShowVideo('playing');
+      debugLog('playing');
+      revealAfterPaintedFrame('playing');
     };
     const handleLoadedMetadata = () => debugLog('loadedmetadata');
     const handleCanPlayThrough = () => debugLog('canplaythrough');
@@ -169,7 +182,8 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         firstTimeUpdateLoggedRef.current = true;
         debugLog('first-timeupdate');
       }
-      markReadyToShowVideo('timeupdate');
+      revealAfterPaintedFrame('timeupdate');
+      if (!video.requestVideoFrameCallback) markReadyToShowVideo('timeupdate:fallback');
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -324,23 +338,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   };
 
   return (
-    <div className="relative h-full w-full bg-black" data-video-debug-label={debugLabel}>
-      {posterUrl && (
-        <img
-          src={posterUrl}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-          style={{
-            opacity: firstFrameReady ? 0 : 1,
-            transition: 'opacity 180ms ease-out',
-          }}
-          draggable={false}
-          onLoad={() => debugLog('poster-load')}
-          onError={() => debugLog('poster-error')}
-        />
-      )}
-
+    <div className="relative h-full w-full bg-transparent" data-video-debug-label={debugLabel}>
       <video
         ref={setVideoRefs}
         src={src}
@@ -356,11 +354,26 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         disableRemotePlayback={true}
         onClick={handleVideoTap}
         style={{
-          opacity: firstFrameReady ? 1 : 0,
-          transition: 'opacity 120ms ease-out',
+          opacity: 1,
           backgroundColor: 'transparent',
         }}
       />
+
+      {posterUrl && (
+        <img
+          src={posterUrl}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 z-[2] w-full h-full object-cover pointer-events-none"
+          style={{
+            opacity: firstFrameReady ? 0 : 1,
+            transition: 'opacity 120ms ease-out',
+          }}
+          draggable={false}
+          onLoad={() => debugLog('poster-load')}
+          onError={() => debugLog('poster-error')}
+        />
+      )}
 
       {showControls && userPaused && firstFrameReady && (
         <div

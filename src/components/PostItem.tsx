@@ -369,12 +369,16 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
           onMouseLeave={onMouseUp}
           onMouseMove={onMouseMove}
         >
-          {displayMedia.map((media, index) => (
+          {displayMedia.map((media, index) => {
+            const backgroundUrl = media.type === 'video' ? media.posterUrl : media.url;
+
+            return (
             <div
               key={`${media.type}-${index}`}
-              className="relative w-full h-full shrink-0 snap-center snap-always bg-gray-200"
+              className="relative w-full h-full shrink-0 snap-center snap-always bg-gray-200 bg-cover bg-center"
+              style={{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined }}
             >
-              <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
+              <div className="absolute inset-0 bg-gray-200/0" aria-hidden="true" />
               {media.type === 'video' ? (
                 <PostItemVideo
                   videoRef={index === currentImageIndex ? videoRef : undefined}
@@ -395,7 +399,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
                 />
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <ImageSliderDots
