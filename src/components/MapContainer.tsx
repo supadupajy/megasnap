@@ -2294,12 +2294,10 @@ const MapContainer = ({
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
     const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
-    const markerImage = hasVideo ? cachedVideoThumb : optimizedDisplayImage;
+    const markerImage = cachedVideoThumb || optimizedDisplayImage;
     const imgContent = markerImage
       ? `<img src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-      : hasVideo
-        ? `<div style="width:100%;height:100%;background:#eef2ff;display:flex;align-items:center;justify-content:center;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#4f46e5'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
-        : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
+      : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
