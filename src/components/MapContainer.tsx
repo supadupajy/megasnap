@@ -2254,14 +2254,10 @@ const MapContainer = ({
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
     const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
-    const markerVideoSrc = hasVideo ? `${firstVideoUrl}#t=0.12` : '';
-    const imgContent = cachedVideoThumb
-      ? `<img src="${cachedVideoThumb}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-      : hasVideo
-        ? `<video src="${markerVideoSrc}" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;background:#e5e7eb;" />`
-        : optimizedDisplayImage
-          ? `<img src="${optimizedDisplayImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-          : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
+    const markerImage = cachedVideoThumb || optimizedDisplayImage;
+    const imgContent = markerImage
+      ? `<img src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
+      : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
