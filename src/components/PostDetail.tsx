@@ -436,19 +436,6 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     : [];
   const activeMedia = effectiveRawDisplayMedia[currentImageIndex] || effectiveRawDisplayMedia[0];
 
-  useEffect(() => {
-    if (!currentPost) return;
-    console.info('[video-debug]', 'detail-slider-index', {
-      postId: currentPost.id,
-      currentImageIndex,
-      mediaCount: displayMedia.length,
-      activeType: activeMedia?.type,
-      isOpen,
-      scrollLeft: imageScrollRef.current?.scrollLeft,
-      clientWidth: imageScrollRef.current?.clientWidth,
-    });
-  }, [activeMedia?.type, currentImageIndex, currentPost?.id, displayMedia.length, imageScrollRef, isOpen]);
-
   const mediaAspectRatio = useMediaAspectRatio(
     activeMedia?.url || displayImage,
     activeMedia?.type || 'image'
@@ -803,13 +790,27 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             }}
           >
             {media.type === 'video' ? (
-              <PostItemVideo
-                src={media.url}
-                posterUrl={media.posterUrl}
-                autoPlay={index === currentImageIndex}
-                showControls={index === currentImageIndex}
-                debugLabel={`detail:${currentPost.id}:media-${index}:active-${index === currentImageIndex}`}
-              />
+              index === currentImageIndex ? (
+                <PostItemVideo
+                  src={media.url}
+                  posterUrl={media.posterUrl}
+                  autoPlay
+                  showControls
+                  debugLabel={`detail:${currentPost.id}:media-${index}:active-true`}
+                />
+              ) : (
+                <img
+                  src={media.posterUrl || getFallbackImage(currentPost.id)}
+                  alt={`Post video thumbnail ${index + 1}`}
+                  className="w-full h-full object-cover pointer-events-none"
+                  draggable={false}
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    const fallback = getFallbackImage(currentPost.id);
+                    if (target.src !== fallback) target.src = fallback;
+                  }}
+                />
+              )
             ) : (
               <img
                 src={media.url}

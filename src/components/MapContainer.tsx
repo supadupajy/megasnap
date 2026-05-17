@@ -37,6 +37,34 @@ interface MapContainerProps {
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
+const isBrokenMarkerImageUrl = (url: unknown) => {
+  if (typeof url !== 'string') return true;
+  if (!url || url === 'null' || url === 'undefined') return true;
+  if (url.startsWith('blob:')) return true;
+  return false;
+};
+
+const isMarkerVideoUrl = (url: unknown) => {
+  if (typeof url !== 'string' || !url) return false;
+  const lower = url.toLowerCase().split('?')[0];
+  return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
+};
+
+const isMockMarkerImageUrl = (url: unknown) => {
+  if (typeof url !== 'string' || !url) return false;
+  return url.includes('pexels.com') || url.includes('unsplash.com') || url.includes('picsum.photos') || url.includes('loremflickr') || url.includes('youtube.com') || url.includes('youtu.be');
+};
+
+const getStoredMarkerThumbnail = (post: any) => {
+  const primary = post?.image_url || post?.image;
+  if (!isBrokenMarkerImageUrl(primary) && !isMarkerVideoUrl(primary) && !isMockMarkerImageUrl(primary)) {
+    return primary;
+  }
+
+  if (!Array.isArray(post?.images)) return '';
+  return post.images.find((url: unknown) => !isBrokenMarkerImageUrl(url) && !isMarkerVideoUrl(url) && !isMockMarkerImageUrl(url)) || '';
+};
+
 const LONG_PRESS_DURATION = 1000; // 1초
 const LONG_PRESS_MOVE_THRESHOLD = 5; // px 이상 움직이면 취소 (드래그 감지를 빠르게)
 
@@ -1075,6 +1103,7 @@ const MapContainer = ({
       const firstVideoUrl = !post.isAd
         ? (post.videoUrl || (Array.isArray(post.videoUrls) ? post.videoUrls.find((url) => typeof url === 'string' && url.trim()) : ''))
         : '';
+      const storedVideoPoster = firstVideoUrl ? getStoredMarkerThumbnail(post) : '';
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (videoThumbCacheRef.current.has(post.id) ? '1' : '0') : '';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
@@ -1128,14 +1157,14 @@ const MapContainer = ({
         overlay.setMap(mapInstance.current);
         overlaysRef.current.set(post.id, overlay);
 
-        // 비디오 포스트이고 썸네일이 없으면 비동기로 추출
+        // 저장된 썸네일이 없는 오래된 영상 포스트만 비동기로 추출한다.
+        // 이미 업로드 시 생성된 썸네일이 있으면 마커를 다시 그리지 않아 검은 프레임 → 썸네일 튐을 방지한다.
         if (firstVideoUrl) {
           const cachedThumb = videoThumbCacheRef.current.get(post.id);
           if (cachedThumb) {
-            // 이미 캐시된 썸네일이 있으면 즉시 적용
             const img = content.querySelector('img') as HTMLImageElement | null;
             if (img) img.src = cachedThumb;
-          } else {
+          } else if (!storedVideoPoster) {
             extractVideoThumbRef.current(post.id, firstVideoUrl);
           }
         }
@@ -2125,10 +2154,6 @@ const MapContainer = ({
 
     video.addEventListener('loadedmetadata', moveToFirstVisibleFrame, { once: true });
     video.addEventListener('seeked', captureDecodedFrame);
-    video.addEventListener('loadeddata', () => {
-      if (!isDone && video.readyState >= 2) captureDecodedFrame();
-    }, { once: true });
-    video.addEventListener('canplay', captureDecodedFrame, { once: true });
     video.addEventListener('error', finish, { once: true });
 
     timeoutId = window.setTimeout(finish, 8000);
@@ -2166,35 +2191,10 @@ const MapContainer = ({
       : '';
     const hasVideo = !!firstVideoUrl;
 
-    const isBrokenUrl = (url: string) => {
-      if (!url || url === 'null' || url === 'undefined') return true;
-      if (url.startsWith('blob:')) return true;
-      return false;
-    };
+    let displayImage = getStoredMarkerThumbnail(post);
 
-    const isVideoUrl = (url: string) => {
-      if (!url) return false;
-      const lower = url.toLowerCase().split('?')[0];
-      return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
-    };
-
-    const isMockUrl = (url: string) => {
-      if (!url) return false;
-      return url.includes('pexels.com') || url.includes('unsplash.com') || url.includes('picsum.photos') || url.includes('loremflickr') || url.includes('youtube.com') || url.includes('youtu.be');
-    };
-
-    let displayImage = post.image_url || post.image;
-    const firstStoredThumbnail = Array.isArray(post.images)
-      ? post.images.find((url: unknown) => typeof url === 'string' && !isBrokenUrl(url) && !isVideoUrl(url) && !isMockUrl(url))
-      : '';
-
-    // image_url이 비디오 URL이거나 목업 URL이면 썸네일로 사용 불가
-    if (isBrokenUrl(displayImage) || isVideoUrl(displayImage) || isMockUrl(displayImage)) {
-      displayImage = firstStoredThumbnail || '';
-    }
-
-    // 비디오 포스트이고 캐시된 첫 프레임이 있으면 저장된 썸네일보다 우선 사용한다.
-    if (hasVideo) {
+    // 저장된 썸네일이 없는 오래된 비디오 포스트에 대해서만 추출 캐시를 사용한다.
+    if (hasVideo && !displayImage) {
       const cached = videoThumbCacheRef.current.get(post.id);
       if (cached) displayImage = cached;
     }

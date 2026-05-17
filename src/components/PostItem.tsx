@@ -325,22 +325,6 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     ));
   }, [post]);
 
-  useEffect(() => {
-    const activeMedia = displayMedia[currentImageIndex];
-    console.info('[video-debug]', 'feed-slider-index', {
-      postId: post.id,
-      currentImageIndex,
-      mediaCount: displayMedia.length,
-      activeType: activeMedia?.type,
-      autoPlayVideo,
-      isVisible,
-      isReadyToPlay,
-      isOverlayOpen,
-      scrollLeft: imageScrollRef.current?.scrollLeft,
-      clientWidth: imageScrollRef.current?.clientWidth,
-    });
-  }, [autoPlayVideo, currentImageIndex, displayMedia, imageScrollRef, isOverlayOpen, isReadyToPlay, isVisible, post.id]);
-
   const renderMedia = () => {
     if (displayMedia.length === 1 && displayMedia[0].type === 'video') {
       return (
