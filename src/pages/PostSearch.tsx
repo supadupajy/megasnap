@@ -383,12 +383,12 @@ const PostSearch = () => {
   const activeTag = getSearchHashtag(searchQuery);
 
   return (
-    <div className="fixed inset-0 bg-white flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[30000] bg-white flex flex-col overflow-hidden">
       {/* 고정 상단 헤더 */}
-      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[100] bg-white">
+      <div className="fixed top-[env(safe-area-inset-top,0px)] pt-[64px] inset-x-0 z-[30100] bg-white">
         <div className="px-4 bg-white border-b border-gray-50 flex items-center h-14 relative">
           <button
-            onClick={() => navigate('/popular')}
+            onClick={() => navigate(-1)}
             className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 active:scale-90 transition-all"
           >
             <ChevronLeft className="w-6 h-6" />

@@ -2020,6 +2020,21 @@ const Index = () => {
     };
   }, [trendingReelsInitialPost]);
 
+  useEffect(() => {
+    const handlePostSearchQuery = () => {
+      setSelectedPostId(null);
+      setIsPostListOpen(false);
+      setIsTrendingExpanded(false);
+      setTrendingReelsInitialPost(null);
+      if (history.state?.postDetailOpen) {
+        history.replaceState({ ...history.state, postDetailOpen: false }, '');
+      }
+    };
+
+    window.addEventListener('post-search-query', handlePostSearchQuery);
+    return () => window.removeEventListener('post-search-query', handlePostSearchQuery);
+  }, []);
+
   return (
     <>
       {showCssConfetti && <div className="css-confetti-container">{confettiPieces.map(p => <div key={p.id} className="css-confetti-piece animate" style={{ left: p.left, animationDelay: p.delay, backgroundColor: p.color }} />)}</div>}
