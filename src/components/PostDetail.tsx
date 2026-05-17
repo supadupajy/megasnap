@@ -851,6 +851,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           aspectRatio: mediaAspectRatio,
           backgroundImage: activeBackgroundUrl ? `url(${activeBackgroundUrl})` : undefined,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {renderMediaSlider()}
       </div>
