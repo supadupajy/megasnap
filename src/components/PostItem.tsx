@@ -356,22 +356,10 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
               <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
               {media.type === 'video' ? (
                 index === currentImageIndex ? (
-                  <video
-                    key={media.url}
-                    ref={videoRef}
+                  <PostItemVideo
+                    videoRef={videoRef}
                     src={media.url}
-                    poster={media.posterUrl}
-                    className="relative z-[1] w-full h-full object-cover bg-gray-200 video-hq"
-                    autoPlay={autoPlayVideo}
-                    muted
-                    loop
-                    playsInline
-                    preload="auto"
-                    controls
-                    controlsList="nodownload noplaybackrate noremoteplayback"
-                    disablePictureInPicture
-                    disableRemotePlayback={true}
-                    onClick={(e) => e.stopPropagation()}
+                    posterUrl={media.posterUrl}
                   />
                 ) : (
                   <VideoThumbnailPreview
