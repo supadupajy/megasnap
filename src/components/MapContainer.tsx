@@ -468,11 +468,8 @@ const MapContainer = ({
     }
   }, []);
 
-  // viewport 안팎으로 들어오고 나가는 마커는 keyframe 등장 애니메이션을
-  // 다시 재생하지 않는다 (overlay DOM이 그대로 유지되므로 한 번 등장한
-  // 마커는 사라지기 전까지 추가 애니메이션 없이 단순 페이드만 처리).
-  // CSS의 .marker-viewport-hidden { opacity: 0; transition: ... } 가
-  // 부드러운 시각 전환을 담당한다.
+  // viewport 안팎으로 들어오고 나가는 마커도 화면 안으로 들어올 때는
+  // opacity 페이드가 아니라 팝 등장 애니메이션을 재생한다.
   const applyMarkerViewportState = useCallback((id: string, overlay: any, isVisible: boolean, _animate = true) => {
     const content = overlay.getContent() as HTMLElement | null;
     if (!content || content.classList.contains('marker-disappear-animation')) return;
@@ -487,8 +484,10 @@ const MapContainer = ({
 
     pushMarkerAnimationDebugLog({
       id,
-      path: isVisible ? 'viewport-fade-in' : 'viewport-fade-out',
-      reason: '기존 마커가 지도 화면 경계를 지나 opacity 전환 경로를 탐',
+      path: isVisible ? 'viewport-pop-in' : 'viewport-hide',
+      reason: isVisible
+        ? '기존 마커가 지도 화면 안으로 들어와 marker-appear-animation 팝 경로를 탐'
+        : '기존 마커가 지도 화면 밖으로 나가 hidden 처리됨',
       classes: content.className,
       details: {
         wasVisible,
@@ -498,8 +497,12 @@ const MapContainer = ({
     });
 
     if (isVisible) {
-      content.classList.remove('marker-viewport-hidden');
+      content.classList.remove('marker-viewport-hidden', 'markers-hidden', 'markers-revealing');
+      content.classList.remove('marker-appear-animation');
+      void content.offsetWidth;
+      content.classList.add('marker-appear-animation');
     } else {
+      content.classList.remove('marker-appear-animation');
       content.classList.add('marker-viewport-hidden');
     }
   }, [clearViewportAnimationTimer, pushMarkerAnimationDebugLog]);
@@ -582,12 +585,14 @@ const MapContainer = ({
       if (content) {
         pushMarkerAnimationDebugLog({
           id: String(id),
-          path: 'global-reveal-fade',
-          reason: '전체 숨김이 풀리며 markers-revealing 페이드 경로를 탐',
+          path: 'global-reveal-pop',
+          reason: '전체 숨김이 풀리며 marker-appear-animation 팝 경로를 탐',
           classes: content.className,
         });
-        content.classList.remove('markers-hidden');
-        content.classList.add('markers-revealing');
+        content.classList.remove('markers-hidden', 'markers-revealing', 'marker-viewport-hidden');
+        content.classList.remove('marker-appear-animation');
+        void content.offsetWidth;
+        content.classList.add('marker-appear-animation');
         // 배지 복원
         const badge = content.querySelector('.overlap-badge') as HTMLElement | null;
         if (badge) badge.style.opacity = '1';
@@ -597,13 +602,15 @@ const MapContainer = ({
     ghostOverlaysRef.current.forEach((overlay) => {
       const content = overlay.getContent() as HTMLElement;
       if (content) {
-        content.classList.remove('markers-hidden');
-        content.classList.add('markers-revealing');
+        content.classList.remove('markers-hidden', 'markers-revealing');
+        content.classList.remove('ghost-marker-appear-animation');
+        void content.offsetWidth;
+        content.classList.add('ghost-marker-appear-animation');
       }
     });
     if (searchOverlayRef.current) {
       const c = searchOverlayRef.current.getContent() as HTMLElement;
-      if (c) { c.style.transition = 'opacity 0.45s ease'; c.style.opacity = '1'; }
+      if (c) { c.style.transition = 'none'; c.style.opacity = '1'; }
     }
   }, [pushMarkerAnimationDebugLog]);
 

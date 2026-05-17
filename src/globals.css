@@ -242,20 +242,20 @@
   transform: none !important;
 }
 
-/* 마커 숨김 모드: !important로 모든 animation/transform 덮어씀 */
+/* 마커 숨김 모드 */
 .marker-container.markers-hidden {
   opacity: 0 !important;
   pointer-events: none !important;
   animation: none !important;
-  transition: opacity 0.25s ease-out !important;
+  transition: none !important;
 }
 
-/* 마커 복원 모드: 스르륵 나타남 */
+/* 마커 복원 모드: 페이드 없이 즉시 보이고 JS에서 pop 애니메이션을 재생 */
 .marker-container.markers-revealing {
   opacity: 1 !important;
   pointer-events: auto !important;
   animation: none !important;
-  transition: opacity 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  transition: none !important;
 }
 
 /* 마커 사라짐: 살짝 부풀었다가 pop! 하고 사라짐 (내부 wrapper에 적용) */
@@ -286,17 +286,15 @@
   transform-origin: 50% 80%;
 }
 
-/* 한 번 지도에 나타난 마커는 viewport를 들락거려도 등장 애니메이션을
-   재생하지 않고, opacity 페이드 transition만으로 자연스럽게 보였다 사라진다.
-   (실제로 마커 DOM이 새로 생성되거나 제거될 때는 marker-appear-animation /
-   marker-disappear-animation 가 별도로 처리한다.) */
+/* viewport 진입도 pop 애니메이션으로 통일하므로 컨테이너 opacity transition은 끈다. */
 .marker-container {
-  transition: opacity 0.25s ease-out;
+  transition: none;
 }
 
 .marker-viewport-hidden {
   opacity: 0 !important;
   pointer-events: none !important;
+  transition: none !important;
 }
 
 .marker-container img {
