@@ -442,6 +442,24 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
     activeMedia?.type || 'image'
   );
 
+  useEffect(() => {
+    if (!currentPost) return;
+    const scroller = imageScrollRef.current;
+    console.info('[video-flicker-debug]', 'detail-media-state', {
+      postId: currentPost.id,
+      currentImageIndex,
+      mediaCount: displayMedia.length,
+      activeMedia,
+      mediaAspectRatio,
+      scroller: scroller ? {
+        scrollLeft: scroller.scrollLeft,
+        clientWidth: scroller.clientWidth,
+        scrollWidth: scroller.scrollWidth,
+        bg: window.getComputedStyle(scroller).backgroundColor,
+      } : null,
+    });
+  }, [activeMedia, currentImageIndex, currentPost, displayMedia.length, imageScrollRef, mediaAspectRatio]);
+
   const postDisplayName = currentPost?.user?.name || '익명';
   
   const isMine = (() => {
@@ -804,6 +822,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                   src={media.url}
                   className="w-full h-full object-cover pointer-events-none"
                   startTime={0.8}
+                  debugLabel={`detail:${currentPost.id}:media-${index}:inactive-thumb`}
                 />
               )
             ) : (
