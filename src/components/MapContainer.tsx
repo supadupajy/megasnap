@@ -2014,6 +2014,58 @@ const MapContainer = ({
       video.load();
     };
 
+    let candidateTimes: number[] = [];
+    let candidateIndex = 0;
+
+    const isMostlyBlackFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+      const data = ctx.getImageData(0, 0, width, height).data;
+      let brightPixels = 0;
+      let sampledPixels = 0;
+
+      for (let i = 0; i < data.length; i += 4 * 12) {
+        const luminance = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        if (luminance > 28) brightPixels += 1;
+        sampledPixels += 1;
+      }
+
+      return sampledPixels > 0 && brightPixels / sampledPixels < 0.04;
+    };
+
+    const refreshMarkerWithCachedThumb = () => {
+      const overlay = overlaysRef.current.get(postId);
+      if (!overlay) return;
+
+      const content = overlay.getContent() as HTMLElement;
+      if (!content) return;
+
+      const post = postsRef.current.find(p => p.id === postId);
+      if (!post) return;
+
+      const isMineKey = !!(authUserRef.current && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUserRef.current.id));
+      const isAdPendingKey = !!(post as any).isAdPending;
+      const newStateKey = `${post.borderType}-${post.isAd}-${!!post.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${post.likes}-1`;
+      content.innerHTML = getMarkerInnerHtmlRef.current(post, false);
+      content.setAttribute('data-content-state', newStateKey);
+    };
+
+    const seekNextCandidate = () => {
+      const nextTime = candidateTimes[candidateIndex];
+      candidateIndex += 1;
+
+      if (typeof nextTime !== 'number') {
+        cleanup();
+        videoThumbPendingRef.current.delete(postId);
+        return;
+      }
+
+      if (nextTime <= 0) {
+        captureDecodedFrame();
+        return;
+      }
+
+      try { video.currentTime = nextTime; } catch { captureDecodedFrame(); }
+    };
+
     const capture = () => {
       try {
         const canvas = document.createElement('canvas');
@@ -2022,55 +2074,43 @@ const MapContainer = ({
         const ctx = canvas.getContext('2d');
         if (!ctx) { cleanup(); videoThumbPendingRef.current.delete(postId); return; }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+        if (isMostlyBlackFrame(ctx, canvas.width, canvas.height) && candidateIndex < candidateTimes.length) {
+          seekNextCandidate();
+          return;
+        }
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.86);
         cleanup();
         videoThumbCacheRef.current.set(postId, dataUrl);
         videoThumbPendingRef.current.delete(postId);
-
-        // 마커 DOM을 썸네일로 즉시 완전 교체
-        const overlay = overlaysRef.current.get(postId);
-        if (overlay) {
-          const content = overlay.getContent() as HTMLElement;
-          if (content) {
-            // postsRef에서 해당 포스트를 찾아 최신 HTML로 교체 (캐시가 이미 set된 상태)
-            const post = postsRef.current.find(p => p.id === postId);
-            if (post) {
-              const isMineKey = !!(authUserRef.current && String(((post as any).owner_id || (post as any).user_id || '')) === String(authUserRef.current.id));
-              const isAdPendingKey = !!(post as any).isAdPending;
-              const newStateKey = `${post.borderType}-${post.isAd}-${!!post.isNewRealtime}-${isMineKey}-${isAdPendingKey}-${post.likes}-1`;
-              content.innerHTML = getMarkerInnerHtmlRef.current(post, false);
-              content.setAttribute('data-content-state', newStateKey);
-            }
-          }
-        }
+        refreshMarkerWithCachedThumb();
       } catch {
         cleanup();
         videoThumbPendingRef.current.delete(postId);
       }
     };
 
-    const captureDecodedFrame = () => {
+    function captureDecodedFrame() {
       if ('requestVideoFrameCallback' in video) {
         video.requestVideoFrameCallback(() => capture());
       } else {
         window.setTimeout(capture, 80);
       }
-    };
+    }
 
     const moveToFirstVisibleFrame = () => {
       const duration = Number.isFinite(video.duration) ? video.duration : 0;
-      const targetTime = duration > 0.2 ? Math.min(0.12, duration - 0.05) : 0;
-
-      if (targetTime <= 0) {
-        captureDecodedFrame();
-        return;
-      }
-
-      try { video.currentTime = targetTime; } catch { captureDecodedFrame(); }
+      const rawTimes = duration > 0.2
+        ? [0.12, 0.35, 0.7, 1.2, 2].filter((time) => time < duration - 0.05)
+        : [0];
+      candidateTimes = Array.from(new Set(rawTimes.length > 0 ? rawTimes : [0]));
+      candidateIndex = 0;
+      seekNextCandidate();
     };
 
     video.addEventListener('loadedmetadata', moveToFirstVisibleFrame, { once: true });
-    video.addEventListener('seeked', captureDecodedFrame, { once: true });
+    video.addEventListener('seeked', captureDecodedFrame);
     video.addEventListener('loadeddata', () => {
       if (Number.isFinite(video.duration) && video.duration <= 0.2) captureDecodedFrame();
     }, { once: true });
@@ -2254,10 +2294,12 @@ const MapContainer = ({
     const adFlipWrapperEnd = isAd ? `</div>` : '';
 
     const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
-    const markerImage = cachedVideoThumb || optimizedDisplayImage;
+    const markerImage = hasVideo ? cachedVideoThumb : optimizedDisplayImage;
     const imgContent = markerImage
       ? `<img src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
-      : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
+      : hasVideo
+        ? `<div style="width:100%;height:100%;background:#eef2ff;display:flex;align-items:center;justify-content:center;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='#4f46e5'><polygon points='5 3 19 12 5 21 5 3'/></svg></div>`
+        : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
