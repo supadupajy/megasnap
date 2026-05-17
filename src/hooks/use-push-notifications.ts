@@ -161,7 +161,9 @@ export const usePushNotifications = () => {
         } else if (data?.type !== 'message' && data?.postId) {
           navigate('/', { state: { postId: data.postId, openPostDetail: true } });
         } else {
-          navigate('/notifications');
+          // 알림은 라우트가 아니라 오버레이다. 홈으로 가서 알림 오버레이를 띄운다.
+          navigate('/');
+          window.dispatchEvent(new CustomEvent('open-notifications-overlay'));
         }
       });
     };

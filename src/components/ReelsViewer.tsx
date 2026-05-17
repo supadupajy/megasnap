@@ -103,12 +103,6 @@ interface ReelsViewerProps {
   onDelete?: (postId: string) => void;
   // 내 포스팅 본문 수정 후 호출 (부모가 캐시된 content를 갱신하도록)
   onUpdate?: (postId: string, content: string) => void;
-  // 활성 슬라이드의 포스트가 바뀔 때마다 부모에게 알림 (페이지 재진입 시 위치 복원용)
-  onActivePostChange?: (postId: string) => void;
-  // 활성 영상의 재생 시간을 주기적으로 부모에게 알림 (재진입 시 같은 위치에서 재생용)
-  onActiveVideoTimeChange?: (time: number) => void;
-  // 활성 영상의 시작 재생 위치 (페이지 재진입 시 복원). 활성 슬라이드가 영상일 때 1회 적용.
-  initialVideoTime?: number;
 }
 
 const ReelsViewer: React.FC<ReelsViewerProps> = ({
@@ -125,9 +119,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   showInlineCloseButton = false,
   onDelete,
   onUpdate,
-  onActivePostChange,
-  onActiveVideoTimeChange,
-  initialVideoTime,
 }) => {
   const isRankedMode = mode === "ranked";
   // 풀이 모두 소진되었는지 (noRepeat 모드 전용)
@@ -385,15 +376,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     if (!current || current.kind !== "post") return;
     markAsViewed(current.post.id);
   }, [isOpen, activeIndex, items, markAsViewed]);
-
-  // 활성 포스트가 바뀌면 부모에게 알림 (페이지 재진입 시 복원용)
-  useEffect(() => {
-    if (!isOpen) return;
-    if (!onActivePostChange) return;
-    const current = items[activeIndex];
-    if (!current || current.kind !== "post") return;
-    onActivePostChange(current.post.id);
-  }, [isOpen, activeIndex, items, onActivePostChange]);
 
   // 끝에 가까워지면 추가 로드 (ranked 모드에서는 무한 스크롤 없음)
   useEffect(() => {
@@ -786,10 +768,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 authUserId={authUser?.id}
                 onContentSaved={handleEditSaved}
                 onRequestDelete={() => setDeletingPostId(item.post.id)}
-                onActiveVideoTimeChange={
-                  index === activeIndex ? onActiveVideoTimeChange : undefined
-                }
-                initialVideoTime={index === activeIndex ? initialVideoTime : undefined}
               />
             ) : item.kind === "ad" ? (
               <AdMobInterstitialPlaceholder isActive={index === activeIndex} />
@@ -1173,10 +1151,6 @@ interface ReelSlideProps {
   // 수정 저장 완료 시 부모에게 알림 (contentMap/외부 리스트 동기화용)
   onContentSaved?: (postId: string, nextContent: string) => void;
   onRequestDelete?: () => void;
-  // 활성 영상의 재생 시간을 부모에게 throttle해서 알림 (Flicks 페이지 재진입 시 위치 복원용)
-  onActiveVideoTimeChange?: (time: number) => void;
-  // 활성 슬라이드가 영상일 때 적용할 시작 재생 위치 (재진입 시 복원). 한 번만 적용.
-  initialVideoTime?: number;
 }
 
 const ReelSlide: React.FC<ReelSlideProps> = ({
@@ -1202,8 +1176,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   authUserId,
   onContentSaved,
   onRequestDelete,
-  onActiveVideoTimeChange,
-  initialVideoTime,
 }) => {
   // 본문 표시는 부모의 수정 결과(contentOverride)를 우선
   const displayContent = contentOverride ?? post.content ?? "";
@@ -1274,18 +1246,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
 
-  // 활성 영상의 currentTime이 바뀔 때 부모에게 보고 (throttle ~400ms)
-  // - 매 timeupdate마다 보고하면 부모 setState가 너무 자주 일어남
-  // - 페이지 재진입 시 위치 복원 용도이므로 400ms 정도면 충분
-  const lastReportedTimeRef = useRef(0);
-  useEffect(() => {
-    if (!isActive) return;
-    if (!onActiveVideoTimeChange) return;
-    const now = performance.now();
-    if (now - lastReportedTimeRef.current < 400) return;
-    lastReportedTimeRef.current = now;
-    onActiveVideoTimeChange(currentTime);
-  }, [currentTime, isActive, onActiveVideoTimeChange]);
   // 스크럽 중에는 사용자가 드래그하는 위치를 표시 (currentTime은 video element가 따라옴)
   const [scrubTime, setScrubTime] = useState(0);
   // 스크럽 시작 직전 재생 중이었는지 (드래그 끝나면 복원)
@@ -1369,13 +1329,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     };
   }, []);
 
-  // 페이지 재진입 시 복원할 시작 위치를 1회만 적용하기 위한 가드.
-  // post id + initialVideoTime 조합이 살아있는 동안 한 번만 seek 한다.
-  const initialSeekAppliedRef = useRef(false);
-  useEffect(() => {
-    initialSeekAppliedRef.current = false;
-  }, [post.id, initialVideoTime]);
-
   // active 슬라이드 + 현재 미디어가 영상일 때만 재생, 음소거 상태 적용
   // (오버레이가 떠 있는 동안은 일시정지하고, 닫히면 다시 재생)
   useEffect(() => {
@@ -1383,20 +1336,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     if (!v) return;
     if (isActive && activeIsVideo && !isOverlayOpen) {
       v.muted = muted;
-      // 재진입 시 직전 위치로 복원 (활성 슬라이드의 첫 재생 시 1회만)
-      if (
-        !initialSeekAppliedRef.current &&
-        typeof initialVideoTime === "number" &&
-        initialVideoTime > 0.1
-      ) {
-        try {
-          v.currentTime = initialVideoTime;
-          setCurrentTime(initialVideoTime);
-        } catch {
-          // seek 실패해도 재생은 진행
-        }
-        initialSeekAppliedRef.current = true;
-      }
       const tryPlay = async () => {
         try {
           await v.play();
@@ -1693,10 +1632,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             muted={muted}
             isSlideActive={isActive}
             videoPosterUrl={fallbackImage}
-            // 페이지 재진입 시(initialVideoTime > 0) 썸네일 깜빡임 방지: 바로 영상으로 페이드인
-            suppressVideoPoster={
-              typeof initialVideoTime === "number" && initialVideoTime > 0.1
-            }
           />
 
           {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
@@ -2064,11 +1999,6 @@ interface ReelsVideoProps {
   isCurrent: boolean;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
   posterUrl?: string;
-  /** "이어 재생" 모드 — 페이지 재진입처럼 처음부터 시작이 아닐 때.
-   * 이 경우 썸네일을 띄우지 않고 바로 영상으로 페이드인하여 화면 튐을 방지한다.
-   * (썸네일이 잠깐 보였다 영상으로 바뀌는 깜빡임 제거. 그 짧은 디코드 시간엔
-   *  부모 슬라이드의 blur 배경이 메워줘서 시각적으로 튀지 않음.) */
-  suppressPoster?: boolean;
 }
 
 const ReelsVideo: React.FC<ReelsVideoProps> = ({
@@ -2078,7 +2008,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   preload,
   isCurrent,
   posterUrl,
-  suppressPoster = false,
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
@@ -2157,27 +2086,22 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         ref={setRefs}
         src={src}
         className="absolute inset-0 w-full h-full object-cover video-hq bg-black"
-        // suppressPoster일 땐 native poster도 띄우지 않음 (썸네일 깜빡임 원천 차단).
-        // 그 외엔 1x1 투명 poster로 회색 placeholder 깜빡임만 막는다.
-        poster={suppressPoster ? TRANSPARENT_POSTER : (posterUrl || TRANSPARENT_POSTER)}
+        // 1x1 투명 poster로 native 회색 placeholder 깜빡임 방지
+        poster={posterUrl || TRANSPARENT_POSTER}
         playsInline
         loop
         muted={muted}
         preload={preload}
         style={{
-          // suppressPoster일 땐 영상을 숨기지 않고 즉시 보이도록 둔다.
-          // (poster를 안 띄우는 대신 부모의 blur 배경이 디코드 동안 메움)
-          opacity: !suppressPoster && isCurrent && !isReady ? 0 : 1,
+          opacity: isCurrent && !isReady ? 0 : 1,
           transition: "opacity 200ms ease-out",
           // 디코드 전 브라우저 기본 흰 배경이 잠깐 보이는 현상 방지.
           backgroundColor: "#000",
         }}
       />
 
-      {/* 첫 프레임 디코드 전엔 posterUrl을 깔아 둠 (흰/회색 빈 화면 방지).
-          isReady가 되면 부드럽게 사라진다.
-          단 suppressPoster=true(=이어 재생 모드)면 썸네일 깜빡임을 막기 위해 아예 렌더하지 않음. */}
-      {posterUrl && !suppressPoster && (
+      {/* 첫 프레임 디코드 전엔 posterUrl을 깔아 둠 (흰/회색 빈 화면 방지). isReady가 되면 부드럽게 사라짐. */}
+      {posterUrl && (
         <img
           src={posterUrl}
           alt=""
@@ -2191,19 +2115,8 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         />
       )}
 
-      {/* 이어 재생 모드 전용: video가 첫 프레임 디코드를 마칠 때까지 그 위에 검은 마스크를 덮어
-          브라우저가 비어있는 <video> 영역에 native 흰색 placeholder를 그리는 깜빡임을 가린다.
-          (CSS background-color나 <video> 자체 bg는 일부 브라우저에서 native placeholder를 못 막음)
-          isReady가 되면 즉시 사라져 영상이 노출된다. */}
-      {suppressPoster && !isReady && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none bg-black"
-        />
-      )}
-
-      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 (이어 재생 모드 제외) */}
-      {!suppressPoster && isCurrent && !isReady && showSpinner && (
+      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 */}
+      {isCurrent && !isReady && showSpinner && (
         <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none bg-black/20">
           <div className="w-12 h-12 rounded-full border-[3px] border-white/30 border-t-white animate-spin" />
         </div>
@@ -2225,8 +2138,6 @@ interface MediaCarouselProps {
   isSlideActive: boolean;
   /** 영상 슬라이드용 fallback 썸네일 (첫 프레임 디코드 전 빈 화면 방지). */
   videoPosterUrl?: string;
-  /** 영상 "이어 재생" 모드 — 썸네일을 띄우지 않고 바로 영상 페이드인 (페이지 재진입 시). */
-  suppressVideoPoster?: boolean;
 }
 
 const MediaCarousel: React.FC<MediaCarouselProps> = ({
@@ -2237,7 +2148,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   muted,
   isSlideActive,
   videoPosterUrl,
-  suppressVideoPoster,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const [dragX, setDragX] = useState(0);
@@ -2500,7 +2410,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   preload={isPlayable ? "auto" : "none"}
                   isCurrent={isPlayable}
                   posterUrl={videoPosterUrl}
-                  suppressPoster={isPlayable && suppressVideoPoster}
                 />
               ) : (
                 <img

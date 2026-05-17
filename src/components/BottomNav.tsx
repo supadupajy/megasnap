@@ -311,6 +311,11 @@ const BottomNav = () => {
   }, [safeIndex]);
 
   const handleNavClick = (path: string) => {
+    // 알림/메시지 전역 오버레이가 열려 있다면 BottomNav를 누른 순간 항상 닫는다.
+    // (같은 탭을 다시 눌러 pathname이 안 바뀌어도 오버레이만은 사라져야 한다.)
+    window.dispatchEvent(new CustomEvent('close-notifications-overlay'));
+    window.dispatchEvent(new CustomEvent('close-messages-overlay'));
+
     if (path === '/') {
       if (location.pathname === '/') return;
       mapCache.keepPosition = true;

@@ -5,7 +5,6 @@ import { Bell, MessageSquare } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { useNotifications } from '@/components/NotificationProvider';
-import { mapCache } from '@/utils/map-cache';
 
 const Header = () => {
   const navigate = useNavigate();
@@ -15,25 +14,11 @@ const Header = () => {
   const isHiddenPage = location.pathname === '/' && location.state?.startSelection;
   if (isHiddenPage) return null;
 
-  const navigateKeepingMapPosition = (path: string) => {
-    if (location.pathname === path) return;
-
-    mapCache.keepPosition = true;
-
-    const isTransientPage = location.pathname === '/notifications' || location.pathname === '/messages';
-    const currentState = location.state as any;
-
-    navigate(path, {
-      replace: isTransientPage,
-      state: {
-        fromPath: isTransientPage && currentState?.fromPath
-          ? currentState.fromPath
-          : `${location.pathname}${location.search}${location.hash}`,
-        fromState: isTransientPage
-          ? currentState?.fromState ?? null
-          : location.state ?? null,
-      },
-    });
+  // 알림/메시지는 라우트가 아니라 전역 오버레이다.
+  // 어느 페이지(Flicks 포함)에서든 버튼을 누르면 현재 페이지 위에 오버레이만 덮이고,
+  // X로 닫으면 페이지가 그대로 이어진다 (영상은 그대로 살아 있음).
+  const openOverlay = (overlay: 'notifications' | 'messages') => {
+    window.dispatchEvent(new CustomEvent(`open-${overlay}-overlay`));
   };
 
   return (
@@ -64,7 +49,7 @@ const Header = () => {
         <div className="flex items-center gap-2 shrink-0 ml-auto">
           <button
             className="relative w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-full transition-all"
-            onClick={() => navigateKeepingMapPosition('/notifications')}
+            onClick={() => openOverlay('notifications')}
           >
             <Bell className="w-[18px] h-[18px] text-gray-700" />
             {unreadNotifs > 0 && (
@@ -75,7 +60,7 @@ const Header = () => {
           </button>
           <button
             className="relative w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-full transition-all"
-            onClick={() => navigateKeepingMapPosition('/messages')}
+            onClick={() => openOverlay('messages')}
           >
             <MessageSquare className="w-[18px] h-[18px] text-gray-700" />
             {unreadMessages > 0 && (

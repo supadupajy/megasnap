@@ -234,7 +234,13 @@ const SwipeNotificationItem: React.FC<SwipeItemProps> = ({
   );
 };
 
-const Notifications = () => {
+interface NotificationsProps {
+  // 오버레이로 사용될 때 닫기를 부모(NotificationsOverlay)에 위임.
+  // 라우트로 직접 진입한 경우(없어졌지만 안전망)에는 기본 동작(이전 경로/홈)으로 동작.
+  onClose?: () => void;
+}
+
+const Notifications: React.FC<NotificationsProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser } = useAuth();
@@ -251,6 +257,12 @@ const Notifications = () => {
   }, []);
 
   const handleBack = useCallback(() => {
+    // 오버레이로 사용 중이면 그냥 닫기 — 아래 페이지(Flicks 등)가 그대로 이어진다.
+    if (onClose) {
+      onClose();
+      return;
+    }
+
     const routeState = location.state as any;
     const fromPath = routeState?.fromPath;
 
@@ -266,7 +278,7 @@ const Notifications = () => {
       replace: true,
       state: { direction: 'back' },
     });
-  }, [location.pathname, location.state, navigate]);
+  }, [location.pathname, location.state, navigate, onClose]);
 
   useEffect(() => {
     const handleOpenWrite = () => {};
@@ -427,6 +439,9 @@ const Notifications = () => {
       return;
     }
 
+    // 다른 페이지로 이동할 때는 먼저 오버레이를 닫는다 (열려 있는 상태로 navigate 하면 어색함)
+    onClose?.();
+
     if (notif.post_id) navigate('/', { state: { postId: notif.post_id, openPostDetail: true } });
     else if (notif.type === 'message') navigate(`/chat/${notif.actor_id}`);
     else navigate(`/profile/${notif.actor_id}`);
@@ -438,6 +453,7 @@ const Notifications = () => {
       return;
     }
 
+    onClose?.();
     navigate(`/profile/${notif.actor_id}`);
   };
 

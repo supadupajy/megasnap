@@ -23,6 +23,8 @@ import { NotificationProvider } from "./components/NotificationProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
 import PlaceSearchOverlay from "./components/PlaceSearchOverlay";
+import NotificationsOverlay from "./components/NotificationsOverlay";
+import MessagesOverlay from "./components/MessagesOverlay";
 
 // Lazy-loaded routes (초기 로드 후 필요할 때만 fetch)
 const Profile = lazy(() => import("./pages/Profile"));
@@ -32,8 +34,9 @@ const UserProfile = lazy(() => import("./pages/UserProfile"));
 const Follow = lazy(() => import("./pages/Follow"));
 const Popular = lazy(() => import("./pages/Popular"));
 const Search = lazy(() => import("./pages/Search"));
-const Notifications = lazy(() => import("./pages/Notifications"));
-const Messages = lazy(() => import("./pages/Messages"));
+// Notifications / Messages는 더 이상 라우트가 아니라 전역 오버레이로 마운트된다.
+// (해당 페이지로 라우트 이동을 하지 않으므로 아래 페이지(예: Flicks)의 영상/상태가
+//  그대로 유지된다 → 깜빡임/이어 재생 캐시 등 우회 코드 불필요)
 const Chat = lazy(() => import("./pages/Chat"));
 const WritePage = lazy(() => import("./pages/Write"));
 const FriendList = lazy(() => import("./pages/FriendList"));
@@ -102,8 +105,7 @@ const NON_INDEX_ROUTE_PREFIXES = [
   '/search',
   '/post-search',
   '/video-search',
-  '/notifications',
-  '/messages',
+  // '/notifications', '/messages'는 오버레이로 처리하므로 라우트 prefix가 아님.
   '/chat',
   '/friends',
   '/profile',
@@ -143,6 +145,15 @@ const PushNotificationBootstrap = () => {
   return null;
 };
 
+// 외부에서 /notifications 또는 /messages URL로 직접 진입한 경우 홈으로 보내고
+// 해당 오버레이를 자동으로 열어 준다 (푸시 알림 클릭, 딥링크 등).
+const OverlayRouteRedirect: React.FC<{ overlay: 'notifications' | 'messages' }> = ({ overlay }) => {
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(`open-${overlay}-overlay`));
+  }, [overlay]);
+  return <Navigate to="/" replace />;
+};
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -172,6 +183,11 @@ const AnimatedRoutes = () => {
   const [isReelsViewerOpen, setIsReelsViewerOpen] = useState(false);
   // 광고 PostDetail이 열려 있을 때는 BottomNav 숨김 (X 버튼으로만 닫음)
   const [isAdPostDetailOpen, setIsAdPostDetailOpen] = useState(false);
+  // 알림/메시지 전역 오버레이 열림 상태.
+  // - 라우트가 아니므로 페이지(예: Flicks)는 그대로 살아 있고 그 위에 오버레이만 덮인다.
+  // - 하단 메뉴(BottomNav) 탭이나 다른 라우트로 이동하면 자동으로 닫힌다.
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
 
   useEffect(() => {
     if (!showIndex || !session) return;
@@ -202,11 +218,20 @@ const AnimatedRoutes = () => {
       setIsAdPostDetailOpen(!!detail.open && !!detail.isAd);
     };
 
+    const handleNotificationsOpen = () => setIsNotificationsOpen(true);
+    const handleNotificationsClose = () => setIsNotificationsOpen(false);
+    const handleMessagesOpen = () => setIsMessagesOpen(true);
+    const handleMessagesClose = () => setIsMessagesOpen(false);
+
     window.addEventListener('open-post-list-overlay', handleOpen);
     window.addEventListener('close-post-list-overlay', handleClose);
     window.addEventListener('open-reels-viewer', handleReelsOpen);
     window.addEventListener('close-reels-viewer', handleReelsClose);
     window.addEventListener('post-detail-visibility', handlePostDetailVisibility);
+    window.addEventListener('open-notifications-overlay', handleNotificationsOpen);
+    window.addEventListener('close-notifications-overlay', handleNotificationsClose);
+    window.addEventListener('open-messages-overlay', handleMessagesOpen);
+    window.addEventListener('close-messages-overlay', handleMessagesClose);
 
     return () => {
       window.removeEventListener('open-post-list-overlay', handleOpen);
@@ -214,8 +239,24 @@ const AnimatedRoutes = () => {
       window.removeEventListener('open-reels-viewer', handleReelsOpen);
       window.removeEventListener('close-reels-viewer', handleReelsClose);
       window.removeEventListener('post-detail-visibility', handlePostDetailVisibility);
+      window.removeEventListener('open-notifications-overlay', handleNotificationsOpen);
+      window.removeEventListener('close-notifications-overlay', handleNotificationsClose);
+      window.removeEventListener('open-messages-overlay', handleMessagesOpen);
+      window.removeEventListener('close-messages-overlay', handleMessagesClose);
     };
   }, []);
+
+  // 라우트(pathname)가 바뀌면 알림/메시지 오버레이는 자동으로 닫는다.
+  // - BottomNav 탭 클릭(다른 라우트로 이동)
+  // - Notifications/Messages 내부에서 프로필/채팅/포스트로 이동
+  // - 푸시 알림으로 들어와 OverlayRouteRedirect가 / 로 보낸 직후의 이전 path 잔여 등
+  //   어느 경우든 라우트가 변하면 오버레이는 닫혀야 자연스럽다.
+  useEffect(() => {
+    setIsNotificationsOpen(false);
+    setIsMessagesOpen(false);
+    // 의도적으로 location.pathname만 의존성에 둔다 (오버레이 자체 상태 변경으로는 재실행 X)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!showIndex && (window as any).__isTrendingReelsOpen === true) {
@@ -225,6 +266,16 @@ const AnimatedRoutes = () => {
 
   useEffect(() => {
     const backButtonListener = CapApp.addListener('backButton', ({ canGoBack }) => {
+      // 0순위(최상): 알림/메시지 전역 오버레이가 떠 있으면 그것부터 닫기
+      if ((window as any).__isNotificationsOverlayOpen === true) {
+        window.dispatchEvent(new CustomEvent('close-notifications-overlay'));
+        return;
+      }
+      if ((window as any).__isMessagesOverlayOpen === true) {
+        window.dispatchEvent(new CustomEvent('close-messages-overlay'));
+        return;
+      }
+
       // 0순위: ReelsViewer가 열려 있으면 닫기 (최상단 풀스크린 오버레이)
       if ((window as any).__isReelsViewerOpen === true) {
         window.dispatchEvent(new CustomEvent('close-reels-viewer-by-back'));
@@ -340,8 +391,11 @@ const AnimatedRoutes = () => {
                   <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
                   <Route path="/post-search" element={<ProtectedRoute><PostSearch /></ProtectedRoute>} />
                   <Route path="/video-search" element={<Navigate to="/post-search" replace />} />
-                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                  <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                  {/* /notifications, /messages는 더 이상 라우트가 아니다 (전역 오버레이로 동작).
+                      외부에서 해당 URL로 진입한 경우에 대비해 홈으로 리다이렉트하면서
+                      자동으로 해당 오버레이를 띄운다. */}
+                  <Route path="/notifications" element={<OverlayRouteRedirect overlay="notifications" />} />
+                  <Route path="/messages" element={<OverlayRouteRedirect overlay="messages" />} />
                   <Route path="/chat/:chatId" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
                   <Route path="/friends" element={<ProtectedRoute><FriendFeed /></ProtectedRoute>} />
                   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
@@ -386,6 +440,21 @@ const AnimatedRoutes = () => {
 
       {/* 전역 장소 검색 오버레이 — open-place-search 이벤트로 열림 (detail.onSelect 콜백 전달) */}
       {session && <PlaceSearchOverlay />}
+
+      {/* 전역 알림/메시지 오버레이 — 라우트와 무관하게 현재 페이지 위로 덮인다.
+          Flicks/Index/Profile 등 어디서든 열릴 수 있고, 닫으면 그 페이지가 그대로 이어진다. */}
+      {session && (
+        <>
+          <NotificationsOverlay
+            open={isNotificationsOpen}
+            onClose={() => setIsNotificationsOpen(false)}
+          />
+          <MessagesOverlay
+            open={isMessagesOpen}
+            onClose={() => setIsMessagesOpen(false)}
+          />
+        </>
+      )}
 
     </div>
   );

@@ -11,13 +11,6 @@ import { getFallbackImage } from '@/lib/utils';
 import { fetchLikedPostIds } from '@/utils/like-utils';
 import ReelsViewer from '@/components/ReelsViewer';
 
-const getTierFromFollowers = (followers: number) => {
-  if (followers >= 10000000) return 'diamond';
-  if (followers >= 1000000) return 'gold';
-  if (followers >= 100000) return 'silver';
-  return 'none';
-};
-
 // Fisher-Yates 셔플
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr];
@@ -47,81 +40,18 @@ const BACKDROP_STYLE: React.CSSProperties = {
   pointerEvents: 'none',
 };
 
-// ─────────────────────────────────────────────────────────────
-// 세션 캐시: 라우터 unmount 후에도 같은 세션에 돌아오면
-// 동일한 셔플 순서/현재 영상/재생 위치를 유지하기 위한 module-scope 저장소.
-//
-// 사용 시나리오:
-//   Flicks → 알림/메시지 진입 → X 눌러 복귀
-//   이때 fetchVideoPool로 새로 셔플되지 않고, 보던 영상의 같은 시점부터 이어 재생.
-//
-// 무효화 시점:
-//   - 사용자 변경 (다른 계정 로그인)
-//   - 차단 목록 변경 (필터 결과가 달라지므로)
-//   - 다음 fetchVideoPool 호출 (= 캐시가 없을 때만 fetch하므로 보통 한 세션 1회)
-// ─────────────────────────────────────────────────────────────
-type FlicksCache = {
-  videoPool: Post[];
-  activePostId: string | null;
-  activeVideoTime: number;
-  authUserId: string | null;
-  blockedKey: string;
-};
-let flicksCache: FlicksCache | null = null;
-
-// Flicks → 이 경로로 나갔다가 → 같은 경로에서 다시 Flicks로 돌아오면 이어 재생.
-// 그 외 라우트로 이탈하면 캐시를 무효화해서 다음 진입 시 새 영상이 나오게 한다.
-const FLICKS_RESUME_ROUTES = ['/notifications', '/messages'];
-
-const isResumeRoute = (pathname: string): boolean =>
-  FLICKS_RESUME_ROUTES.some((p) => pathname === p || pathname.startsWith(p + '/'));
-
-// Flicks가 unmount될 때 어떤 경로로 빠져나갔는지 기록.
-// 다음에 Flicks가 mount될 때 이 값이 resume route였을 때만 캐시 복원.
-let flicksLastExitPath: string | null = null;
-
+// 알림/메시지는 라우트가 아니라 오버레이로 동작하므로,
+// Flicks 페이지가 unmount되지 않고 그대로 살아 있다. 이전에 있던 캐시/이어재생/
+// exitPath/initialVideoTime 같은 우회 로직은 모두 제거되었다.
 const Flicks = () => {
   const navigate = useNavigate();
   const { user: authUser, loading: authLoading } = useAuth();
   const { blockedIds } = useBlockedUsers();
   const blockedKey = Array.from(blockedIds).sort().join(',');
 
-  // 캐시가 현재 사용자/차단목록과 일치하고,
-  // 직전에 Flicks에서 빠져나간 경로가 알림/메시지(=resume route)였을 때만 즉시 복원.
-  // → 알림/메시지에서 X로 돌아오는 케이스에서만 이어 재생, 다른 메뉴 갔다 오면 새 영상.
-  const cachedValid =
-    !!flicksCache &&
-    flicksCache.authUserId === (authUser?.id ?? null) &&
-    flicksCache.blockedKey === blockedKey &&
-    flicksCache.videoPool.length > 0 &&
-    flicksLastExitPath !== null &&
-    isResumeRoute(flicksLastExitPath);
-
-  // 한 번 마운트하면 exit path는 소비된 셈이므로 다시 null로 (다음 cycle을 위해)
-  // 단, 캐시가 유효하지 않아 새로 페치하더라도 동일하게 리셋되어야 일관됨
-  useEffect(() => {
-    flicksLastExitPath = null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const [videoPool, setVideoPool] = useState<Post[]>(
-    cachedValid ? flicksCache!.videoPool : []
-  );
-  const [isLoading, setIsLoading] = useState(!cachedValid);
-  const hasLoaded = useRef(cachedValid);
-
-  // 마지막으로 보고된 활성 포스트/시간을 ref로 추적 (state로 두면 매 보고마다 리렌더)
-  const activePostIdRef = useRef<string | null>(
-    cachedValid ? flicksCache!.activePostId : null
-  );
-  const activeVideoTimeRef = useRef<number>(
-    cachedValid ? flicksCache!.activeVideoTime : 0
-  );
-
-  // ReelsViewer에 넘길 초기 포스트와 초기 재생 시간을 마운트 시 1회만 결정
-  // (이후 ReelsViewer 내부 상태로 흘러가므로 부모는 재계산 안 함)
-  const initialPostRef = useRef<Post | null>(null);
-  const initialVideoTimeRef = useRef<number>(0);
+  const [videoPool, setVideoPool] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const hasLoaded = useRef(false);
 
   const fetchVideoPool = useCallback(async () => {
     try {
@@ -222,20 +152,7 @@ const Flicks = () => {
       const filtered = mapped.filter(
         (p) => !p.isAd && p.user && !blockedIds.has(p.user.id)
       );
-
-      const shuffled = shuffle(filtered);
-      setVideoPool(shuffled);
-
-      // 새로 셔플된 풀을 캐시에 저장 (이후 페이지 재진입 시 재사용)
-      flicksCache = {
-        videoPool: shuffled,
-        activePostId: shuffled[0]?.id ?? null,
-        activeVideoTime: 0,
-        authUserId: authUser?.id ?? null,
-        blockedKey,
-      };
-      activePostIdRef.current = flicksCache.activePostId;
-      activeVideoTimeRef.current = 0;
+      setVideoPool(shuffle(filtered));
     } catch (err) {
       console.error('[Flicks] failed to load video pool', err);
       setVideoPool([]);
@@ -255,79 +172,16 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
-  // Unmount 시 다음 라우트를 기록.
-  // - 알림/메시지로 빠져나갔다 → 다음 mount에서 캐시 복원해 이어 재생
-  // - 그 외 경로(하단 탭 다른 메뉴 등)로 이탈 → 캐시 무효화, 다음 진입 시 새 영상
-  // - StrictMode dev/HMR에서 발생하는 가짜 unmount(여전히 /flicks에 있는 상태)는 무시한다.
-  // React Router는 라우트 전환이 일어난 뒤 unmount하므로 이 시점에는 window.location.pathname이 이미 새 경로로 갱신돼 있다.
-  useEffect(() => {
-    return () => {
-      const nextPath = typeof window !== 'undefined' ? window.location.pathname : '';
-      // 현재 경로가 여전히 /flicks라면 실제 라우트 이동이 아닌 StrictMode/HMR 이중 마운트 cleanup이므로 캐시를 건드리지 않는다.
-      if (nextPath === '/flicks' || nextPath.startsWith('/flicks/')) {
-        return;
-      }
-      flicksLastExitPath = nextPath;
-      const willResume = isResumeRoute(nextPath);
-      if (!willResume) {
-        flicksCache = null;
-      }
-    };
-  }, []);
-
-  // 마운트 시 초기 포스트/초기 시간 결정 (cached일 때만 의미 있음; 새 fetch면 fetchVideoPool이 캐시를 덮어쓴 후 ReelsViewer가 첫 슬라이드부터 시작)
-  if (videoPool.length > 0 && !initialPostRef.current) {
-    const cachedActiveId = activePostIdRef.current;
-    const found = cachedActiveId
-      ? videoPool.find((p) => p.id === cachedActiveId)
-      : null;
-    initialPostRef.current = found ?? videoPool[0];
-    initialVideoTimeRef.current = found ? activeVideoTimeRef.current : 0;
-  }
-
   const handleClose = useCallback(() => {
     navigate(-1);
   }, [navigate]);
 
   const handlePostDeleted = useCallback((postId: string) => {
-    setVideoPool((prev) => {
-      const next = prev.filter((p) => p.id !== postId);
-      if (flicksCache) {
-        flicksCache.videoPool = next;
-        if (flicksCache.activePostId === postId) {
-          flicksCache.activePostId = next[0]?.id ?? null;
-          flicksCache.activeVideoTime = 0;
-        }
-      }
-      return next;
-    });
+    setVideoPool((prev) => prev.filter((p) => p.id !== postId));
   }, []);
 
   const handlePostUpdated = useCallback((postId: string, content: string) => {
-    setVideoPool((prev) => {
-      const next = prev.map((p) => (p.id === postId ? { ...p, content } : p));
-      if (flicksCache) flicksCache.videoPool = next;
-      return next;
-    });
-  }, []);
-
-  // ReelsViewer에서 활성 포스트가 바뀔 때마다 캐시 갱신
-  const handleActivePostChange = useCallback((postId: string) => {
-    activePostIdRef.current = postId;
-    if (flicksCache) {
-      // 활성 포스트가 바뀌면 영상 시간은 0부터 — 그래야 다른 영상으로 갔다 돌아왔을 때
-      // 마지막 본 영상이 처음부터 재생되는 게 아니라, 마지막 영상의 마지막 시점에서 재개됨
-      if (flicksCache.activePostId !== postId) {
-        flicksCache.activeVideoTime = 0;
-      }
-      flicksCache.activePostId = postId;
-    }
-  }, []);
-
-  // 활성 영상의 재생 시간을 ref+캐시에 저장 (state 갱신 X, 리렌더 없음)
-  const handleActiveVideoTimeChange = useCallback((time: number) => {
-    activeVideoTimeRef.current = time;
-    if (flicksCache) flicksCache.activeVideoTime = time;
+    setVideoPool((prev) => prev.map((p) => (p.id === postId ? { ...p, content } : p)));
   }, []);
 
   if (isLoading) {
@@ -368,14 +222,11 @@ const Flicks = () => {
       <div className="bg-black" style={CONTENT_FIXED_STYLE}>
         <ReelsViewer
           isOpen={true}
-          initialPost={initialPostRef.current ?? videoPool[0]}
+          initialPost={videoPool[0]}
           pool={videoPool}
           onClose={handleClose}
           onDelete={handlePostDeleted}
           onUpdate={handlePostUpdated}
-          onActivePostChange={handleActivePostChange}
-          onActiveVideoTimeChange={handleActiveVideoTimeChange}
-          initialVideoTime={initialVideoTimeRef.current}
           noRepeat
           embedded
           endMessage="더 이상 표시할 영상이 없습니다"

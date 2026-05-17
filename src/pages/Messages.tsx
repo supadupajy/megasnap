@@ -140,7 +140,12 @@ const SwipeConversationItem: React.FC<SwipeConvItemProps> = ({
   );
 };
 
-const Messages = () => {
+interface MessagesProps {
+  // 오버레이로 사용될 때 닫기를 부모(MessagesOverlay)에 위임.
+  onClose?: () => void;
+}
+
+const Messages: React.FC<MessagesProps> = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser } = useAuth();
@@ -289,6 +294,7 @@ const Messages = () => {
 
   const handleStartChat = (user: any) => {
     chatStore.getOrCreateRoom(user.id, user.nickname || '사용자', user.avatar_url);
+    onClose?.();
     navigate(`/chat/${user.id}`);
   };
 
@@ -316,6 +322,12 @@ const Messages = () => {
   };
 
   const handleBack = () => {
+    // 오버레이로 사용 중이면 그냥 닫기 — 아래 페이지(Flicks 등)가 그대로 이어진다.
+    if (onClose) {
+      onClose();
+      return;
+    }
+
     const routeState = location.state as any;
     const fromPath = routeState?.fromPath;
 
@@ -397,8 +409,8 @@ const Messages = () => {
                     onOpen={(id) => setSwipedId(id)}
                     onClose={() => setSwipedId(null)}
                     onDeleteClick={handleDeleteClick}
-                    onNavigate={(id) => navigate(`/chat/${id}`)}
-                    onProfileNavigate={(id) => navigate(`/profile/${id}`)}
+                    onNavigate={(id) => { onClose?.(); navigate(`/chat/${id}`); }}
+                    onProfileNavigate={(id) => { onClose?.(); navigate(`/profile/${id}`); }}
                   />
                 ))}
               </AnimatePresence>

@@ -69,7 +69,10 @@ const Chat = () => {
 
   const handleBack = useCallback(() => {
     localStorage.removeItem('activeChatId');
-    navigate('/messages', { replace: true, state: { direction: 'back' } });
+    // 메시지는 오버레이로 동작하므로, Chat에서 뒤로가면 홈으로 가면서
+    // 메시지 오버레이를 열어 자연스러운 흐름을 만든다.
+    navigate('/', { replace: true, state: { direction: 'back' } });
+    window.dispatchEvent(new CustomEvent('open-messages-overlay'));
   }, [navigate]);
 
   const scrollToBottom = useCallback(() => {
@@ -361,7 +364,13 @@ const Chat = () => {
           </div>
           <HeaderAdBanner />
           <div className="flex items-center gap-4 shrink-0">
-            <button className="relative p-1 hover:bg-gray-50 rounded-full" onClick={() => navigate('/notifications')} >
+            <button
+              className="relative p-1 hover:bg-gray-50 rounded-full"
+              onClick={() => {
+                navigate('/', { replace: true });
+                window.dispatchEvent(new CustomEvent('open-notifications-overlay'));
+              }}
+            >
               <Bell className="w-6 h-6 text-gray-600" />
               {unreadNotifs > 0 && (
                 <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
@@ -369,7 +378,13 @@ const Chat = () => {
                 </span>
               )}
             </button>
-            <button className="relative p-1 hover:bg-gray-50 rounded-full" onClick={() => navigate('/messages')} >
+            <button
+              className="relative p-1 hover:bg-gray-50 rounded-full"
+              onClick={() => {
+                navigate('/', { replace: true });
+                window.dispatchEvent(new CustomEvent('open-messages-overlay'));
+              }}
+            >
               <MessageSquare className="w-6 h-6 text-gray-600" />
               {unreadMessages > 0 && (
                 <span className="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
