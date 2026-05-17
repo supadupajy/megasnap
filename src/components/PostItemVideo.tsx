@@ -39,12 +39,30 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   const userPausedRef = useRef(false);
   const wasPlayingBeforeScrubRef = useRef(false);
   const firstTimeUpdateLoggedRef = useRef(false);
+  const propsSnapshotRef = useRef({
+    debugLabel,
+    src,
+    posterUrl,
+    autoPlay,
+    showControls,
+    firstFrameReady: false,
+  });
   const [userPaused, setUserPaused] = useState(false);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
   const [muted, setMuted] = useVideoMuted();
 
+  propsSnapshotRef.current = {
+    debugLabel,
+    src,
+    posterUrl,
+    autoPlay,
+    showControls,
+    firstFrameReady,
+  };
+
   const getVideoSnapshot = useCallback(() => {
     const video = localVideoRef.current;
+    const snapshot = propsSnapshotRef.current;
     if (!video) return { hasVideo: false };
 
     return {
@@ -63,27 +81,28 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       buffered: video.buffered.length
         ? `${Number(video.buffered.start(0).toFixed(3))}-${Number(video.buffered.end(video.buffered.length - 1).toFixed(3))}`
         : 'empty',
-      currentSrc: getShortUrl(video.currentSrc || src),
-      poster: getShortUrl(video.poster || posterUrl),
+      currentSrc: getShortUrl(video.currentSrc || snapshot.src),
+      poster: getShortUrl(video.poster || snapshot.posterUrl),
       styleOpacity: video.style.opacity,
       computedOpacity: typeof window !== 'undefined' ? window.getComputedStyle(video).opacity : undefined,
     };
-  }, [posterUrl, src]);
+  }, []);
 
   const debugLog = useCallback((event: string, extra: Record<string, unknown> = {}) => {
+    const snapshot = propsSnapshotRef.current;
     console.info('[video-debug]', event, {
-      label: debugLabel,
+      label: snapshot.debugLabel,
       instanceId: instanceIdRef.current,
-      src: getShortUrl(src),
-      posterUrl: getShortUrl(posterUrl),
-      autoPlay,
-      showControls,
-      firstFrameReady,
+      src: getShortUrl(snapshot.src),
+      posterUrl: getShortUrl(snapshot.posterUrl),
+      autoPlay: snapshot.autoPlay,
+      showControls: snapshot.showControls,
+      firstFrameReady: snapshot.firstFrameReady,
       userPaused: userPausedRef.current,
       ...extra,
       video: getVideoSnapshot(),
     });
-  }, [autoPlay, debugLabel, firstFrameReady, getVideoSnapshot, posterUrl, showControls, src]);
+  }, [getVideoSnapshot]);
 
   const setVideoRefs = useCallback((el: HTMLVideoElement | null) => {
     localVideoRef.current = el;
@@ -91,27 +110,21 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
     }
 
-    console.info('[video-debug]', el ? 'ref-attached' : 'ref-detached', {
-      label: debugLabel,
-      instanceId: instanceIdRef.current,
-      src: getShortUrl(src),
-      posterUrl: getShortUrl(posterUrl),
-      autoPlay,
-      showControls,
+    debugLog(el ? 'ref-attached' : 'ref-detached', {
       elementReadyState: el?.readyState,
       elementNetworkState: el?.networkState,
       elementCurrentSrc: getShortUrl(el?.currentSrc),
     });
-  }, [autoPlay, debugLabel, posterUrl, showControls, src, videoRef]);
+  }, [debugLog, videoRef]);
 
   useEffect(() => {
-    debugLog('mount');
-    return () => debugLog('unmount');
+    debugLog('actual-mount');
+    return () => debugLog('actual-unmount');
   }, [debugLog]);
 
   useEffect(() => {
     debugLog('props-change');
-  }, [autoPlay, showControls, src, posterUrl, debugLabel, debugLog]);
+  }, [autoPlay, debugLabel, debugLog, posterUrl, showControls, src]);
 
   useEffect(() => {
     userPausedRef.current = false;
@@ -196,7 +209,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       video.removeEventListener('error', handleError);
       video.removeEventListener('timeupdate', handleTimeUpdate);
     };
-  }, [src, debugLog]);
+  }, [debugLog, src]);
 
   useEffect(() => {
     const video = localVideoRef.current;
@@ -255,7 +268,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
     debugLog('play-waiting-for-canplay');
     video.addEventListener('canplay', play, { once: true });
     return () => video.removeEventListener('canplay', play);
-  }, [autoPlay, src, setMuted, debugLog]);
+  }, [autoPlay, debugLog, setMuted, src]);
 
   const handleVideoTap = (e: React.MouseEvent) => {
     e.stopPropagation();
