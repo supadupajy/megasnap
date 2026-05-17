@@ -1442,7 +1442,7 @@ const Index = () => {
     const handleMoveComplete = () => {
       window.removeEventListener('map-move-complete', handleMoveComplete);
       if (highlightTimeoutRef.current) window.clearTimeout(highlightTimeoutRef.current);
-      window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
+      window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500, forcePop: true } }));
       highlightTimeoutRef.current = null;
     };
     window.addEventListener('map-move-complete', handleMoveComplete);
@@ -1450,7 +1450,7 @@ const Index = () => {
     // 안전장치: 2초 후에도 이벤트가 안 오면 강제 실행
     highlightTimeoutRef.current = window.setTimeout(() => {
       window.removeEventListener('map-move-complete', handleMoveComplete);
-      window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500 } }));
+      window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: post.id, duration: 2500, forcePop: true } }));
       highlightTimeoutRef.current = null;
     }, 2000);
   }, []);

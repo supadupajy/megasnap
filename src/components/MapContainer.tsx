@@ -1180,6 +1180,7 @@ const MapContainer = ({
     const handleHighlight = (e: any) => {
       const postId = e.detail?.id;
       const duration = e.detail?.duration || 2500;
+      const forcePop = !!e.detail?.forcePop;
 
       if (!postId) return;
 
@@ -1219,9 +1220,11 @@ const MapContainer = ({
               content.setAttribute('data-content-state', nowStateKey);
               scheduleOverlapBadgeUpdateRef.current();
             }
-            // 새로 업로드한 컨텐츠는 highlight 시점에 pop-pop 등장을 한 번 더 강제 재생한다.
-            // 지도 이동/마커 생성 타이밍에 따라 최초 appear 클래스가 소비돼도 업로드 완료 애니메이션이 보장된다.
-            if (pNow?.isNewRealtime) {
+            // 새로 업로드한 컨텐츠 또는 위치보기로 포커스된 컨텐츠는 highlight 시점에
+            // pop-pop 등장을 한 번 더 강제 재생한다. 모바일에서 지도 bounds 안정화 전에
+            // 일시적으로 viewport 밖으로 판정되어 페이드 경로를 타는 경우도 여기서 보정한다.
+            if (pNow?.isNewRealtime || forcePop) {
+              content.classList.remove('marker-viewport-hidden', 'markers-hidden', 'markers-revealing');
               content.classList.remove('marker-appear-animation');
               void content.offsetWidth;
               content.classList.add('marker-appear-animation');
