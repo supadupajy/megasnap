@@ -802,29 +802,30 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           return (
           <div
             key={`${media.type}-${index}`}
-            className="w-full h-full shrink-0 snap-center relative bg-transparent bg-cover bg-center"
+            className="w-full h-full shrink-0 snap-center relative bg-neutral-950 bg-cover bg-center"
             style={{
               scrollSnapStop: 'always',
               backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
             }}
           >
             {media.type === 'video' ? (
-              index === currentImageIndex ? (
-                <PostItemVideo
-                  src={media.url}
-                  posterUrl={media.posterUrl}
-                  autoPlay
-                  showControls
-                  debugLabel={`detail:${currentPost.id}:media-${index}:active-true`}
-                />
-              ) : (
+              <>
                 <VideoThumbnailPreview
                   src={media.url}
-                  className="w-full h-full object-cover pointer-events-none"
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                   startTime={0.8}
-                  debugLabel={`detail:${currentPost.id}:media-${index}:inactive-thumb`}
+                  debugLabel={`detail:${currentPost.id}:media-${index}:base-thumb`}
                 />
-              )
+                {index === currentImageIndex && (
+                  <PostItemVideo
+                    src={media.url}
+                    posterUrl={media.posterUrl}
+                    autoPlay
+                    showControls
+                    debugLabel={`detail:${currentPost.id}:media-${index}:active-true`}
+                  />
+                )}
+              </>
             ) : (
               <img
                 src={media.url}
@@ -861,7 +862,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
     return (
       <div
-        className="relative rounded-3xl overflow-hidden bg-transparent bg-cover bg-center shadow-inner transition-[height] duration-300"
+        className="relative rounded-3xl overflow-hidden bg-neutral-950 bg-cover bg-center shadow-inner transition-[height] duration-300"
         style={{
           aspectRatio: mediaAspectRatio,
           backgroundImage: activeBackgroundUrl ? `url(${activeBackgroundUrl})` : undefined,

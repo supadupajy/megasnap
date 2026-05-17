@@ -361,8 +361,8 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     }
 
     return (
-      <div className="relative w-full h-full bg-transparent group/slider">
-        <div className="absolute inset-0 bg-transparent" aria-hidden="true" />
+      <div className="relative w-full h-full bg-neutral-950 group/slider">
+        <div className="absolute inset-0 bg-neutral-950" aria-hidden="true" />
         <div
           ref={imageScrollRef}
           className={cn(
@@ -381,28 +381,29 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
             return (
             <div
               key={`${media.type}-${index}`}
-              className="relative w-full h-full shrink-0 snap-center snap-always bg-transparent bg-cover bg-center"
+              className="relative w-full h-full shrink-0 snap-center snap-always bg-neutral-950 bg-cover bg-center"
               style={{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined }}
             >
               <div className="absolute inset-0 bg-gray-200/0" aria-hidden="true" />
               {media.type === 'video' ? (
-                index === currentImageIndex ? (
-                  <PostItemVideo
-                    videoRef={videoRef}
-                    src={media.url}
-                    posterUrl={media.posterUrl}
-                    autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
-                    showControls
-                    debugLabel={`feed:${post.id}:media-${index}:active-true`}
-                  />
-                ) : (
+                <>
                   <VideoThumbnailPreview
                     src={media.url}
-                    className="relative z-[1] w-full h-full object-cover pointer-events-none"
+                    className="absolute inset-0 z-[1] w-full h-full object-cover pointer-events-none"
                     startTime={0.8}
-                    debugLabel={`feed:${post.id}:media-${index}:inactive-thumb`}
+                    debugLabel={`feed:${post.id}:media-${index}:base-thumb`}
                   />
-                )
+                  {index === currentImageIndex && (
+                    <PostItemVideo
+                      videoRef={videoRef}
+                      src={media.url}
+                      posterUrl={media.posterUrl}
+                      autoPlay={!!autoPlayVideo && isVisible && isReadyToPlay && !isOverlayOpen}
+                      showControls
+                      debugLabel={`feed:${post.id}:media-${index}:active-true`}
+                    />
+                  )}
+                </>
               ) : (
                 <img
                   src={media.url}
