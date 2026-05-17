@@ -1217,8 +1217,9 @@ const MapContainer = ({
               content.setAttribute('data-content-state', nowStateKey);
               scheduleOverlapBadgeUpdateRef.current();
             }
-            // marker-appear-animation 제거 (innerHTML 교체 후이므로 안전)
-            content.classList.remove('marker-appear-animation');
+            // marker-appear-animation은 유지 — 새 컨텐츠 생성 시 pop! 등장이
+            // 끊기지 않도록 그대로 두고, highlighted와 동시에 재생되도록 한다.
+            // (.highlighted.marker-appear-animation은 CSS에서 등장 애니메이션을 허용)
             // highlighted 추가
             content.classList.remove('highlighted');
             content.classList.add('highlighted');

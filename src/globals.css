@@ -168,8 +168,10 @@
   z-index: 99999 !important;
 }
 
-/* highlighted 상태에서 marker-appear 애니메이션 완전 중단 + 최종 상태 고정 */
-.marker-container.highlighted .marker-content-wrapper {
+/* highlighted 상태에서 기본은 최종 상태 고정.
+   단, marker-appear-animation이 함께 붙어 있으면(=새로 생성된 컨텐츠)
+   pop! 등장 애니메이션을 끝까지 재생할 수 있도록 별도 규칙에서 허용. */
+.marker-container.highlighted:not(.marker-appear-animation) .marker-content-wrapper {
   animation: none !important;
   opacity: 1 !important;
   transform: none !important;
@@ -199,6 +201,16 @@
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
+/* 새 컨텐츠 생성 시(highlighted와 함께) 등장: 더 화려한 pop-pop-pop! */
+@keyframes marker-appear-new {
+  0%   { opacity: 0; transform: scale(0) rotate(-8deg); }
+  35%  { opacity: 1; transform: scale(1.35) rotate(4deg); }
+  55%  { transform: scale(0.85) rotate(-3deg); }
+  72%  { transform: scale(1.12) rotate(2deg); }
+  88%  { transform: scale(0.96) rotate(-0.5deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
 .marker-appear-animation .marker-content-wrapper {
   animation: marker-appear 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   transform-origin: 50% 80%;
@@ -209,14 +221,22 @@
   transform-origin: 50% 80%;
 }
 
+/* 새로 생성된 내 컨텐츠(highlighted + marker-appear-animation): 더 경쾌한 pop-pop-pop! */
+.marker-container.highlighted.marker-appear-animation .marker-content-wrapper {
+  animation: marker-appear-new 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+  transform-origin: 50% 80% !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 /* marker-appear-animation 클래스가 없으면 opacity:1 기본값 보장 */
 .marker-container:not(.marker-appear-animation) .marker-content-wrapper {
   opacity: 1;
 }
 
-/* highlighted 상태에서는 marker-appear-animation이 함께 있어도 animation 완전 무력화 */
-.marker-container.highlighted.marker-appear-animation .marker-content-wrapper,
-.marker-container.highlighted .marker-content-wrapper {
+/* highlighted + marker-appear-animation은 위에서 별도로 pop-pop-pop! 애니메이션을 부여.
+   순수 highlighted(등장 애니메이션 없음)는 transform/opacity 고정 → 핑 효과만 재생. */
+.marker-container.highlighted:not(.marker-appear-animation) .marker-content-wrapper {
   animation: none !important;
   opacity: 1 !important;
   transform: none !important;
@@ -337,9 +357,19 @@
   animation: marker-float 2.5s ease-in-out infinite;
 }
 
+/* 경쾌한 pop ring: 빠르게 부풀었다가 사라지면서 가장자리에 살짝 머무는 느낌.
+   기존의 단조로운 균일 확산 대신 cubic 가속으로 펑! 하는 임팩트를 준다. */
 @keyframes marker-ping {
-  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0.85; }
-  100% { transform: translate(-50%, -50%) scale(5);   opacity: 0; }
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  15%  { opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(4.5); opacity: 0; }
+}
+
+/* 두 번째 링: 첫 링보다 살짝 작고 색이 다른 보조 ring → pop-pop 느낌 */
+@keyframes marker-ping-secondary {
+  0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  20%  { opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(3.2); opacity: 0; }
 }
 
 /* ping은 marker-container의 ::after pseudo-element로 구현
@@ -355,7 +385,23 @@
   border-radius: 50%;
   pointer-events: none;
   z-index: -1;
-  animation: marker-ping 0.9s ease-out 3;
+  animation: marker-ping 0.7s cubic-bezier(0.16, 0.84, 0.44, 1) 3;
+}
+
+/* 두 번째 링 — 살짝 딜레이를 주고 색을 약간 다르게 해서 "pop-pop" 느낌을 강화 */
+.marker-container.highlighted::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  background: rgba(251, 191, 36, 0.45);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+  animation: marker-ping-secondary 0.7s cubic-bezier(0.16, 0.84, 0.44, 1) 3;
+  animation-delay: 0.18s;
 }
 
 /* 기존 .marker-highlight-ping은 숨김 (하위 호환) */
