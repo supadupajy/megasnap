@@ -1,6 +1,6 @@
 {
 	"appId": "com.chorasnap.chorasnap",
-	"appName": "TocaToca",
+	"appName": "SnapPop",
 	"webDir": "dist",
 	"server": {
 		"hostname": "localhost",
