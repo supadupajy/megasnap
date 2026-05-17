@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Check, Hash } from 'lucide-react';
+import { MapPin, X, ImageIcon, Utensils, Car, TreePine, PawPrint, ChevronLeft, ChevronRight, Loader2, PenLine, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { showSuccess, showError } from '@/utils/toast';
+
 import { cn, compressImage, createVideoThumbnail, cropImageBySourceRect, cropImageToAspectRatio } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
@@ -39,7 +40,11 @@ const CATEGORIES = [
   { key: 'animal', label: '동물', Icon: PawPrint },
 ] as const;
 
+const HASHTAG_INLINE_REGEX = /(#[\p{L}\p{N}_가-힣ㄱ-ㅎㅏ-ㅣ]{1,40})/gu;
+const HASHTAG_INLINE_TEST_REGEX = /^#[\p{L}\p{N}_가-힣ㄱ-ㅎㅏ-ㅣ]{1,40}$/u;
+
 const isImageMedia = (media?: MediaFile) => media?.type === 'image';
+
 const isPortraitImage = (media?: MediaFile) =>
   media?.type === 'image' && media.orientation !== 'landscape';
 const isLandscapeImage = (media?: MediaFile) =>
@@ -52,10 +57,12 @@ const Write = () => {
 
   const { content, setContent, category, setCategory, clear, mediaFiles, setMediaFiles } = useWriteStore();
   const hashtags = useMemo(() => extractHashtags(content), [content]);
+  const highlightedContentParts = useMemo(() => content.split(HASHTAG_INLINE_REGEX), [content]);
   const selectedVideoCount = useMemo(() => mediaFiles.filter((media) => media.type === 'video').length, [mediaFiles]);
   const hasTooManyVideos = selectedVideoCount > 1;
   
   const [currentPage, setCurrentPage] = useState<1 | 2>(
+
     location.state?.location || location.state?.fromLocationSelection ? 2 : 1
   );
 
@@ -67,8 +74,10 @@ const Write = () => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [previewTransform, setPreviewTransform] = useState('translate3d(0px, 0px, 0) scale(1)');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [contentScrollTop, setContentScrollTop] = useState(0);
 
   const initialLocation = location.state?.location;
+
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1285,36 +1294,41 @@ const Write = () => {
                       내용을 입력해주세요.
                     </span>
                   </div>
-                  <Textarea
-                    ref={textareaRef}
-                    placeholder="이 장소에서의 추억을 기록해보세요. 예) 오늘 노을 최고 #한강 #산책"
-                    className="min-h-[120px] bg-gray-50 border-none rounded-[32px] p-6 text-base font-normal placeholder:font-normal focus-visible:ring-2 focus-visible:ring-indigo-600"
-                    value={content}
-                    onFocus={handleTextareaInteraction}
-                    onClick={handleTextareaInteraction}
-                    onTouchStart={handleTextareaInteraction}
-                    onChange={(e) => setContent(e.target.value)}
-                  />
-                  <div className="rounded-[28px] border border-indigo-100 bg-indigo-50/60 p-4">
-                    <div className="flex items-center gap-2 text-indigo-700">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-2xl bg-white shadow-sm">
-                        <Hash className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black">해시태그 자동 인식</p>
-                        <p className="text-[10px] font-bold text-indigo-400">본문에 #태그를 쓰면 검색에 정확히 반영돼요.</p>
-                      </div>
-                    </div>
-                    {hashtags.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {hashtags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-indigo-600 shadow-sm">
-                            #{tag}
-                          </span>
-                        ))}
+                  <div className="relative min-h-[120px] rounded-[32px] bg-gray-50 focus-within:ring-2 focus-within:ring-indigo-600">
+                    {content && (
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words p-6 text-base font-normal leading-6 text-gray-900"
+                      >
+                        <div style={{ transform: `translateY(-${contentScrollTop}px)` }}>
+                          {highlightedContentParts.map((part, index) => (
+                            HASHTAG_INLINE_TEST_REGEX.test(part) ? (
+                              <span key={`${part}-${index}`} className="font-bold text-indigo-600">
+                                {part}
+                              </span>
+                            ) : (
+                              <React.Fragment key={`${part}-${index}`}>{part}</React.Fragment>
+                            )
+                          ))}
+
+                        </div>
                       </div>
                     )}
+                    <Textarea
+                      ref={textareaRef}
+                      placeholder="이 장소에서의 추억을 기록해보세요. 예) 오늘 노을 최고 #한강 #산책"
+                      className="relative min-h-[120px] resize-none rounded-[32px] border-none bg-transparent p-6 text-base font-normal leading-6 text-transparent caret-gray-900 placeholder:text-gray-400 placeholder:font-normal focus-visible:ring-0 focus-visible:ring-offset-0"
+                      value={content}
+                      spellCheck={false}
+                      onFocus={handleTextareaInteraction}
+                      onClick={handleTextareaInteraction}
+                      onTouchStart={handleTextareaInteraction}
+                      onScroll={(e) => setContentScrollTop(e.currentTarget.scrollTop)}
+                      onChange={(e) => setContent(e.target.value)}
+                    />
+
                   </div>
+
                 </div>
               </div>
             )}
