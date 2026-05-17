@@ -1,0 +1,1 @@
+select tgname from pg_trigger where tgfoid = 'public.handle_new_message_push()'::regprocedure;

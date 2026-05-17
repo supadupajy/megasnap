@@ -1,0 +1,1 @@
+create policy "post_videos_insert_own_path" on storage.objects for insert to authenticated with check (bucket_id = 'post-videos' and (storage.foldername(name))[1] = auth.uid()::text);

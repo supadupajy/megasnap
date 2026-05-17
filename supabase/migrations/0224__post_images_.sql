@@ -1,0 +1,1 @@
+drop policy if exists "Post Images Authenticated Upload" on storage.objects;

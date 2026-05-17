@@ -6,6 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const escapeHtml = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const cleanHeader = (value: unknown) => String(value ?? '').replace(/[\r\n]+/g, ' ').trim();
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -37,7 +47,14 @@ serve(async (req) => {
     }
 
     const { category, title, content } = await req.json();
-    console.log('[send-inquiry] 문의 접수:', { category, title, userEmail: user.email });
+    const safeCategory = escapeHtml(category);
+    const safeTitle = escapeHtml(title);
+    const safeContent = escapeHtml(content);
+    const safeUserEmail = escapeHtml(user.email);
+    const subjectCategory = cleanHeader(category);
+    const subjectTitle = cleanHeader(title);
+
+    console.log('[send-inquiry] 문의 접수:', { category: subjectCategory, title: subjectTitle, userEmail: user.email });
 
     const gmailUser = Deno.env.get('GMAIL_USER');
     const gmailPass = Deno.env.get('GMAIL_APP_PASSWORD');
@@ -63,19 +80,19 @@ serve(async (req) => {
       <table style="width:100%;border-collapse:collapse;">
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;width:100px;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">문의 유형</td>
-          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#4f46e5;">${category}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#4f46e5;">${safeCategory}</td>
         </tr>
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">발신자</td>
-          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${user.email}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${safeUserEmail}</td>
         </tr>
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">제목</td>
-          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${title}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${safeTitle}</td>
         </tr>
         <tr>
           <td style="padding:16px 0;vertical-align:top;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">내용</td>
-          <td style="padding:16px 0;font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;">${content}</td>
+          <td style="padding:16px 0;font-size:14px;color:#374151;line-height:1.7;white-space:pre-wrap;">${safeContent}</td>
         </tr>
       </table>
     </div>
@@ -102,11 +119,11 @@ serve(async (req) => {
       from: `"SnapPop Support" <support@thesnappop.com>`,
       to: "support@thesnappop.com",
       replyTo: user.email,
-      subject: `[SnapPop 문의] [${category}] ${title}`,
+      subject: `[SnapPop 문의] [${subjectCategory}] ${subjectTitle}`,
       html: htmlBody,
     });
 
-    console.log('[send-inquiry] 이메일 전송 성공:', { category, title, userEmail: user.email });
+    console.log('[send-inquiry] 이메일 전송 성공:', { category: subjectCategory, title: subjectTitle, userEmail: user.email });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

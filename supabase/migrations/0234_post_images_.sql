@@ -1,0 +1,1 @@
+create policy "post_images_delete_own_path" on storage.objects for delete to authenticated using (bucket_id = 'post-images' and (storage.foldername(name))[1] = auth.uid()::text);

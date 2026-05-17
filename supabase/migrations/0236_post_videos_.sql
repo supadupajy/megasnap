@@ -1,0 +1,1 @@
+create policy "post_videos_update_own_path" on storage.objects for update to authenticated using (bucket_id = 'post-videos' and (storage.foldername(name))[1] = auth.uid()::text) with check (bucket_id = 'post-videos' and (storage.foldername(name))[1] = auth.uid()::text);

@@ -1,0 +1,1 @@
+drop policy if exists "Users Update Own Objects" on storage.objects;

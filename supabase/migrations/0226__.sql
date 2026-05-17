@@ -1,0 +1,1 @@
+drop policy if exists "Storage Authenticated Upload" on storage.objects;

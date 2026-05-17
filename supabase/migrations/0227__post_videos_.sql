@@ -1,0 +1,1 @@
+drop policy if exists "Users Delete Own Objects" on storage.objects;

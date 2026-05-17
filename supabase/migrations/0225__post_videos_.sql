@@ -1,0 +1,1 @@
+drop policy if exists "Post Videos Authenticated Upload" on storage.objects;

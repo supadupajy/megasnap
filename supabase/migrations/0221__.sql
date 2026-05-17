@@ -1,0 +1,1 @@
+select name, public from storage.buckets order by name;

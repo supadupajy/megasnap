@@ -5,6 +5,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const escapeHtml = (value: unknown) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const cleanHeader = (value: unknown) => String(value ?? '').replace(/[\r\n]+/g, ' ').trim();
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -12,8 +22,13 @@ serve(async (req) => {
 
   try {
     const { adType, company, manager, contact, message } = await req.json();
+    const safeCompany = escapeHtml(company);
+    const safeManager = escapeHtml(manager);
+    const safeContact = escapeHtml(contact);
+    const safeMessage = escapeHtml(message);
+    const subjectCompany = cleanHeader(company);
 
-    console.log("[send-ad-inquiry] 광고 문의 접수 시작:", { adType, company, contact });
+    console.log("[send-ad-inquiry] 광고 문의 접수 시작:", { adType, company: subjectCompany, contact: cleanHeader(contact) });
 
     const gmailUser = Deno.env.get("GMAIL_USER");
     const gmailPass = Deno.env.get("GMAIL_APP_PASSWORD");
@@ -32,7 +47,8 @@ serve(async (req) => {
       banner: '배너 광고',
       sponsored: '스폰서드 콘텐츠',
     };
-    const adTypeLabel = adTypeLabels[adType] || adType;
+    const adTypeLabel = adTypeLabels[adType] || cleanHeader(adType);
+    const safeAdTypeLabel = escapeHtml(adTypeLabel);
 
     const htmlBody = `<!DOCTYPE html>
 <html lang="ko">
@@ -47,23 +63,23 @@ serve(async (req) => {
       <table style="width:100%;border-collapse:collapse;">
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;width:120px;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">광고 유형</td>
-          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#4f46e5;">${adTypeLabel}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#4f46e5;">${safeAdTypeLabel}</td>
         </tr>
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">회사/브랜드</td>
-          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${company}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${safeCompany}</td>
         </tr>
         ${manager ? `<tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">담당자명</td>
-          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${manager}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${safeManager}</td>
         </tr>` : ''}
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">연락처</td>
-          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${contact}</td>
+          <td style="padding:12px 0;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:700;color:#111827;">${safeContact}</td>
         </tr>
         ${message ? `<tr>
           <td style="padding:12px 0;vertical-align:top;font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;">추가 문의</td>
-          <td style="padding:12px 0;font-size:14px;color:#374151;line-height:1.6;white-space:pre-wrap;">${message}</td>
+          <td style="padding:12px 0;font-size:14px;color:#374151;line-height:1.6;white-space:pre-wrap;">${safeMessage}</td>
         </tr>` : ''}
       </table>
     </div>
@@ -90,11 +106,11 @@ serve(async (req) => {
     await transporter.sendMail({
       from: `"SnapPop Ads" <support@thesnappop.com>`,
       to: "support@thesnappop.com",
-      subject: `[SnapPop 광고 문의] ${company} - ${adTypeLabel}`,
+      subject: `[SnapPop 광고 문의] ${subjectCompany} - ${cleanHeader(adTypeLabel)}`,
       html: htmlBody,
     });
 
-    console.log("[send-ad-inquiry] 이메일 전송 성공:", { company, contact });
+    console.log("[send-ad-inquiry] 이메일 전송 성공:", { company: subjectCompany, contact: cleanHeader(contact) });
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

@@ -1,0 +1,1 @@
+create policy "avatars_update_own_file" on storage.objects for update to authenticated using (bucket_id = 'avatars' and (storage.foldername(name))[1] = 'avatars' and storage.filename(name) like auth.uid()::text || '\_%' escape '\') with check (bucket_id = 'avatars' and (storage.foldername(name))[1] = 'avatars' and storage.filename(name) like auth.uid()::text || '\_%' escape '\');

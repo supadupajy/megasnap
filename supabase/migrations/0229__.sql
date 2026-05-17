@@ -1,0 +1,1 @@
+drop policy if exists "avatars_auth_upload" on storage.objects;

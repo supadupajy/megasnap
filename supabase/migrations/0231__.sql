@@ -1,0 +1,1 @@
+drop policy if exists "avatars_auth_delete" on storage.objects;
