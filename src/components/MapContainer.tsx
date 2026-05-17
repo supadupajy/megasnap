@@ -2117,11 +2117,7 @@ const MapContainer = ({
     };
 
     function captureDecodedFrame() {
-      if ('requestVideoFrameCallback' in video) {
-        video.requestVideoFrameCallback(() => capture());
-      } else {
-        window.setTimeout(capture, 80);
-      }
+      window.setTimeout(capture, 80);
     }
 
     const moveToFirstVisibleFrame = () => {
@@ -2154,8 +2150,9 @@ const MapContainer = ({
         videoWidth: video.videoWidth,
         videoHeight: video.videoHeight,
       });
-      if (Number.isFinite(video.duration) && video.duration <= 0.2) captureDecodedFrame();
+      if (video.readyState >= 2) captureDecodedFrame();
     }, { once: true });
+    video.addEventListener('canplay', captureDecodedFrame, { once: true });
     video.addEventListener('error', () => {
       console.error('[MapContainer] video marker thumbnail video element error', { postId, videoUrl, error: video.error });
       cleanup();
