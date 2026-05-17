@@ -184,11 +184,10 @@
   visibility: visible !important;
 }
 
-/* 마커 등장: 경쾌하게 pop! 하고 튀어나옴 (내부 wrapper에 적용) */
+/* 마커 등장: 처음 pop 느낌은 유지하고 마지막 되튐은 제거 */
 @keyframes marker-appear {
   0%   { opacity: 0; transform: scale(0); }
-  50%  { opacity: 1; transform: scale(1.2); }
-  75%  { transform: scale(0.92); }
+  55%  { opacity: 1; transform: scale(1.16); }
   100% { opacity: 1; transform: scale(1); }
 }
 
@@ -201,18 +200,15 @@
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
-/* 새 컨텐츠 생성 시(highlighted와 함께) 등장: 더 화려한 pop-pop-pop! */
+/* 새 컨텐츠 생성 시(highlighted와 함께) 등장: 처음 pop 이후 자연스럽게 정착 */
 @keyframes marker-appear-new {
-  0%   { opacity: 0; transform: scale(0) rotate(-8deg); }
-  35%  { opacity: 1; transform: scale(1.35) rotate(4deg); }
-  55%  { transform: scale(0.85) rotate(-3deg); }
-  72%  { transform: scale(1.12) rotate(2deg); }
-  88%  { transform: scale(0.96) rotate(-0.5deg); }
+  0%   { opacity: 0; transform: scale(0) rotate(-6deg); }
+  40%  { opacity: 1; transform: scale(1.28) rotate(3deg); }
   100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 .marker-appear-animation .marker-content-wrapper {
-  animation: marker-appear 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: marker-appear 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   transform-origin: 50% 80%;
 }
 
@@ -221,9 +217,9 @@
   transform-origin: 50% 80%;
 }
 
-/* 새로 생성된 내 컨텐츠(highlighted + marker-appear-animation): 더 경쾌한 pop-pop-pop! */
+/* 새로 생성된 내 컨텐츠(highlighted + marker-appear-animation): pop 후 마지막 되튐 없이 정착 */
 .marker-container.highlighted.marker-appear-animation .marker-content-wrapper {
-  animation: marker-appear-new 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+  animation: marker-appear-new 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
   transform-origin: 50% 80% !important;
   opacity: 1 !important;
   visibility: visible !important;
