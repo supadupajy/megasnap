@@ -1999,9 +1999,16 @@ const MapContainer = ({
   // ── 비디오 마커 썸네일 비동기 추출 및 마커 img 교체 ──────────
   // ref에 함수를 저장해서 마커 생성 useEffect에서 항상 최신 함수를 참조할 수 있게 함
   extractVideoThumbRef.current = (postId: string, videoUrl: string) => {
-    if (videoThumbCacheRef.current.has(postId)) return; // 이미 캐시됨
-    if (videoThumbPendingRef.current.has(postId)) return; // 이미 추출 중
+    if (videoThumbCacheRef.current.has(postId)) {
+      console.log('[MapContainer] video marker thumbnail cache hit', { postId, videoUrl });
+      return;
+    }
+    if (videoThumbPendingRef.current.has(postId)) {
+      console.log('[MapContainer] video marker thumbnail extraction already pending', { postId, videoUrl });
+      return;
+    }
     videoThumbPendingRef.current.add(postId);
+    console.log('[MapContainer] video marker thumbnail extraction start', { postId, videoUrl });
 
     const video = document.createElement('video');
     video.crossOrigin = 'anonymous';
@@ -2053,17 +2060,23 @@ const MapContainer = ({
       candidateIndex += 1;
 
       if (typeof nextTime !== 'number') {
+        console.warn('[MapContainer] video marker thumbnail extraction exhausted candidates', { postId, videoUrl, candidateTimes });
         cleanup();
         videoThumbPendingRef.current.delete(postId);
         return;
       }
+
+      console.log('[MapContainer] video marker thumbnail seek candidate', { postId, videoUrl, nextTime, candidateIndex, candidateTimes });
 
       if (nextTime <= 0) {
         captureDecodedFrame();
         return;
       }
 
-      try { video.currentTime = nextTime; } catch { captureDecodedFrame(); }
+      try { video.currentTime = nextTime; } catch (error) {
+        console.warn('[MapContainer] video marker thumbnail seek failed, capture current frame', { postId, videoUrl, nextTime, error });
+        captureDecodedFrame();
+      }
     };
 
     const capture = () => {
@@ -2075,7 +2088,17 @@ const MapContainer = ({
         if (!ctx) { cleanup(); videoThumbPendingRef.current.delete(postId); return; }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        if (isMostlyBlackFrame(ctx, canvas.width, canvas.height) && candidateIndex < candidateTimes.length) {
+        const isBlackFrame = isMostlyBlackFrame(ctx, canvas.width, canvas.height);
+        console.log('[MapContainer] video marker thumbnail captured candidate', {
+          postId,
+          videoUrl,
+          currentTime: video.currentTime,
+          candidateIndex,
+          candidateTimes,
+          isBlackFrame,
+        });
+
+        if (isBlackFrame && candidateIndex < candidateTimes.length) {
           seekNextCandidate();
           return;
         }
@@ -2084,8 +2107,10 @@ const MapContainer = ({
         cleanup();
         videoThumbCacheRef.current.set(postId, dataUrl);
         videoThumbPendingRef.current.delete(postId);
+        console.log('[MapContainer] video marker thumbnail cached', { postId, videoUrl, currentTime: video.currentTime, isBlackFrame });
         refreshMarkerWithCachedThumb();
-      } catch {
+      } catch (error) {
+        console.error('[MapContainer] video marker thumbnail capture failed', { postId, videoUrl, error });
         cleanup();
         videoThumbPendingRef.current.delete(postId);
       }
@@ -2106,15 +2131,33 @@ const MapContainer = ({
         : [0];
       candidateTimes = Array.from(new Set(rawTimes.length > 0 ? rawTimes : [0]));
       candidateIndex = 0;
+      console.log('[MapContainer] video marker thumbnail metadata loaded', {
+        postId,
+        videoUrl,
+        duration,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        candidateTimes,
+      });
       seekNextCandidate();
     };
 
     video.addEventListener('loadedmetadata', moveToFirstVisibleFrame, { once: true });
     video.addEventListener('seeked', captureDecodedFrame);
     video.addEventListener('loadeddata', () => {
+      console.log('[MapContainer] video marker thumbnail loadeddata', {
+        postId,
+        videoUrl,
+        duration: video.duration,
+        currentTime: video.currentTime,
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+      });
       if (Number.isFinite(video.duration) && video.duration <= 0.2) captureDecodedFrame();
     }, { once: true });
     video.addEventListener('error', () => {
+      console.error('[MapContainer] video marker thumbnail video element error', { postId, videoUrl, error: video.error });
       cleanup();
       videoThumbPendingRef.current.delete(postId);
     }, { once: true });
@@ -2122,6 +2165,7 @@ const MapContainer = ({
     // 8초 타임아웃
     setTimeout(() => {
       if (videoThumbPendingRef.current.has(postId)) {
+        console.warn('[MapContainer] video marker thumbnail extraction timeout', { postId, videoUrl });
         cleanup();
         videoThumbPendingRef.current.delete(postId);
       }
@@ -2295,6 +2339,16 @@ const MapContainer = ({
 
     const cachedVideoThumb = hasVideo ? videoThumbCacheRef.current.get(post.id) : '';
     const markerImage = cachedVideoThumb || optimizedDisplayImage;
+    if (hasVideo) {
+      console.log('[MapContainer] video marker image selected', {
+        postId: post.id,
+        firstVideoUrl,
+        hasCachedVideoThumb: !!cachedVideoThumb,
+        hasOptimizedDisplayImage: !!optimizedDisplayImage,
+        displayImage,
+        markerImage,
+      });
+    }
     const imgContent = markerImage
       ? `<img src="${markerImage}" style="width:100%;height:100%;object-fit:cover;display:block;" />`
       : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
