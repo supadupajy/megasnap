@@ -15,14 +15,6 @@
         android:fillAlpha="0.9"
         android:pathData="M38,29C44,24 52,23.5 57,28C62,32.5 60,39.5 54,44C48,49 40,49.5 35,45C30,40.5 32,33.5 38,29Z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.58"
-        android:pathData="M34,50C35.5,40 43.5,31.5 55,30L55,35C46,36.5 40,43 39,51Z" />
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.78"
-        android:pathData="M36,33a4,4 0,1 0,0.1 0z" />
-    <path
         android:fillColor="#DFF5FF"
         android:fillAlpha="0.42"
         android:pathData="M74,52C74,67.5 66,78 54,82C69,82 84,69.5 84,54C84,42 78,32 70,26C73,33 74,43 74,52Z" />

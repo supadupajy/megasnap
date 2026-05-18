@@ -30,8 +30,6 @@ export const HiBubbleIcon = ({ className }: BrandProps) => (
 
     <circle cx="60" cy="60" r="34" fill="url(#hi-bubble-drop)" opacity="0.76" stroke="#FFFFFF" strokeWidth="3" />
     <ellipse cx="48" cy="44" rx="14" ry="8" fill="#FFFFFF" opacity="0.9" transform="rotate(-35 48 44)" />
-    <path d="M38 54C39.5 43 47.5 34.8 58.5 33" fill="none" stroke="#FFFFFF" strokeWidth="5" strokeLinecap="round" opacity="0.55" />
-    <circle cx="42" cy="39" r="4" fill="#FFFFFF" opacity="0.78" />
     <path d="M82 58C82 73.5 73.5 84 60 88C77 88 92 75.5 92 60C92 48 85.5 38 76 32C79.8 38.8 82 47.8 82 58Z" fill="#DFF5FF" opacity="0.42" />
   </svg>
 );
