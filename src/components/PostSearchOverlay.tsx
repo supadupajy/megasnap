@@ -272,48 +272,55 @@ const PostSearchOverlay = () => {
   const debounceInitRef = useRef(false);
   const skipNextDebounceRef = useRef(false);
 
-  const closeOverlay = useCallback(() => {
-    setSelectedPostId(null);
-    setIsOpen(false);
-    window.dispatchEvent(new CustomEvent('close-post-search-overlay'));
-  }, []);
-
-  const openOverlay = useCallback((query?: string) => {
+  const applyOpenState = useCallback((query?: string) => {
     const nextQuery = query?.trim() || '';
 
     setIsOpen(true);
     setSelectedPostId(null);
+    (window as any).__isPostSearchOverlayOpen = true;
 
     if (nextQuery) {
       skipNextDebounceRef.current = true;
       setSearchQuery(nextQuery);
+      setHasSearched(true);
+      setResults([]);
       try {
         sessionStorage.setItem(CACHE_KEY_QUERY, nextQuery);
         sessionStorage.removeItem(CACHE_KEY_RESULTS);
       } catch {}
-    } else {
-      try {
-        const cachedQuery = sessionStorage.getItem(CACHE_KEY_QUERY) || '';
-        setSearchQuery(cachedQuery);
-        setResults(getInitialPostSearchResults());
-        setHasSearched(!!cachedQuery);
-      } catch {
-        setSearchQuery('');
-        setResults([]);
-        setHasSearched(false);
-      }
+      return;
     }
 
-    window.dispatchEvent(new CustomEvent('open-post-search-overlay'));
+    try {
+      const cachedQuery = sessionStorage.getItem(CACHE_KEY_QUERY) || '';
+      setSearchQuery(cachedQuery);
+      setResults(getInitialPostSearchResults());
+      setHasSearched(!!cachedQuery);
+    } catch {
+      setSearchQuery('');
+      setResults([]);
+      setHasSearched(false);
+    }
+  }, []);
+
+  const closeOverlay = useCallback(() => {
+    setSelectedPostId(null);
+    setIsOpen(false);
+    (window as any).__isPostSearchOverlayOpen = false;
+    window.dispatchEvent(new CustomEvent('close-post-search-overlay'));
   }, []);
 
   useEffect(() => {
     const handleOpen = (event: Event) => {
       const detail = (event as CustomEvent<{ query?: string }>).detail;
-      openOverlay(detail?.query);
+      applyOpenState(detail?.query);
     };
 
-    const handleClose = () => closeOverlay();
+    const handleClose = () => {
+      setSelectedPostId(null);
+      setIsOpen(false);
+      (window as any).__isPostSearchOverlayOpen = false;
+    };
 
     window.addEventListener('open-post-search-overlay', handleOpen);
     window.addEventListener('close-post-search-overlay', handleClose);
@@ -322,7 +329,7 @@ const PostSearchOverlay = () => {
       window.removeEventListener('open-post-search-overlay', handleOpen);
       window.removeEventListener('close-post-search-overlay', handleClose);
     };
-  }, [openOverlay, closeOverlay]);
+  }, [applyOpenState]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -336,6 +343,7 @@ const PostSearchOverlay = () => {
     const handlePopState = () => {
       setSelectedPostId(null);
       setIsOpen(false);
+      (window as any).__isPostSearchOverlayOpen = false;
       window.dispatchEvent(new CustomEvent('close-post-search-overlay'));
     };
 
