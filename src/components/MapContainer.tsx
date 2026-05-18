@@ -238,23 +238,23 @@ const MapContainer = ({
   const scheduleMarkerFloat = useCallback((id: string, content: HTMLElement) => {
     clearMarkerFloatTimer(id);
 
-    const target = content.querySelector('.animate-marker-float') as HTMLElement | null;
-    if (!target) return;
-
-    const runNext = () => {
-      const delay = 8000 + Math.random() * 2000;
+    const runNext = (delay: number) => {
       const timerId = window.setTimeout(() => {
-        if (!overlaysRef.current.has(id) || !target.isConnected) {
+        const latestOverlay = overlaysRef.current.get(id);
+        const latestContent = latestOverlay?.getContent?.() as HTMLElement | null;
+        const target = latestContent?.querySelector('.animate-marker-float') as HTMLElement | null;
+
+        if (!latestOverlay || !latestContent || !target || !target.isConnected) {
           clearMarkerFloatTimer(id);
           return;
         }
 
         if (
-          content.classList.contains('marker-viewport-hidden') ||
-          content.classList.contains('markers-hidden') ||
-          content.classList.contains('marker-disappear-animation')
+          latestContent.classList.contains('marker-viewport-hidden') ||
+          latestContent.classList.contains('markers-hidden') ||
+          latestContent.classList.contains('marker-disappear-animation')
         ) {
-          runNext();
+          runNext(8000 + Math.random() * 2000);
           return;
         }
 
@@ -264,14 +264,14 @@ const MapContainer = ({
 
         const endTimerId = window.setTimeout(() => {
           target.classList.remove('marker-float-active');
-          runNext();
+          runNext(8000 + Math.random() * 2000);
         }, 3000);
         markerFloatTimersRef.current.set(id, endTimerId);
       }, delay);
       markerFloatTimersRef.current.set(id, timerId);
     };
 
-    runNext();
+    runNext(Math.random() * 2000);
   }, [clearMarkerFloatTimer]);
 
   useEffect(() => {
@@ -1085,7 +1085,7 @@ const MapContainer = ({
       const shouldDelayVideoMarker = !!firstVideoUrl && !storedVideoPoster && !cachedVideoThumb;
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
-      const markerFloatKey = 'float-v3';
+      const markerFloatKey = 'float-v4';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 

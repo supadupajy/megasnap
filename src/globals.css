@@ -171,11 +171,6 @@
   filter: none !important;
 }
 
-#kakao-map.map-is-moving .animate-marker-float {
-  animation: none !important;
-  transform: translate3d(0, 0, 0) !important;
-}
-
 #kakao-map.map-is-moving .marker-bubble-reflection,
 #kakao-map.map-is-moving .marker-countdown-ring-spark,
 #kakao-map.map-is-moving .shine-overlay::after {
