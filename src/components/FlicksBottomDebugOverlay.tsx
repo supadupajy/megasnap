@@ -98,71 +98,94 @@ const FlicksBottomDebugOverlay: React.FC = () => {
 
     setResults(newResults);
 
-    // 콘솔에도 가독성 좋게 출력
+    // 콘솔에도 가독성 좋게 출력 (그룹 없이 평탄하게 — 사용자가 복사하기 쉽게)
     // eslint-disable-next-line no-console
-    console.groupCollapsed(
-      "%c[FlicksDebug] 하단 영역 stacking 분석",
+    console.log(
+      "%c[FlicksDebug] ===== 하단 영역 stacking 분석 =====",
       "color:#fff;background:#7c3aed;padding:2px 6px;border-radius:4px;font-weight:bold;"
     );
     newResults.forEach((r) => {
+      // 그룹이 아니라 평탄하게 출력해서 한 번에 다 보이도록 함
       // eslint-disable-next-line no-console
-      console.groupCollapsed(
+      console.log(
         `📍 ${r.label}  (x=${Math.round(r.x)}, y=${Math.round(r.y)}) → 합성 배경: ${r.effectiveBg}`
       );
       r.stack.forEach((s, i) => {
         // eslint-disable-next-line no-console
         console.log(
-          `  [${i}] <${s.tag}> bg=${s.bg} opacity=${s.opacity} z=${s.zIndex} class="${s.classHead}" top=${s.rectTop} bottom=${s.rectBottom}`
+          `   [${i}] <${s.tag}> bg=${s.bg} opacity=${s.opacity} z=${s.zIndex} class="${s.classHead}" top=${s.rectTop} bottom=${s.rectBottom}`
         );
       });
-      // eslint-disable-next-line no-console
-      console.groupEnd();
     });
     // eslint-disable-next-line no-console
     console.log(
       "[FlicksDebug] body bg:",
       window.getComputedStyle(document.body).backgroundColor,
       "| html bg:",
-      window.getComputedStyle(document.documentElement).backgroundColor
+      window.getComputedStyle(document.documentElement).backgroundColor,
+      "| window=", window.innerWidth, "x", window.innerHeight
     );
     // eslint-disable-next-line no-console
-    console.groupEnd();
+    console.log("%c[FlicksDebug] ===== 분석 끝 =====", "color:#a78bfa;");
   }, []);
 
-  // 켜져 있으면 주기적으로 재측정 (1초마다)
+  // 켜졌을 때 1회 측정. 이후엔 "↻ 재측정" 버튼으로 수동 갱신.
   useEffect(() => {
     if (!enabled) return;
     runSample();
-    const id = window.setInterval(() => {
-      runSample();
-      setTick((t) => t + 1);
-    }, 1000);
-    return () => window.clearInterval(id);
   }, [enabled, runSample]);
 
   // 토글 버튼은 항상 노출 (화면 우상단)
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setEnabled((v) => !v)}
+      <div
         style={{
           position: "fixed",
           top: 80,
           right: 8,
           zIndex: 999999,
-          padding: "6px 10px",
-          borderRadius: 8,
-          fontSize: 11,
-          fontWeight: 700,
-          background: enabled ? "#7c3aed" : "rgba(0,0,0,0.65)",
-          color: "white",
-          border: "1px solid rgba(255,255,255,0.3)",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          display: "flex",
+          gap: 4,
         }}
       >
-        {enabled ? `DEBUG ON (${tick})` : "DEBUG"}
-      </button>
+        <button
+          type="button"
+          onClick={() => setEnabled((v) => !v)}
+          style={{
+            padding: "6px 10px",
+            borderRadius: 8,
+            fontSize: 11,
+            fontWeight: 700,
+            background: enabled ? "#7c3aed" : "rgba(0,0,0,0.65)",
+            color: "white",
+            border: "1px solid rgba(255,255,255,0.3)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          }}
+        >
+          {enabled ? `DEBUG ON (${tick})` : "DEBUG"}
+        </button>
+        {enabled && (
+          <button
+            type="button"
+            onClick={() => {
+              runSample();
+              setTick((t) => t + 1);
+            }}
+            style={{
+              padding: "6px 10px",
+              borderRadius: 8,
+              fontSize: 11,
+              fontWeight: 700,
+              background: "#0ea5e9",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.3)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+            }}
+          >
+            ↻ 재측정
+          </button>
+        )}
+      </div>
 
       {enabled && (
         <>
