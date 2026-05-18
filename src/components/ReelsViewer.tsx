@@ -2266,16 +2266,20 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     el.load();
   }, [isCurrent, shouldWarmUp, src]);
 
+  const frameAspect = 3 / 4;
   const effectiveVideoAspect = videoAspect ?? 9 / 16;
-  const isNarrowerThanFrame = effectiveVideoAspect < 3 / 4;
+  const isNarrowerThanFrame = effectiveVideoAspect < frameAspect;
+  const foregroundWidthPercent = isNarrowerThanFrame
+    ? Math.min(100, (effectiveVideoAspect / frameAspect) * 100)
+    : 100;
+  const foregroundHeightPercent = isNarrowerThanFrame
+    ? 100
+    : Math.min(100, (frameAspect / effectiveVideoAspect) * 100);
   const foregroundMediaStyle: React.CSSProperties = {
     top: '50%',
     left: '50%',
-    width: isNarrowerThanFrame ? 'auto' : '100%',
-    height: isNarrowerThanFrame ? '100%' : 'auto',
-    maxWidth: '100%',
-    maxHeight: '100%',
-    aspectRatio: effectiveVideoAspect,
+    width: `${foregroundWidthPercent}%`,
+    height: `${foregroundHeightPercent}%`,
     transform: 'translate(-50%, -50%)',
   };
 
@@ -2298,7 +2302,11 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       isReady,
       videoAspect,
       cropSideLetterbox,
+      frameAspect,
+      effectiveVideoAspect,
       isNarrowerThanFrame,
+      foregroundWidthPercent,
+      foregroundHeightPercent,
       foregroundMediaStyle,
       parentRect: parentRect ? {
 
@@ -2333,7 +2341,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         zIndex: blurStyle.zIndex,
       } : null,
     });
-  }, [isCurrent, src, posterUrl, isReady, videoAspect, cropSideLetterbox, isNarrowerThanFrame]);
+  }, [isCurrent, src, posterUrl, isReady, videoAspect, cropSideLetterbox, isNarrowerThanFrame, foregroundWidthPercent, foregroundHeightPercent]);
 
   return (
 
