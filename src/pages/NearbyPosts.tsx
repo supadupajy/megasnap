@@ -285,33 +285,52 @@ const NearbyPosts = () => {
     return () => observer.disconnect();
   }, [loadMorePosts, posts.length, hasMore]);
 
+  const syncCachedLikeState = useCallback((postId: string, isLiked: boolean, likes: number) => {
+    const apply = (post: Post) => post.id === postId ? { ...post, isLiked, likes } : post;
+    mapCache.posts = mapCache.posts.map(apply);
+
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const stored = JSON.parse(raw) as NearbyPostsPayload;
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        ...stored,
+        initialPosts: (stored.initialPosts || []).map(apply),
+      }));
+    } catch {}
+  }, []);
+
   const handleLikeToggle = useCallback((postId: string) => {
     if (!authUser?.id) {
       showError('로그인이 필요한 기능입니다.');
       return;
     }
 
-    let currentlyLiked = false;
-    setPosts(prev => prev.map(post => {
-      if (post.id !== postId) return post;
-      currentlyLiked = post.isLiked;
-      return {
-        ...post,
-        isLiked: !post.isLiked,
-        likes: !post.isLiked ? post.likes + 1 : Math.max(0, post.likes - 1),
-      };
+    const targetPost = posts.find(post => post.id === postId);
+    if (!targetPost) return;
+
+    const currentlyLiked = !!targetPost.isLiked;
+    const nextLiked = !currentlyLiked;
+    const nextLikes = nextLiked ? targetPost.likes + 1 : Math.max(0, targetPost.likes - 1);
+
+    setPosts(prev => prev.map(post => post.id !== postId ? post : {
+      ...post,
+      isLiked: nextLiked,
+      likes: nextLikes,
     }));
+    syncCachedLikeState(postId, nextLiked, nextLikes);
 
     toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
       if (!ok) {
         setPosts(prev => prev.map(post => post.id !== postId ? post : {
           ...post,
           isLiked: currentlyLiked,
-          likes: currentlyLiked ? post.likes + 1 : Math.max(0, post.likes - 1),
+          likes: targetPost.likes,
         }));
+        syncCachedLikeState(postId, currentlyLiked, targetPost.likes);
       }
     });
-  }, [authUser?.id]);
+  }, [authUser?.id, posts, syncCachedLikeState]);
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number, post?: Post) => {
     e.stopPropagation();
