@@ -95,12 +95,12 @@ const getRingSparkPoint = (geo: RingGeometry, remainingRatio: number): { x: numb
 };
 
 // 썸네일 박스 사이즈별 ring geometry (Tailwind 클래스와 일치시켜야 함)
-// - 펼친 리스트: w-12 h-12 (48px), rounded-xl (12px), border 2.5px
-// - 접힌 헤더:   w-6  h-6  (24px), rounded-lg (8px),  border 1.5px
+// - 펼친 리스트: w-12 h-12 (48px), rounded-full (24px), border 2.5px
+// - 접힌 헤더:   w-6  h-6  (24px), rounded-full (12px), border 1.5px
 //
 // stroke 두께는 지도 마커(60x60 박스에 stroke-width 4 → 비율 4/60 ≈ 0.0667)와
 // 시각적으로 동일하게 보이도록 산출한다.
-// ⚠️ 인기 리스트 썸네일은 부모(.rounded-xl overflow-hidden) 안에서 그려지기 때문에
+// ⚠️ 인기 리스트 썸네일은 부모(.rounded-full overflow-hidden) 안에서 그려지기 때문에
 //    SVG stroke의 바깥쪽 절반이 클리핑되어 실제 보이는 두께가 절반 가까이로 줄어든다.
 //    지도 마커는 SVG가 inner box 위 레이어에 overflow:visible로 그려져 stroke 전체가
 //    보인다. 두 환경에서 "보이는 두께"를 맞추려면 인기 리스트 쪽 stroke 를
@@ -108,8 +108,8 @@ const getRingSparkPoint = (geo: RingGeometry, remainingRatio: number): { x: numb
 //    동일한 두께가 되도록 한다.
 //   md: 2 × (4/60) × 48 = 6.4
 //   sm: 2 × (4/60) × 24 = 3.2
-const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 12, 6.4);
-const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 8, 3.2);
+const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 24, 6.4);
+const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 12, 3.2);
 
 const getPostCreatedAtMs = (post: Post): number | null => {
   const raw = post.createdAt;
@@ -689,7 +689,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
       </div>
 
       <div
-        className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-50 box-border"
+        className="relative w-12 h-12 rounded-full overflow-hidden shrink-0 bg-gray-50 box-border"
         style={{ border: frameStyle.border, boxShadow: frameStyle.boxShadow }}
       >
         <PostThumbnail post={post} onImgError={handleImageError} now={now} borderWidth={frameStyle.borderWidth} />
@@ -697,6 +697,7 @@ const TrendingPostItem: React.FC<TrendingPostItemProps> = React.memo(({ post, on
           <div className="absolute top-0.5 right-0.5 z-30">
             <Sparkles className={cn(
               "w-2.5 h-2.5",
+
               borderType === 'popular' ? "text-rose-500 fill-rose-500" :
               borderType === 'diamond' ? "text-cyan-400 fill-cyan-400" :
               borderType === 'silver' ? "text-slate-400 fill-slate-400" :
@@ -1125,10 +1126,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   transition={{ duration: 0.25, ease: "easeOut" }}
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
-                  <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
+                  <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
                     <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" now={thumbnailTimerNow} borderWidth={0} />
                   </div>
                   <div className="flex-1 overflow-hidden relative h-5">
+
                     <AnimatePresence mode="wait">
 
                       <motion.p
