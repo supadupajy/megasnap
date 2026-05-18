@@ -106,6 +106,9 @@
   width: 60px;
   height: auto;
   transition: none;
+  contain: layout style;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
   /* xAnchor:0.5, yAnchor:1 설정으로 하단 중앙이 좌표에 맞춰지므로 transform 불필요 */
   transform: scale(1) !important;
   transform-origin: 50% 100%;
@@ -161,6 +164,27 @@
   width: 100%;
   will-change: transform, opacity;
   transform-origin: 50% 100%;
+  backface-visibility: hidden;
+}
+
+#kakao-map.map-is-moving .marker-content-wrapper {
+  filter: none !important;
+}
+
+#kakao-map.map-is-moving .animate-marker-float,
+#kakao-map.map-is-moving .marker-bubble-reflection,
+#kakao-map.map-is-moving .marker-countdown-ring-spark,
+#kakao-map.map-is-moving .shine-overlay::after {
+  animation: none !important;
+  display: none !important;
+}
+
+#kakao-map.map-is-moving .marker-countdown-ring-progress {
+  filter: none !important;
+}
+
+#kakao-map.map-is-moving .marker-countdown-ring {
+  overflow: hidden !important;
 }
 
 /* 하이라이트 상태: z-index 올리고 마커 내용은 완전히 보이게 고정 */
@@ -891,6 +915,8 @@ video.post-item-video::-webkit-media-text-track-container {
   width: 42px;
   height: 42px;
   opacity: 0.7;
+  contain: layout style;
+  backface-visibility: hidden;
   /* 일반 마커(.marker-container)와 동일한 페이드 트랜지션 */
   transition: opacity 0.25s ease-out;
   transform-origin: 50% 50%;
@@ -980,6 +1006,18 @@ video.post-item-video::-webkit-media-text-track-container {
   border-radius: 50%;
   pointer-events: none;
   z-index: 1;
+}
+
+#kakao-map.map-is-moving .ghost-marker-dot {
+  box-shadow: 0 3px 8px rgba(71, 85, 105, 0.18) !important;
+}
+
+#kakao-map.map-is-moving .ghost-marker-dot::before {
+  display: none !important;
+}
+
+#kakao-map.map-is-moving .ghost-marker-dot img {
+  filter: grayscale(1) brightness(0.86) !important;
 }
 
 /* 줌 레벨에 따라 고스트 마커도 함께 작아짐 */

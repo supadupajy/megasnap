@@ -1330,16 +1330,23 @@ const MapContainer = ({
     const kakao = (window as any).kakao;
     if (!kakao?.maps) return;
 
+    const setMapMoving = (moving: boolean) => {
+      containerRef.current?.classList.toggle('map-is-moving', moving);
+    };
+
     const handleMarkerViewportChange = () => {
+      if (isDraggingViewportRef.current) return;
       scheduleMarkerViewportVisibilityUpdate(true);
     };
 
     const handleViewportDragStart = () => {
       isDraggingViewportRef.current = true;
+      setMapMoving(true);
     };
 
     const handleViewportDragEnd = () => {
       isDraggingViewportRef.current = false;
+      setMapMoving(false);
       // 드래그가 끝난 시점에 한 번에 화면 진입/이탈을 평가하여 애니메이션 트리거
       scheduleMarkerViewportVisibilityUpdate(true);
     };
@@ -1353,6 +1360,7 @@ const MapContainer = ({
     scheduleMarkerViewportVisibilityUpdate(false);
 
     return () => {
+      setMapMoving(false);
       kakao.maps.event.removeListener(map, 'dragstart', handleViewportDragStart);
       kakao.maps.event.removeListener(map, 'dragend', handleViewportDragEnd);
       kakao.maps.event.removeListener(map, 'center_changed', handleMarkerViewportChange);
@@ -1429,6 +1437,7 @@ const MapContainer = ({
 
     // 히트맵 등 부가 레이어가 setCenter 매 프레임 redraw하지 않도록
     // programmatic 이동 시작을 알림 (캔버스 transform으로 따라가기 위함)
+    containerRef.current?.classList.add('map-is-moving');
     try {
       window.dispatchEvent(new CustomEvent('map-programmatic-move-start'));
     } catch (e) {}
@@ -1451,6 +1460,7 @@ const MapContainer = ({
         animationFrameRef.current = requestAnimationFrame(animate);
       } else {
         animationFrameRef.current = null;
+        containerRef.current?.classList.remove('map-is-moving');
         try {
           window.dispatchEvent(new CustomEvent('map-programmatic-move-end'));
         } catch (e) {}
@@ -2197,7 +2207,7 @@ const MapContainer = ({
       ? 'background:radial-gradient(circle at 30% 22%,rgba(255,255,255,0.18) 0 12%,transparent 32%),linear-gradient(135deg,#111827,#374151);'
       : 'background:radial-gradient(circle at 30% 22%,rgba(255,255,255,0.45) 0 10%,rgba(229,231,235,0.85) 32%,#e5e7eb 100%);';
     const innerBoxStyle = `width:60px;height:60px;border-radius:50%;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
-    const bubbleReflectionHtml = `<div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,0.58) 0 10%,rgba(255,255,255,0.22) 11%,transparent 32%),radial-gradient(circle at 72% 78%,rgba(255,255,255,0.16) 0 14%,transparent 38%),linear-gradient(145deg,rgba(255,255,255,0.26) 0%,transparent 44%,rgba(15,23,42,0.16) 100%);box-shadow:inset 0 2px 6px rgba(255,255,255,0.42),inset 0 -10px 16px rgba(15,23,42,0.13);pointer-events:none;z-index:4;"></div>`;
+    const bubbleReflectionHtml = `<div class="marker-bubble-reflection" style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,0.58) 0 10%,rgba(255,255,255,0.22) 11%,transparent 32%),radial-gradient(circle at 72% 78%,rgba(255,255,255,0.16) 0 14%,transparent 38%),linear-gradient(145deg,rgba(255,255,255,0.26) 0%,transparent 44%,rgba(15,23,42,0.16) 100%);box-shadow:inset 0 2px 6px rgba(255,255,255,0.42),inset 0 -10px 16px rgba(15,23,42,0.13);pointer-events:none;z-index:4;"></div>`;
 
     // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
     // 광고/광고대기 마커에는 표시하지 않음. createdAt이 없는 포스트도 skip.
