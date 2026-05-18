@@ -573,8 +573,19 @@ const Index = () => {
     try {
       const { data, error } = await supabase.rpc('get_trending_posts', { limit_count: 20 });
       if (!error && data) {
-        const likedIds = await fetchLikedPostIds(data.map((p: any) => p.id), authUserIdRef.current);
-        const mapped = data.map((p: any) => mapRawToPost({ ...p, isLiked: likedIds.has(String(p.id)) }));
+        const postIds = data.map((p: any) => p.id).filter(Boolean);
+        const [likedIds, { data: fullRows }] = await Promise.all([
+          fetchLikedPostIds(postIds, authUserIdRef.current),
+          supabase
+            .from('posts')
+            .select('id, latitude, longitude, location_name, category, likes, created_at, video_url, video_urls, image_url, user_id, user_name, user_avatar, images, content, hot_since, profiles!posts_user_id_fkey(followers, nickname, avatar_url)')
+            .in('id', postIds),
+        ]);
+        const fullRowMap = new Map((fullRows || []).map((row: any) => [String(row.id), row]));
+        const mapped = data.map((p: any) => {
+          const fullRow = fullRowMap.get(String(p.id)) || {};
+          return mapRawToPost({ ...p, ...fullRow, isLiked: likedIds.has(String(p.id)) });
+        });
         const trending = mapped.slice(0, 20).map((p: any, i: number) => ({ ...p, rank: i + 1 }));
         setGlobalTrendingPosts(trending);
         // 새 트렌딩 fetch 완료 신호 → TrendingPosts가 비교 기준(prevRanks)을 갱신할 수 있게 한다.
@@ -582,6 +593,7 @@ const Index = () => {
         trendingFetchedAtRef.current = now;
 
         // 처음 트렌딩에 진입한 포스팅의 first_trended_at을 기록 (콜드 스타트 보호)
+
         // first_trended_at이 없는 포스팅만 업데이트 (이미 기록된 포스팅은 스킵)
         const newlyTrendedIds = (data as any[])
           .filter((p: any) => !p.first_trended_at)
