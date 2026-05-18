@@ -197,15 +197,18 @@ const DBImageCompression = () => {
       const video = document.createElement('video');
       let settled = false;
       let timeoutId: number | undefined;
+      let captureTimerId: number | undefined;
 
       const cleanup = () => {
         if (timeoutId) window.clearTimeout(timeoutId);
+        if (captureTimerId) window.clearTimeout(captureTimerId);
         video.pause();
-        video.removeEventListener('loadeddata', captureDecodedFrame);
-        video.removeEventListener('canplay', captureDecodedFrame);
+        video.removeEventListener('loadeddata', scheduleCapture);
+        video.removeEventListener('canplay', scheduleCapture);
         video.removeEventListener('error', handleError);
         video.removeAttribute('src');
         video.load();
+        video.remove();
       };
 
       const finish = (callback: () => void) => {
@@ -220,9 +223,15 @@ const DBImageCompression = () => {
       };
 
       const capture = () => {
+        if (settled) return;
+        if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+          fail(new Error('영상 첫 프레임을 읽을 수 없습니다.'));
+          return;
+        }
+
         try {
-          const width = video.videoWidth || 320;
-          const height = video.videoHeight || 320;
+          const width = video.videoWidth;
+          const height = video.videoHeight;
           const canvas = document.createElement('canvas');
           canvas.width = width;
           canvas.height = height;
@@ -245,34 +254,42 @@ const DBImageCompression = () => {
         }
       };
 
-      function captureDecodedFrame() {
-        if (settled || video.readyState < 2) return;
-        if ('requestVideoFrameCallback' in video) {
-          video.requestVideoFrameCallback(() => capture());
-        } else {
-          window.setTimeout(capture, 80);
-        }
+      function scheduleCapture() {
+        if (settled) return;
+        if (captureTimerId) window.clearTimeout(captureTimerId);
+        // 모바일 WebView/Safari에서는 requestVideoFrameCallback이 paused/hidden video에서
+        // 호출되지 않는 경우가 있어, DOM에 붙인 뒤 짧게 기다렸다가 직접 캡처한다.
+        captureTimerId = window.setTimeout(capture, 120);
       }
 
       const handleError = () => fail(new Error('영상 로드 실패'));
 
       timeoutId = window.setTimeout(() => {
-        if (video.readyState >= 2) {
-          captureDecodedFrame();
+        if (video.readyState >= 2 && video.videoWidth && video.videoHeight) {
+          capture();
           return;
         }
         fail(new Error('영상 첫 프레임 로드 시간이 초과되었습니다.'));
-      }, 20000);
+      }, 8000);
 
       video.crossOrigin = 'anonymous';
-      video.preload = 'auto';
+      video.preload = 'metadata';
       video.muted = true;
       video.playsInline = true;
-      video.currentTime = 0;
-      video.src = directUrl;
-      video.addEventListener('loadeddata', captureDecodedFrame, { once: true });
-      video.addEventListener('canplay', captureDecodedFrame, { once: true });
+      video.controls = false;
+      video.style.position = 'fixed';
+      video.style.left = '-1px';
+      video.style.top = '-1px';
+      video.style.width = '1px';
+      video.style.height = '1px';
+      video.style.opacity = '0';
+      video.style.pointerEvents = 'none';
+      document.body.appendChild(video);
+
+      video.addEventListener('loadeddata', scheduleCapture, { once: true });
+      video.addEventListener('canplay', scheduleCapture, { once: true });
       video.addEventListener('error', handleError, { once: true });
+      video.src = directUrl;
       video.load();
     });
   };
@@ -305,7 +322,9 @@ const DBImageCompression = () => {
     let regenerated = 0;
 
     for (const slot of slots) {
+      addThumbLog(`   ↳ 영상 ${regenerated + 1}/${slots.length} 첫 프레임 읽는 중`);
       const thumbnailBlob = await createThumbnailFromVideoUrl(slot.url);
+      addThumbLog(`   ↳ 영상 ${regenerated + 1}/${slots.length} 썸네일 업로드 중`);
       const thumbnailUrl = await uploadRegeneratedThumbnail(thumbnailBlob, post.id, slot.index);
       nextImages[slot.index] = thumbnailUrl;
       if (slot.index === 0 || !nextImageUrl) nextImageUrl = thumbnailUrl;
@@ -378,6 +397,7 @@ const DBImageCompression = () => {
     setThumbProgress({ done: 0, total: 0 });
 
     try {
+      addThumbLog('영상 포스트 목록을 조회하는 중...');
       const posts = await fetchVideoPosts();
       setThumbProgress({ done: 0, total: posts.length });
       addThumbLog(`총 ${posts.length}개 영상 포스트 발견`);
@@ -388,8 +408,11 @@ const DBImageCompression = () => {
       for (let i = 0; i < posts.length; i++) {
         const post = posts[i];
 
+        setThumbProgress({ done: i + 1, total: posts.length });
+
         try {
           addThumbLog(`⏳ [${i + 1}/${posts.length}] ${post.id} · 처리 시작`);
+          await new Promise((resolve) => window.setTimeout(resolve, 30));
           const count = await regeneratePostVideoThumbnails(post);
           regeneratedCount += count;
           addThumbLog(`✅ [${i + 1}/${posts.length}] ${post.id} · 썸네일 ${count}개 재생성`);
@@ -398,7 +421,6 @@ const DBImageCompression = () => {
           addThumbLog(`❌ [${i + 1}/${posts.length}] ${post.id} · 실패: ${err.message}`);
         }
 
-        setThumbProgress({ done: i + 1, total: posts.length });
         await new Promise((resolve) => window.setTimeout(resolve, 40));
       }
 
