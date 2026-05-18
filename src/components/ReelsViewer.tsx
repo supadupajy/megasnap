@@ -42,6 +42,10 @@ import { showSuccess, showError } from "@/utils/toast";
 // 광고 삽입 주기 (포스팅 3개마다 광고 1개)
 const AD_INSERT_INTERVAL = 3;
 
+// 현재 슬라이드 주변 영상만 미리 준비해 스와이프 직후 로딩을 줄인다.
+// 너무 멀리 있는 영상까지 auto preload하면 데이터/메모리 사용량이 커질 수 있어 ±2개로 제한한다.
+const REEL_VIDEO_PRELOAD_DISTANCE = 2;
+
 const isVideoUrl = (url: string | undefined | null): boolean => {
   if (!url) return false;
   const lower = url.toLowerCase().split("?")[0];
@@ -824,6 +828,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 inlineRank={embedded && isRankedMode ? index + 1 : undefined}
                 isMine={isPostMine(item.post)}
                 authUserId={authUser?.id}
+                shouldPreloadVideo={Math.abs(index - activeIndex) <= REEL_VIDEO_PRELOAD_DISTANCE}
                 onContentSaved={handleEditSaved}
                 onRequestDelete={() => setDeletingPostId(item.post.id)}
               />
@@ -1233,6 +1238,8 @@ interface ReelSlideProps {
   isMine?: boolean;
   // 본문 저장 시 사용할 인증 사용자 ID
   authUserId?: string;
+  // 현재 슬라이드 주변 영상이면 미리 로드해 다음 스와이프 때 로딩을 줄인다.
+  shouldPreloadVideo?: boolean;
   // 수정 저장 완료 시 부모에게 알림 (contentMap/외부 리스트 동기화용)
   onContentSaved?: (postId: string, nextContent: string) => void;
   onRequestDelete?: () => void;
@@ -1259,6 +1266,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   inlineRank,
   isMine = false,
   authUserId,
+  shouldPreloadVideo = false,
   onContentSaved,
   onRequestDelete,
 }) => {
@@ -1724,6 +1732,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             videoRef={videoRef}
             muted={muted}
             isSlideActive={isActive}
+            shouldPreloadVideo={shouldPreloadVideo}
             videoPosterUrl={fallbackImage}
           />
 
@@ -2090,6 +2099,7 @@ interface ReelsVideoProps {
   muted: boolean;
   preload: "none" | "metadata" | "auto";
   isCurrent: boolean;
+  shouldWarmUp?: boolean;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
   posterUrl?: string;
 }
@@ -2100,6 +2110,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   muted,
   preload,
   isCurrent,
+  shouldWarmUp = false,
   posterUrl,
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
@@ -2158,6 +2169,13 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       el.currentTime = 0;
     }
   }, [isCurrent]);
+
+  // 가까운 다음/이전 영상은 실제 재생하지 않고 네트워크 버퍼만 미리 채운다.
+  useEffect(() => {
+    const el = localRef.current;
+    if (!el || isCurrent || !shouldWarmUp) return;
+    el.load();
+  }, [isCurrent, shouldWarmUp, src]);
 
   // 첫 프레임이 200ms 안에 안 뜨면 로딩 스피너 노출 (깜빡임 방지)
   useEffect(() => {
@@ -2229,6 +2247,8 @@ interface MediaCarouselProps {
   // false면 캐러셀 내부의 비디오가 canplay/loadeddata 이벤트로 자동 재생되는 것을 차단한다.
   // (여러 슬라이드가 동시에 DOM에 마운트되어 있어도 활성 슬라이드만 영상을 재생하기 위함)
   isSlideActive: boolean;
+  // 부모 슬라이드가 현재 슬라이드 주변에 있으면 영상 네트워크 버퍼를 미리 준비한다.
+  shouldPreloadVideo?: boolean;
   /** 영상 슬라이드용 fallback 썸네일 (첫 프레임 디코드 전 빈 화면 방지). */
   videoPosterUrl?: string;
 }
@@ -2240,6 +2260,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   videoRef,
   muted,
   isSlideActive,
+  shouldPreloadVideo = false,
   videoPosterUrl,
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -2489,6 +2510,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
           // "재생 가능 상태"로 취급한다. 그래야 화면에 보이지 않는 다른 슬라이드의
           // 영상이 canplay/loadeddata 이벤트로 자동 재생되어 소리가 겹치는 문제가 사라진다.
           const isPlayable = isCurrent && isSlideActive;
+          const shouldWarmUp = isCurrent && shouldPreloadVideo && !isSlideActive;
           return (
             <div
               key={`${url}-${i}`}
@@ -2500,8 +2522,9 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   videoRef={isPlayable ? videoRef : undefined}
                   src={url}
                   muted={isPlayable ? muted : true}
-                  preload={isPlayable ? "auto" : "none"}
+                  preload={isPlayable || shouldWarmUp ? "auto" : "none"}
                   isCurrent={isPlayable}
+                  shouldWarmUp={shouldWarmUp}
                   posterUrl={videoPosterUrl}
                 />
               ) : (
