@@ -2199,21 +2199,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 
   return (
     <>
-      {posterUrl && (
-        <img
-          src={posterUrl}
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 z-0 h-full w-full scale-125 object-cover blur-3xl opacity-75 pointer-events-none"
-          draggable={false}
-        />
-      )}
-      <div className="absolute inset-0 z-[1] bg-black/35 pointer-events-none" />
-
       <video
         ref={setRefs}
         src={src}
-        className="absolute inset-0 z-10 w-full h-full object-contain video-hq bg-transparent"
+        className="absolute inset-0 w-full h-full object-cover video-hq bg-black"
         // 1x1 투명 poster로 native 회색 placeholder 깜빡임 방지
         poster={posterUrl || TRANSPARENT_POSTER}
         playsInline
@@ -2223,7 +2212,8 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         style={{
           opacity: isCurrent && !isReady ? 0 : 1,
           transition: "opacity 200ms ease-out",
-          backgroundColor: "transparent",
+          // 디코드 전 브라우저 기본 흰 배경이 잠깐 보이는 현상 방지.
+          backgroundColor: "#000",
         }}
       />
 
@@ -2233,7 +2223,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 z-20 w-full h-full object-contain pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           style={{
             opacity: isReady ? 0 : 1,
             transition: "opacity 200ms ease-out",
@@ -2242,8 +2232,8 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         />
       )}
 
-      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌고 poster가 없으면 스켈레톤을 표시 */}
-      {isCurrent && !isReady && !posterUrl && <ReelsVideoSkeleton />}
+      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 스피너 대신 스켈레톤을 표시 */}
+      {isCurrent && !isReady && <ReelsVideoSkeleton />}
     </>
   );
 };
