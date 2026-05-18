@@ -231,43 +231,28 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   const isVideoCard = firstMedia?.type === 'video';
 
   // 영상 카드의 초기 포스터.
-  // ⚠️ 검정 깜빡임 방지 정책:
-  //   서버에 저장된 영상 자동 생성 썸네일(`-thumb.*`)은 0초 부근의 검정 프레임이
-  //   그대로 저장된 경우가 흔하다(페이드인/암전 시작 영상 등). 이걸 일단 보여줬다가
-  //   픽셀 분석 후 교체하는 흐름이 "검정이 잠깐 보이는" 현상의 정체.
-  //   → 자동 생성 썸네일은 처음부터 신뢰하지 않고(getTrustedPosterUrl로 걸러냄),
-  //     사용자가 직접 올린 다른 이미지가 있을 때만 즉시 사용한다.
-  //     사용 가능한 이미지가 없으면 placeholder로 두고 곧장 클라이언트 프레임 추출.
+  // 정책:
+  //  - DB에 저장된 자동 생성 썸네일(`-thumb.*`)이든 사용자 업로드 이미지든,
+  //    "쓸 수 있는 이미지 URL"이 있으면 일단 그것을 사용해 즉시 표시한다.
+  //    (영상 파일을 매번 다운로드해서 프레임을 추출하는 비용을 피하려는 게 목적)
+  //  - 단, paint 전에 onLoad에서 픽셀 검사(isImageMostlyBlack)를 통과해야만 화면에
+  //    노출되며, 검정으로 판정되면 그 즉시 숨긴 채 클라이언트 프레임 추출로 교체.
   const basePoster = useMemo(() => {
     if (!isVideoCard) return FALLBACK_IMAGE;
-    // pickSafePosterCandidate는 firstMedia.posterUrl(자동 생성 썸네일 가능)을 1순위로 받지만,
-    // 검정 위험을 피하기 위해 영상 카드에서는 그 인자를 일부러 넘기지 않는다.
-    // → images[]/image_url/image 중 "자동 생성 썸네일이 아닌" 사용자 업로드 이미지가
-    //   있을 때에만 채택되고, 없으면 FALLBACK_IMAGE로 떨어진다.
-    const safeCandidates: Array<string | undefined> = [
-      ...(Array.isArray(post.images) ? post.images : []),
-      post.image_url,
-      post.image,
-    ];
-    for (const candidate of safeCandidates) {
-      // 사용자 업로드 이미지로 보이는 후보만 채택 (자동 생성 -thumb.* 은 제외)
-      if (isUsableImageThumbnail(candidate) && !isGeneratedVideoThumbnailUrl(candidate)) {
-        return candidate as string;
-      }
-    }
-    return FALLBACK_IMAGE;
-  }, [isVideoCard, post]);
+    return pickSafePosterCandidate(post, firstMedia?.posterUrl);
+  }, [isVideoCard, post, firstMedia]);
 
   const [extractedFrameUrl, setExtractedFrameUrl] = useState<string | null>(null);
   const [needsExtraction, setNeedsExtraction] = useState(false);
   const [didFallback, setDidFallback] = useState(false);
-  // basePoster가 실제로 검정인지 검사가 끝나서 "보여줘도 안전"하다고 판정됐는지.
-  // - 검사 전: <img>는 opacity 0으로 숨김 (검정 픽셀이 사용자에게 노출되지 않도록)
-  // - 검사 결과 검정이 아니면 즉시 페이드 인
-  // - 검정으로 판정되면 그대로 숨겨둔 채 추출된 프레임으로 교체될 때까지 회색 플레이스홀더 유지
+  // basePoster가 검정인지 검사가 끝나서 "보여줘도 안전"한지.
+  //  - 검사 전: <img>는 opacity 0으로 숨김 → 검정 픽셀이 paint될 기회 자체가 없음
+  //  - 검사 결과 검정 아님 → 페이드 인
+  //  - 검정으로 판정 → 그대로 숨긴 채 추출된 프레임으로 교체
   const [posterRevealed, setPosterRevealed] = useState(false);
 
-  // 검정 썸네일 감지 → 클라이언트 프레임 추출 트리거
+  // <img>가 디코드 직후 검정인지 검사.
+  // 영상 카드일 때만 검사하고, 그 외에는 즉시 노출.
   const handleLoadedImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
     if (checkedBlackRef.current) return;
     checkedBlackRef.current = true;
@@ -277,10 +262,10 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     }
     const isBlack = isImageMostlyBlack(event.currentTarget);
     if (isBlack && videoUrl) {
-      // 검정이면 이 <img>는 영영 보여주지 않는다. (다음 turn에서 extractedFrameUrl로 교체됨)
+      // 검정 → 이 <img>는 끝까지 숨김. extractedFrameUrl이 도착하면 교체된다.
       setNeedsExtraction(true);
     } else {
-      // 정상 썸네일이면 그제서야 부드럽게 노출
+      // 정상 → 즉시 노출
       setPosterRevealed(true);
     }
   };
@@ -367,7 +352,10 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
         <img
           src={posterSrc}
           alt=""
-          loading="lazy"
+          // 영상 카드 썸네일은 fetch 시작 시점을 viewport 진입까지 미루지 않는다.
+          // 그리드 항목들이 차례대로 깜빡거리며 채워지는 어색함을 줄이고,
+          // 모든 항목을 가능한 동시에 표시하기 위함 (브라우저가 우선순위 자동 조절).
+          loading="eager"
           decoding="async"
           crossOrigin="anonymous"
           className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
