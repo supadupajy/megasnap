@@ -382,6 +382,7 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       let timeoutId: number | undefined;
       let candidateTimes: number[] = [];
       let candidateIndex = 0;
+      let bestCandidate: { blob: Blob; brightness: number } | null = null;
 
       const cleanup = () => {
         if (timeoutId) window.clearTimeout(timeoutId);
@@ -399,24 +400,38 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       };
 
       const fail = (error?: unknown) => {
+        // 모든 후보가 검은 프레임이라도 가장 밝았던 후보를 반환해 placeholder보다는 유의미한 미리보기 제공.
+        if (bestCandidate) {
+          finish(() => resolve(bestCandidate!.blob));
+          return;
+        }
         finish(() => {
           reject(error instanceof Error ? error : new Error('비디오 썸네일을 생성할 수 없습니다.'));
         });
       };
 
-      const isMostlyBlackFrame = (context: CanvasRenderingContext2D, width: number, height: number) => {
+      // 충분히 밝은 프레임인지(=충분한 비-검정 픽셀 비율) 검사한다.
+      // 임계치를 더 빡세게 잡아 (12% 이상) 검은 인트로/페이드인을 더 적극적으로 회피한다.
+      const measureFrameBrightness = (context: CanvasRenderingContext2D, width: number, height: number) => {
         const data = context.getImageData(0, 0, width, height).data;
         let brightPixels = 0;
         let sampledPixels = 0;
+        let totalLuma = 0;
 
         for (let i = 0; i < data.length; i += 4 * 16) {
           const luminance = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-          if (luminance > 32) brightPixels += 1;
+          if (luminance > 40) brightPixels += 1;
+          totalLuma += luminance;
           sampledPixels += 1;
         }
 
-        return sampledPixels > 0 && brightPixels / sampledPixels < 0.04;
+        const brightRatio = sampledPixels > 0 ? brightPixels / sampledPixels : 0;
+        const avgLuma = sampledPixels > 0 ? totalLuma / sampledPixels : 0;
+        return { brightRatio, avgLuma };
       };
+
+      const BRIGHT_RATIO_THRESHOLD = 0.12;
+      const AVG_LUMA_THRESHOLD = 28;
 
       const seekNextCandidate = () => {
         const nextTime = candidateTimes[candidateIndex];
@@ -453,14 +468,22 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
           }
 
           context.drawImage(video, 0, 0, width, height);
-          if (isMostlyBlackFrame(context, width, height) && candidateIndex < candidateTimes.length) {
-            seekNextCandidate();
-            return;
-          }
+          const { brightRatio, avgLuma } = measureFrameBrightness(context, width, height);
+          const isAcceptable = brightRatio >= BRIGHT_RATIO_THRESHOLD && avgLuma >= AVG_LUMA_THRESHOLD;
 
           canvas.toBlob((blob) => {
             if (!blob) {
               fail();
+              return;
+            }
+
+            // 가장 밝은 후보 저장 (모두 검정인 영상의 fallback용)
+            if (!bestCandidate || avgLuma > bestCandidate.brightness) {
+              bestCandidate = { blob, brightness: avgLuma };
+            }
+
+            if (!isAcceptable && candidateIndex < candidateTimes.length) {
+              seekNextCandidate();
               return;
             }
 
@@ -475,14 +498,15 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
         if ('requestVideoFrameCallback' in video) {
           video.requestVideoFrameCallback(() => capture());
         } else {
-          window.setTimeout(capture, 80);
+          window.setTimeout(capture, 120);
         }
       }
 
       const moveToFirstVisibleFrame = () => {
         const duration = Number.isFinite(video.duration) ? video.duration : 0;
-        const rawTimes = duration > 0.2
-          ? [0.35, 0.7, 1.2, 2].filter((time) => time < duration - 0.05)
+        // 후보 시점을 더 촘촘하고 길게 잡아 검은 인트로가 긴 영상도 통과시킨다.
+        const rawTimes = duration > 0.3
+          ? [0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.5, 7.0].filter((time) => time < duration - 0.05)
           : [0];
         candidateTimes = rawTimes.length > 0 ? rawTimes : [0];
         candidateIndex = 0;
@@ -491,7 +515,7 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
 
       timeoutId = window.setTimeout(() => {
         fail(new Error('비디오 썸네일 생성 시간이 초과되었습니다.'));
-      }, 10000);
+      }, 15000);
 
       video.preload = 'auto';
       video.muted = true;

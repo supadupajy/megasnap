@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 
 import { Post } from '@/types';
@@ -50,8 +50,50 @@ const hasAnyVideoUrl = (post: Post): boolean => {
   return false;
 };
 
+/**
+ * 로드된 <img>의 픽셀 평균 휘도를 측정해 너무 어두우면 검은 썸네일로 간주.
+ * - sample step을 크게 잡아 비용은 그리드 칸 당 1회, 수 ms 이내로 끝난다.
+ * - 같은 origin의 supabase storage 이미지는 보통 CORS 헤더가 동봉되어 toDataURL/getImageData가 가능.
+ *   getImageData가 실패(보안 오류)하면 그냥 통과시켜 영향 0.
+ */
+const isImageMostlyBlack = (img: HTMLImageElement): boolean => {
+  try {
+    const w = Math.min(48, img.naturalWidth || 48);
+    const h = Math.min(48, img.naturalHeight || 48);
+    if (w <= 0 || h <= 0) return false;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return false;
+
+    ctx.drawImage(img, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+
+    let totalLuma = 0;
+    let brightPixels = 0;
+    let sampledPixels = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const luminance = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      totalLuma += luminance;
+      if (luminance > 40) brightPixels += 1;
+      sampledPixels += 1;
+    }
+
+    if (sampledPixels === 0) return false;
+    const avgLuma = totalLuma / sampledPixels;
+    const brightRatio = brightPixels / sampledPixels;
+    return avgLuma < 18 && brightRatio < 0.04;
+  } catch {
+    return false;
+  }
+};
+
 const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   const [didFallback, setDidFallback] = useState(false);
+  const checkedRef = useRef(false);
 
   const mediaItems = useMemo(
     () => getPostMediaItems(post, { trustGeneratedVideoThumbnails: true }),
@@ -59,6 +101,16 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   );
   const firstMedia = mediaItems[0];
   const hasVideo = hasAnyVideoUrl(post);
+
+  const handleLoadedImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    if (checkedRef.current || didFallback) return;
+    checkedRef.current = true;
+    const imgEl = event.currentTarget;
+    // 어두운 썸네일 감지 → placeholder로 교체
+    if (isImageMostlyBlack(imgEl)) {
+      setDidFallback(true);
+    }
+  };
 
   if (!firstMedia) {
     return (
@@ -85,7 +137,9 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
           alt=""
           loading="lazy"
           decoding="async"
+          crossOrigin="anonymous"
           className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
+          onLoad={handleLoadedImage}
           onError={() => {
             if (!didFallback) setDidFallback(true);
           }}
@@ -106,7 +160,9 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
         alt=""
         loading="lazy"
         decoding="async"
+        crossOrigin="anonymous"
         className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+        onLoad={handleLoadedImage}
         onError={() => {
           if (!didFallback) setDidFallback(true);
         }}
