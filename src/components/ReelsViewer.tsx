@@ -97,11 +97,6 @@ interface ReelsViewerProps {
   // - BottomNav 등 페이지 chrome이 그대로 노출됨
   // - 음소거 버튼은 영상 내부 좌상단에 배치됨
   embedded?: boolean;
-  // embedded 모드에서 컨테이너 하단에 추가로 비워둘 공간(px).
-  // 예) Flicks 페이지처럼 ReelsViewer 컨테이너가 BottomNav 영역까지 덮고 있을 때,
-  // 영상/액션 영역이 BottomNav 알약 뒤로 가려지지 않도록 슬라이드 하단에 그만큼 여백을 둔다.
-  // (컨테이너 자체는 화면 끝까지 차서 알약 주변 배경이 검정/투명으로 자연스럽게 이어진다.)
-  embeddedBottomReserve?: number;
   // embedded 모드에서 영상/이미지 우상단에 닫기(X) 버튼을 표시 (트렌딩 릴스 뷰어용)
   showInlineCloseButton?: boolean;
   // 내 포스팅 삭제 후 호출 (부모가 리스트에서 제거하도록)
@@ -121,7 +116,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   endMessage = "더 이상 표시할 영상이 없습니다",
   endSubMessage = "처음으로 돌아가거나 닫아주세요.",
   embedded = false,
-  embeddedBottomReserve = 0,
   showInlineCloseButton = false,
   onDelete,
   onUpdate,
@@ -794,7 +788,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                   }, 50);
                 }}
                 embedded={embedded}
-                embeddedBottomReserve={embeddedBottomReserve}
                 showInlineMuteButton={embedded}
                 onToggleMute={() => setMuted((m) => !m)}
                 showInlineCloseButton={embedded && showInlineCloseButton}
@@ -1172,8 +1165,6 @@ interface ReelSlideProps {
   onUserClick: () => void;
   // embedded: 페이지 안에 인라인으로 들어간 모드 (BottomNav 등이 보이는 상태)
   embedded?: boolean;
-  // embedded 모드에서 컨테이너 하단에 추가로 비워둘 공간(px). 영상/정보 영역을 그만큼 위로 올려준다.
-  embeddedBottomReserve?: number;
   // 영상 내부 좌상단에 표시할 음소거 토글 (embedded 모드 전용)
   showInlineMuteButton?: boolean;
   onToggleMute?: () => void;
@@ -1205,7 +1196,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   onLocationClick,
   onUserClick,
   embedded = false,
-  embeddedBottomReserve = 0,
   showInlineMuteButton = false,
   onToggleMute,
   showInlineCloseButton = false,
@@ -1612,7 +1602,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         style={{
           top: "10px",
           bottom: embedded
-            ? `${infoHeight + embeddedBottomReserve}px`
+            ? `${infoHeight}px`
             : `calc(env(safe-area-inset-bottom, 0px) + ${infoHeight}px)`,
           cursor: "pointer",
         }}
@@ -1748,13 +1738,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           - 정보 영역 본체는 배경 없이 콘텐츠만 올린다. */}
       <div
         className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/95 via-black/55 to-transparent"
-        style={{ bottom: `${embeddedBottomReserve}px`, height: `${infoHeight + 100}px` }}
+        style={{ bottom: 0, height: `${infoHeight + 100}px` }}
         aria-hidden
       />
-      <div
-        className="absolute left-0 right-0 z-20 pointer-events-none"
-        style={{ bottom: `${embeddedBottomReserve}px` }}
-      >
+      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
           className="px-4"

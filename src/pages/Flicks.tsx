@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage } from '@/lib/utils';
 import { fetchLikedPostIds } from '@/utils/like-utils';
 import ReelsViewer from '@/components/ReelsViewer';
+import FlicksBottomDebugOverlay from '@/components/FlicksBottomDebugOverlay';
 
 // Fisher-Yates 셔플
 const shuffle = <T,>(arr: T[]): T[] => {
@@ -21,22 +22,13 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// Flicks 페이지 컨테이너:
-// - 헤더(64px) 아래부터 화면 하단(0)까지 차지한다.
-// - BottomNav는 화면 위에 floating으로 떠 있는 알약이므로, 그 영역까지 컨테이너가 덮어주면
-//   알약 주변(상/좌/우) 배경이 body 흰색이 아니라 ReelsViewer 자체의 검은 배경으로 자연스럽게 이어진다.
-// - 영상이 BottomNav 뒤로 가려지지 않도록 ReelsViewer에 `embeddedBottomReserve`(=64px)를 넘겨
-//   슬라이드 하단을 BottomNav 높이만큼 비워둔다.
 const CONTENT_FIXED_STYLE: React.CSSProperties = {
   position: 'fixed',
   left: 0,
   right: 0,
   top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-  bottom: 0,
+  bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
-
-// BottomNav가 떠 있는 영역 높이(알약 자체 + 하단 패딩) — 영상이 그 뒤로 가려지지 않도록 비워둘 공간
-const BOTTOM_NAV_RESERVE_PX = 64;
 
 // 알림/메시지는 라우트가 아니라 오버레이로 동작하므로,
 // Flicks 페이지가 unmount되지 않고 그대로 살아 있다. 이전에 있던 캐시/이어재생/
@@ -184,46 +176,54 @@ const Flicks = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
-          <Clapperboard className="w-10 h-10 text-white/80" />
-          <Loader2 className="w-6 h-6 animate-spin text-white/80" />
-          <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+      <>
+        <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
+            <Clapperboard className="w-10 h-10 text-white/80" />
+            <Loader2 className="w-6 h-6 animate-spin text-white/80" />
+            <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+          </div>
         </div>
-      </div>
+        <FlicksBottomDebugOverlay />
+      </>
     );
   }
 
   if (videoPool.length === 0) {
     return (
-      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
-          <Clapperboard className="w-12 h-12 text-white/70" />
-          <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
-          <p className="text-xs font-bold text-white/60 leading-relaxed">
-            영상이 등록된 컨텐츠가 없습니다.<br />영상을 업로드하면 여기서 즐길 수 있어요.
-          </p>
+      <>
+        <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
+            <Clapperboard className="w-12 h-12 text-white/70" />
+            <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
+            <p className="text-xs font-bold text-white/60 leading-relaxed">
+              영상이 등록된 컨텐츠가 없습니다.<br />영상을 업로드하면 여기서 즐길 수 있어요.
+            </p>
+          </div>
         </div>
-      </div>
+        <FlicksBottomDebugOverlay />
+      </>
     );
   }
 
   return (
-    <div className="bg-black" style={CONTENT_FIXED_STYLE}>
-      <ReelsViewer
-        isOpen={true}
-        initialPost={videoPool[0]}
-        pool={videoPool}
-        onClose={handleClose}
-        onDelete={handlePostDeleted}
-        onUpdate={handlePostUpdated}
-        noRepeat
-        embedded
-        embeddedBottomReserve={BOTTOM_NAV_RESERVE_PX}
-        endMessage="더 이상 표시할 영상이 없습니다"
-        endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
-      />
-    </div>
+    <>
+      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+        <ReelsViewer
+          isOpen={true}
+          initialPost={videoPool[0]}
+          pool={videoPool}
+          onClose={handleClose}
+          onDelete={handlePostDeleted}
+          onUpdate={handlePostUpdated}
+          noRepeat
+          embedded
+          endMessage="더 이상 표시할 영상이 없습니다"
+          endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
+        />
+      </div>
+      <FlicksBottomDebugOverlay />
+    </>
   );
 };
 
