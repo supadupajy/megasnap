@@ -1,4 +1,5 @@
 import { Post } from '@/types';
+import { isValidMediaUrl } from '@/utils/post-media';
 
 const SAFE_FALLBACK = '/placeholder.svg';
 
@@ -27,6 +28,13 @@ interface MapDbToPostParams {
   isLiked?: boolean;
   isSaved?: boolean;
 }
+
+const normalizeVideoUrls = (rawVideoUrls: unknown): (string | null)[] | undefined => {
+  if (!Array.isArray(rawVideoUrls)) return undefined;
+  const hasAnyVideo = rawVideoUrls.some((url) => isValidMediaUrl(url));
+  if (!hasAnyVideo) return undefined;
+  return rawVideoUrls.map((url) => (isValidMediaUrl(url) ? url : null));
+};
 
 export const mapDbToProfilePost = ({
   post,
@@ -58,6 +66,9 @@ export const mapDbToProfilePost = ({
 
   if (finalImages.length === 0) finalImages = [finalImage];
 
+  const normalizedVideoUrls = normalizeVideoUrls(post.video_urls);
+  const normalizedVideoUrl = isValidMediaUrl(post.video_url) ? post.video_url : undefined;
+
   return {
     id: post.id,
     isAd,
@@ -82,8 +93,8 @@ export const mapDbToProfilePost = ({
     image: finalImage,
     image_url: finalImage,
     images: finalImages,
-    videoUrl: post.video_url,
-    videoUrls: Array.isArray(post.video_urls) ? post.video_urls : undefined,
+    videoUrl: normalizedVideoUrl,
+    videoUrls: normalizedVideoUrls,
     isLiked,
     isSaved,
     createdAt: new Date(post.created_at),

@@ -5,7 +5,7 @@ import { Play } from 'lucide-react';
 
 import { Post } from '@/types';
 import { getOptimizedMarkerImage } from '@/lib/utils';
-import { getPostMediaItems } from '@/utils/post-media';
+import { getPostMediaItems, isValidMediaUrl, isVideoUrl } from '@/utils/post-media';
 
 interface ProfileGridThumbnailProps {
   post: Post;
@@ -14,13 +14,37 @@ interface ProfileGridThumbnailProps {
 
 const FALLBACK_IMAGE = '/placeholder.svg';
 
+const pickSafePosterCandidate = (post: Post, primaryPoster?: string): string => {
+  const candidates: Array<string | undefined> = [
+    primaryPoster,
+    ...(Array.isArray(post.images) ? post.images : []),
+    post.image_url,
+    post.image,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (!isValidMediaUrl(candidate)) continue;
+    if (isVideoUrl(candidate)) continue;
+    return candidate;
+  }
+
+  return FALLBACK_IMAGE;
+};
+
+const hasAnyVideoUrl = (post: Post): boolean => {
+  if (isValidMediaUrl(post.videoUrl)) return true;
+  if (Array.isArray(post.videoUrls) && post.videoUrls.some((url) => isValidMediaUrl(url))) return true;
+  return false;
+};
+
 const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   const mediaItems = useMemo(
     () => getPostMediaItems(post, { trustGeneratedVideoThumbnails: true }),
     [post]
   );
   const firstMedia = mediaItems[0];
-  const hasVideo = !!(post.videoUrl || (Array.isArray(post.videoUrls) && post.videoUrls.length > 0));
+  const hasVideo = hasAnyVideoUrl(post);
 
   if (!firstMedia) {
     return (
@@ -38,10 +62,8 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   }
 
   if (firstMedia.type === 'video') {
-    const posterCandidate = firstMedia.posterUrl || post.image_url || post.image;
-    const posterSrc = posterCandidate
-      ? getOptimizedMarkerImage(posterCandidate, post.id)
-      : FALLBACK_IMAGE;
+    const safePoster = pickSafePosterCandidate(post, firstMedia.posterUrl);
+    const posterSrc = getOptimizedMarkerImage(safePoster, post.id);
 
     return (
       <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
@@ -60,10 +82,14 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     );
   }
 
+  const imageSrc = isValidMediaUrl(firstMedia.url) && !isVideoUrl(firstMedia.url)
+    ? getOptimizedMarkerImage(firstMedia.url, post.id)
+    : FALLBACK_IMAGE;
+
   return (
     <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
       <img
-        src={getOptimizedMarkerImage(firstMedia.url, post.id)}
+        src={imageSrc}
         alt=""
         loading="lazy"
         decoding="async"
