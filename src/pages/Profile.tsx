@@ -2,62 +2,25 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import {
-  Settings,
-  LayoutGrid,
-  List,
-  Bookmark,
-  Map,
-  User as UserIcon,
-} from 'lucide-react';
+import { Settings, User as UserIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
-import PostItem from '@/components/PostItem';
-import { Post } from '@/types';
-import { cn, formatCount, getOptimizedMarkerImage } from '@/lib/utils';
 
-import { useAuth } from '@/components/AuthProvider';
-import { supabase } from '@/integrations/supabase/client';
-import { showSuccess, showError } from '@/utils/toast';
-
-import { toggleLikeInDb } from '@/utils/like-utils';
 import CollapsingHeader from '@/components/CollapsingHeader';
+import ProfileHeaderSkeleton from '@/components/ProfileHeaderSkeleton';
+import ProfilePostsContent from '@/components/ProfilePostsContent';
+import ProfileSavedPosts from '@/components/ProfileSavedPosts';
+import ProfileStats from '@/components/ProfileStats';
+import ProfileTabs, { ProfileViewMode } from '@/components/ProfileTabs';
+import { useAuth } from '@/components/AuthProvider';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
-import ProfileGridThumbnail from '@/components/ProfileGridThumbnail';
+import { supabase } from '@/integrations/supabase/client';
+import { Post } from '@/types';
+import { toggleLikeInDb } from '@/utils/like-utils';
+import { mapDbToProfilePost, mapSavedAdToPost } from '@/utils/profile-posts';
+import { showError, showSuccess } from '@/utils/toast';
 
-const FALLBACK_IMAGE = "/placeholder.svg";
-
-const ProfileHeaderSkeleton = () => (
-  <div className="p-6">
-    <div className="flex items-center gap-6 mb-8">
-      <Skeleton className="w-24 h-24 rounded-full flex-shrink-0" />
-      <div className="flex-1 space-y-2">
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-4 w-48" />
-        <div className="flex gap-4 mt-4">
-          <div className="text-center space-y-1"><Skeleton className="h-5 w-8 mx-auto" /><Skeleton className="h-3 w-10 mx-auto" /></div>
-          <div className="text-center space-y-1"><Skeleton className="h-5 w-8 mx-auto" /><Skeleton className="h-3 w-14 mx-auto" /></div>
-          <div className="text-center space-y-1"><Skeleton className="h-5 w-8 mx-auto" /><Skeleton className="h-3 w-14 mx-auto" /></div>
-        </div>
-      </div>
-    </div>
-    <Skeleton className="w-full h-11 rounded-xl mb-8" />
-    <Skeleton className="h-px w-full mb-4" />
-    <div className="grid grid-cols-3 gap-1">
-      {Array.from({ length: 9 }).map((_, i) => (
-        <Skeleton key={i} className="aspect-square rounded-sm" />
-      ))}
-    </div>
-  </div>
-);
-
-const getTierFromFollowers = (followers: number) => {
-  if (followers >= 10000000) return 'diamond';
-  if (followers >= 1000000) return 'gold';
-  if (followers >= 100000) return 'silver';
-  return 'none';
-};
+const FALLBACK_IMAGE = '/placeholder.svg';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -67,7 +30,7 @@ const Profile = () => {
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
-  const [viewMode, setViewMode] = useState<'grid' | 'saved' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<ProfileViewMode>('grid');
   const [isDataLoading, setIsDataLoading] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -82,67 +45,15 @@ const Profile = () => {
   }, [collapsingScrollRef]);
 
   const userId = authUser?.id;
-  const displayName = useMemo(() => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가', [profile, authUser]);
-  const avatarUrl = useMemo(() => profile?.avatar_url || '/placeholder.svg', [profile]);
-
-  const isValidUrl = (url: any) => {
-    if (!url || typeof url !== 'string') return false;
-    const clean = url.trim();
-    if (/content\s*\d+/i.test(clean)) return false;
-    if (/post\s*content/i.test(clean)) return false;
-    if (!clean.startsWith('http')) return false;
-    return true;
-  };
-
-  const SAFE_FALLBACK = "/placeholder.svg";
-
-  const mapDbToPost = (p: any, isLiked = false, isSaved = false): Post => {
-    let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
-    let rawImages = Array.isArray(p.images) && p.images.length > 0
-      ? p.images.filter(isValidUrl)
-      : [rawImage];
-    if (rawImages.length === 0) rawImages = [rawImage];
-
-    const isAd = p.content?.trim().startsWith('[AD]');
-    let borderType: 'diamond' | 'gold' | 'silver' | 'popular' | 'none' = 'none';
-    if (p.hot_since) {
-      borderType = 'popular';
-    } else if (!isAd) {
-      borderType = getTierFromFollowers(followerCount) as any;
-    }
-
-    let finalImage = isValidUrl(rawImage) ? rawImage : SAFE_FALLBACK;
-    let finalImages = rawImages.filter(isValidUrl);
-    if (finalImages.length === 0) finalImages = [finalImage];
-
-    return {
-      id: p.id, isAd, isGif: false, isInfluencer: !isAd && ['silver', 'gold', 'diamond'].includes(borderType),
-      user_id: p.user_id,
-      owner_id: p.user_id,
-      user: {
-        id: p.user_id,
-        name: p.user_id === authUser?.id ? displayName : (p.profiles?.nickname || p.user_name || '탐험가'),
-        avatar: p.user_id === authUser?.id ? avatarUrl : (p.profiles?.avatar_url || p.user_avatar || '/placeholder.svg')
-      },
-      content: p.content?.replace(/^\[AD\]\s*/, '') || '',
-      location: p.location_name || '알 수 없는 장소',
-      lat: p.latitude, lng: p.longitude,
-      latitude: p.latitude, longitude: p.longitude,
-      likes: Number(p.likes || 0),
-      commentsCount: 0, comments: [],
-      image: finalImage, image_url: finalImage,
-      images: finalImages,
-      videoUrl: p.video_url,
-      videoUrls: Array.isArray(p.video_urls) ? p.video_urls : undefined,
-      isLiked, isSaved,
-      createdAt: new Date(p.created_at),
-      borderType,
-      category: p.category || 'none'
-    };
-  };
+  const displayName = useMemo(
+    () => profile?.nickname || authUser?.email?.split('@')[0] || '탐험가',
+    [profile, authUser]
+  );
+  const avatarUrl = useMemo(() => profile?.avatar_url || FALLBACK_IMAGE, [profile]);
 
   const loadProfileData = useCallback(async (uid: string) => {
     setIsDataLoading(true);
+
     try {
       const [myPostsRes, savedPostsRes, adSavedRes, followersRes, followingRes, profileRes] = await Promise.all([
         supabase
@@ -175,8 +86,8 @@ const Profile = () => {
         .filter((item: any) => item.posts)
         .map((item: any) => item.posts);
 
-      const myPostIds = myData.map(p => p.id);
-      const savedPostIds = savedPostObjects.map((p: any) => p.id);
+      const myPostIds = myData.map((post) => post.id);
+      const savedPostIds = savedPostObjects.map((post: any) => post.id);
       const allPostIds = [...new Set([...myPostIds, ...savedPostIds])];
 
       let likedPostIds = new Set<string>();
@@ -185,29 +96,56 @@ const Profile = () => {
       if (authUser?.id && allPostIds.length > 0) {
         const [{ data: likesData }, { data: extraSavedData }] = await Promise.all([
           supabase.from('likes').select('post_id').eq('user_id', authUser.id).in('post_id', allPostIds),
-          myPostIds.filter(id => !savedPostIdSet.has(id)).length > 0
-            ? supabase.from('saved_posts').select('post_id').eq('user_id', authUser.id).in('post_id', myPostIds.filter(id => !savedPostIdSet.has(id)))
+          myPostIds.filter((id) => !savedPostIdSet.has(id)).length > 0
+            ? supabase
+                .from('saved_posts')
+                .select('post_id')
+                .eq('user_id', authUser.id)
+                .in('post_id', myPostIds.filter((id) => !savedPostIdSet.has(id)))
             : Promise.resolve({ data: [] }),
         ]);
-        likedPostIds = new Set((likesData || []).map(l => l.post_id));
-        (extraSavedData || []).forEach((s: any) => savedPostIdSet.add(s.post_id));
+
+        likedPostIds = new Set((likesData || []).map((like) => like.post_id));
+        (extraSavedData || []).forEach((saved: any) => savedPostIdSet.add(saved.post_id));
       }
 
-      const initialMyPosts = myData.map(p => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
-      const initialSavedPosts = savedPostObjects.map((p: any) => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
+      const initialMyPosts = myData.map((post) =>
+        mapDbToProfilePost({
+          post,
+          authUserId: authUser?.id,
+          displayName,
+          avatarUrl,
+          followerCount: profileFollowersVal > 0 ? profileFollowersVal : (followersRes.count || 0),
+          isLiked: likedPostIds.has(post.id),
+          isSaved: savedPostIdSet.has(post.id),
+        })
+      );
+
+      const initialSavedPosts = savedPostObjects.map((post: any) =>
+        mapDbToProfilePost({
+          post,
+          authUserId: authUser?.id,
+          displayName,
+          avatarUrl,
+          followerCount: profileFollowersVal > 0 ? profileFollowersVal : (followersRes.count || 0),
+          isLiked: likedPostIds.has(post.id),
+          isSaved: savedPostIdSet.has(post.id),
+        })
+      );
 
       const adSavedItems = adSavedRes.data || [];
       let adSavedPosts: Post[] = [];
+
       if (adSavedItems.length > 0) {
         const adPostIds = adSavedItems.map((item: any) => item.ad_id as string);
-        const adIds = adPostIds.map(id => id.replace('ad-map-marker-', ''));
+        const adIds = adPostIds.map((id) => id.replace('ad-map-marker-', ''));
 
         const [{ data: adsData }, ...adStatsResults] = await Promise.all([
           supabase
             .from('ads')
             .select('id, brand_name, brand_logo_url, image_url, title, subtitle, link_url, lat, lng, updated_at')
             .in('id', adIds),
-          ...adPostIds.map(adPostId =>
+          ...adPostIds.map((adPostId) =>
             Promise.all([
               supabase.from('ad_likes').select('id', { count: 'exact', head: true }).eq('ad_id', adPostId),
               supabase.from('ad_comments').select('id', { count: 'exact', head: true }).eq('ad_id', adPostId),
@@ -218,57 +156,22 @@ const Profile = () => {
           ),
         ]);
 
-        adSavedPosts = (adsData || []).map((ad: any, idx: number): Post => {
-          const adPostId = `ad-map-marker-${ad.id}`;
-          const stats = adStatsResults[idx] as any;
-          const likesCount = stats?.[0]?.count || 0;
-          const commentsCount = stats?.[1]?.count || 0;
-          const isLiked = !!(stats?.[2]?.data);
-
-          return {
-            id: adPostId,
-            isAd: true,
-            isGif: false,
-            isInfluencer: false,
-            user_id: '',
-            owner_id: '',
-            user: {
-              id: '',
-              name: ad.brand_name || '광고',
-              avatar: ad.brand_logo_url || '/placeholder.svg',
-            },
-            content: ad.subtitle || ad.title || '',
-            location: '',
-            lat: ad.lat,
-            lng: ad.lng,
-            latitude: ad.lat,
-            longitude: ad.lng,
-            likes: likesCount,
-            commentsCount: commentsCount,
-            comments: [],
-            image: ad.image_url || '/placeholder.svg',
-            image_url: ad.image_url || '/placeholder.svg',
-            images: ad.image_url ? [ad.image_url] : ['/placeholder.svg'],
-            videoUrl: undefined,
-            isLiked: isLiked,
-            isSaved: true,
-            link_url: ad.link_url,
-            createdAt: new Date(ad.updated_at || Date.now()),
-            borderType: 'none',
-            category: 'none',
-          };
-        });
+        adSavedPosts = (adsData || []).map((ad: any, index: number) =>
+          mapSavedAdToPost({
+            ad,
+            stats: adStatsResults[index],
+          })
+        );
       }
 
       setMyPosts(initialMyPosts);
       setSavedPosts([...initialSavedPosts, ...adSavedPosts]);
-      setIsDataLoading(false);
-
-    } catch (err) {
-      console.error('[Profile] loadProfileData error:', err);
+    } catch (error) {
+      console.error('[Profile] loadProfileData error:', error);
+    } finally {
       setIsDataLoading(false);
     }
-  }, [authUser?.id, displayName, avatarUrl, followerCount]);
+  }, [authUser?.id, avatarUrl, displayName]);
 
   useEffect(() => {
     if (!authLoading && authUser?.id) {
@@ -276,12 +179,13 @@ const Profile = () => {
     }
   }, [authLoading, authUser?.id, loadProfileData]);
 
-  const handleTabChange = useCallback((mode: 'grid' | 'list' | 'saved') => {
+  const handleTabChange = useCallback((mode: ProfileViewMode) => {
     const container = scrollRef.current;
     if (!container) {
       setViewMode(mode);
       return;
     }
+
     const currentScroll = container.scrollTop;
     flushSync(() => {
       setViewMode(mode);
@@ -291,19 +195,36 @@ const Profile = () => {
 
   const handleLikeToggle = useCallback((postId: string) => {
     if (!authUser?.id) return;
+
     let currentlyLiked = false;
-    const updatePost = (prev: Post[]) => prev.map(post => {
-      if (post.id !== postId) return post;
-      currentlyLiked = post.isLiked;
-      return { ...post, isLiked: !post.isLiked, likes: !post.likes ? post.likes + 1 : post.likes - 1 };
-    });
+
+    const updatePost = (prev: Post[]) =>
+      prev.map((post) => {
+        if (post.id !== postId) return post;
+        currentlyLiked = post.isLiked;
+        return {
+          ...post,
+          isLiked: !post.isLiked,
+          likes: post.isLiked ? post.likes - 1 : post.likes + 1,
+        };
+      });
+
     setMyPosts(updatePost);
     setSavedPosts(updatePost);
-    toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
+
+    toggleLikeInDb(postId, authUser.id, currentlyLiked).then((ok) => {
       if (!ok) {
-        const rollback = (prev: Post[]) => prev.map(post => post.id !== postId ? post
-          : { ...post, isLiked: currentlyLiked, likes: currentlyLiked ? post.likes + 1 : post.likes - 1 }
-        );
+        const rollback = (prev: Post[]) =>
+          prev.map((post) =>
+            post.id !== postId
+              ? post
+              : {
+                  ...post,
+                  isLiked: currentlyLiked,
+                  likes: currentlyLiked ? post.likes + 1 : post.likes - 1,
+                }
+          );
+
         setMyPosts(rollback);
         setSavedPosts(rollback);
       }
@@ -311,28 +232,33 @@ const Profile = () => {
   }, [authUser?.id]);
 
   const handleSaveToggle = useCallback((postId: string, nextSaved: boolean) => {
-    setMyPosts(prev => prev.map(p => p.id === postId ? { ...p, isSaved: nextSaved } : p));
+    setMyPosts((prev) => prev.map((post) => (post.id === postId ? { ...post, isSaved: nextSaved } : post)));
 
     if (nextSaved) {
-      setSavedPosts(prev => {
-        if (prev.some(p => p.id === postId)) {
-          return prev.map(p => p.id === postId ? { ...p, isSaved: true } : p);
+      setSavedPosts((prev) => {
+        if (prev.some((post) => post.id === postId)) {
+          return prev.map((post) => (post.id === postId ? { ...post, isSaved: true } : post));
         }
-        const postToAdd = myPosts.find(p => p.id === postId);
+
+        const postToAdd = myPosts.find((post) => post.id === postId);
         return postToAdd ? [{ ...postToAdd, isSaved: true }, ...prev] : prev;
       });
-    } else {
-      setSavedPosts(prev => prev.filter(p => p.id !== postId));
+      return;
     }
+
+    setSavedPosts((prev) => prev.filter((post) => post.id !== postId));
   }, [myPosts]);
 
-  const handleGridItemClick = (postId: string) => {
+  const handleGridItemClick = useCallback((postId: string) => {
     const container = scrollRef.current;
     const currentScroll = container?.scrollTop ?? 0;
+
     flushSync(() => {
       setViewMode('list');
     });
+
     if (container) container.scrollTop = currentScroll;
+
     setTimeout(() => {
       const element = document.getElementById(`post-${postId}`);
       if (element && container) {
@@ -342,61 +268,67 @@ const Profile = () => {
         container.scrollTo({ top: offset, behavior: 'smooth' });
       }
     }, 150);
-  };
+  }, []);
 
   const handleImageError = useCallback((postId: string) => {
-    setMyPosts(prev => prev.filter(p => p.id !== postId));
-    setSavedPosts(prev => prev.filter(p => p.id !== postId));
+    setMyPosts((prev) => prev.filter((post) => post.id !== postId));
+    setSavedPosts((prev) => prev.filter((post) => post.id !== postId));
   }, []);
 
   const handlePostDelete = useCallback(async (postId: string) => {
     try {
       const { error } = await supabase.from('posts').delete().eq('id', postId);
       if (error) throw error;
-      setMyPosts(prev => prev.filter(p => p.id !== postId));
-      setSavedPosts(prev => prev.filter(p => p.id !== postId));
+
+      setMyPosts((prev) => prev.filter((post) => post.id !== postId));
+      setSavedPosts((prev) => prev.filter((post) => post.id !== postId));
       showSuccess('게시물이 삭제되었습니다.');
-    } catch (err) {
-      console.error('[Profile] Delete error:', err);
+    } catch (error) {
+      console.error('[Profile] Delete error:', error);
       showError('게시물 삭제 중 오류가 발생했습니다.');
     }
   }, []);
 
   const handleLocationClick = useCallback((e: React.MouseEvent, lat: number, lng: number, post: Post) => {
     e.stopPropagation();
-    if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return;
+    if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) return;
+
     sessionStorage.setItem('pendingMapFocus', JSON.stringify({ lat, lng, postId: post.id }));
     navigate('/', { state: { post, center: { lat, lng } } });
   }, [navigate]);
 
-  const handleViewOnMap = () => {
-    const postWithCoords = myPosts.find(p => p.lat != null && p.lng != null && !isNaN(p.lat) && !isNaN(p.lng));
+  const handleViewOnMap = useCallback(() => {
+    const postWithCoords = myPosts.find((post) => post.lat != null && post.lng != null && !Number.isNaN(post.lat) && !Number.isNaN(post.lng));
+
     if (postWithCoords) {
-      sessionStorage.setItem('pendingMapFocus', JSON.stringify({ lat: postWithCoords.lat, lng: postWithCoords.lng, postId: postWithCoords.id }));
+      sessionStorage.setItem(
+        'pendingMapFocus',
+        JSON.stringify({ lat: postWithCoords.lat, lng: postWithCoords.lng, postId: postWithCoords.id })
+      );
       navigate('/', { state: { post: postWithCoords, center: { lat: postWithCoords.lat, lng: postWithCoords.lng } } });
-    } else {
-      navigate('/');
+      return;
     }
-  };
+
+    navigate('/');
+  }, [myPosts, navigate]);
 
   const handleScrollToTop = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
-  const handleScrollToPosts = () => {
+  const handleScrollToPosts = useCallback(() => {
     if (scrollRef.current && postListStartRef.current) {
       const tabBarEl = postListStartRef.current;
       const tabBarHeight = tabBarEl.offsetHeight;
       const postListTop = tabBarEl.offsetTop;
       const headerHeight = stickyHeaderRef.current?.offsetHeight ?? 0;
+
       scrollRef.current.scrollTo({
         top: postListTop + tabBarHeight - headerHeight,
         behavior: 'smooth',
       });
     }
-  };
+  }, []);
 
   if (authLoading) {
     return (
@@ -407,7 +339,10 @@ const Profile = () => {
   }
 
   return (
-    <div className="h-screen w-full max-w-full flex flex-col overflow-x-hidden bg-white overscroll-x-none" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
+    <div
+      className="h-screen w-full max-w-full flex flex-col overflow-x-hidden bg-white overscroll-x-none"
+      style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       <div ref={stickyHeaderRef} className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={headerProgress}
@@ -427,121 +362,53 @@ const Profile = () => {
           <ProfileHeaderSkeleton />
         ) : (
           <div className="p-6">
-            <div className="flex items-center gap-6 mb-8">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
-                  <img src={getOptimizedMarkerImage(avatarUrl, authUser?.id || 'profile')} alt="profile" loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover border-4 border-white" onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-black text-gray-900 mb-1">{displayName}</h2>
-                <p className="text-sm text-gray-500 mb-4">{profile?.bio || "지도를 여행하는 탐험가 📍"}</p>
-                <div className="flex gap-4">
-                  <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={handleScrollToPosts}>
-                    <p className="font-bold text-gray-900">{formatCount(myPosts.length)}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-black">Posts</p>
-                  </div>
-                  <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'followers' } })}>
-                    <p className="font-bold text-gray-900">{formatCount(followerCount)}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-black">Followers</p>
-                  </div>
-                  <div className="text-center cursor-pointer active:scale-95 transition-transform" onClick={() => navigate(`/profile/follow/${userId}`, { state: { tab: 'following' } })}>
-                    <p className="font-bold text-gray-900">{formatCount(followingCount)}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-black">Following</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ProfileStats
+              userId={userId}
+              avatarUrl={avatarUrl}
+              displayName={displayName}
+              bio={profile?.bio}
+              postsCount={myPosts.length}
+              followerCount={followerCount}
+              followingCount={followingCount}
+              fallbackImage={FALLBACK_IMAGE}
+              onPostsClick={handleScrollToPosts}
+            />
 
-            <Button onClick={() => navigate('/profile/edit')} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-0">프로필 편집</Button>
+            <Button
+              onClick={() => navigate('/profile/edit')}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-0"
+            >
+              프로필 편집
+            </Button>
 
             <div ref={postListStartRef} className="bg-white -mx-6 px-6 mb-0">
-              <div className="flex border-b border-gray-100">
-                <button
-                  onClick={() => handleTabChange('grid')}
-                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'grid' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  <span className="text-xs font-bold">그리드</span>
-                </button>
-                <button
-                  onClick={() => handleTabChange('list')}
-                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'list' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-                >
-                  <List className="w-4 h-4" />
-                  <span className="text-xs font-bold">리스트</span>
-                </button>
-                <button
-                  onClick={() => handleTabChange('saved')}
-                  className={cn("flex-1 py-3 flex items-center justify-center gap-1.5 transition-all border-b-2 -mb-px", viewMode === 'saved' ? "border-indigo-600 text-indigo-600" : "border-transparent text-gray-300")}
-                >
-                  <Bookmark className="w-4 h-4" />
-                  <span className="text-xs font-bold">저장됨</span>
-                </button>
-              </div>
+              <ProfileTabs viewMode={viewMode} onChange={handleTabChange} />
             </div>
 
             <div className="flex flex-col -mx-6 pb-6">
               <div className={viewMode === 'saved' ? undefined : 'hidden'}>
-                {savedPosts.map((post) => (
-                  <div key={post.id} id={`post-saved-${post.id}`}>
-                    <PostItem
-                      post={post}
-                      disablePulse={true}
-                      autoPlayVideo={true}
-                      onLikeToggle={() => handleLikeToggle(post.id)}
-                      onSaveToggle={handleSaveToggle}
-                      onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
-                      onOwnUserClick={handleScrollToTop}
-                    />
-                  </div>
-                ))}
-                {savedPosts.length === 0 && (
-                  <div className="py-20 text-center text-gray-400 font-medium">저장된 컨텐츠가 없습니다.</div>
-                )}
+                <ProfileSavedPosts
+                  posts={savedPosts}
+                  onLikeToggle={handleLikeToggle}
+                  onSaveToggle={handleSaveToggle}
+                  onLocationClick={handleLocationClick}
+                  onOwnUserClick={handleScrollToTop}
+                />
               </div>
 
               <div className={viewMode === 'saved' ? 'hidden' : undefined}>
-                <div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors">
-                  <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
-                    <Map className="w-4 h-4 fill-indigo-600" />지도에서 보기
-                  </h3>
-                  <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
-                </div>
-
-                <div className={viewMode === 'list' ? undefined : 'hidden'}>
-                  {myPosts.map((post) => (
-                    <div key={post.id} id={`post-${post.id}`}>
-                      <PostItem
-                        post={post}
-                        disablePulse={true}
-                        autoPlayVideo={true}
-                        onLikeToggle={() => handleLikeToggle(post.id)}
-                        onSaveToggle={handleSaveToggle}
-                        onLocationClick={(e, lat, lng) => handleLocationClick(e, lat, lng, post)}
-                        onDelete={() => handlePostDelete(post.id)}
-                        onOwnUserClick={handleScrollToTop}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className={viewMode === 'grid' ? 'grid grid-cols-3 gap-1 px-6' : 'hidden'}>
-                  {myPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      onClick={() => handleGridItemClick(post.id)}
-                    >
-                      <ProfileGridThumbnail
-                        post={post}
-                        onError={() => handleImageError(post.id)}
-                      />
-                    </div>
-                  ))}
-                  {myPosts.length === 0 && (
-                    <div className="col-span-3 py-20 text-center text-gray-400 font-medium">아직 등록된 컨텐츠가 없습니다.</div>
-                  )}
-                </div>
+                <ProfilePostsContent
+                  viewMode={viewMode}
+                  posts={myPosts}
+                  onViewOnMap={handleViewOnMap}
+                  onGridItemClick={handleGridItemClick}
+                  onLikeToggle={handleLikeToggle}
+                  onSaveToggle={handleSaveToggle}
+                  onLocationClick={handleLocationClick}
+                  onDelete={handlePostDelete}
+                  onOwnUserClick={handleScrollToTop}
+                  onImageError={handleImageError}
+                />
               </div>
             </div>
           </div>
