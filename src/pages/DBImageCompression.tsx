@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ChevronLeft, CheckCircle2, Database, Image, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, Database, Image, Loader2, RefreshCw, ShieldCheck, Video } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { cn, compressImage } from '@/lib/utils';
+import { cn, compressImage, createVideoThumbnail } from '@/lib/utils';
+import { useAuth } from '@/components/AuthProvider';
 import { showError, showSuccess } from '@/utils/toast';
 
 type CompressionStatus = 'idle' | 'running' | 'done' | 'error';
@@ -11,17 +12,31 @@ type CompressionResult =
   | { action: 'optimized' }
   | { action: 'skipped'; reason: string };
 
+type VideoThumbnailPost = {
+  id: string;
+  user_id: string | null;
+  image_url: string | null;
+  images: unknown;
+  video_url: string | null;
+  video_urls: unknown;
+};
+
 const MAX_IMAGE_SIZE = 1920;
 const JPEG_QUALITY = 0.82;
 const BATCH_SIZE = 1000;
 
 const DBImageCompression = () => {
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [status, setStatus] = useState<CompressionStatus>('idle');
+  const [thumbStatus, setThumbStatus] = useState<CompressionStatus>('idle');
   const [log, setLog] = useState<string[]>([]);
+  const [thumbLog, setThumbLog] = useState<string[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [thumbProgress, setThumbProgress] = useState({ done: 0, total: 0 });
 
   const addLog = (msg: string) => setLog(prev => [...prev, msg]);
+  const addThumbLog = (msg: string) => setThumbLog(prev => [...prev, msg]);
 
   const getSupabasePath = (url: string): { bucket: string; path: string } | null => {
     try {
@@ -123,6 +138,96 @@ const DBImageCompression = () => {
     return Array.from(urlSet);
   };
 
+  const getVideoSlots = (post: VideoThumbnailPost) => {
+    if (Array.isArray(post.video_urls)) {
+      return post.video_urls
+        .map((url, index) => ({ url: typeof url === 'string' ? url : '', index }))
+        .filter((slot) => !!slot.url);
+    }
+
+    return typeof post.video_url === 'string' && post.video_url
+      ? [{ url: post.video_url, index: 0 }]
+      : [];
+  };
+
+  const fetchVideoPosts = async () => {
+    const result: VideoThumbnailPost[] = [];
+    let from = 0;
+
+    while (true) {
+      const { data: posts, error } = await supabase
+        .from('posts')
+        .select('id, user_id, image_url, images, video_url, video_urls')
+        .or('video_url.not.is.null,video_urls.not.is.null')
+        .range(from, from + BATCH_SIZE - 1);
+
+      if (error) throw error;
+      if (!posts || posts.length === 0) break;
+
+      result.push(...(posts as VideoThumbnailPost[]).filter((post) => getVideoSlots(post).length > 0));
+
+      if (posts.length < BATCH_SIZE) break;
+      from += BATCH_SIZE;
+    }
+
+    return result;
+  };
+
+  const createThumbnailFromVideoUrl = async (videoUrl: string) => {
+    const source = getSupabasePath(videoUrl);
+    const fetchUrl = source ? getDirectPublicUrl(source.bucket, source.path) : videoUrl;
+    const res = await fetch(fetchUrl, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`영상 다운로드 실패: ${res.status}`);
+
+    const blob = await res.blob();
+    const file = new File([blob], 'existing-video.mp4', { type: blob.type || 'video/mp4' });
+    return createVideoThumbnail(file);
+  };
+
+  const uploadRegeneratedThumbnail = async (blob: Blob, postId: string, slotIndex: number) => {
+    if (!authUser?.id) throw new Error('로그인이 필요합니다.');
+    const fileName = `${Date.now()}-${postId}-${slotIndex}-opening-thumb.jpg`;
+    const path = `${authUser.id}/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from('post-images')
+      .upload(path, blob, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: 'image/jpeg',
+      });
+
+    if (error) throw error;
+
+    const { data: { publicUrl } } = supabase.storage.from('post-images').getPublicUrl(path);
+    return publicUrl;
+  };
+
+  const regeneratePostVideoThumbnails = async (post: VideoThumbnailPost) => {
+    const slots = getVideoSlots(post);
+    const nextImages = Array.isArray(post.images)
+      ? post.images.map((url) => (typeof url === 'string' ? url : ''))
+      : [];
+    let nextImageUrl = post.image_url || '';
+    let regenerated = 0;
+
+    for (const slot of slots) {
+      const thumbnailBlob = await createThumbnailFromVideoUrl(slot.url);
+      const thumbnailUrl = await uploadRegeneratedThumbnail(thumbnailBlob, post.id, slot.index);
+      nextImages[slot.index] = thumbnailUrl;
+      if (slot.index === 0 || !nextImageUrl) nextImageUrl = thumbnailUrl;
+      regenerated += 1;
+    }
+
+    const { error } = await supabase
+      .from('posts')
+      .update({ image_url: nextImageUrl, images: nextImages })
+      .eq('id', post.id);
+
+    if (error) throw error;
+    return regenerated;
+  };
+
   const handleRun = async () => {
     setStatus('running');
     setLog([]);
@@ -168,7 +273,52 @@ const DBImageCompression = () => {
     }
   };
 
+  const handleRegenerateVideoThumbnails = async () => {
+    if (!authUser?.id) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
+    setThumbStatus('running');
+    setThumbLog([]);
+    setThumbProgress({ done: 0, total: 0 });
+
+    try {
+      const posts = await fetchVideoPosts();
+      setThumbProgress({ done: 0, total: posts.length });
+      addThumbLog(`총 ${posts.length}개 영상 포스트 발견`);
+
+      let regeneratedCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < posts.length; i++) {
+        const post = posts[i];
+
+        try {
+          const count = await regeneratePostVideoThumbnails(post);
+          regeneratedCount += count;
+          addThumbLog(`✅ [${i + 1}/${posts.length}] ${post.id} · 썸네일 ${count}개 재생성`);
+        } catch (err: any) {
+          failCount++;
+          addThumbLog(`❌ [${i + 1}/${posts.length}] ${post.id} · 실패: ${err.message}`);
+        }
+
+        setThumbProgress({ done: i + 1, total: posts.length });
+      }
+
+      addThumbLog(`\n완료! 재생성 ${regeneratedCount}개 / 실패 포스트 ${failCount}개`);
+      setThumbStatus('done');
+      if (failCount === 0) showSuccess(`영상 썸네일 ${regeneratedCount}개를 첫 프레임으로 교체했습니다.`);
+      else showError(`일부 영상 썸네일 재생성에 실패했습니다. 실패 ${failCount}개`);
+    } catch (err: any) {
+      addThumbLog(`치명적 오류: ${err.message}`);
+      setThumbStatus('error');
+      showError('영상 썸네일 재생성 중 오류가 발생했습니다.');
+    }
+  };
+
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+  const thumbProgressPct = thumbProgress.total > 0 ? Math.round((thumbProgress.done / thumbProgress.total) * 100) : 0;
 
   return (
     <div className="h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col">
@@ -268,6 +418,68 @@ const DBImageCompression = () => {
 
             <p className="text-[10px] text-gray-400 font-medium text-center leading-relaxed">
               JPEG이 아니거나 1920px을 초과하는 이미지에만 압축을 적용합니다.
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-4 mt-5 bg-white rounded-3xl border border-indigo-100 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-indigo-50">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-indigo-50 rounded-2xl flex items-center justify-center shrink-0">
+                <Video className="w-5 h-5 text-indigo-500" />
+              </div>
+              <div>
+                <p className="text-[15px] font-black text-gray-900" style={{ letterSpacing: '-0.04em' }}>기존 영상 썸네일 재생성</p>
+                <p className="text-[11px] text-gray-400 font-medium">DB의 기존 영상들을 다시 읽어 첫 디코드 프레임 썸네일로 교체합니다</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-3">
+            {thumbStatus === 'running' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-gray-500">
+                  <span>{thumbProgress.done} / {thumbProgress.total} 처리 중...</span>
+                  <span>{thumbProgressPct}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                    style={{ width: `${thumbProgressPct}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {thumbLog.length > 0 && (
+              <div className="bg-gray-50 rounded-2xl p-3 max-h-56 overflow-y-auto space-y-0.5">
+                {thumbLog.map((line, i) => (
+                  <p key={i} className="text-[10px] font-mono text-gray-600 leading-relaxed whitespace-pre-wrap">{line}</p>
+                ))}
+              </div>
+            )}
+
+            <Button
+              onClick={handleRegenerateVideoThumbnails}
+              disabled={thumbStatus === 'running'}
+              className={cn(
+                'w-full h-12 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2',
+                thumbStatus === 'done'
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-600'
+                  : thumbStatus === 'error'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 hover:bg-indigo-700 disabled:opacity-50'
+              )}
+            >
+              {thumbStatus === 'running'
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> 재생성 중...</>
+                : thumbStatus === 'done'
+                  ? <><CheckCircle2 className="w-4 h-4" /> 완료됨 · 다시 실행하기</>
+                  : <><RefreshCw className="w-4 h-4" /> 기존 영상 썸네일 재생성 시작</>}
+            </Button>
+
+            <p className="text-[10px] text-gray-400 font-medium text-center leading-relaxed">
+              영상 파일을 하나씩 내려받아 처리하므로 완료될 때까지 화면을 닫지 마세요. 새 썸네일은 post-images에 저장되고 posts.image_url/images가 갱신됩니다.
             </p>
           </div>
         </div>
