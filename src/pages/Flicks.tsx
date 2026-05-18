@@ -41,7 +41,6 @@ const Flicks = () => {
 
   const [videoPool, setVideoPool] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activePosterUrl, setActivePosterUrl] = useState<string | null>(null);
   const hasLoaded = useRef(false);
 
   const fetchVideoPool = useCallback(async () => {
@@ -163,23 +162,12 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
-  const bottomBackdrop = (
+  const bottomFill = (
     <div
       aria-hidden="true"
-      className="fixed left-0 right-0 bottom-0 pointer-events-none overflow-hidden bg-transparent"
+      className="fixed left-0 right-0 bottom-0 pointer-events-none bg-black"
       style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}
-    >
-      {activePosterUrl && (
-        <>
-          <img
-            src={activePosterUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/30 to-transparent" />
-        </>
-      )}
-    </div>
+    />
   );
 
   const handleClose = useCallback(() => {
@@ -204,7 +192,7 @@ const Flicks = () => {
             <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
           </div>
         </div>
-        {bottomBackdrop}
+        {bottomFill}
       </>
     );
   }
@@ -221,7 +209,7 @@ const Flicks = () => {
             </p>
           </div>
         </div>
-        {bottomBackdrop}
+        {bottomFill}
       </>
     );
   }
@@ -236,14 +224,13 @@ const Flicks = () => {
           onClose={handleClose}
           onDelete={handlePostDeleted}
           onUpdate={handlePostUpdated}
-          onActivePosterChange={setActivePosterUrl}
           noRepeat
           embedded
+          embeddedBottomExtensionHeight="calc(env(safe-area-inset-bottom, 0px) + 64px)"
           endMessage="더 이상 표시할 영상이 없습니다"
           endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
         />
       </div>
-      {bottomBackdrop}
     </>
   );
 };
