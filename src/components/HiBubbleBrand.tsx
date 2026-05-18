@@ -9,7 +9,7 @@ export const HiBubbleIcon = ({ className }: BrandProps) => (
   <svg
     viewBox="0 0 120 120"
     role="img"
-    aria-label="하이버블 아이콘"
+    aria-label="하이버블즈 아이콘"
     className={cn('block', className)}
     xmlns="http://www.w3.org/2000/svg"
   >
@@ -47,13 +47,13 @@ export const HiBubbleIcon = ({ className }: BrandProps) => (
 );
 
 export const HiBubbleWordmark = ({ className }: BrandProps) => (
-  <div className={cn('relative inline-flex items-end font-black tracking-[-0.12em] leading-none', className)} aria-label="하이버블">
+  <div className={cn('relative inline-flex items-end font-black tracking-[-0.12em] leading-none', className)} aria-label="하이버블즈">
     <span className="text-slate-950">하이</span>
     <span className="relative ml-1 text-amber-500">
-      버블
+      버블즈
       <span className="absolute -right-3 -top-3 h-2.5 w-2.5 rounded-full bg-amber-300 shadow-sm" />
-      <span className="absolute right-4 -top-4 h-1.5 w-1.5 rounded-full bg-sky-300 shadow-sm" />
-      <span className="absolute right-0 top-2 h-1 w-1 rounded-full bg-white ring-1 ring-amber-200" />
+      <span className="absolute right-6 -top-4 h-1.5 w-1.5 rounded-full bg-sky-300 shadow-sm" />
+      <span className="absolute right-1 top-2 h-1 w-1 rounded-full bg-white ring-1 ring-amber-200" />
     </span>
   </div>
 );

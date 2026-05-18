@@ -233,7 +233,7 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
         <div className="bg-white rounded-3xl shadow-lg p-5 border border-gray-100 space-y-4">
           <div className="text-center space-y-1">
             <h2 className="text-lg font-black text-gray-900">
-              하이버블에서 전체 내용 보기
+              하이버블즈에서 전체 내용 보기
             </h2>
             <p className="text-sm text-gray-500">
               지도 기반 여행 컨텐츠 앱 · 내 주변 여행지 발견

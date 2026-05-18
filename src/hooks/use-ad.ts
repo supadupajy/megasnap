@@ -53,7 +53,7 @@ export const RECRUITMENT_SLOT: AdSlot = {
   title: '광고 문의',
   subtitle: 'support@thesnappop.com',
   link_url: 'mailto:support@thesnappop.com',
-  brand_name: '하이버블',
+  brand_name: '하이버블즈',
   brand_logo_url: '',
   isNext: false,
   isRecruitment: true,
