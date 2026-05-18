@@ -4,8 +4,10 @@ import { Loader2, MapPin, Heart, Download, ExternalLink, Smartphone } from 'luci
 import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage, getOptimizedFeedImage, formatCount } from '@/lib/utils';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
+import { HiBubbleBrand } from '@/components/HiBubbleBrand';
 
 const ANDROID_PACKAGE = 'com.chorasnap.chorasnap';
+
 const IOS_APP_ID = '0000000000'; // 실제 App Store ID로 교체 필요
 const PLAY_STORE_URL = `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`;
 const APP_STORE_URL = `https://apps.apple.com/app/id${IOS_APP_ID}`;
@@ -153,17 +155,13 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex flex-col">
       {/* 앱 브랜딩 헤더 */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-indigo-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl overflow-hidden">
-            <img src="/tocatoca-logo.png" alt="하이버블" className="w-full h-full object-cover" />
-          </div>
-          <span className="font-black text-lg tracking-tight"><span className="text-gray-900">하이</span><span className="text-amber-500">버블</span></span>
-        </div>
+      <div className="bg-white/80 backdrop-blur-sm border-b border-amber-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <HiBubbleBrand className="scale-90 origin-left" />
         <button
           onClick={handleLoginAndView}
-          className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+          className="text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors"
         >
+
           로그인
         </button>
       </div>

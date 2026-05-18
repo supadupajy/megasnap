@@ -5,8 +5,10 @@ import { motion } from 'framer-motion';
 import { Mail } from 'lucide-react';
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from '@/hooks/use-ad';
 import { getOptimizedBannerImage, getOptimizedMarkerImage } from '@/lib/utils';
+import { HiBubbleIcon, HiBubbleWordmark } from '@/components/HiBubbleBrand';
 
 const SplashScreen = () => {
+
   const { ad, loading, now } = useAd('splash');
 
   // 기간 기반으로 현재 or 다음 광고 슬롯 결정
@@ -46,7 +48,7 @@ const SplashScreen = () => {
         <div className="relative flex flex-col items-center gap-6 w-full">
           {/* Logo Icon */}
           <motion.div
-            initial={{ scale: 0, rotate: -20 }}
+            initial={{ scale: 0, rotate: -12 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{
               type: "spring",
@@ -54,38 +56,34 @@ const SplashScreen = () => {
               damping: 20,
               delay: 0.4
             }}
-            className="w-24 h-24 rounded-[28px] overflow-hidden shadow-2xl shadow-yellow-300/60"
+            className="w-28 h-28 drop-shadow-2xl"
           >
-            <img
-              src="/tocatoca-logo.png"
-              alt="하이버블"
-              className="w-full h-full object-cover"
-            />
+            <HiBubbleIcon className="h-full w-full" />
           </motion.div>
 
           {/* Brand Name */}
           <div className="flex flex-col items-center">
-            <motion.h1
+            <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.8 }}
-              className="text-4xl font-black tracking-tighter"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              <span className="text-gray-900">하이</span><span className="text-amber-500">버블</span>
-            </motion.h1>
+              <HiBubbleWordmark className="text-5xl" />
+            </motion.div>
             
             <motion.p
+
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8, duration: 0.8 }}
-              className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase"
+              className="text-[10px] font-bold text-gray-400 mt-3 tracking-widest uppercase"
             >
               Be here, Be seen.
             </motion.p>
           </div>
 
           {/* 광고 슬롯 — 만료 시 구인 배너 표시 */}
+
           {slot && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
