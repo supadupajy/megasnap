@@ -14,6 +14,7 @@
   <path d="M25 37H95M25 56H95M25 75H95M41 24V91M62 24V91M82 24V91" stroke="white" stroke-opacity="0.28" stroke-width="2.4" stroke-linecap="round"/>
   <g>
     <path d="M60 26C46.2 26 35 37.2 35 51C35 69.2 55 84.4 59.1 91.6C59.5 92.3 60.5 92.3 60.9 91.6C65 84.4 85 69.2 85 51C85 37.2 73.8 26 60 26Z" fill="url(#pin)"/>
+    <circle cx="60" cy="51" r="13" fill="#111827"/>
   </g>
   <g fill="#FFFFFF" stroke="#111827" stroke-opacity="0.1" stroke-width="1.5">
 

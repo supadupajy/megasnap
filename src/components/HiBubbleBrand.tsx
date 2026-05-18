@@ -33,6 +33,7 @@ export const HiBubbleIcon = ({ className }: BrandProps) => (
         d="M60 26C46.2 26 35 37.2 35 51C35 69.2 55 84.4 59.1 91.6C59.5 92.3 60.5 92.3 60.9 91.6C65 84.4 85 69.2 85 51C85 37.2 73.8 26 60 26Z"
         fill="url(#hi-bubble-pin)"
       />
+      <circle cx="60" cy="51" r="13" fill="#111827" />
     </g>
 
     <g fill="#FFFFFF" stroke="#111827" strokeOpacity="0.1" strokeWidth="1.5">
