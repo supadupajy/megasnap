@@ -4,7 +4,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 
 import { Post } from '@/types';
-import { getPostMediaItems, isValidMediaUrl, isVideoUrl } from '@/utils/post-media';
+import {
+  getPostMediaItems,
+  isGeneratedVideoThumbnailUrl,
+  isValidMediaUrl,
+  isVideoUrl,
+} from '@/utils/post-media';
 
 interface ProfileGridThumbnailProps {
   post: Post;
@@ -225,10 +230,33 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   const videoUrl = useMemo(() => getFirstVideoUrl(post), [post]);
   const isVideoCard = firstMedia?.type === 'video';
 
+  // 영상 카드의 초기 포스터.
+  // ⚠️ 검정 깜빡임 방지 정책:
+  //   서버에 저장된 영상 자동 생성 썸네일(`-thumb.*`)은 0초 부근의 검정 프레임이
+  //   그대로 저장된 경우가 흔하다(페이드인/암전 시작 영상 등). 이걸 일단 보여줬다가
+  //   픽셀 분석 후 교체하는 흐름이 "검정이 잠깐 보이는" 현상의 정체.
+  //   → 자동 생성 썸네일은 처음부터 신뢰하지 않고(getTrustedPosterUrl로 걸러냄),
+  //     사용자가 직접 올린 다른 이미지가 있을 때만 즉시 사용한다.
+  //     사용 가능한 이미지가 없으면 placeholder로 두고 곧장 클라이언트 프레임 추출.
   const basePoster = useMemo(() => {
     if (!isVideoCard) return FALLBACK_IMAGE;
-    return pickSafePosterCandidate(post, firstMedia?.posterUrl);
-  }, [isVideoCard, post, firstMedia]);
+    // pickSafePosterCandidate는 firstMedia.posterUrl(자동 생성 썸네일 가능)을 1순위로 받지만,
+    // 검정 위험을 피하기 위해 영상 카드에서는 그 인자를 일부러 넘기지 않는다.
+    // → images[]/image_url/image 중 "자동 생성 썸네일이 아닌" 사용자 업로드 이미지가
+    //   있을 때에만 채택되고, 없으면 FALLBACK_IMAGE로 떨어진다.
+    const safeCandidates: Array<string | undefined> = [
+      ...(Array.isArray(post.images) ? post.images : []),
+      post.image_url,
+      post.image,
+    ];
+    for (const candidate of safeCandidates) {
+      // 사용자 업로드 이미지로 보이는 후보만 채택 (자동 생성 -thumb.* 은 제외)
+      if (isUsableImageThumbnail(candidate) && !isGeneratedVideoThumbnailUrl(candidate)) {
+        return candidate as string;
+      }
+    }
+    return FALLBACK_IMAGE;
+  }, [isVideoCard, post]);
 
   const [extractedFrameUrl, setExtractedFrameUrl] = useState<string | null>(null);
   const [needsExtraction, setNeedsExtraction] = useState(false);
@@ -323,10 +351,13 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     else if (didFallback) posterSrc = FALLBACK_IMAGE;
     else posterSrc = basePoster;
 
-    // 추출된 프레임/플레이스홀더는 즉시 노출해도 안전.
-    // basePoster를 보여주는 경우에만 posterRevealed 게이트를 적용.
-    const safeToReveal =
-      !!extractedFrameUrl || didFallback || posterSrc === FALLBACK_IMAGE || posterRevealed;
+    // 영상 카드에서 "안전하게 보여줘도 좋은" 시점 판정.
+    //  - 추출된 프레임이 들어왔을 때 → 즉시 표시
+    //  - basePoster가 사용자 업로드 이미지로 채택돼 검정 검사를 통과했을 때 → 표시
+    //  - 그 외(아직 검사 전이거나, placeholder/추출 대기 상태) → 숨겨서 부모의 옅은 회색
+    //    배경(bg-gray-100)만 보이게 한다. placeholder.svg의 "이미지 없음" 그래픽이
+    //    잠깐이라도 노출되는 어색함을 피하기 위함.
+    const safeToReveal = !!extractedFrameUrl || (posterSrc !== FALLBACK_IMAGE && posterRevealed);
 
     return (
       <div
