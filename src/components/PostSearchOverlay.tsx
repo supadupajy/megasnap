@@ -306,6 +306,8 @@ const PostSearchOverlay = () => {
   const closeOverlay = useCallback(() => {
     setSelectedPostId(null);
     setIsOpen(false);
+    debounceInitRef.current = false;
+    skipNextDebounceRef.current = false;
     (window as any).__isPostSearchOverlayOpen = false;
     window.dispatchEvent(new CustomEvent('close-post-search-overlay'));
   }, []);
@@ -319,6 +321,8 @@ const PostSearchOverlay = () => {
     const handleClose = () => {
       setSelectedPostId(null);
       setIsOpen(false);
+      debounceInitRef.current = false;
+      skipNextDebounceRef.current = false;
       (window as any).__isPostSearchOverlayOpen = false;
     };
 
@@ -343,6 +347,8 @@ const PostSearchOverlay = () => {
     const handlePopState = () => {
       setSelectedPostId(null);
       setIsOpen(false);
+      debounceInitRef.current = false;
+      skipNextDebounceRef.current = false;
       (window as any).__isPostSearchOverlayOpen = false;
       window.dispatchEvent(new CustomEvent('close-post-search-overlay'));
     };
@@ -424,14 +430,17 @@ const PostSearchOverlay = () => {
   useEffect(() => {
     if (!isOpen) return;
 
-    if (!debounceInitRef.current) {
+    // 명시적인 검색 요청(태그 클릭 등)은 init 가드보다 우선 처리해서 즉시 검색.
+    if (skipNextDebounceRef.current) {
+      skipNextDebounceRef.current = false;
       debounceInitRef.current = true;
+      handleSearch(searchQuery);
       return;
     }
 
-    if (skipNextDebounceRef.current) {
-      skipNextDebounceRef.current = false;
-      handleSearch(searchQuery);
+    // 오버레이가 처음 열릴 때 캐시된 결과를 보여주는 경우, 자동 재검색은 한 번 스킵.
+    if (!debounceInitRef.current) {
+      debounceInitRef.current = true;
       return;
     }
 
