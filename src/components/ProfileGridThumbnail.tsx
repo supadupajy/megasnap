@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Play } from 'lucide-react';
 
 import { Post } from '@/types';
-import { getOptimizedMarkerImage } from '@/lib/utils';
 import { getPostMediaItems, isValidMediaUrl, isVideoUrl } from '@/utils/post-media';
 
 interface ProfileGridThumbnailProps {
@@ -14,35 +13,19 @@ interface ProfileGridThumbnailProps {
 
 const FALLBACK_IMAGE = '/placeholder.svg';
 
-const pickSafePosterCandidate = (
-  post: Post,
-  primaryPoster: string | undefined,
-  debugCandidates: Array<{ source: string; value: any; rejected?: string }>
-): string => {
-  const rawCandidates: Array<{ source: string; value: string | undefined }> = [
-    { source: 'firstMedia.posterUrl', value: primaryPoster },
-    ...(Array.isArray(post.images)
-      ? post.images.map((url, i) => ({ source: `post.images[${i}]`, value: url }))
-      : []),
-    { source: 'post.image_url', value: post.image_url },
-    { source: 'post.image', value: post.image },
+const pickSafePosterCandidate = (post: Post, primaryPoster?: string): string => {
+  const candidates: Array<string | undefined> = [
+    primaryPoster,
+    ...(Array.isArray(post.images) ? post.images : []),
+    post.image_url,
+    post.image,
   ];
 
-  for (const candidate of rawCandidates) {
-    if (!candidate.value) {
-      debugCandidates.push({ source: candidate.source, value: candidate.value, rejected: 'empty' });
-      continue;
-    }
-    if (!isValidMediaUrl(candidate.value)) {
-      debugCandidates.push({ source: candidate.source, value: candidate.value, rejected: 'not-http-url' });
-      continue;
-    }
-    if (isVideoUrl(candidate.value)) {
-      debugCandidates.push({ source: candidate.source, value: candidate.value, rejected: 'is-video' });
-      continue;
-    }
-    debugCandidates.push({ source: candidate.source, value: candidate.value });
-    return candidate.value;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (!isValidMediaUrl(candidate)) continue;
+    if (isVideoUrl(candidate)) continue;
+    return candidate;
   }
 
   return FALLBACK_IMAGE;
@@ -55,6 +38,8 @@ const hasAnyVideoUrl = (post: Post): boolean => {
 };
 
 const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
+  const [didFallback, setDidFallback] = useState(false);
+
   const mediaItems = useMemo(
     () => getPostMediaItems(post, { trustGeneratedVideoThumbnails: true }),
     [post]
@@ -63,15 +48,6 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   const hasVideo = hasAnyVideoUrl(post);
 
   if (!firstMedia) {
-    console.log('[ProfileGridThumbnail] no firstMedia', {
-      postId: post.id,
-      image_url: post.image_url,
-      image: post.image,
-      images: post.images,
-      videoUrl: post.videoUrl,
-      videoUrls: post.videoUrls,
-    });
-
     return (
       <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
         <img
@@ -80,30 +56,16 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
           loading="lazy"
           decoding="async"
           className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-          onError={onError}
         />
       </div>
     );
   }
 
   if (firstMedia.type === 'video') {
-    const debugCandidates: Array<{ source: string; value: any; rejected?: string }> = [];
-    const safePoster = pickSafePosterCandidate(post, firstMedia.posterUrl, debugCandidates);
-    const posterSrc = getOptimizedMarkerImage(safePoster, post.id);
-
-    console.log('[ProfileGridThumbnail] video card', {
-      postId: post.id,
-      videoUrl: post.videoUrl,
-      videoUrls: post.videoUrls,
-      image_url: post.image_url,
-      image: post.image,
-      images: post.images,
-      firstMediaPosterUrl: firstMedia.posterUrl,
-      pickedPoster: safePoster,
-      pickedPosterIsFallback: safePoster === FALLBACK_IMAGE,
-      finalPosterSrc: posterSrc,
-      candidates: debugCandidates,
-    });
+    const safePoster = pickSafePosterCandidate(post, firstMedia.posterUrl);
+    // 원본 썸네일 URL을 그대로 사용. (supabase 이미지 transform이 비활성화된 환경에서
+    // render/image 경로가 빈 응답을 주며 까만 칸이 되는 것을 방지.)
+    const posterSrc = didFallback ? FALLBACK_IMAGE : safePoster;
 
     return (
       <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
@@ -113,13 +75,8 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
           loading="lazy"
           decoding="async"
           className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
-          onError={(e) => {
-            console.warn('[ProfileGridThumbnail] poster <img> failed to load', {
-              postId: post.id,
-              attemptedSrc: (e.currentTarget as HTMLImageElement).src,
-              pickedPoster: safePoster,
-            });
-            onError();
+          onError={() => {
+            if (!didFallback) setDidFallback(true);
           }}
         />
         <div className="absolute top-2 right-2 z-10">
@@ -130,18 +87,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   }
 
   const isFirstMediaUsable = isValidMediaUrl(firstMedia.url) && !isVideoUrl(firstMedia.url);
-  const imageSrc = isFirstMediaUsable
-    ? getOptimizedMarkerImage(firstMedia.url, post.id)
-    : FALLBACK_IMAGE;
-
-  if (!isFirstMediaUsable) {
-    console.log('[ProfileGridThumbnail] image card fell back to placeholder', {
-      postId: post.id,
-      firstMediaUrl: firstMedia.url,
-      image_url: post.image_url,
-      images: post.images,
-    });
-  }
+  const imageSrc = didFallback || !isFirstMediaUsable ? FALLBACK_IMAGE : firstMedia.url;
 
   return (
     <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
@@ -151,13 +97,8 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
         loading="lazy"
         decoding="async"
         className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-        onError={(e) => {
-          console.warn('[ProfileGridThumbnail] image <img> failed to load', {
-            postId: post.id,
-            attemptedSrc: (e.currentTarget as HTMLImageElement).src,
-            firstMediaUrl: firstMedia.url,
-          });
-          onError();
+        onError={() => {
+          if (!didFallback) setDidFallback(true);
         }}
       />
       {hasVideo && (
