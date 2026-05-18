@@ -2172,24 +2172,23 @@ const MapContainer = ({
     else if (!isMine && (isInfluencer || isPopular)) animationClass = 'animate-marker-float';
 
     let inlineBorderStyle = "border: 3px solid #ffffff;";
-    let inlineShadow = "0 10px 22px rgba(15, 23, 42, 0.18), inset 0 2px 8px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(15, 23, 42, 0.18)";
+    let inlineShadow = "0 6px 14px rgba(15, 23, 42, 0.16), inset 0 2px 8px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(15, 23, 42, 0.16)";
     let influencerClass = "";
 
     if (isMine) {
       inlineBorderStyle = "border: 3px solid #4f46e5;";
-      inlineShadow = "0 10px 22px rgba(79, 70, 229, 0.22), inset 0 2px 8px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(30, 41, 59, 0.16)";
     }
-    else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; inlineShadow = "0 12px 26px rgba(37, 99, 235, 0.28), inset 0 2px 9px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(30, 64, 175, 0.22)"; influencerClass = ""; }
-    else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 12px 26px rgba(239, 68, 68, 0.35), inset 0 2px 9px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(127, 29, 29, 0.18)"; }
-    else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.75), 0 12px 26px rgba(8, 145, 178, 0.25), inset 0 2px 9px rgba(255, 255, 255, 0.62), inset 0 -10px 18px rgba(8, 145, 178, 0.18)"; influencerClass = "influencer-glow"; }
-    else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.58), 0 12px 26px rgba(217, 119, 6, 0.24), inset 0 2px 9px rgba(255, 255, 255, 0.62), inset 0 -10px 18px rgba(146, 64, 14, 0.16)"; influencerClass = "influencer-glow"; }
-    else if (borderType === 'silver') { inlineBorderStyle = "border: 4.5px solid #94a3b8;"; inlineShadow = "0 0 16px rgba(148, 163, 184, 0.68), 0 12px 26px rgba(71, 85, 105, 0.22), inset 0 2px 9px rgba(255, 255, 255, 0.62), inset 0 -10px 18px rgba(51, 65, 85, 0.14)"; influencerClass = "influencer-glow"; }
+    else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; }
+    else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; }
+    else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; }
+    else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; }
+    else if (borderType === 'silver') { inlineBorderStyle = "border: 4.5px solid #94a3b8;"; }
 
     const adStyleTag = isAd ? `<style>
       @keyframes _ad_flip { 0%,75%{transform:rotateY(0deg)} 100%{transform:rotateY(360deg)} }
       @keyframes _tornado_outer { 0%{transform:rotate(0deg) scale(1)} 25%{transform:rotate(90deg) scale(1.15)} 50%{transform:rotate(180deg) scale(1)} 75%{transform:rotate(270deg) scale(1.15)} 100%{transform:rotate(360deg) scale(1)} }
       @keyframes _tornado_inner { 0%{transform:rotate(0deg) scale(1.2)} 100%{transform:rotate(-360deg) scale(1.2)} }
-      ._ad_lbl { position:relative; overflow:hidden; width:auto; min-width:34px; color:white; font-size:9px; font-weight:900; padding:3px 8px; border-radius:999px; text-align:center; box-sizing:border-box; letter-spacing:0.05em; margin-bottom:-7px; z-index:3; line-height:1.1; border:2px solid rgba(255,255,255,0.9); box-shadow:0 3px 10px rgba(37,99,235,0.28); }
+      ._ad_lbl { position:relative; overflow:hidden; width:auto; min-width:34px; color:white; font-size:9px; font-weight:900; padding:3px 8px; border-radius:999px; text-align:center; box-sizing:border-box; letter-spacing:0.05em; margin-bottom:-7px; z-index:3; line-height:1.1; border:2px solid rgba(255,255,255,0.9); box-shadow:0 3px 8px rgba(15,23,42,0.16); }
       ._ad_lbl::before { content:""; position:absolute; inset:-60%; border-radius:50%; background:conic-gradient(from 0deg,#1d4ed8 0deg,#3b82f6 60deg,#60a5fa 90deg,#93c5fd 120deg,#2563eb 180deg,#1e40af 240deg,#3b82f6 300deg,#1d4ed8 360deg); animation:_tornado_outer 1.2s linear infinite; z-index:0; }
       ._ad_lbl::after { content:""; position:absolute; inset:-40%; border-radius:50%; background:conic-gradient(from 0deg,rgba(99,102,241,0.9) 0deg,rgba(59,130,246,0.7) 90deg,rgba(147,197,253,0.5) 150deg,rgba(37,99,235,0.9) 210deg,rgba(99,102,241,0.7) 270deg,rgba(59,130,246,0.9) 330deg,rgba(99,102,241,0.9) 360deg); animation:_tornado_inner 0.8s linear infinite; z-index:1; }
       ._ad_lbl_txt { position:relative; z-index:2; text-shadow:0 1px 3px rgba(0,0,0,0.5); }
