@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Clapperboard } from 'lucide-react';
+import { Clapperboard } from 'lucide-react';
 import { Post } from '@/types';
 import { useAuth } from '@/components/AuthProvider';
 import { useBlockedUsers } from '@/hooks/use-blocked-users';
@@ -29,6 +29,40 @@ const CONTENT_FIXED_STYLE: React.CSSProperties = {
   top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
   bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
+
+const FlicksLoadingSkeleton = () => (
+  <div className="relative h-full w-full overflow-hidden bg-black">
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(79,70,229,0.22),transparent_34%),linear-gradient(180deg,#111827_0%,#030712_55%,#000_100%)]" />
+    <div className="absolute inset-x-0 top-3 bottom-[116px] flex items-end justify-center px-3">
+      <div className="relative h-full max-h-full aspect-[3/4] max-w-full overflow-hidden rounded-2xl bg-white/[0.07]">
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/[0.10] via-white/[0.045] to-white/[0.08]" />
+        <div className="absolute inset-x-6 bottom-6 h-1 rounded-full bg-white/12 animate-pulse" />
+      </div>
+    </div>
+    <div className="absolute left-4 right-4 bottom-3 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex gap-2">
+          <div className="h-9 w-20 rounded-full bg-white/10 animate-pulse" />
+          <div className="h-9 w-20 rounded-full bg-white/10 animate-pulse" />
+          <div className="h-9 w-9 rounded-full bg-white/10 animate-pulse" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-9 w-9 rounded-full bg-white/10 animate-pulse" />
+          <div className="h-9 w-20 rounded-full bg-white/10 animate-pulse" />
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded-full bg-white/12 animate-pulse" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="h-3 w-28 rounded-full bg-white/14 animate-pulse" />
+          <div className="h-2.5 w-44 rounded-full bg-white/10 animate-pulse" />
+        </div>
+      </div>
+      <div className="h-3 w-3/4 rounded-full bg-white/10 animate-pulse" />
+      <p className="pt-1 text-center text-[11px] font-black tracking-[0.28em] text-white/35">FLICKS</p>
+    </div>
+  </div>
+);
 
 // 알림/메시지는 라우트가 아니라 오버레이로 동작하므로,
 // Flicks 페이지가 unmount되지 않고 그대로 살아 있다. 이전에 있던 캐시/이어재생/
@@ -191,11 +225,7 @@ const Flicks = () => {
     return (
       <>
         <div className="bg-black" style={CONTENT_FIXED_STYLE}>
-          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
-            <Clapperboard className="w-10 h-10 text-white/80" />
-            <Loader2 className="w-6 h-6 animate-spin text-white/80" />
-            <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
-          </div>
+          <FlicksLoadingSkeleton />
         </div>
         {bottomFill}
       </>

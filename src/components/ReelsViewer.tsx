@@ -2093,6 +2093,19 @@ const ReelContentEditOverlay: React.FC<ReelContentEditOverlayProps> = ({
 // 투명 poster로 네이티브 placeholder를 막고, 첫 프레임 준비 전까지 video를 숨겨둔다.
 const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
+const ReelsVideoSkeleton = () => (
+  <div className="absolute inset-0 z-[5] overflow-hidden bg-black pointer-events-none">
+    <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/[0.10] via-white/[0.04] to-white/[0.08]" />
+    <div className="absolute left-4 right-4 bottom-4 space-y-2">
+      <div className="h-1 rounded-full bg-white/15 animate-pulse" />
+      <div className="flex items-center justify-between pt-2">
+        <div className="h-3 w-24 rounded-full bg-white/15 animate-pulse" />
+        <div className="h-3 w-12 rounded-full bg-white/10 animate-pulse" />
+      </div>
+    </div>
+  </div>
+);
+
 interface ReelsVideoProps {
   src: string;
   videoRef?: React.RefObject<HTMLVideoElement>;
@@ -2115,8 +2128,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
-  // isCurrent && 아직 첫 프레임 렌더 전이면 로딩 스피너를 보여줌 (200ms 그레이스)
-  const [showSpinner, setShowSpinner] = useState(false);
 
   const setRefs = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -2133,11 +2144,19 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   }, [src]);
 
   useEffect(() => {
+    if (!isCurrent) return;
+    const el = localRef.current;
+    setIsReady(!!el && !el.paused && el.readyState >= 2);
+  }, [isCurrent, src]);
+
+  useEffect(() => {
     const el = localRef.current;
     if (!el) return;
     const markReady = () => setIsReady(true);
+    const handleLoadedData = () => {
+      if (!isCurrent) markReady();
+    };
     const handleCanPlay = () => {
-      markReady();
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
       if (isCurrent && el.paused) {
         el.play().catch(() => {
@@ -2147,12 +2166,13 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         });
       }
     };
-    el.addEventListener("loadeddata", markReady);
+    el.addEventListener("loadeddata", handleLoadedData);
     el.addEventListener("playing", markReady);
     el.addEventListener("canplay", handleCanPlay);
-    if (el.readyState >= 2) markReady();
+    if (isCurrent && !el.paused && el.readyState >= 2) markReady();
+    if (!isCurrent && el.readyState >= 2) markReady();
     return () => {
-      el.removeEventListener("loadeddata", markReady);
+      el.removeEventListener("loadeddata", handleLoadedData);
       el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
     };
@@ -2176,20 +2196,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     if (!el || isCurrent || !shouldWarmUp) return;
     el.load();
   }, [isCurrent, shouldWarmUp, src]);
-
-  // 첫 프레임이 200ms 안에 안 뜨면 로딩 스피너 노출 (깜빡임 방지)
-  useEffect(() => {
-    if (!isCurrent) {
-      setShowSpinner(false);
-      return;
-    }
-    if (isReady) {
-      setShowSpinner(false);
-      return;
-    }
-    const t = window.setTimeout(() => setShowSpinner(true), 200);
-    return () => window.clearTimeout(t);
-  }, [isCurrent, isReady, src]);
 
   return (
     <>
@@ -2226,12 +2232,8 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         />
       )}
 
-      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 로딩 스피너 표시 */}
-      {isCurrent && !isReady && showSpinner && (
-        <div className="absolute inset-0 z-[5] flex items-center justify-center pointer-events-none bg-black/20">
-          <div className="w-12 h-12 rounded-full border-[3px] border-white/30 border-t-white animate-spin" />
-        </div>
-      )}
+      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 스피너 대신 스켈레톤을 표시 */}
+      {isCurrent && !isReady && <ReelsVideoSkeleton />}
     </>
   );
 };
