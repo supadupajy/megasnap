@@ -845,7 +845,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 style={{
                   top: 'calc(100% - 96px)',
                   height: `calc(${embeddedBottomExtensionHeight} + 96px)`,
-                  background: 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.18) 28px, rgba(0,0,0,0.52) 58px, rgba(0,0,0,0.82) 82px, #000 112px, #000 100%)',
+                  background: 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.18) 28px, rgba(0,0,0,0.52) 58px, rgba(0,0,0,0.82) 82px, #000 96px, #000 100%)',
                 }}
               />
             )}

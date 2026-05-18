@@ -165,8 +165,13 @@ const Flicks = () => {
   const bottomFill = (
     <div
       aria-hidden="true"
-      className="fixed left-0 right-0 bottom-0 pointer-events-none bg-black"
-      style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}
+      className="fixed left-0 right-0 bottom-0 bg-black cursor-default"
+      style={{
+        height: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
+        zIndex: 19998,
+        pointerEvents: 'auto',
+        touchAction: 'none',
+      }}
     />
   );
 
@@ -231,6 +236,7 @@ const Flicks = () => {
           endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
         />
       </div>
+      {bottomFill}
     </>
   );
 };
