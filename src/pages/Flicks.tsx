@@ -167,16 +167,20 @@ const Flicks = () => {
     <div
       aria-hidden="true"
       className="fixed left-0 right-0 bottom-0 pointer-events-none overflow-hidden bg-transparent"
-      style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}
+      style={{
+        height: 'calc(env(safe-area-inset-bottom, 0px) + 128px)',
+        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 42%, black 100%)',
+        maskImage: 'linear-gradient(to bottom, transparent 0%, black 42%, black 100%)',
+      }}
     >
       {activePosterUrl && (
         <>
           <img
             src={activePosterUrl}
             alt=""
-            className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl"
+            className="absolute inset-0 h-full w-full scale-125 object-cover blur-3xl opacity-90"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/30 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/30 to-transparent" />
         </>
       )}
     </div>
