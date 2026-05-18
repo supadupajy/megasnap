@@ -103,6 +103,9 @@ interface ReelsViewerProps {
   onDelete?: (postId: string) => void;
   // 내 포스팅 본문 수정 후 호출 (부모가 캐시된 content를 갱신하도록)
   onUpdate?: (postId: string, content: string) => void;
+  // 활성 슬라이드가 바뀔 때마다 현재 포스트의 대표 이미지(=영상 썸네일 또는 첫 이미지) URL을 알린다.
+  // Flicks 페이지가 BottomNav 알약 주변 배경을 영상 분위기로 자연스럽게 잇기 위해 사용.
+  onActivePosterChange?: (posterUrl: string | null) => void;
 }
 
 const ReelsViewer: React.FC<ReelsViewerProps> = ({
@@ -119,6 +122,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   showInlineCloseButton = false,
   onDelete,
   onUpdate,
+  onActivePosterChange,
 }) => {
   const isRankedMode = mode === "ranked";
   // 풀이 모두 소진되었는지 (noRepeat 모드 전용)
@@ -376,6 +380,27 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     if (!current || current.kind !== "post") return;
     markAsViewed(current.post.id);
   }, [isOpen, activeIndex, items, markAsViewed]);
+
+  // 활성 슬라이드의 대표 이미지(영상 썸네일 또는 첫 이미지)를 부모에게 알린다.
+  // - Flicks 페이지가 BottomNav 알약 주변 배경을 영상 분위기로 블러 처리해 채우기 위함.
+  // - 광고/끝 슬라이드면 null을 보낸다.
+  useEffect(() => {
+    if (!onActivePosterChange) return;
+    if (!isOpen) {
+      onActivePosterChange(null);
+      return;
+    }
+    const current = items[activeIndex];
+    if (!current || current.kind !== "post") {
+      onActivePosterChange(null);
+      return;
+    }
+    const p = current.post;
+    const thumb = p.image_url || p.image || null;
+    // 영상 URL 자체는 썸네일로 못 쓰므로 제외
+    const poster = thumb && !isVideoUrl(thumb) ? thumb : null;
+    onActivePosterChange(poster);
+  }, [isOpen, activeIndex, items, onActivePosterChange]);
 
   // 끝에 가까워지면 추가 로드 (ranked 모드에서는 무한 스크롤 없음)
   useEffect(() => {
