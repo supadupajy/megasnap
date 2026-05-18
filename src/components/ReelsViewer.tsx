@@ -2221,65 +2221,11 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     transform: 'translate(-50%, -50%)',
   };
 
-  useEffect(() => {
-    if (!isCurrent) return;
-
-    const video = localRef.current;
-    const videoRect = video?.getBoundingClientRect();
-    const parentRect = video?.parentElement?.getBoundingClientRect();
-    const videoStyle = video ? window.getComputedStyle(video) : null;
-    const blurLayer = video?.parentElement?.querySelector('[data-reels-blur-bg="true"]') as HTMLElement | null;
-    const blurRect = blurLayer?.getBoundingClientRect();
-    const blurStyle = blurLayer ? window.getComputedStyle(blurLayer) : null;
-
-    console.log('[FlicksBlurDebug] render state', {
-      src,
-      hasPosterUrl: !!posterUrl,
-      posterUrl,
-      isReady,
-      videoAspect,
-      isNarrowerThanFrame,
-      foregroundMediaStyle,
-      parentRect: parentRect ? {
-        width: parentRect.width,
-        height: parentRect.height,
-      } : null,
-      videoRect: videoRect ? {
-        x: videoRect.x,
-        y: videoRect.y,
-        width: videoRect.width,
-        height: videoRect.height,
-      } : null,
-      videoComputed: videoStyle ? {
-        width: videoStyle.width,
-        height: videoStyle.height,
-        objectFit: videoStyle.objectFit,
-        backgroundColor: videoStyle.backgroundColor,
-        opacity: videoStyle.opacity,
-        zIndex: videoStyle.zIndex,
-      } : null,
-      blurRect: blurRect ? {
-        x: blurRect.x,
-        y: blurRect.y,
-        width: blurRect.width,
-        height: blurRect.height,
-      } : null,
-      blurComputed: blurStyle ? {
-        display: blurStyle.display,
-        filter: blurStyle.filter,
-        opacity: blurStyle.opacity,
-        transform: blurStyle.transform,
-        zIndex: blurStyle.zIndex,
-      } : null,
-    });
-  }, [isCurrent, src, posterUrl, isReady, videoAspect, isNarrowerThanFrame]);
-
   return (
     <>
 
       {posterUrl && (
         <img
-          data-reels-blur-bg="true"
           src={posterUrl}
           alt=""
           aria-hidden="true"
@@ -2288,27 +2234,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
             filter: 'blur(30px)',
             transform: 'scale(1.22)',
             opacity: 0.88,
-          }}
-          onLoad={(event) => {
-            const img = event.currentTarget;
-            const rect = img.getBoundingClientRect();
-            const style = window.getComputedStyle(img);
-            console.log('[FlicksBlurDebug] blur poster loaded', {
-              src,
-              posterUrl,
-              naturalWidth: img.naturalWidth,
-              naturalHeight: img.naturalHeight,
-              rect: { width: rect.width, height: rect.height },
-              computed: {
-                filter: style.filter,
-                opacity: style.opacity,
-                transform: style.transform,
-                zIndex: style.zIndex,
-              },
-            });
-          }}
-          onError={() => {
-            console.warn('[FlicksBlurDebug] blur poster failed to load', { src, posterUrl });
           }}
           draggable={false}
         />
@@ -2330,20 +2255,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           opacity: isCurrent && !isReady ? 0 : 1,
           transition: "opacity 200ms ease-out",
           backgroundColor: "transparent",
-        }}
-        onLoadedMetadata={(event) => {
-          const video = event.currentTarget;
-          const rect = video.getBoundingClientRect();
-          const parentRect = video.parentElement?.getBoundingClientRect();
-          console.log('[FlicksBlurDebug] video metadata loaded', {
-            src,
-            posterUrl,
-            videoWidth: video.videoWidth,
-            videoHeight: video.videoHeight,
-            aspect: video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : null,
-            parentRect: parentRect ? { width: parentRect.width, height: parentRect.height } : null,
-            videoRect: { width: rect.width, height: rect.height },
-          });
         }}
       />
 
