@@ -19,19 +19,18 @@ export const HiBubbleIcon = ({ className }: BrandProps) => (
         <stop offset="0.55" stopColor="#FFB703" />
         <stop offset="1" stopColor="#FF8A00" />
       </linearGradient>
-      <linearGradient id="hi-bubble-pin" x1="41" y1="24" x2="78" y2="86" gradientUnits="userSpaceOnUse">
+      <radialGradient id="hi-bubble-drop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(50 44) rotate(48) scale(58)">
         <stop stopColor="#FFFFFF" />
-        <stop offset="1" stopColor="#FFF7E5" />
-      </linearGradient>
+        <stop offset="0.58" stopColor="#FFFFFF" />
+        <stop offset="1" stopColor="#EAF7FF" />
+      </radialGradient>
     </defs>
 
     <rect x="8" y="8" width="104" height="104" rx="28" fill="url(#hi-bubble-bg)" />
 
-    <path
-      d="M60 25C45.1 25 33 37.1 33 52C33 70.8 54.7 86.3 59.1 94C59.5 94.7 60.5 94.7 60.9 94C65.3 86.3 87 70.8 87 52C87 37.1 74.9 25 60 25Z"
-      fill="url(#hi-bubble-pin)"
-    />
-    <circle cx="60" cy="52" r="13" fill="#111827" />
+    <circle cx="60" cy="60" r="34" fill="url(#hi-bubble-drop)" stroke="#FFFFFF" strokeWidth="3" />
+    <ellipse cx="49" cy="45" rx="12" ry="7" fill="#FFFFFF" opacity="0.85" transform="rotate(-35 49 45)" />
+    <path d="M82 58C82 73.5 73.5 84 60 88C77 88 92 75.5 92 60C92 48 85.5 38 76 32C79.8 38.8 82 47.8 82 58Z" fill="#DFF5FF" opacity="0.38" />
   </svg>
 );
 
