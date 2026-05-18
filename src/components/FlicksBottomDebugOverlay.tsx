@@ -71,6 +71,62 @@ const FlicksBottomDebugOverlay: React.FC = () => {
   const [enabled, setEnabled] = useState(false);
   const [results, setResults] = useState<SampleResult[]>([]);
   const [tick, setTick] = useState(0);
+  const [copyStatus, setCopyStatus] = useState<"" | "복사됨!" | "복사 실패">("");
+
+  // 결과를 plain text로 직렬화 (클립보드 복사용)
+  const buildReportText = useCallback((rs: SampleResult[]): string => {
+    const lines: string[] = [];
+    lines.push("===== [FlicksDebug] 하단 영역 stacking 분석 =====");
+    if (typeof window !== "undefined") {
+      lines.push(
+        `window: ${window.innerWidth} x ${window.innerHeight}`
+      );
+      lines.push(
+        `body bg: ${window.getComputedStyle(document.body).backgroundColor} | html bg: ${window.getComputedStyle(document.documentElement).backgroundColor}`
+      );
+    }
+    lines.push("");
+    rs.forEach((r) => {
+      lines.push(
+        `📍 ${r.label}  (x=${Math.round(r.x)}, y=${Math.round(r.y)}) → 합성 배경: ${r.effectiveBg}`
+      );
+      r.stack.forEach((s, i) => {
+        lines.push(
+          `   [${i}] <${s.tag}> bg=${s.bg} opacity=${s.opacity} z=${s.zIndex} class="${s.classHead}" top=${s.rectTop} bottom=${s.rectBottom}`
+        );
+      });
+      lines.push("");
+    });
+    lines.push("===== 분석 끝 =====");
+    return lines.join("\n");
+  }, []);
+
+  const copyReport = useCallback(async () => {
+    const text = buildReportText(results);
+    let ok = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      } else {
+        // fallback: hidden textarea + execCommand
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "0";
+        ta.setAttribute("readonly", "");
+        document.body.appendChild(ta);
+        ta.select();
+        ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+    } catch {
+      ok = false;
+    }
+    setCopyStatus(ok ? "복사됨!" : "복사 실패");
+    window.setTimeout(() => setCopyStatus(""), 1500);
+  }, [results, buildReportText]);
 
   const runSample = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -230,9 +286,63 @@ const FlicksBottomDebugOverlay: React.FC = () => {
               lineHeight: 1.35,
             }}
           >
-            <div style={{ fontWeight: "bold", marginBottom: 6, color: "#a78bfa" }}>
-              [FlicksDebug] 하단 영역 stacking (tick {tick})
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 6,
+              }}
+            >
+              <div style={{ fontWeight: "bold", color: "#a78bfa" }}>
+                [FlicksDebug] 하단 영역 stacking (tick {tick})
+              </div>
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                {copyStatus && (
+                  <span style={{ fontSize: 10, color: "#34d399" }}>{copyStatus}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={copyReport}
+                  style={{
+                    padding: "4px 8px",
+                    borderRadius: 6,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    background: "#10b981",
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                  }}
+                >
+                  📋 로그 복사
+                </button>
+              </div>
             </div>
+
+            {/* 텍스트 백업: 클립보드가 안 먹힐 때 길게 눌러서 복사할 수 있도록 */}
+            <details style={{ marginBottom: 6 }}>
+              <summary style={{ cursor: "pointer", color: "#fbbf24", fontSize: 10 }}>
+                ▸ 텍스트로 보기 (길게 눌러 직접 복사)
+              </summary>
+              <textarea
+                readOnly
+                value={buildReportText(results)}
+                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                style={{
+                  width: "100%",
+                  height: 120,
+                  marginTop: 4,
+                  background: "#111",
+                  color: "#e5e7eb",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  borderRadius: 4,
+                  fontSize: 9,
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                  padding: 4,
+                  lineHeight: 1.3,
+                }}
+              />
+            </details>
             {results.map((r, i) => (
               <div
                 key={i}
