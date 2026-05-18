@@ -2186,10 +2186,17 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       const shouldCrop = leftDark > 0.82 && rightDark > 0.82 && centerDark < 0.72;
 
       setCropSideLetterbox(shouldCrop);
-    } catch {
-      setCropSideLetterbox(false);
+      console.log('[FlicksBlurDebug] side letterbox detection', {
+        src,
+        leftDark,
+        rightDark,
+        centerDark,
+        shouldCrop,
+      });
+    } catch (error) {
+      console.warn('[FlicksBlurDebug] side letterbox detection failed', { src, error });
     }
-  }, []);
+  }, [src]);
 
   useEffect(() => {
 
@@ -2275,17 +2282,66 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     height: `${foregroundHeightPercent}%`,
     transform: 'translate(-50%, -50%)',
   };
-  const sideGutterPercent = Math.max(0, (100 - foregroundWidthPercent) / 2);
-  const verticalGutterPercent = Math.max(0, (100 - foregroundHeightPercent) / 2);
-  const letterboxBlurStyle: React.CSSProperties = posterUrl
-    ? {
-        backgroundImage: `url(${posterUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        filter: 'blur(22px)',
-        transform: 'scale(1.12)',
-      }
-    : {};
+
+  useEffect(() => {
+    if (!isCurrent) return;
+
+    const video = localRef.current;
+    const videoRect = video?.getBoundingClientRect();
+    const parentRect = video?.parentElement?.parentElement?.getBoundingClientRect();
+    const videoStyle = video ? window.getComputedStyle(video) : null;
+    const blurLayer = video?.parentElement?.parentElement?.querySelector('[data-reels-blur-bg="true"]') as HTMLElement | null;
+
+    const blurRect = blurLayer?.getBoundingClientRect();
+    const blurStyle = blurLayer ? window.getComputedStyle(blurLayer) : null;
+
+    console.log('[FlicksBlurDebug] render state', {
+      src,
+      hasPosterUrl: !!posterUrl,
+      posterUrl,
+      isReady,
+      videoAspect,
+      cropSideLetterbox,
+      frameAspect,
+      effectiveVideoAspect,
+      isNarrowerThanFrame,
+      foregroundWidthPercent,
+      foregroundHeightPercent,
+      foregroundMediaStyle,
+      parentRect: parentRect ? {
+
+        width: parentRect.width,
+        height: parentRect.height,
+      } : null,
+      videoRect: videoRect ? {
+        x: videoRect.x,
+        y: videoRect.y,
+        width: videoRect.width,
+        height: videoRect.height,
+      } : null,
+      videoComputed: videoStyle ? {
+        width: videoStyle.width,
+        height: videoStyle.height,
+        objectFit: videoStyle.objectFit,
+        backgroundColor: videoStyle.backgroundColor,
+        opacity: videoStyle.opacity,
+        zIndex: videoStyle.zIndex,
+      } : null,
+      blurRect: blurRect ? {
+        x: blurRect.x,
+        y: blurRect.y,
+        width: blurRect.width,
+        height: blurRect.height,
+      } : null,
+      blurComputed: blurStyle ? {
+        display: blurStyle.display,
+        filter: blurStyle.filter,
+        opacity: blurStyle.opacity,
+        transform: blurStyle.transform,
+        zIndex: blurStyle.zIndex,
+      } : null,
+    });
+  }, [isCurrent, src, posterUrl, isReady, videoAspect, cropSideLetterbox, isNarrowerThanFrame, foregroundWidthPercent, foregroundHeightPercent]);
 
   return (
 
@@ -2303,43 +2359,34 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
             transform: 'scale(1.28)',
             opacity: 0.95,
           }}
+
+          onLoad={(event) => {
+            const img = event.currentTarget;
+            const rect = img.getBoundingClientRect();
+            const style = window.getComputedStyle(img);
+            console.log('[FlicksBlurDebug] blur poster loaded', {
+              src,
+              posterUrl,
+              naturalWidth: img.naturalWidth,
+              naturalHeight: img.naturalHeight,
+              rect: { width: rect.width, height: rect.height },
+              computed: {
+                filter: style.filter,
+                opacity: style.opacity,
+                transform: style.transform,
+                zIndex: style.zIndex,
+              },
+            });
+          }}
+          onError={() => {
+            console.warn('[FlicksBlurDebug] blur poster failed to load', { src, posterUrl });
+          }}
           draggable={false}
         />
       )}
       <div className="absolute inset-0 z-[3] bg-black/25 pointer-events-none" />
 
-      {posterUrl && sideGutterPercent > 0.5 && (
-        <>
-          <div
-            aria-hidden="true"
-            className="absolute left-0 top-0 bottom-0 z-[12] pointer-events-none"
-            style={{ width: `${sideGutterPercent}%`, ...letterboxBlurStyle }}
-          />
-          <div
-            aria-hidden="true"
-            className="absolute right-0 top-0 bottom-0 z-[12] pointer-events-none"
-            style={{ width: `${sideGutterPercent}%`, ...letterboxBlurStyle }}
-          />
-        </>
-      )}
-
-      {posterUrl && verticalGutterPercent > 0.5 && (
-        <>
-          <div
-            aria-hidden="true"
-            className="absolute left-0 right-0 top-0 z-[12] pointer-events-none"
-            style={{ height: `${verticalGutterPercent}%`, ...letterboxBlurStyle }}
-          />
-          <div
-            aria-hidden="true"
-            className="absolute left-0 right-0 bottom-0 z-[12] pointer-events-none"
-            style={{ height: `${verticalGutterPercent}%`, ...letterboxBlurStyle }}
-          />
-        </>
-      )}
-
       <div
-
         className="absolute z-10 overflow-hidden bg-transparent"
         style={foregroundMediaStyle}
       >
@@ -2361,8 +2408,22 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
             backgroundColor: "transparent",
             transform: cropSideLetterbox ? 'scale(1.42) translateZ(0)' : 'translateZ(0)',
           }}
-        />
+          onLoadedMetadata={(event) => {
 
+            const video = event.currentTarget;
+            const rect = video.getBoundingClientRect();
+            const parentRect = video.parentElement?.getBoundingClientRect();
+            console.log('[FlicksBlurDebug] video metadata loaded', {
+              src,
+              posterUrl,
+              videoWidth: video.videoWidth,
+              videoHeight: video.videoHeight,
+              aspect: video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : null,
+              parentRect: parentRect ? { width: parentRect.width, height: parentRect.height } : null,
+              videoRect: { width: rect.width, height: rect.height },
+            });
+          }}
+        />
       </div>
 
       {/* 첫 프레임 디코드 전엔 posterUrl을 깔아 둠 (흰/회색 빈 화면 방지). isReady가 되면 부드럽게 사라짐. */}
