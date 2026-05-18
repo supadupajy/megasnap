@@ -2211,8 +2211,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     el.load();
   }, [isCurrent, shouldWarmUp, src]);
 
-  const effectiveVideoAspect = videoAspect ?? 9 / 16;
-  const isNarrowerThanFrame = effectiveVideoAspect < 3 / 4;
+  const isNarrowerThanFrame = videoAspect != null && videoAspect < 3 / 4;
   const foregroundMediaStyle: React.CSSProperties = {
     top: '50%',
     left: '50%',
@@ -2220,7 +2219,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     height: isNarrowerThanFrame ? '100%' : 'auto',
     maxWidth: '100%',
     maxHeight: '100%',
-    aspectRatio: effectiveVideoAspect,
     transform: 'translate(-50%, -50%)',
   };
 
@@ -2229,10 +2227,9 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 
     const video = localRef.current;
     const videoRect = video?.getBoundingClientRect();
-    const parentRect = video?.parentElement?.parentElement?.getBoundingClientRect();
+    const parentRect = video?.parentElement?.getBoundingClientRect();
     const videoStyle = video ? window.getComputedStyle(video) : null;
-    const blurLayer = video?.parentElement?.parentElement?.querySelector('[data-reels-blur-bg="true"]') as HTMLElement | null;
-
+    const blurLayer = video?.parentElement?.querySelector('[data-reels-blur-bg="true"]') as HTMLElement | null;
     const blurRect = blurLayer?.getBoundingClientRect();
     const blurStyle = blurLayer ? window.getComputedStyle(blurLayer) : null;
 
@@ -2287,13 +2284,12 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 z-[2] h-full w-full object-cover pointer-events-none"
+          className="absolute inset-0 z-0 h-full w-full object-cover pointer-events-none"
           style={{
-            filter: 'blur(32px)',
-            transform: 'scale(1.28)',
-            opacity: 0.95,
+            filter: 'blur(30px)',
+            transform: 'scale(1.22)',
+            opacity: 0.88,
           }}
-
           onLoad={(event) => {
             const img = event.currentTarget;
             const rect = img.getBoundingClientRect();
@@ -2318,44 +2314,39 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           draggable={false}
         />
       )}
-      <div className="absolute inset-0 z-[3] bg-black/25 pointer-events-none" />
+      <div className="absolute inset-0 z-[1] bg-black/45 pointer-events-none" />
 
-      <div
-        className="absolute z-10 overflow-hidden bg-transparent"
-        style={foregroundMediaStyle}
-      >
-
-        <video
-          ref={setRefs}
-          src={src}
-          className="absolute inset-0 h-full w-full object-cover video-hq bg-transparent"
-          // 1x1 투명 poster로 native 회색 placeholder 깜빡임 방지
-          poster={posterUrl || TRANSPARENT_POSTER}
-          playsInline
-          loop
-          muted={muted}
-          preload={preload}
-          style={{
-            opacity: isCurrent && !isReady ? 0 : 1,
-            transition: "opacity 200ms ease-out",
-            backgroundColor: "transparent",
-          }}
-          onLoadedMetadata={(event) => {
-            const video = event.currentTarget;
-            const rect = video.getBoundingClientRect();
-            const parentRect = video.parentElement?.getBoundingClientRect();
-            console.log('[FlicksBlurDebug] video metadata loaded', {
-              src,
-              posterUrl,
-              videoWidth: video.videoWidth,
-              videoHeight: video.videoHeight,
-              aspect: video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : null,
-              parentRect: parentRect ? { width: parentRect.width, height: parentRect.height } : null,
-              videoRect: { width: rect.width, height: rect.height },
-            });
-          }}
-        />
-      </div>
+      <video
+        ref={setRefs}
+        src={src}
+        className="absolute z-10 object-contain video-hq bg-transparent"
+        // 1x1 투명 poster로 native 회색 placeholder 깜빡임 방지
+        poster={posterUrl || TRANSPARENT_POSTER}
+        playsInline
+        loop
+        muted={muted}
+        preload={preload}
+        style={{
+          ...foregroundMediaStyle,
+          opacity: isCurrent && !isReady ? 0 : 1,
+          transition: "opacity 200ms ease-out",
+          backgroundColor: "transparent",
+        }}
+        onLoadedMetadata={(event) => {
+          const video = event.currentTarget;
+          const rect = video.getBoundingClientRect();
+          const parentRect = video.parentElement?.getBoundingClientRect();
+          console.log('[FlicksBlurDebug] video metadata loaded', {
+            src,
+            posterUrl,
+            videoWidth: video.videoWidth,
+            videoHeight: video.videoHeight,
+            aspect: video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : null,
+            parentRect: parentRect ? { width: parentRect.width, height: parentRect.height } : null,
+            videoRect: { width: rect.width, height: rect.height },
+          });
+        }}
+      />
 
       {/* 첫 프레임 디코드 전엔 posterUrl을 깔아 둠 (흰/회색 빈 화면 방지). isReady가 되면 부드럽게 사라짐. */}
       {posterUrl && (
@@ -2363,7 +2354,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute z-20 object-cover pointer-events-none"
+          className="absolute z-20 object-contain pointer-events-none"
           style={{
             ...foregroundMediaStyle,
             opacity: isReady ? 0 : 1,
@@ -2657,7 +2648,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
           return (
             <div
               key={`${url}-${i}`}
-              className="relative isolate h-full shrink-0 bg-transparent"
+              className="relative h-full shrink-0 bg-transparent"
               style={{ width: `${100 / mediaList.length}%` }}
             >
               {isVid ? (
