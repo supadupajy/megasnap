@@ -88,14 +88,11 @@ const MARKER_EXPIRY_CHECK_INTERVAL_MS = 60 * 1000; // 1분마다 만료/타이�
 // DB에 수천개가 있어도 한 화면에는 아래 개수까지만 그려서 부하를 최소화한다.
 const GHOST_MARKER_MAX_VISIBLE = 30;
 
-// 카운트다운 링 사각 둥근 테두리 파라미터 (60×60 마커 inner box 안쪽)
-// inner box: width=60, height=60, border-radius=20, border=4.5px
-// 외곽 테두리 바로 안쪽에 딱 붙도록 padding을 최소화 → 좋아요 카운트 가리지 않음
-// stroke-width=4의 절반(=2)만큼만 안으로 들여 외곽 테두리에 거의 붙임
-const COUNTDOWN_RING_PADDING = 2; // 마커 박스 가장자리에서 안쪽으로 들이는 픽셀
-const COUNTDOWN_RING_BOX = 60;    // viewBox 크기 (마커 inner box 크기와 동일)
-const COUNTDOWN_RING_SIZE = COUNTDOWN_RING_BOX - COUNTDOWN_RING_PADDING * 2; // 사각 변 길이 = 56
-const COUNTDOWN_RING_R = 16;      // 둥근 모서리 반지름 (마커 border-radius=20에 맞춰 살짝 작게)
+// 카운트다운 링 원형 테두리 파라미터 (60×60 버블 마커 안쪽)
+const COUNTDOWN_RING_PADDING = 2;
+const COUNTDOWN_RING_BOX = 60;
+const COUNTDOWN_RING_RADIUS = COUNTDOWN_RING_BOX / 2 - COUNTDOWN_RING_PADDING;
+const COUNTDOWN_RING_CENTER = COUNTDOWN_RING_BOX / 2;
 
 // 카운트다운 링 컬러 (LocationButtonWithTimer와 통일)
 // 남은 시간: 형광 네온 그린 / 지난 시간: 진한 초록 (opacity ↑)
@@ -103,112 +100,24 @@ const COUNTDOWN_PROGRESS_COLOR = '#39FF14';            // 형광 네온 그린 �
 const COUNTDOWN_TRACK_COLOR = 'rgba(34,197,94,0.55)';  // 진한 초록(opacity 0.55) — 지난 시간
 const COUNTDOWN_GLOW = '0 0 4px rgba(57,255,20,0.7)';  // 네온 발광
 
-/**
- * 12시 방향(상단 중앙)에서 시작해, 시계 반대방향으로 한 바퀴 도는
- * 둥근 사각형 SVG path를 생성한다.
- * → stroke-dashoffset을 음수로 늘리면 시작점에서부터 stroke가 깎여나가므로,
- *    "남은 끝점"이 시계 반대방향으로 회전하면서 줄어드는 효과가 된다.
- */
+/** 12시 방향에서 시작해 시계 반대방향으로 도는 원형 SVG path */
 const buildCountdownRingPath = (): string => {
-  const pad = COUNTDOWN_RING_PADDING;
-  const size = COUNTDOWN_RING_SIZE;
-  const r = COUNTDOWN_RING_R;
-  // 사각형 꼭짓점 좌표 (반지름 r만큼 안쪽에서 시작/종료)
-  const left = pad;
-  const right = pad + size;
-  const top = pad;
-  const bottom = pad + size;
-  const cx = pad + size / 2; // 상단 중앙 시작점 x
-  // 12시 방향(상단 중앙) → 시계 반대방향(왼쪽으로) 한 바퀴
-  // M cx,top                         시작: 상단 중앙
-  // H left + r                       ↖ 상단을 왼쪽으로
-  // A r,r 0 0 0 left,top + r         ↶ 좌상 모서리(반시계)
-  // V bottom - r                     ↙ 왼쪽 변 따라 아래로
-  // A r,r 0 0 0 left + r,bottom      ↶ 좌하 모서리(반시계)
-  // H right - r                      ↘ 하단을 오른쪽으로
-  // A r,r 0 0 0 right,bottom - r     ↶ 우하 모서리(반시계)
-  // V top + r                        ↗ 오른쪽 변 따라 위로
-  // A r,r 0 0 0 right - r,top        ↶ 우상 모서리(반시계)
-  // Z                                상단 중앙으로 닫기
-  return `M ${cx} ${top} H ${left + r} A ${r} ${r} 0 0 0 ${left} ${top + r} V ${bottom - r} A ${r} ${r} 0 0 0 ${left + r} ${bottom} H ${right - r} A ${r} ${r} 0 0 0 ${right} ${bottom - r} V ${top + r} A ${r} ${r} 0 0 0 ${right - r} ${top} Z`;
+  const cx = COUNTDOWN_RING_CENTER;
+  const cy = COUNTDOWN_RING_CENTER;
+  const r = COUNTDOWN_RING_RADIUS;
+  return `M ${cx} ${cy - r} A ${r} ${r} 0 1 0 ${cx} ${cy + r} A ${r} ${r} 0 1 0 ${cx} ${cy - r}`;
 };
 
-/**
- * 둥근 사각형 path의 총 둘레 길이 (대략):
- *   직선 4개 + 코너 4개 호
- *   직선 길이: 각 변의 (size - 2r) → 4 * (size - 2r)
- *   호 길이: 코너 4개 합 = 2 * π * r (4개의 90도 호 = 1개의 원)
- */
-const COUNTDOWN_RING_PERIMETER =
-  4 * (COUNTDOWN_RING_SIZE - 2 * COUNTDOWN_RING_R) + 2 * Math.PI * COUNTDOWN_RING_R;
+const COUNTDOWN_RING_PERIMETER = 2 * Math.PI * COUNTDOWN_RING_RADIUS;
 
 const COUNTDOWN_RING_PATH = buildCountdownRingPath();
 
-const getCountdownRingSparkPoint = (remainingRatio: number): { x: number; y: number } => {
-  const pad = COUNTDOWN_RING_PADDING;
-  const size = COUNTDOWN_RING_SIZE;
-  const r = COUNTDOWN_RING_R;
-  const left = pad;
-  const right = pad + size;
-  const top = pad;
-  const bottom = pad + size;
-  const cx = pad + size / 2;
-
-  const halfTop = size / 2 - r;
-  const straight = size - 2 * r;
-  const arc = (Math.PI * r) / 2;
-  let d = (COUNTDOWN_RING_PERIMETER * remainingRatio) % COUNTDOWN_RING_PERIMETER;
-
-  // 상단 중앙 → 좌상단 직선
-  if (d <= halfTop) return { x: cx - d, y: top };
-  d -= halfTop;
-
-  // 좌상단 모서리
-  if (d <= arc) {
-    const t = d / arc;
-    const angle = -Math.PI / 2 - (Math.PI / 2) * t;
-    return { x: left + r + r * Math.cos(angle), y: top + r + r * Math.sin(angle) };
-  }
-  d -= arc;
-
-  // 왼쪽 변
-  if (d <= straight) return { x: left, y: top + r + d };
-  d -= straight;
-
-  // 좌하단 모서리
-  if (d <= arc) {
-    const t = d / arc;
-    const angle = Math.PI - (Math.PI / 2) * t;
-    return { x: left + r + r * Math.cos(angle), y: bottom - r + r * Math.sin(angle) };
-  }
-  d -= arc;
-
-  // 하단 변
-  if (d <= straight) return { x: left + r + d, y: bottom };
-  d -= straight;
-
-  // 우하단 모서리
-  if (d <= arc) {
-    const t = d / arc;
-    const angle = Math.PI / 2 - (Math.PI / 2) * t;
-    return { x: right - r + r * Math.cos(angle), y: bottom - r + r * Math.sin(angle) };
-  }
-  d -= arc;
-
-  // 오른쪽 변
-  if (d <= straight) return { x: right, y: bottom - r - d };
-  d -= straight;
-
-  // 우상단 모서리
-  if (d <= arc) {
-    const t = d / arc;
-    const angle = 0 - (Math.PI / 2) * t;
-    return { x: right - r + r * Math.cos(angle), y: top + r + r * Math.sin(angle) };
-  }
-  d -= arc;
-
-  // 상단 우측 → 상단 중앙
-  return { x: right - r - d, y: top };
+const getCountdownRingSparkPoint = (progressRatio: number): { x: number; y: number } => {
+  const angle = -Math.PI / 2 - 2 * Math.PI * progressRatio;
+  return {
+    x: COUNTDOWN_RING_CENTER + COUNTDOWN_RING_RADIUS * Math.cos(angle),
+    y: COUNTDOWN_RING_CENTER + COUNTDOWN_RING_RADIUS * Math.sin(angle),
+  };
 };
 
 /** 포스트의 createdAt(Date | string | undefined)에서 ms timestamp 추출. 없으면 null. */
@@ -2201,9 +2110,10 @@ const MapContainer = ({
     if (isAdPending) {
       return `<div class="marker-content-wrapper" style="opacity:0.45;filter:grayscale(0.3);">
         <div class="marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
-          <div style="width:100%;background:linear-gradient(90deg,#94a3b8,#cbd5e1,#94a3b8);color:white;font-size:9px;font-weight:900;padding:2px 0 16px 0;border-radius:14px 14px 0 0;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-16px;position:relative;z-index:1;line-height:1.2;">AD</div>
-          <div style="width:60px;height:60px;border-radius:20px;position:relative;z-index:2;border:3px solid #94a3b8;box-shadow:0 4px 12px rgba(0,0,0,0.1);background-color:#f1f5f9;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden;">
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px;">
+          <div style="width:auto;min-width:34px;background:linear-gradient(90deg,#94a3b8,#cbd5e1,#94a3b8);color:white;font-size:9px;font-weight:900;padding:3px 8px;border-radius:999px;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-7px;position:relative;z-index:3;line-height:1.1;border:2px solid rgba(255,255,255,0.9);box-shadow:0 3px 10px rgba(100,116,139,0.22);">AD</div>
+          <div style="width:60px;height:60px;border-radius:50%;position:relative;z-index:2;border:3px solid #94a3b8;box-shadow:0 10px 22px rgba(15,23,42,0.16),inset 0 2px 8px rgba(255,255,255,0.9),inset 0 -9px 16px rgba(15,23,42,0.10);background:radial-gradient(circle at 30% 22%,rgba(255,255,255,0.95) 0 10%,rgba(241,245,249,0.95) 28%,#e2e8f0 100%);box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <div style="position:absolute;top:8px;left:12px;width:18px;height:10px;border-radius:999px;background:rgba(255,255,255,0.72);transform:rotate(-25deg);filter:blur(0.2px);pointer-events:none;"></div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px;position:relative;z-index:2;">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               <span style="font-size:8px;font-weight:800;color:#94a3b8;letter-spacing:-0.02em;line-height:1;">준비중</span>
             </div>
@@ -2243,7 +2153,7 @@ const MapContainer = ({
     else if (borderType === 'silver') { labelText = 'SILVER'; labelBg = '#94a3b8'; labelColor = 'white'; }
 
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
-    const labelHtml = (labelText && !isAd) ? `<div style="width: 100%; background: ${labelBg}; color: ${labelColor}; font-size: 9px; font-weight: 900; padding: 2px 0 16px 0; border-radius: 14px 14px 0 0; text-align: center; box-sizing: border-box; letter-spacing: 0.05em; margin-bottom: -16px; position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 -2px 10px rgba(0,0,0,0.1); line-height: 1.2;">${labelText}</div>` : '';
+    const labelHtml = (labelText && !isAd) ? `<div style="width:auto;min-width:34px;background:${labelBg};color:${labelColor};font-size:9px;font-weight:900;padding:3px 8px;border-radius:999px;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-7px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 3px 10px rgba(0,0,0,0.16);line-height:1.1;border:2px solid rgba(255,255,255,0.9);">${labelText}</div>` : '';
 
     const isInfluencer = ['silver', 'gold', 'diamond'].includes(borderType);
     const isPopular = borderType === 'popular';
@@ -2251,28 +2161,25 @@ const MapContainer = ({
     if (isAd) animationClass = '';
     else if (!isMine && (isInfluencer || isPopular)) animationClass = 'animate-marker-float';
 
-    const isSpecialPost = isAd || isInfluencer || isPopular;
-    const shineClass = isSpecialPost ? 'shine-overlay' : '';
-
     let inlineBorderStyle = "border: 3px solid #ffffff;";
-    let inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
+    let inlineShadow = "0 10px 22px rgba(15, 23, 42, 0.18), inset 0 2px 8px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(15, 23, 42, 0.18)";
     let influencerClass = "";
 
     if (isMine) {
       inlineBorderStyle = "border: 3px solid #4f46e5;";
-      inlineShadow = "0 6px 16px rgba(0, 0, 0, 0.12)";
+      inlineShadow = "0 10px 22px rgba(79, 70, 229, 0.22), inset 0 2px 8px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(30, 41, 59, 0.16)";
     }
-    else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; inlineShadow = "none"; influencerClass = ""; }
-    else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 0 20px rgba(239, 68, 68, 0.5)"; }
-    else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.8), inset 0 0 10px rgba(34, 211, 238, 0.5)"; influencerClass = "influencer-glow"; }
-    else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.6), inset 0 0 10px rgba(251, 191, 36, 0.4)"; influencerClass = "influencer-glow"; }
-    else if (borderType === 'silver') { inlineBorderStyle = "border: 4.5px solid #94a3b8;"; inlineShadow = "0 0 16px rgba(148, 163, 184, 0.7), inset 0 0 8px rgba(148, 163, 184, 0.3)"; influencerClass = "influencer-glow"; }
+    else if (isAd) { inlineBorderStyle = "border: 4.5px solid #2563eb;"; inlineShadow = "0 12px 26px rgba(37, 99, 235, 0.28), inset 0 2px 9px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(30, 64, 175, 0.22)"; influencerClass = ""; }
+    else if (borderType === 'popular') { inlineBorderStyle = "border: 4.5px solid #ef4444;"; inlineShadow = "0 12px 26px rgba(239, 68, 68, 0.35), inset 0 2px 9px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(127, 29, 29, 0.18)"; }
+    else if (borderType === 'diamond') { inlineBorderStyle = "border: 4.5px solid #22d3ee;"; inlineShadow = "0 0 20px rgba(34, 211, 238, 0.75), 0 12px 26px rgba(8, 145, 178, 0.25), inset 0 2px 9px rgba(255, 255, 255, 0.62), inset 0 -10px 18px rgba(8, 145, 178, 0.18)"; influencerClass = "influencer-glow"; }
+    else if (borderType === 'gold') { inlineBorderStyle = "border: 4.5px solid #fbbf24;"; inlineShadow = "0 0 20px rgba(251, 191, 36, 0.58), 0 12px 26px rgba(217, 119, 6, 0.24), inset 0 2px 9px rgba(255, 255, 255, 0.62), inset 0 -10px 18px rgba(146, 64, 14, 0.16)"; influencerClass = "influencer-glow"; }
+    else if (borderType === 'silver') { inlineBorderStyle = "border: 4.5px solid #94a3b8;"; inlineShadow = "0 0 16px rgba(148, 163, 184, 0.68), 0 12px 26px rgba(71, 85, 105, 0.22), inset 0 2px 9px rgba(255, 255, 255, 0.62), inset 0 -10px 18px rgba(51, 65, 85, 0.14)"; influencerClass = "influencer-glow"; }
 
     const adStyleTag = isAd ? `<style>
       @keyframes _ad_flip { 0%,75%{transform:rotateY(0deg)} 100%{transform:rotateY(360deg)} }
       @keyframes _tornado_outer { 0%{transform:rotate(0deg) scale(1)} 25%{transform:rotate(90deg) scale(1.15)} 50%{transform:rotate(180deg) scale(1)} 75%{transform:rotate(270deg) scale(1.15)} 100%{transform:rotate(360deg) scale(1)} }
       @keyframes _tornado_inner { 0%{transform:rotate(0deg) scale(1.2)} 100%{transform:rotate(-360deg) scale(1.2)} }
-      ._ad_lbl { position:relative; overflow:hidden; width:100%; color:white; font-size:9px; font-weight:900; padding:2px 0 16px 0; border-radius:14px 14px 0 0; text-align:center; box-sizing:border-box; letter-spacing:0.05em; margin-bottom:-16px; z-index:1; line-height:1.2; }
+      ._ad_lbl { position:relative; overflow:hidden; width:auto; min-width:34px; color:white; font-size:9px; font-weight:900; padding:3px 8px; border-radius:999px; text-align:center; box-sizing:border-box; letter-spacing:0.05em; margin-bottom:-7px; z-index:3; line-height:1.1; border:2px solid rgba(255,255,255,0.9); box-shadow:0 3px 10px rgba(37,99,235,0.28); }
       ._ad_lbl::before { content:""; position:absolute; inset:-60%; border-radius:50%; background:conic-gradient(from 0deg,#1d4ed8 0deg,#3b82f6 60deg,#60a5fa 90deg,#93c5fd 120deg,#2563eb 180deg,#1e40af 240deg,#3b82f6 300deg,#1d4ed8 360deg); animation:_tornado_outer 1.2s linear infinite; z-index:0; }
       ._ad_lbl::after { content:""; position:absolute; inset:-40%; border-radius:50%; background:conic-gradient(from 0deg,rgba(99,102,241,0.9) 0deg,rgba(59,130,246,0.7) 90deg,rgba(147,197,253,0.5) 150deg,rgba(37,99,235,0.9) 210deg,rgba(99,102,241,0.7) 270deg,rgba(59,130,246,0.9) 330deg,rgba(99,102,241,0.9) 360deg); animation:_tornado_inner 0.8s linear infinite; z-index:1; }
       ._ad_lbl_txt { position:relative; z-index:2; text-shadow:0 1px 3px rgba(0,0,0,0.5); }
@@ -2287,15 +2194,14 @@ const MapContainer = ({
     const adGlowLayer = '';
 
     const innerBoxBackground = hasVideo && !optimizedDisplayImage && !videoThumbCacheRef.current.get(post.id)
-      ? 'background:linear-gradient(135deg,#111827,#374151);'
-      : 'background-color:#e5e7eb;';
-    const innerBoxStyle = `width:60px;height:60px;border-radius:20px;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
+      ? 'background:radial-gradient(circle at 30% 22%,rgba(255,255,255,0.18) 0 12%,transparent 32%),linear-gradient(135deg,#111827,#374151);'
+      : 'background:radial-gradient(circle at 30% 22%,rgba(255,255,255,0.45) 0 10%,rgba(229,231,235,0.85) 32%,#e5e7eb 100%);';
+    const innerBoxStyle = `width:60px;height:60px;border-radius:50%;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
+    const bubbleReflectionHtml = `<div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,0.58) 0 10%,rgba(255,255,255,0.22) 11%,transparent 32%),radial-gradient(circle at 72% 78%,rgba(255,255,255,0.16) 0 14%,transparent 38%),linear-gradient(145deg,rgba(255,255,255,0.26) 0%,transparent 44%,rgba(15,23,42,0.16) 100%);box-shadow:inset 0 2px 6px rgba(255,255,255,0.42),inset 0 -10px 16px rgba(15,23,42,0.13);pointer-events:none;z-index:4;"></div>`;
 
     // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
     // 광고/광고대기 마커에는 표시하지 않음. createdAt이 없는 포스트도 skip.
-    // path는 12시 방향에서 시작해 시계 반대방향으로 한 바퀴 도는 둥근 사각형.
-    // stroke-dashoffset을 음수로 둘수록 path의 시작점부터 stroke가 깎여나가
-    // → 남아있는 끝점이 시계 반대방향으로 회전하면서 줄어드는 효과.
+    // path는 12시 방향에서 시작해 시계 반대방향으로 한 바퀴 도는 원형.
     const createdAtMs = getPostCreatedAtMs(post);
     const showCountdownRing = isMarkerExpirable(post) && createdAtMs !== null;
     const countdownRingHtml = showCountdownRing
@@ -2348,9 +2254,10 @@ const MapContainer = ({
         ${isAd ? adLabelHtml : labelHtml}
         <div class="${influencerClass}" style="${innerBoxStyle}">
           ${isAd ? adSparklesHtml : ''}
-          <div style="width:100%;height:100%;position:relative;border-radius:${isAd ? '15px' : '16px'};overflow:hidden;" class="${shineClass}">
+          <div style="width:100%;height:100%;position:relative;border-radius:50%;overflow:hidden;">
             ${imgContent}
-            <div style="position:absolute;bottom:3px;right:3px;background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:8px;z-index:5;line-height:1;display:flex;align-items:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+            ${bubbleReflectionHtml}
+            <div style="position:absolute;bottom:3px;right:3px;background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:999px;z-index:5;line-height:1;display:flex;align-items:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
               <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
               <span>${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</span>
             </div>
