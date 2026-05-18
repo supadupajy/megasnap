@@ -9,8 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { showError, showSuccess } from '@/utils/toast';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { HiBubbleIcon, HiBubbleWordmark } from '@/components/HiBubbleBrand';
 
 // Supabase 에러 메시지 → 한국어 매핑 (User Enumeration 방지)
+
 const getAuthErrorMessage = (message: string): string => {
   if (!message) return '인증에 실패했습니다. 다시 시도해주세요.';
   const m = message.toLowerCase();
@@ -159,28 +161,20 @@ const Login = () => {
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-24 h-24 rounded-[28px] overflow-hidden shadow-2xl shadow-yellow-200/60"
+            className="w-28 h-28"
           >
-            <img
-              src="/tocatoca-logo.png"
-              alt="하이버블"
-              className="w-full h-full object-cover"
-            />
+            <HiBubbleIcon className="h-full w-full" />
           </motion.div>
           <div className="text-center">
-            <h1
-              className="text-4xl font-black tracking-tighter"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-            >
-              <span className="text-gray-900">하이</span><span className="text-amber-500">버블</span>
-            </h1>
-            <p className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
+            <HiBubbleWordmark className="text-5xl" />
+            <p className="text-[10px] font-bold text-gray-400 mt-3 tracking-widest uppercase">
               Be here, Be seen.
             </p>
           </div>
         </div>
 
         <div className="bg-white p-8 rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-gray-50">
+
           {isSignUp && (
             <div className="mb-6 p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
               <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />

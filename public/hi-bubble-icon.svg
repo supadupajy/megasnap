@@ -9,22 +9,14 @@
       <stop stop-color="#FFFFFF"/>
       <stop offset="1" stop-color="#FFF7E5"/>
     </linearGradient>
-    <filter id="shadow" x="18" y="16" width="86" height="96" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="8" stdDeviation="5" flood-color="#111827" flood-opacity="0.16"/>
-    </filter>
   </defs>
   <rect x="8" y="8" width="104" height="104" rx="28" fill="url(#bg)"/>
   <path d="M25 37H95M25 56H95M25 75H95M41 24V91M62 24V91M82 24V91" stroke="white" stroke-opacity="0.28" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M28 84C40 74 51 73 64 80C75 86 86 85 95 77" stroke="#9A5A00" stroke-opacity="0.2" stroke-width="6" stroke-linecap="round"/>
-  <g filter="url(#shadow)">
+  <g>
     <path d="M60 26C46.2 26 35 37.2 35 51C35 69.2 55 84.4 59.1 91.6C59.5 92.3 60.5 92.3 60.9 91.6C65 84.4 85 69.2 85 51C85 37.2 73.8 26 60 26Z" fill="url(#pin)"/>
-    <circle cx="60" cy="51" r="16" fill="#111827"/>
-    <path d="M48 50C55 43 66 43 73 50" stroke="#FFFFFF" stroke-opacity="0.84" stroke-width="3" stroke-linecap="round"/>
-    <path d="M47 57C54 63 65 64 73 57" stroke="#FFFFFF" stroke-opacity="0.72" stroke-width="3" stroke-linecap="round"/>
-    <path d="M60 36V66" stroke="#FFFFFF" stroke-opacity="0.38" stroke-width="2.4" stroke-linecap="round"/>
-    <path d="M42 51H78" stroke="#FFFFFF" stroke-opacity="0.34" stroke-width="2.4" stroke-linecap="round"/>
   </g>
   <g fill="#FFFFFF" stroke="#111827" stroke-opacity="0.1" stroke-width="1.5">
+
     <circle cx="82" cy="28" r="7.5"/>
     <circle cx="94" cy="38" r="5"/>
     <circle cx="31" cy="39" r="4.5"/>
