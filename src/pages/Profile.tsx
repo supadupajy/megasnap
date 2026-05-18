@@ -25,6 +25,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import CollapsingHeader from '@/components/CollapsingHeader';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
+import { getPostMediaItems } from '@/utils/post-media';
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
@@ -76,7 +77,6 @@ const Profile = () => {
 
   const { scrollRef: collapsingScrollRef, progress: headerProgress } = useCollapsingHeader(80);
 
-  // 두 ref를 동일한 element에 연결하기 위한 콜백 ref
   const setScrollRef = useCallback((node: HTMLDivElement | null) => {
     (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
     (collapsingScrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
@@ -96,6 +96,21 @@ const Profile = () => {
   };
 
   const SAFE_FALLBACK = "/placeholder.svg";
+
+  const getProfileGridThumbnail = useCallback((post: Post) => {
+    const mediaItems = getPostMediaItems(post);
+    const firstMedia = mediaItems[0];
+
+    if (!firstMedia) {
+      return post.image_url || post.image || SAFE_FALLBACK;
+    }
+
+    if (firstMedia.type === 'video') {
+      return firstMedia.posterUrl || SAFE_FALLBACK;
+    }
+
+    return firstMedia.url || SAFE_FALLBACK;
+  }, []);
 
   const mapDbToPost = (p: any, isLiked = false, isSaved = false): Post => {
     let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
@@ -197,7 +212,6 @@ const Profile = () => {
       const initialMyPosts = myData.map(p => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
       const initialSavedPosts = savedPostObjects.map((p: any) => mapDbToPost(p, likedPostIds.has(p.id), savedPostIdSet.has(p.id)));
 
-      // 광고 저장 항목 처리: ad_saved에서 ad_id 목록을 가져와 ads 테이블에서 데이터 조회
       const adSavedItems = adSavedRes.data || [];
       let adSavedPosts: Post[] = [];
       if (adSavedItems.length > 0) {
@@ -270,7 +284,7 @@ const Profile = () => {
       console.error('[Profile] loadProfileData error:', err);
       setIsDataLoading(false);
     }
-  }, [authUser?.id, displayName, avatarUrl]);
+  }, [authUser?.id, displayName, avatarUrl, followerCount]);
 
   useEffect(() => {
     if (!authLoading && authUser?.id) {
@@ -278,7 +292,6 @@ const Profile = () => {
     }
   }, [authLoading, authUser?.id, loadProfileData]);
 
-  // 탭 전환 시 스크롤 위치 보존
   const handleTabChange = useCallback((mode: 'grid' | 'list' | 'saved') => {
     const container = scrollRef.current;
     if (!container) {
@@ -390,14 +403,10 @@ const Profile = () => {
 
   const handleScrollToPosts = () => {
     if (scrollRef.current && postListStartRef.current) {
-      // 탭바 요소(postListStartRef) 다음 형제가 "지도에서 보기" 섹션을 포함한 컨텐츠 영역
-      // "지도에서 보기" 섹션이 sticky 헤더 바로 아래에 딱 맞게 위치하도록 스크롤
       const tabBarEl = postListStartRef.current;
       const tabBarHeight = tabBarEl.offsetHeight;
       const postListTop = tabBarEl.offsetTop;
       const headerHeight = stickyHeaderRef.current?.offsetHeight ?? 0;
-      // sticky 헤더 높이 + 탭바 높이만큼 빼주면, 탭바는 위로 스크롤되어 사라지고
-      // "지도에서 보기" 섹션이 sticky 헤더 바로 아래에 딱 붙음 (모바일/웹 동일하게 동작)
       scrollRef.current.scrollTo({
         top: postListTop + tabBarHeight - headerHeight,
         behavior: 'smooth',
@@ -415,7 +424,6 @@ const Profile = () => {
 
   return (
     <div className="h-screen w-full max-w-full flex flex-col overflow-x-hidden bg-white overscroll-x-none" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}>
-      {/* 상단 고정 헤더 */}
       <div ref={stickyHeaderRef} className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={headerProgress}
@@ -430,13 +438,11 @@ const Profile = () => {
         />
       </div>
 
-      {/* 스크롤 영역 */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none" ref={setScrollRef}>
         {isDataLoading && myPosts.length === 0 ? (
           <ProfileHeaderSkeleton />
         ) : (
           <div className="p-6">
-            {/* 프로필 헤더 */}
             <div className="flex items-center gap-6 mb-8">
               <div className="relative">
                 <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
@@ -465,7 +471,6 @@ const Profile = () => {
 
             <Button onClick={() => navigate('/profile/edit')} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-bold rounded-xl mb-0">프로필 편집</Button>
 
-            {/* 탭 바 */}
             <div ref={postListStartRef} className="bg-white -mx-6 px-6 mb-0">
               <div className="flex border-b border-gray-100">
                 <button
@@ -493,7 +498,6 @@ const Profile = () => {
             </div>
 
             <div className="flex flex-col -mx-6 pb-6">
-              {/* 저장됨 탭 */}
               <div className={viewMode === 'saved' ? undefined : 'hidden'}>
                 {savedPosts.map((post) => (
                   <div key={post.id} id={`post-saved-${post.id}`}>
@@ -513,7 +517,6 @@ const Profile = () => {
                 )}
               </div>
 
-              {/* 그리드/리스트 탭 — 항상 렌더링, hidden으로 숨김 */}
               <div className={viewMode === 'saved' ? 'hidden' : undefined}>
                 <div onClick={handleViewOnMap} className="px-6 py-4 bg-indigo-50/50 border-b border-indigo-100 mb-4 cursor-pointer active:bg-indigo-100 transition-colors">
                   <h3 className="text-sm font-black text-indigo-600 flex items-center gap-2">
@@ -522,7 +525,6 @@ const Profile = () => {
                   <p className="text-[10px] text-indigo-400 font-bold mt-0.5">나의 추억들을 지도에서 확인하세요</p>
                 </div>
 
-                {/* 리스트 뷰 — 항상 렌더링 */}
                 <div className={viewMode === 'list' ? undefined : 'hidden'}>
                   {myPosts.map((post) => (
                     <div key={post.id} id={`post-${post.id}`}>
@@ -540,7 +542,6 @@ const Profile = () => {
                   ))}
                 </div>
 
-                {/* 그리드 뷰 — 항상 렌더링 */}
                 <div className={viewMode === 'grid' ? 'grid grid-cols-3 gap-1 px-6' : 'hidden'}>
                   {myPosts.map((post) => (
                     <div
@@ -549,14 +550,14 @@ const Profile = () => {
                       onClick={() => handleGridItemClick(post.id)}
                     >
                       <img
-                        src={getOptimizedMarkerImage(post.image_url || post.image, post.id)}
+                        src={getOptimizedMarkerImage(getProfileGridThumbnail(post), post.id)}
                         alt=""
                         loading="lazy"
                         decoding="async"
                         className="w-full h-full object-cover hover:opacity-80 transition-opacity"
                         onError={() => handleImageError(post.id)}
                       />
-                      {post.videoUrl && (
+                      {(post.videoUrl || (Array.isArray(post.videoUrls) && post.videoUrls.length > 0)) && (
                         <div className="absolute top-2 right-2 z-10">
                           <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
                         </div>
