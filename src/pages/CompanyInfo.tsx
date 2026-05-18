@@ -1,6 +1,8 @@
 import React from 'react';
 import { ChevronLeft, Building2, Mail, Phone, MapPin, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { HiBubbleIcon } from '@/components/HiBubbleBrand';
+
 const info = [
   { icon: Building2, label: '상호명', value: '주식회사 코라' },
   { icon: Building2, label: '대표자', value: '연상훈' },
@@ -30,9 +32,7 @@ const CompanyInfo = () => {
         <div className="px-4 pt-5">
           {/* 로고 영역 */}
           <div className="flex flex-col items-center py-6 mb-4">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden mb-3 shadow-lg shadow-yellow-200/60">
-              <img src="/tocatoca-logo.png" alt="하이버블즈" className="w-full h-full object-cover" />
-            </div>
+            <HiBubbleIcon className="w-16 h-16 mb-3 drop-shadow-lg" />
             <h2 className="text-lg font-black"><span className="text-gray-900">하이</span><span className="text-amber-500">버블즈</span></h2>
             <p className="text-[12px] text-gray-400 font-medium mt-1">위치 기반 소셜 플랫폼</p>
           </div>
