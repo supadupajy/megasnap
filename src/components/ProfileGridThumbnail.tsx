@@ -12,6 +12,22 @@ interface ProfileGridThumbnailProps {
 }
 
 const FALLBACK_IMAGE = '/placeholder.svg';
+const IMAGE_EXTENSION_REGEX = /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)(\?|#|$)/i;
+
+const getUrlPathname = (url: string): string => {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return url;
+  }
+};
+
+const isUsableImageThumbnail = (url: unknown): url is string => {
+  if (!isValidMediaUrl(url)) return false;
+  if (isVideoUrl(url)) return false;
+  const pathname = getUrlPathname(url);
+  return IMAGE_EXTENSION_REGEX.test(pathname);
+};
 
 const pickSafePosterCandidate = (post: Post, primaryPoster?: string): string => {
   const candidates: Array<string | undefined> = [
@@ -22,10 +38,7 @@ const pickSafePosterCandidate = (post: Post, primaryPoster?: string): string => 
   ];
 
   for (const candidate of candidates) {
-    if (!candidate) continue;
-    if (!isValidMediaUrl(candidate)) continue;
-    if (isVideoUrl(candidate)) continue;
-    return candidate;
+    if (isUsableImageThumbnail(candidate)) return candidate;
   }
 
   return FALLBACK_IMAGE;
@@ -63,8 +76,6 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
 
   if (firstMedia.type === 'video') {
     const safePoster = pickSafePosterCandidate(post, firstMedia.posterUrl);
-    // 원본 썸네일 URL을 그대로 사용. (supabase 이미지 transform이 비활성화된 환경에서
-    // render/image 경로가 빈 응답을 주며 까만 칸이 되는 것을 방지.)
     const posterSrc = didFallback ? FALLBACK_IMAGE : safePoster;
 
     return (
@@ -86,8 +97,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     );
   }
 
-  const isFirstMediaUsable = isValidMediaUrl(firstMedia.url) && !isVideoUrl(firstMedia.url);
-  const imageSrc = didFallback || !isFirstMediaUsable ? FALLBACK_IMAGE : firstMedia.url;
+  const imageSrc = didFallback || !isUsableImageThumbnail(firstMedia.url) ? FALLBACK_IMAGE : firstMedia.url;
 
   return (
     <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
