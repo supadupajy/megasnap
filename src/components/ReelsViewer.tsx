@@ -791,16 +791,6 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 : { height: "100dvh", top: `${index * 100}dvh` }
             }
           >
-            {embeddedBottomExtensionHeight && (
-              <div
-                aria-hidden="true"
-                className="absolute left-0 right-0 pointer-events-none bg-black"
-                style={{
-                  top: 'calc(100% - 2px)',
-                  height: `calc(${embeddedBottomExtensionHeight} + 2px)`,
-                }}
-              />
-            )}
             {item.kind === "post" ? (
               <ReelSlide
                 post={item.post}
@@ -846,6 +836,17 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 onClose={onClose}
                 embedded={embedded}
                 showCloseButton={!embedded}
+              />
+            )}
+            {embeddedBottomExtensionHeight && (
+              <div
+                aria-hidden="true"
+                className="absolute left-0 right-0 pointer-events-none z-[80]"
+                style={{
+                  top: 'calc(100% - 48px)',
+                  height: `calc(${embeddedBottomExtensionHeight} + 48px)`,
+                  background: 'linear-gradient(to bottom, transparent 0px, #000 44px, #000 100%)',
+                }}
               />
             )}
           </div>
