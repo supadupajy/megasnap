@@ -58,7 +58,7 @@ const SplashScreen = () => {
           >
             <img
               src="/tocatoca-logo.png"
-              alt="SnapPop"
+              alt="하이버블"
               className="w-full h-full object-cover"
             />
           </motion.div>
@@ -69,10 +69,10 @@ const SplashScreen = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.8 }}
-              className="text-4xl font-black text-gray-900 tracking-tighter"
+              className="text-4xl font-black tracking-tighter"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              Snap<span className="text-yellow-500">Pop</span>
+              <span className="text-gray-900">하이</span><span className="text-amber-500">버블</span>
             </motion.h1>
             
             <motion.p

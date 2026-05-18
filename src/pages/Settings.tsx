@@ -189,7 +189,7 @@ const Settings = () => {
             <SettingItem
               icon={Megaphone}
               label="광고 문의"
-              sublabel="SnapPop에 광고를 게재하세요"
+              sublabel="하이버블에 광고를 게재하세요"
               iconBg="bg-yellow-50"
               iconColor="text-amber-500"
               onClick={() => navigate('/settings/ad')}
@@ -411,7 +411,7 @@ const Settings = () => {
             />
           </div>
           <p className="text-center text-[10px] text-gray-300 font-bold mt-8 uppercase tracking-tighter">
-            SnapPop Version 1.0.0
+            하이버블 Version 1.0.0
           </p>
         </div>
       </div>

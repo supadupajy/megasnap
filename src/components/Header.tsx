@@ -39,8 +39,8 @@ const Header = () => {
           onClick={() => navigate('/')}
         >
           <h1 className="text-2xl font-black tracking-tighter" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-gray-900">Snap</span>
-            <span className="text-yellow-500">Pop</span>
+            <span className="text-gray-900">하이</span>
+            <span className="text-amber-500">버블</span>
           </h1>
         </div>
 

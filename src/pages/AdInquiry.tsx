@@ -123,12 +123,12 @@ const AdInquiry = () => {
               <Megaphone className="w-5 h-5 text-gray-900" />
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-900/70 uppercase tracking-widest">SnapPop Ads</p>
+              <p className="text-xs font-bold text-gray-900/70 uppercase tracking-widest">하이버블 Ads</p>
               <p className="text-lg font-black leading-tight">지도 위에서 브랜드를 알리세요</p>
             </div>
           </div>
           <p className="text-sm text-gray-900/80 font-medium leading-relaxed">
-            실시간 위치 기반 플랫폼 SnapPop에서 타겟 고객에게 정확하게 도달하세요.
+            실시간 위치 기반 플랫폼 하이버블에서 타겟 고객에게 정확하게 도달하세요.
           </p>
           {/* 일단 아래 광고 수치 관련 내용은 주석 처리 */}
           {/* <div className="flex gap-4 mt-4">

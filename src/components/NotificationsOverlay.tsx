@@ -14,7 +14,7 @@ interface NotificationsOverlayProps {
 // - 라우트가 바뀌지 않으므로 아래 페이지(예: Flicks)의 영상/상태가 그대로 살아있음.
 // - X 버튼 또는 BottomNav 탭 클릭 시 onClose 호출 → 오버레이만 사라지고
 //   아래 페이지가 그대로 이어진다.
-// - z-index는 Header(12600)보다 낮은 12500으로 둬서 글로벌 헤더(SnapPop 로고 +
+// - z-index는 Header(12600)보다 낮은 12500으로 둬서 글로벌 헤더(하이버블 로고 +
 //   종/메시지 버튼)는 그대로 보이게 한다. 알림 페이지 자체의 sticky 헤더는
 //   pt-16(글로벌 헤더 높이만큼)으로 헤더 아래에 위치한다.
 // - 영상 pause 시그널: open되면 app-overlay-visibility 이벤트와 __isAppOverlayOpen

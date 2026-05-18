@@ -163,16 +163,16 @@ const Login = () => {
           >
             <img
               src="/tocatoca-logo.png"
-              alt="SnapPop"
+              alt="하이버블"
               className="w-full h-full object-cover"
             />
           </motion.div>
           <div className="text-center">
             <h1
-              className="text-4xl font-black text-gray-900 tracking-tighter"
+              className="text-4xl font-black tracking-tighter"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              Snap<span className="text-yellow-500">Pop</span>
+              <span className="text-gray-900">하이</span><span className="text-amber-500">버블</span>
             </h1>
             <p className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
               Be here, Be seen.

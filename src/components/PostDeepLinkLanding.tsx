@@ -156,9 +156,9 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
       <div className="bg-white/80 backdrop-blur-sm border-b border-indigo-100 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl overflow-hidden">
-            <img src="/tocatoca-logo.png" alt="SnapPop" className="w-full h-full object-cover" />
+            <img src="/tocatoca-logo.png" alt="하이버블" className="w-full h-full object-cover" />
           </div>
-          <span className="font-black text-gray-900 text-lg tracking-tight">SnapPop</span>
+          <span className="font-black text-lg tracking-tight"><span className="text-gray-900">하이</span><span className="text-amber-500">버블</span></span>
         </div>
         <button
           onClick={handleLoginAndView}
@@ -235,7 +235,7 @@ const PostDeepLinkLanding: React.FC<Props> = ({ postId }) => {
         <div className="bg-white rounded-3xl shadow-lg p-5 border border-gray-100 space-y-4">
           <div className="text-center space-y-1">
             <h2 className="text-lg font-black text-gray-900">
-              SnapPop에서 전체 내용 보기
+              하이버블에서 전체 내용 보기
             </h2>
             <p className="text-sm text-gray-500">
               지도 기반 여행 컨텐츠 앱 · 내 주변 여행지 발견
