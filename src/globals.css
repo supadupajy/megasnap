@@ -160,31 +160,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  /* 그림자(drop-shadow) 제거: 드래그 시 GPU 합성 비용이 커서 깜빡임/버벅임 유발.
+     버블 자체의 inset shadow와 border만으로 입체감을 유지한다. */
   width: 100%;
   will-change: transform, opacity;
   transform-origin: 50% 100%;
   backface-visibility: hidden;
 }
 
-#kakao-map.map-is-moving .marker-content-wrapper {
-  filter: none !important;
-}
-
-#kakao-map.map-is-moving .marker-bubble-reflection,
-#kakao-map.map-is-moving .marker-countdown-ring-spark,
-#kakao-map.map-is-moving .shine-overlay::after {
-  animation: none !important;
-  display: none !important;
-}
-
-#kakao-map.map-is-moving .marker-countdown-ring-progress {
-  filter: none !important;
-}
-
-#kakao-map.map-is-moving .marker-countdown-ring {
-  overflow: hidden !important;
-}
+/* 드래그 중에도 반사효과/카운트다운 spark/shine 등 시각 효과를 유지한다.
+   기존에는 map-is-moving 클래스로 이들을 모두 끄고 dragend 시 다시 켰기 때문에,
+   빠르게 드래그를 반복하면 효과들이 켜졌다 꺼졌다 하며 깜빡이는 현상이 발생했다.
+   효과를 항상 유지하도록 비활성 규칙을 제거. */
 
 /* 하이라이트 상태: z-index 올리고 마커 내용은 완전히 보이게 고정 */
 .marker-container.highlighted {
@@ -1015,17 +1002,8 @@ video.post-item-video::-webkit-media-text-track-container {
   z-index: 1;
 }
 
-#kakao-map.map-is-moving .ghost-marker-dot {
-  box-shadow: 0 3px 8px rgba(71, 85, 105, 0.18) !important;
-}
-
-#kakao-map.map-is-moving .ghost-marker-dot::before {
-  display: none !important;
-}
-
-#kakao-map.map-is-moving .ghost-marker-dot img {
-  filter: grayscale(1) brightness(0.86) !important;
-}
+/* 드래그 중에도 고스트 마커의 반사/그라데이션 효과를 유지한다.
+   (기존에는 효과를 비활성화했으나, 빠른 드래그 시 깜빡임 원인이 됨) */
 
 /* 줌 레벨에 따라 고스트 마커도 함께 작아짐 */
 #kakao-map.zoom-6 .ghost-marker-container {
