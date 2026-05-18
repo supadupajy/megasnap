@@ -21,18 +21,12 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// Flicks 콘텐츠 컨테이너:
-// - 상단: Header(64px) 아래부터
-// - 하단: 화면 끝까지 (BottomNav는 알약 형태로 floating되며, 그 뒤로 영상/배경이 자연스럽게 이어진다)
-// 이전에는 bottom을 BottomNav 높이만큼 띄우고 그 아래에 별도의 검은 BACKDROP을 깔았으나,
-// 슬라이드 전환(translateY) 중 슬라이드 사이의 빈 공간으로 BACKDROP의 검은 띠가 비쳐 보이는
-// 문제가 있어서, 컨테이너를 화면 하단까지 확장해 슬라이드가 끊김 없이 이어지게 한다.
 const CONTENT_FIXED_STYLE: React.CSSProperties = {
   position: 'fixed',
   left: 0,
   right: 0,
   top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-  bottom: 0,
+  bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
 
 // 알림/메시지는 라우트가 아니라 오버레이로 동작하므로,
