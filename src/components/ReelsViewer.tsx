@@ -787,10 +787,17 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
             className="absolute left-0 right-0 w-full"
             style={
               embedded
-                ? { height: "100%", top: `${index * 100}%` }
+                ? { height: "100%", top: `${index * 100}%`, zIndex: index === activeIndex ? 2 : 1 }
                 : { height: "100dvh", top: `${index * 100}dvh` }
             }
           >
+            {embeddedBottomExtensionHeight && (
+              <div
+                aria-hidden="true"
+                className="absolute left-0 right-0 top-full pointer-events-none bg-black"
+                style={{ height: embeddedBottomExtensionHeight }}
+              />
+            )}
             {item.kind === "post" ? (
               <ReelSlide
                 post={item.post}
@@ -929,7 +936,6 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(0);
 
   // 모든 상태를 ref로 관리해 클로저/state 비동기성 문제 회피
   const activeIndexRef = useRef(activeIndex);
@@ -949,20 +955,6 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   useEffect(() => {
     itemCountRef.current = itemCount;
   }, [itemCount]);
-
-  useLayoutEffect(() => {
-    const root = containerRef.current;
-    if (!root || !bottomExtensionHeight) return;
-
-    const updateViewportHeight = () => {
-      setViewportHeight(root.clientHeight);
-    };
-
-    updateViewportHeight();
-    const resizeObserver = new ResizeObserver(updateViewportHeight);
-    resizeObserver.observe(root);
-    return () => resizeObserver.disconnect();
-  }, [containerRef, bottomExtensionHeight]);
 
   const goTo = useCallback(
     (nextIndex: number) => {
@@ -1154,59 +1146,26 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   }, [goTo, containerRef]);
 
   const trackTransition = isTransitioning ? "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none";
-  const bottomTrackTransform = viewportHeight > 0
-    ? `translate3d(0, ${-activeIndex * viewportHeight + dragOffset}px, 0)`
-    : `translate3d(0, ${dragOffset}px, 0)`;
 
   return (
-    <>
+    <div
+      ref={containerRef}
+      className={cn("absolute inset-0", bottomExtensionHeight ? "overflow-visible" : "overflow-hidden")}
+      style={{ touchAction: "none" }}
+    >
       <div
-        ref={containerRef}
-        className="absolute inset-0 overflow-hidden"
-        style={{ touchAction: "none" }}
+        ref={trackRef}
+        className="absolute inset-0 will-change-transform"
+        style={{
+          transform: embedded
+            ? `translate3d(0, calc(${-activeIndex * 100}% + ${dragOffset}px), 0)`
+            : `translate3d(0, calc(${-activeIndex * 100}dvh + ${dragOffset}px), 0)`,
+          transition: trackTransition,
+        }}
       >
-        <div
-          ref={trackRef}
-          className="absolute inset-0 will-change-transform"
-          style={{
-            transform: embedded
-              ? `translate3d(0, calc(${-activeIndex * 100}% + ${dragOffset}px), 0)`
-              : `translate3d(0, calc(${-activeIndex * 100}dvh + ${dragOffset}px), 0)`,
-            transition: trackTransition,
-          }}
-        >
-          {children}
-        </div>
+        {children}
       </div>
-
-      {bottomExtensionHeight && (
-        <div
-          aria-hidden="true"
-          className="absolute left-0 right-0 top-full pointer-events-none overflow-hidden bg-black"
-          style={{ height: bottomExtensionHeight }}
-        >
-          <div
-            className="absolute left-0 right-0 top-0 will-change-transform"
-            style={{
-              height: viewportHeight > 0 ? `${viewportHeight}px` : '100%',
-              transform: bottomTrackTransform,
-              transition: trackTransition,
-            }}
-          >
-            {Array.from({ length: itemCount }).map((_, index) => (
-              <div
-                key={`bottom-extension-${index}`}
-                className="absolute left-0 right-0 bg-black"
-                style={{
-                  top: viewportHeight > 0 ? `${index * viewportHeight}px` : `${index * 100}%`,
-                  height: bottomExtensionHeight,
-                }}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 };
 
