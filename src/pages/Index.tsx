@@ -1528,6 +1528,12 @@ const Index = () => {
     }
 
     if (!navigator.geolocation) return;
+
+    try {
+      const permission = await navigator.permissions?.query?.({ name: 'geolocation' as PermissionName });
+      if (permission && permission.state !== 'granted') return;
+    } catch {}
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         updateUserLocationMarker({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -1538,6 +1544,7 @@ const Index = () => {
   }, [updateUserLocationMarker]);
 
   const moveToCurrentLocation = useCallback(async (showToast = true, force = false) => {
+
     // route state로 위치가 이미 지정된 경우 자동 geolocation으로 덮어쓰지 않음
     // 단, 사용자가 현재위치 버튼을 직접 누른 경우에는 명시적 동작이므로 허용
     if (!force && locationLockedRef.current) return;
@@ -1602,6 +1609,20 @@ const Index = () => {
         if (showToast) showError('이 브라우저는 위치 정보를 지원하지 않습니다.');
         return;
       }
+
+      try {
+        const permission = await navigator.permissions?.query?.({ name: 'geolocation' as PermissionName });
+        if (permission?.state === 'denied') {
+          if (toastId) dismissToast(toastId);
+          if (showToast) showError('위치 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘을 눌러 위치 권한을 허용해주세요.');
+          if (mapCache.lastCenter) setMapCenter(mapCache.lastCenter);
+          return;
+        }
+        if (!showToast && permission?.state === 'prompt') {
+          return;
+        }
+      } catch {}
+
       const tryGetPosition = (retryCount = 0) => {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
@@ -1611,6 +1632,7 @@ const Index = () => {
             if (toastId) dismissToast(toastId);
             if (showToast) showSuccess('현재 위치로 이동했습니다.');
           },
+
           (err) => {
             // POSITION_UNAVAILABLE (code 2): iOS kCLErrorLocationUnknown 등 일시적 실패
             // → 최대 2회 재시도 후 포기
