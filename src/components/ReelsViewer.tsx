@@ -2130,8 +2130,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [videoAspect, setVideoAspect] = useState<number | null>(null);
+  const [cropSideLetterbox, setCropSideLetterbox] = useState(false);
 
   const setRefs = useCallback(
+
     (el: HTMLVideoElement | null) => {
       localRef.current = el;
 
@@ -2145,9 +2147,59 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   useEffect(() => {
     setIsReady(false);
     setVideoAspect(null);
+    setCropSideLetterbox(false);
+  }, [src]);
+
+  const detectSideLetterbox = useCallback((video: HTMLVideoElement) => {
+    if (video.videoWidth <= 0 || video.videoHeight <= 0) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 90;
+      canvas.height = 160;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return;
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const darkRatio = (startX: number, endX: number) => {
+        let dark = 0;
+        let total = 0;
+        for (let y = 0; y < canvas.height; y += 4) {
+          for (let x = startX; x < endX; x += 2) {
+            const idx = (y * canvas.width + x) * 4;
+            const luminance = data[idx] * 0.2126 + data[idx + 1] * 0.7152 + data[idx + 2] * 0.0722;
+            if (luminance < 24) dark += 1;
+            total += 1;
+          }
+        }
+        return total > 0 ? dark / total : 0;
+      };
+
+      const edgeWidth = Math.max(6, Math.round(canvas.width * 0.12));
+      const centerStart = Math.round(canvas.width * 0.38);
+      const centerEnd = Math.round(canvas.width * 0.62);
+      const leftDark = darkRatio(0, edgeWidth);
+      const rightDark = darkRatio(canvas.width - edgeWidth, canvas.width);
+      const centerDark = darkRatio(centerStart, centerEnd);
+      const shouldCrop = leftDark > 0.82 && rightDark > 0.82 && centerDark < 0.72;
+
+      setCropSideLetterbox(shouldCrop);
+      console.log('[FlicksBlurDebug] side letterbox detection', {
+        src,
+        leftDark,
+        rightDark,
+        centerDark,
+        shouldCrop,
+      });
+    } catch (error) {
+      console.warn('[FlicksBlurDebug] side letterbox detection failed', { src, error });
+    }
   }, [src]);
 
   useEffect(() => {
+
     if (!isCurrent) return;
 
     const el = localRef.current;
@@ -2165,8 +2217,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     };
     const handleLoadedData = () => {
       updateAspect();
+      detectSideLetterbox(el);
       if (!isCurrent) markReady();
     };
+
     const handleCanPlay = () => {
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
       if (isCurrent && el.paused) {
@@ -2190,9 +2244,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
     };
-  }, [src, isCurrent]);
+  }, [src, isCurrent, detectSideLetterbox]);
 
   // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
+
   // (비활성 슬라이드의 영상이 백그라운드에서 계속 재생되어 소리가 겹치는 문제 방지)
   useEffect(() => {
     const el = localRef.current;
@@ -2242,9 +2297,11 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       posterUrl,
       isReady,
       videoAspect,
+      cropSideLetterbox,
       isNarrowerThanFrame,
       foregroundMediaStyle,
       parentRect: parentRect ? {
+
         width: parentRect.width,
         height: parentRect.height,
       } : null,
@@ -2276,9 +2333,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         zIndex: blurStyle.zIndex,
       } : null,
     });
-  }, [isCurrent, src, posterUrl, isReady, videoAspect, isNarrowerThanFrame]);
+  }, [isCurrent, src, posterUrl, isReady, videoAspect, cropSideLetterbox, isNarrowerThanFrame]);
 
   return (
+
     <>
 
       {posterUrl && (
@@ -2335,12 +2393,15 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           loop
           muted={muted}
           preload={preload}
+          crossOrigin="anonymous"
           style={{
             opacity: isCurrent && !isReady ? 0 : 1,
-            transition: "opacity 200ms ease-out",
+            transition: "opacity 200ms ease-out, transform 160ms ease-out",
             backgroundColor: "transparent",
+            transform: cropSideLetterbox ? 'scale(1.42) translateZ(0)' : 'translateZ(0)',
           }}
           onLoadedMetadata={(event) => {
+
             const video = event.currentTarget;
             const rect = video.getBoundingClientRect();
             const parentRect = video.parentElement?.getBoundingClientRect();
