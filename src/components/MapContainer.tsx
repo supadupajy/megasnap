@@ -1029,7 +1029,8 @@ const MapContainer = ({
       const shouldDelayVideoMarker = !!firstVideoUrl && !storedVideoPoster && !cachedVideoThumb;
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
-      const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}`;
+      const markerFloatKey = 'float-v2';
+      const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
       if (shouldDelayVideoMarker) {

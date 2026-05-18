@@ -370,12 +370,18 @@
 }
 
 @keyframes marker-float {
-  0%, 37.5%, 100% { transform: translateY(0); }
-  18.75% { transform: translateY(-10px); }
+  0%, 37.5%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  18.75% {
+    transform: translate3d(0, -16px, 0);
+  }
 }
 
 .animate-marker-float {
-  animation: marker-float 8s ease-in-out infinite;
+  animation: marker-float 8s ease-in-out infinite !important;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
 }
 
 /* 경쾌한 pop ring: 빠르게 부풀었다가 사라지면서 가장자리에 살짝 머무는 느낌.
