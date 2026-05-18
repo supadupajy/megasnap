@@ -1377,6 +1377,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   }, [post.videoUrl, post.images, post.image_url, post.image]);
 
   const [mediaIndex, setMediaIndex] = useState(0);
+  const [activeVideoAspect, setActiveVideoAspect] = useState<number | null>(null);
 
   // 새 포스트가 들어오면 인덱스 초기화
   useEffect(() => {
@@ -1387,7 +1388,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const activeIsVideo = isVideoUrl(activeMediaUrl);
   const hasVideo = activeIsVideo; // 현재 보여지는 미디어가 영상인지
 
+  useEffect(() => {
+    setActiveVideoAspect(null);
+  }, [activeMediaUrl]);
+
   const fallbackImage = useMemo(() => {
+
     // 1순위: 일반 이미지 (영상이 아닌 슬라이드)
     const firstImage = mediaList.find((u) => !isVideoUrl(u));
     if (firstImage) return getOptimizedFeedImage(firstImage, post.id);
@@ -1605,7 +1611,34 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     }
   }, [isEditingContent, lockedHeight]);
 
+  const mediaFrameAspect = 3 / 4;
+  const effectiveActiveVideoAspect = activeVideoAspect ?? 9 / 16;
+  const activeVideoIsNarrow = activeIsVideo && effectiveActiveVideoAspect < mediaFrameAspect;
+  const activeVideoWidthPercent = activeIsVideo
+    ? activeVideoIsNarrow
+      ? Math.min(100, (effectiveActiveVideoAspect / mediaFrameAspect) * 100)
+      : 100
+    : 100;
+  const activeVideoHeightPercent = activeIsVideo
+    ? activeVideoIsNarrow
+      ? 100
+      : Math.min(100, (mediaFrameAspect / effectiveActiveVideoAspect) * 100)
+    : 100;
+  const mediaSideGutterPercent = Math.max(0, (100 - activeVideoWidthPercent) / 2);
+  const mediaVerticalGutterPercent = Math.max(0, (100 - activeVideoHeightPercent) / 2);
+  const mediaFrameBlurFill = fallbackImage ? (
+    <img
+      src={fallbackImage}
+      alt=""
+      aria-hidden="true"
+      className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+      style={{ filter: 'blur(24px)', transform: 'scale(1.18)', opacity: 0.96 }}
+      draggable={false}
+    />
+  ) : null;
+
   return (
+
     <div
       ref={slideRootRef}
       className="relative w-full bg-black overflow-hidden"
@@ -1725,6 +1758,44 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             </div>
           )}
 
+          {hasVideo && fallbackImage && mediaSideGutterPercent > 0.5 && (
+            <>
+              <div
+                aria-hidden="true"
+                className="absolute left-0 top-0 bottom-0 z-[25] overflow-hidden pointer-events-none"
+                style={{ width: `${mediaSideGutterPercent}%` }}
+              >
+                {mediaFrameBlurFill}
+              </div>
+              <div
+                aria-hidden="true"
+                className="absolute right-0 top-0 bottom-0 z-[25] overflow-hidden pointer-events-none"
+                style={{ width: `${mediaSideGutterPercent}%` }}
+              >
+                {mediaFrameBlurFill}
+              </div>
+            </>
+          )}
+
+          {hasVideo && fallbackImage && mediaVerticalGutterPercent > 0.5 && (
+            <>
+              <div
+                aria-hidden="true"
+                className="absolute left-0 right-0 top-0 z-[25] overflow-hidden pointer-events-none"
+                style={{ height: `${mediaVerticalGutterPercent}%` }}
+              >
+                {mediaFrameBlurFill}
+              </div>
+              <div
+                aria-hidden="true"
+                className="absolute left-0 right-0 bottom-0 z-[25] overflow-hidden pointer-events-none"
+                style={{ height: `${mediaVerticalGutterPercent}%` }}
+              >
+                {mediaFrameBlurFill}
+              </div>
+            </>
+          )}
+
           {/* 가로 슬라이더 — 다중 미디어면 좌우 스와이프로 이동, 단일이면 그냥 표시 */}
           <MediaCarousel
             mediaList={mediaList}
@@ -1735,9 +1806,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             isSlideActive={isActive}
             shouldPreloadVideo={shouldPreloadVideo}
             videoPosterUrl={fallbackImage}
+            onVideoAspectChange={setActiveVideoAspect}
           />
 
           {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
+
           <ImageSliderDots
             count={mediaList.length}
             currentIndex={mediaIndex}
@@ -2116,6 +2189,7 @@ interface ReelsVideoProps {
   shouldWarmUp?: boolean;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
   posterUrl?: string;
+  onAspectChange?: (aspect: number) => void;
 }
 
 const ReelsVideo: React.FC<ReelsVideoProps> = ({
@@ -2126,7 +2200,9 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   isCurrent,
   shouldWarmUp = false,
   posterUrl,
+  onAspectChange,
 }) => {
+
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
   const [videoAspect, setVideoAspect] = useState<number | null>(null);
@@ -2205,9 +2281,12 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     const markReady = () => setIsReady(true);
     const updateAspect = () => {
       if (el.videoWidth > 0 && el.videoHeight > 0) {
-        setVideoAspect(el.videoWidth / el.videoHeight);
+        const nextAspect = el.videoWidth / el.videoHeight;
+        setVideoAspect(nextAspect);
+        onAspectChange?.(nextAspect);
       }
     };
+
     const handleLoadedData = () => {
       updateAspect();
       detectSideLetterbox(el);
@@ -2237,7 +2316,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
     };
-  }, [src, isCurrent, detectSideLetterbox]);
+  }, [src, isCurrent, detectSideLetterbox, onAspectChange]);
 
   // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
 
@@ -2277,15 +2356,16 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   };
   const sideGutterPercent = Math.max(0, (100 - foregroundWidthPercent) / 2);
   const verticalGutterPercent = Math.max(0, (100 - foregroundHeightPercent) / 2);
-  const letterboxBlurStyle: React.CSSProperties = posterUrl
-    ? {
-        backgroundImage: `url(${posterUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        filter: 'blur(22px)',
-        transform: 'scale(1.12)',
-      }
-    : {};
+  const renderBlurFill = () => (
+    <img
+      src={posterUrl}
+      alt=""
+      aria-hidden="true"
+      className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+      style={{ filter: 'blur(22px)', transform: 'scale(1.18)', opacity: 0.95 }}
+      draggable={false}
+    />
+  );
 
   return (
 
@@ -2312,14 +2392,18 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         <>
           <div
             aria-hidden="true"
-            className="absolute left-0 top-0 bottom-0 z-[12] pointer-events-none"
-            style={{ width: `${sideGutterPercent}%`, ...letterboxBlurStyle }}
-          />
+            className="absolute left-0 top-0 bottom-0 z-[25] overflow-hidden pointer-events-none"
+            style={{ width: `${sideGutterPercent}%` }}
+          >
+            {renderBlurFill()}
+          </div>
           <div
             aria-hidden="true"
-            className="absolute right-0 top-0 bottom-0 z-[12] pointer-events-none"
-            style={{ width: `${sideGutterPercent}%`, ...letterboxBlurStyle }}
-          />
+            className="absolute right-0 top-0 bottom-0 z-[25] overflow-hidden pointer-events-none"
+            style={{ width: `${sideGutterPercent}%` }}
+          >
+            {renderBlurFill()}
+          </div>
         </>
       )}
 
@@ -2327,14 +2411,18 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         <>
           <div
             aria-hidden="true"
-            className="absolute left-0 right-0 top-0 z-[12] pointer-events-none"
-            style={{ height: `${verticalGutterPercent}%`, ...letterboxBlurStyle }}
-          />
+            className="absolute left-0 right-0 top-0 z-[25] overflow-hidden pointer-events-none"
+            style={{ height: `${verticalGutterPercent}%` }}
+          >
+            {renderBlurFill()}
+          </div>
           <div
             aria-hidden="true"
-            className="absolute left-0 right-0 bottom-0 z-[12] pointer-events-none"
-            style={{ height: `${verticalGutterPercent}%`, ...letterboxBlurStyle }}
-          />
+            className="absolute left-0 right-0 bottom-0 z-[25] overflow-hidden pointer-events-none"
+            style={{ height: `${verticalGutterPercent}%` }}
+          >
+            {renderBlurFill()}
+          </div>
         </>
       )}
 
@@ -2402,6 +2490,7 @@ interface MediaCarouselProps {
   shouldPreloadVideo?: boolean;
   /** 영상 슬라이드용 fallback 썸네일 (첫 프레임 디코드 전 빈 화면 방지). */
   videoPosterUrl?: string;
+  onVideoAspectChange?: (aspect: number) => void;
 }
 
 const MediaCarousel: React.FC<MediaCarouselProps> = ({
@@ -2413,7 +2502,9 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   isSlideActive,
   shouldPreloadVideo = false,
   videoPosterUrl,
+  onVideoAspectChange,
 }) => {
+
   const rootRef = useRef<HTMLDivElement>(null);
   const [dragX, setDragX] = useState(0);
   // 트랜지션 문자열 자체를 state로: 빠른 flick엔 짧고 가파른 곡선, 느릴 땐 살짝 더 부드럽게.
@@ -2678,7 +2769,9 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   isCurrent={isPlayable}
                   shouldWarmUp={shouldWarmUp}
                   posterUrl={videoPosterUrl}
+                  onAspectChange={isCurrent ? onVideoAspectChange : undefined}
                 />
+
               ) : (
                 <img
                   src={getOptimizedFeedImage(url, url)}
