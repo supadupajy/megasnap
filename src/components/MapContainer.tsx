@@ -2165,11 +2165,7 @@ const MapContainer = ({
     const videoIconHtml = hasVideo ? `<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 15; box-shadow: 0 4px 10px rgba(0,0,0,0.2);"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>` : '';
     const labelHtml = (labelText && !isAd) ? `<div style="width:auto;min-width:34px;background:${labelBg};color:${labelColor};font-size:9px;font-weight:900;padding:3px 8px;border-radius:999px;text-align:center;box-sizing:border-box;letter-spacing:0.05em;margin-bottom:-7px;position:relative;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,0.2);box-shadow:0 3px 10px rgba(0,0,0,0.16);line-height:1.1;border:2px solid rgba(255,255,255,0.9);">${labelText}</div>` : '';
 
-    const isInfluencer = ['silver', 'gold', 'diamond'].includes(borderType);
-    const isPopular = borderType === 'popular';
-    let animationClass = '';
-    if (isAd) animationClass = '';
-    else if (!isMine && (isInfluencer || isPopular)) animationClass = 'animate-marker-float';
+    const animationClass = 'animate-marker-float';
 
     let inlineBorderStyle = "border: 3px solid #ffffff;";
     let inlineShadow = "0 6px 14px rgba(15, 23, 42, 0.16), inset 0 2px 8px rgba(255, 255, 255, 0.55), inset 0 -10px 18px rgba(15, 23, 42, 0.16)";
