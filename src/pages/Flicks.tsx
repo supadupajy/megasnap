@@ -236,7 +236,6 @@ const Flicks = () => {
           endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
         />
       </div>
-      {bottomFill}
     </>
   );
 };
