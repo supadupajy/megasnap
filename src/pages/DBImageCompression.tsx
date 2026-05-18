@@ -198,11 +198,14 @@ const DBImageCompression = () => {
       let settled = false;
       let timeoutId: number | undefined;
       let captureTimerId: number | undefined;
+      let captureAttempt = 0;
 
       const cleanup = () => {
         if (timeoutId) window.clearTimeout(timeoutId);
         if (captureTimerId) window.clearTimeout(captureTimerId);
         video.pause();
+        video.removeEventListener('loadedmetadata', seekToThumbnailFrame);
+        video.removeEventListener('seeked', scheduleCapture);
         video.removeEventListener('loadeddata', scheduleCapture);
         video.removeEventListener('canplay', scheduleCapture);
         video.removeEventListener('error', handleError);
@@ -222,10 +225,42 @@ const DBImageCompression = () => {
         finish(() => reject(error instanceof Error ? error : new Error('영상 썸네일을 생성할 수 없습니다.')));
       };
 
+      const isMostlyDarkFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+        const { data } = ctx.getImageData(0, 0, width, height);
+        let darkPixels = 0;
+        const pixelCount = data.length / 4;
+
+        for (let i = 0; i < data.length; i += 16) {
+          const luminance = data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722;
+          if (luminance < 18) darkPixels += 4;
+        }
+
+        return darkPixels / pixelCount > 0.88;
+      };
+
+      const seekToThumbnailFrame = () => {
+        if (settled) return;
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        if (duration <= 0.25) {
+          scheduleCapture();
+          return;
+        }
+
+        const candidates = [0.8, duration * 0.15, 1.6, duration * 0.35, duration * 0.55]
+          .map((time) => Math.min(Math.max(time, 0.1), duration - 0.05));
+        const target = candidates[Math.min(captureAttempt, candidates.length - 1)];
+
+        try {
+          video.currentTime = target;
+        } catch {
+          scheduleCapture();
+        }
+      };
+
       const capture = () => {
         if (settled) return;
         if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-          fail(new Error('영상 첫 프레임을 읽을 수 없습니다.'));
+          fail(new Error('영상 프레임을 읽을 수 없습니다.'));
           return;
         }
 
@@ -242,6 +277,12 @@ const DBImageCompression = () => {
           }
 
           ctx.drawImage(video, 0, 0, width, height);
+          if (isMostlyDarkFrame(ctx, width, height) && captureAttempt < 4) {
+            captureAttempt += 1;
+            seekToThumbnailFrame();
+            return;
+          }
+
           canvas.toBlob((blob) => {
             if (!blob) {
               fail();
@@ -257,8 +298,6 @@ const DBImageCompression = () => {
       function scheduleCapture() {
         if (settled) return;
         if (captureTimerId) window.clearTimeout(captureTimerId);
-        // 모바일 WebView/Safari에서는 requestVideoFrameCallback이 paused/hidden video에서
-        // 호출되지 않는 경우가 있어, DOM에 붙인 뒤 짧게 기다렸다가 직접 캡처한다.
         captureTimerId = window.setTimeout(capture, 120);
       }
 
@@ -269,11 +308,11 @@ const DBImageCompression = () => {
           capture();
           return;
         }
-        fail(new Error('영상 첫 프레임 로드 시간이 초과되었습니다.'));
-      }, 8000);
+        fail(new Error('영상 프레임 로드 시간이 초과되었습니다.'));
+      }, 12000);
 
       video.crossOrigin = 'anonymous';
-      video.preload = 'metadata';
+      video.preload = 'auto';
       video.muted = true;
       video.playsInline = true;
       video.controls = false;
@@ -286,6 +325,8 @@ const DBImageCompression = () => {
       video.style.pointerEvents = 'none';
       document.body.appendChild(video);
 
+      video.addEventListener('loadedmetadata', seekToThumbnailFrame, { once: true });
+      video.addEventListener('seeked', scheduleCapture);
       video.addEventListener('loadeddata', scheduleCapture, { once: true });
       video.addEventListener('canplay', scheduleCapture, { once: true });
       video.addEventListener('error', handleError, { once: true });
@@ -295,6 +336,7 @@ const DBImageCompression = () => {
   };
 
   const uploadRegeneratedThumbnail = async (blob: Blob, postId: string, slotIndex: number) => {
+
     if (!authUser?.id) throw new Error('로그인이 필요합니다.');
     const fileName = `${Date.now()}-${postId}-${slotIndex}-opening-thumb.jpg`;
     const path = `${authUser.id}/${fileName}`;
@@ -322,7 +364,7 @@ const DBImageCompression = () => {
     let regenerated = 0;
 
     for (const slot of slots) {
-      addThumbLog(`   ↳ 영상 ${regenerated + 1}/${slots.length} 첫 프레임 읽는 중`);
+      addThumbLog(`   ↳ 영상 ${regenerated + 1}/${slots.length} 대표 프레임 읽는 중`);
       const thumbnailBlob = await createThumbnailFromVideoUrl(slot.url);
       addThumbLog(`   ↳ 영상 ${regenerated + 1}/${slots.length} 썸네일 업로드 중`);
       const thumbnailUrl = await uploadRegeneratedThumbnail(thumbnailBlob, post.id, slot.index);
@@ -548,9 +590,10 @@ const DBImageCompression = () => {
               </div>
               <div>
                 <p className="text-[15px] font-black text-gray-900" style={{ letterSpacing: '-0.04em' }}>기존 영상 썸네일 재생성</p>
-                <p className="text-[11px] text-gray-400 font-medium">DB의 기존 영상들을 다시 읽어 첫 디코드 프레임 썸네일로 교체합니다</p>
+                <p className="text-[11px] text-gray-400 font-medium">DB의 기존 영상들을 다시 읽어 검은 프레임을 피한 대표 썸네일로 교체합니다</p>
               </div>
             </div>
+
           </div>
 
           <div className="p-4 space-y-3">

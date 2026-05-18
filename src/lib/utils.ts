@@ -380,10 +380,13 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       const video = document.createElement('video');
       let settled = false;
       let timeoutId: number | undefined;
+      let captureAttempt = 0;
 
       const cleanup = () => {
         if (timeoutId) window.clearTimeout(timeoutId);
         video.pause();
+        video.removeEventListener('loadedmetadata', seekToThumbnailFrame);
+        video.removeEventListener('seeked', captureDecodedFrame);
         video.removeEventListener('loadeddata', captureDecodedFrame);
         video.removeEventListener('canplay', captureDecodedFrame);
         video.removeAttribute('src');
@@ -404,6 +407,38 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
         });
       };
 
+      const isMostlyDarkFrame = (context: CanvasRenderingContext2D, width: number, height: number) => {
+        const { data } = context.getImageData(0, 0, width, height);
+        let darkPixels = 0;
+        const pixelCount = data.length / 4;
+
+        for (let i = 0; i < data.length; i += 16) {
+          const luminance = data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722;
+          if (luminance < 18) darkPixels += 4;
+        }
+
+        return darkPixels / pixelCount > 0.88;
+      };
+
+      const seekToThumbnailFrame = () => {
+        if (settled) return;
+        const duration = Number.isFinite(video.duration) ? video.duration : 0;
+        if (duration <= 0.25) {
+          captureDecodedFrame();
+          return;
+        }
+
+        const candidates = [0.8, duration * 0.15, 1.6, duration * 0.35, duration * 0.55]
+          .map((time) => Math.min(Math.max(time, 0.1), duration - 0.05));
+        const target = candidates[Math.min(captureAttempt, candidates.length - 1)];
+
+        try {
+          video.currentTime = target;
+        } catch {
+          captureDecodedFrame();
+        }
+      };
+
       const capture = () => {
         try {
           const canvas = document.createElement('canvas');
@@ -418,6 +453,12 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
           }
 
           context.drawImage(video, 0, 0, width, height);
+          if (isMostlyDarkFrame(context, width, height) && captureAttempt < 4) {
+            captureAttempt += 1;
+            seekToThumbnailFrame();
+            return;
+          }
+
           canvas.toBlob((blob) => {
             if (!blob) {
               fail();
@@ -450,11 +491,10 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       video.preload = 'auto';
       video.muted = true;
       video.playsInline = true;
-      video.currentTime = 0;
       video.src = objectUrl;
 
-      // 모바일 WebView/Safari는 아주 초반 seek도 뒤쪽 키프레임으로 튈 수 있어,
-      // seek하지 않고 최초 디코드 프레임을 그대로 캡처한다.
+      video.addEventListener('loadedmetadata', seekToThumbnailFrame, { once: true });
+      video.addEventListener('seeked', captureDecodedFrame);
       video.addEventListener('loadeddata', captureDecodedFrame, { once: true });
       video.addEventListener('canplay', captureDecodedFrame, { once: true });
       video.addEventListener('error', () => fail(), { once: true });
@@ -467,6 +507,7 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
 };
 
 export const formatRelativeTime = (date: Date | string): string => {
+
   const d = new Date(date);
   const diffMs = Date.now() - d.getTime();
   if (Math.abs(diffMs) < 60_000) return '1분 전';
