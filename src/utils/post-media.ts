@@ -27,8 +27,28 @@ const getTrustedPosterUrl = (url: string | undefined): string | undefined => {
   return isGeneratedVideoThumbnailUrl(url) ? undefined : url;
 };
 
-export const getPostMediaItems = (post: Post | any): PostMediaItem[] => {
+export interface GetPostMediaItemsOptions {
+  /**
+   * true이면 `-thumb.*` 패턴의 자동 생성 썸네일도 비디오 포스터로 신뢰한다.
+   * 프로필 그리드처럼 실제 `<video>`를 마운트하지 않고 정지 이미지만 보여줄 때 사용.
+   */
+  trustGeneratedVideoThumbnails?: boolean;
+}
+
+export const getPostMediaItems = (
+  post: Post | any,
+  options: GetPostMediaItemsOptions = {}
+): PostMediaItem[] => {
   if (!post) return [];
+
+  const { trustGeneratedVideoThumbnails = false } = options;
+
+  const resolvePoster = (url: string | undefined): string | undefined => {
+    if (trustGeneratedVideoThumbnails) {
+      return isValidMediaUrl(url) ? url : undefined;
+    }
+    return getTrustedPosterUrl(url);
+  };
 
   const rawImages = Array.isArray(post.images) ? post.images : [];
   const alignedImages = rawImages.map((url) => (isValidMediaUrl(url) ? url : undefined));
@@ -55,7 +75,7 @@ export const getPostMediaItems = (post: Post | any): PostMediaItem[] => {
       const imageUrl = alignedImages[index];
 
       if (isValidMediaUrl(videoUrl)) {
-        items.push({ type: 'video', url: videoUrl, posterUrl: getTrustedPosterUrl(imageUrl) });
+        items.push({ type: 'video', url: videoUrl, posterUrl: resolvePoster(imageUrl) });
       } else if (isValidMediaUrl(imageUrl)) {
         items.push({ type: 'image', url: imageUrl });
       }
@@ -66,7 +86,7 @@ export const getPostMediaItems = (post: Post | any): PostMediaItem[] => {
 
   if (isValidMediaUrl(post.videoUrl) || isValidMediaUrl(post.video_url)) {
     const videoUrl = (post.videoUrl || post.video_url) as string;
-    return [{ type: 'video', url: videoUrl, posterUrl: getTrustedPosterUrl(singleImage ?? images[0]) }];
+    return [{ type: 'video', url: videoUrl, posterUrl: resolvePoster(singleImage ?? images[0]) }];
   }
 
   const imageItems = (images.length > 0 ? images : singleImage ? [singleImage] : [])
