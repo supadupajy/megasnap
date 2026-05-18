@@ -206,6 +206,7 @@ const MapContainer = ({
   const viewportVisibilityRef = useRef<Map<string, boolean>>(new Map());
   const viewportAnimationFrameRef = useRef<number | null>(null);
   const viewportAnimationTimersRef = useRef<Map<string, number>>(new Map());
+  const markerFloatTimersRef = useRef<Map<string, number>>(new Map());
   // 드래그 중에는 viewport 애니메이션 트리거를 보류했다가 dragend에서 한 번에 평가
   const isDraggingViewportRef = useRef(false);
 
@@ -226,6 +227,58 @@ const MapContainer = ({
     if (!container) return false;
     const rect = container.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && container.offsetWidth > 0 && container.offsetHeight > 0;
+  }, []);
+
+  const clearMarkerFloatTimer = useCallback((id: string) => {
+    const timerId = markerFloatTimersRef.current.get(id);
+    if (timerId) window.clearTimeout(timerId);
+    markerFloatTimersRef.current.delete(id);
+  }, []);
+
+  const scheduleMarkerFloat = useCallback((id: string, content: HTMLElement) => {
+    clearMarkerFloatTimer(id);
+
+    const target = content.querySelector('.animate-marker-float') as HTMLElement | null;
+    if (!target) return;
+
+    const runNext = () => {
+      const delay = 8000 + Math.random() * 2000;
+      const timerId = window.setTimeout(() => {
+        if (!overlaysRef.current.has(id) || !target.isConnected) {
+          clearMarkerFloatTimer(id);
+          return;
+        }
+
+        if (
+          content.classList.contains('marker-viewport-hidden') ||
+          content.classList.contains('markers-hidden') ||
+          content.classList.contains('marker-disappear-animation')
+        ) {
+          runNext();
+          return;
+        }
+
+        target.classList.remove('marker-float-active');
+        void target.offsetWidth;
+        target.classList.add('marker-float-active');
+
+        const endTimerId = window.setTimeout(() => {
+          target.classList.remove('marker-float-active');
+          runNext();
+        }, 3000);
+        markerFloatTimersRef.current.set(id, endTimerId);
+      }, delay);
+      markerFloatTimersRef.current.set(id, timerId);
+    };
+
+    runNext();
+  }, [clearMarkerFloatTimer]);
+
+  useEffect(() => {
+    return () => {
+      markerFloatTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      markerFloatTimersRef.current.clear();
+    };
   }, []);
 
   const rememberStableMapView = useCallback((map: any) => {
@@ -706,6 +759,7 @@ const MapContainer = ({
               overlaysRef.current.delete(postId);
               viewportVisibilityRef.current.delete(String(postId));
               clearViewportAnimationTimer(String(postId));
+              clearMarkerFloatTimer(String(postId));
             }
           }, 520);
         }
@@ -715,7 +769,7 @@ const MapContainer = ({
     };
     window.addEventListener('animate-marker-delete', handleAnimateDelete);
     return () => window.removeEventListener('animate-marker-delete', handleAnimateDelete);
-  }, [clearViewportAnimationTimer]);
+  }, [clearViewportAnimationTimer, clearMarkerFloatTimer]);
 
   useEffect(() => {
     const originalGetRangeAt = Selection.prototype.getRangeAt;
@@ -997,6 +1051,7 @@ const MapContainer = ({
               overlaysRef.current.delete(id);
               viewportVisibilityRef.current.delete(String(id));
               clearViewportAnimationTimer(String(id));
+              clearMarkerFloatTimer(String(id));
             }
           }, 520);
           removalTimeoutsRef.current.set(id, removalTimer);
@@ -1005,6 +1060,7 @@ const MapContainer = ({
           overlaysRef.current.delete(id);
           viewportVisibilityRef.current.delete(String(id));
           clearViewportAnimationTimer(String(id));
+          clearMarkerFloatTimer(String(id));
         }
       }
     });
@@ -1029,7 +1085,7 @@ const MapContainer = ({
       const shouldDelayVideoMarker = !!firstVideoUrl && !storedVideoPoster && !cachedVideoThumb;
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
-      const markerFloatKey = 'float-v2';
+      const markerFloatKey = 'float-v3';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
@@ -1039,6 +1095,7 @@ const MapContainer = ({
           overlaysRef.current.delete(post.id);
           viewportVisibilityRef.current.delete(String(post.id));
           clearViewportAnimationTimer(String(post.id));
+          clearMarkerFloatTimer(String(post.id));
         }
         extractVideoThumbRef.current(post.id, firstVideoUrl);
         return;
@@ -1070,6 +1127,7 @@ const MapContainer = ({
         content.setAttribute('data-content-state', contentStateKey);
         content.setAttribute('data-position-state', positionStateKey);
         content.innerHTML = getMarkerInnerHtml(post, isViewed);
+        scheduleMarkerFloat(String(post.id), content);
         content.onclick = (e) => {
           e.stopPropagation();
           if (isDragging.current) return;
@@ -1118,6 +1176,7 @@ const MapContainer = ({
           if (!highlightingIdsRef.current.has(post.id)) {
             content.innerHTML = getMarkerInnerHtml(post, isViewed);
             content.setAttribute('data-content-state', contentStateKey);
+            scheduleMarkerFloat(String(post.id), content);
             scheduleOverlapBadgeUpdateRef.current();
           } else {
             content.setAttribute('data-content-state', contentStateKey);
@@ -1127,7 +1186,7 @@ const MapContainer = ({
     });
 
     scheduleMarkerViewportVisibilityUpdate(false);
-  }, [posts, isMapReady, authUser, videoThumbRevision, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer]);
+  }, [posts, isMapReady, authUser, videoThumbRevision, scheduleMarkerViewportVisibilityUpdate, clearViewportAnimationTimer, clearMarkerFloatTimer, scheduleMarkerFloat]);
 
   useEffect(() => {
     if (!isMapReady) return;
@@ -1293,6 +1352,8 @@ const MapContainer = ({
         removalTimeoutsRef.current.clear();
         viewportAnimationTimersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
         viewportAnimationTimersRef.current.clear();
+        markerFloatTimersRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+        markerFloatTimersRef.current.clear();
         // 고스트 마커도 함께 즉시 제거
         ghostOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
         ghostOverlaysRef.current.clear();
@@ -2317,6 +2378,7 @@ const MapContainer = ({
               overlaysRef.current.delete(id);
               viewportVisibilityRef.current.delete(String(id));
               clearViewportAnimationTimer(String(id));
+              clearMarkerFloatTimer(String(id));
               scheduleOverlapBadgeUpdate();
             }
           }, 520);
@@ -2347,7 +2409,7 @@ const MapContainer = ({
     tick();
     const intervalId = window.setInterval(tick, MARKER_EXPIRY_CHECK_INTERVAL_MS);
     return () => window.clearInterval(intervalId);
-  }, [isMapReady, clearViewportAnimationTimer, scheduleOverlapBadgeUpdate]);
+  }, [isMapReady, clearViewportAnimationTimer, clearMarkerFloatTimer, scheduleOverlapBadgeUpdate]);
 
   // CSS 애니메이션 duration을 변수로 전달
   const circleCircumference = 2 * Math.PI * 13; // r=13

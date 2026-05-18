@@ -171,7 +171,11 @@
   filter: none !important;
 }
 
-#kakao-map.map-is-moving .animate-marker-float,
+#kakao-map.map-is-moving .animate-marker-float {
+  animation: none !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
 #kakao-map.map-is-moving .marker-bubble-reflection,
 #kakao-map.map-is-moving .marker-countdown-ring-spark,
 #kakao-map.map-is-moving .shine-overlay::after {
@@ -370,18 +374,21 @@
 }
 
 @keyframes marker-float {
-  0%, 37.5%, 100% {
+  0%, 100% {
     transform: translate3d(0, 0, 0);
   }
-  18.75% {
+  50% {
     transform: translate3d(0, -16px, 0);
   }
 }
 
 .animate-marker-float {
-  animation: marker-float 8s ease-in-out infinite !important;
   will-change: transform;
   transform: translate3d(0, 0, 0);
+}
+
+.animate-marker-float.marker-float-active {
+  animation: marker-float 3s ease-in-out 1 !important;
 }
 
 /* 경쾌한 pop ring: 빠르게 부풀었다가 사라지면서 가장자리에 살짝 머무는 느낌.
