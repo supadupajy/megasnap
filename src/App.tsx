@@ -140,6 +140,9 @@ const AnimatedRoutes = () => {
 
   const isChatPage = location.pathname.startsWith("/chat");
   const isWritePage = location.pathname === "/write";
+  // Flicks 페이지는 전체 풀스크린 영상 뷰어라서, 페이지 wrapper의 기본 흰색이
+  // BottomNav 알약 좌/우/위로 비치면 어색해진다 → 이 페이지에선 검정 배경으로 둔다.
+  const isFlicksPage = location.pathname.startsWith("/flicks");
   const showIndex = shouldShowIndex(location.pathname);
 
   const hideAppChrome =
@@ -322,7 +325,7 @@ const AnimatedRoutes = () => {
   }
 
   return (
-    <div className={`bg-white ${isChatPage ? "h-screen overflow-hidden" : "min-h-screen"}`}>
+    <div className={`${isFlicksPage ? "bg-black" : "bg-white"} ${isChatPage ? "h-screen overflow-hidden" : "min-h-screen"}`}>
       {(!hideAppChrome || isWritePage) && session && !isReelsViewerOpen && !isPostSearchOpen && (
         <Header />
       )}

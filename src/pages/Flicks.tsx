@@ -22,21 +22,16 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// Flicks 페이지 컨테이너:
-// - 헤더(64px) 아래부터 화면 하단(0)까지 차지한다.
-// - ReelsViewer의 슬라이드 블러 배경이 BottomNav 알약 뒤까지 자연스럽게 이어진다.
-// - 영상/액션 영역이 BottomNav 알약 뒤에 가려지지 않도록 ReelsViewer에 `bottomReserve`(BottomNav 높이)를
-//   넘겨 영상과 정보 영역만 그만큼 위로 올린다.
+// Flicks 페이지 컨테이너: 헤더(64px)와 BottomNav 영역(64px) 사이에만 표시.
+// BottomNav 알약 주변의 빈 영역은 App.tsx 쪽 wrapper의 흰색이 비치지 않도록,
+// Flicks 라우트에서만 wrapper bg를 검정으로 처리해 둠 (App.tsx 참고).
 const CONTENT_FIXED_STYLE: React.CSSProperties = {
   position: 'fixed',
   left: 0,
   right: 0,
   top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-  bottom: 0,
+  bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
-
-// BottomNav가 떠 있는 영역 높이(알약 + 패딩). 영상/정보 영역이 그 뒤로 가려지지 않도록 위로 올릴 양.
-const BOTTOM_NAV_RESERVE_PX = 64;
 
 // 알림/메시지는 라우트가 아니라 오버레이로 동작하므로,
 // Flicks 페이지가 unmount되지 않고 그대로 살아 있다. 이전에 있던 캐시/이어재생/
@@ -226,7 +221,6 @@ const Flicks = () => {
           onUpdate={handlePostUpdated}
           noRepeat
           embedded
-          bottomReserve={BOTTOM_NAV_RESERVE_PX}
           endMessage="더 이상 표시할 영상이 없습니다"
           endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
         />
