@@ -186,12 +186,6 @@ const DBImageCompression = () => {
   };
 
   const fetchVideoPosts = async () => {
-    const { data, error } = await supabase.rpc('get_video_posts_for_thumbnail_regen');
-    if (!error && Array.isArray(data)) {
-      return (data as VideoThumbnailPost[]).filter((post) => getVideoSlots(post).length > 0);
-    }
-
-    addThumbLog('ℹ️ 관리자 RPC를 사용할 수 없어 전체 posts 조회 방식으로 검사합니다.');
     return fetchVideoPostsFallback();
   };
 
@@ -241,20 +235,12 @@ const DBImageCompression = () => {
       regenerated += 1;
     }
 
-    const { error: rpcError } = await supabase.rpc('update_post_video_thumbnails', {
-      target_post_id: post.id,
-      next_image_url: nextImageUrl,
-      next_images: nextImages,
-    });
+    const { error } = await supabase
+      .from('posts')
+      .update({ image_url: nextImageUrl, images: nextImages })
+      .eq('id', post.id);
 
-    if (rpcError) {
-      const { error } = await supabase
-        .from('posts')
-        .update({ image_url: nextImageUrl, images: nextImages })
-        .eq('id', post.id);
-
-      if (error) throw error;
-    }
+    if (error) throw error;
 
     return regenerated;
   };
