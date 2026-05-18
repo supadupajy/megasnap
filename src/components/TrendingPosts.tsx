@@ -128,6 +128,7 @@ const isThumbnailExpirable = (post: Post): boolean => {
 
 // ── 비디오 썸네일 인메모리 캐시 ──────────────────────────────
 const videoThumbCache = new Map<string, string | 'failed'>();
+const loggedTrendingThumbnailPostIds = new Set<string>();
 
 // 플레이 오버레이/로딩 인디케이터 사이즈
 // - sm: collapsed 헤더의 w-6 h-6(24px) 썸네일용
@@ -216,7 +217,16 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        if (isMostlyDarkFrame(ctx, canvas.width, canvas.height) && captureAttempt < 4) {
+        const isDarkFrame = isMostlyDarkFrame(ctx, canvas.width, canvas.height);
+        console.info('[TrendingVideoFrameDebug]', {
+          videoUrl,
+          captureAttempt,
+          currentTime: video.currentTime,
+          duration: video.duration,
+          isDarkFrame,
+        });
+
+        if (isDarkFrame && captureAttempt < 4) {
           captureAttempt += 1;
           seekToAttemptFrame();
           return;
@@ -226,7 +236,8 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
         videoThumbCache.set(videoUrl, url);
         setThumbUrl(url);
         cleanup();
-      } catch {
+      } catch (error) {
+        console.warn('[TrendingVideoFrameDebug] capture failed', { videoUrl, error });
         markFailed();
       }
     };
@@ -411,11 +422,30 @@ const PostThumbnail: React.FC<{
   borderWidth: number;
 }> = ({ post, className, imgClassName, onImgError, size = 'md', now, borderWidth }) => {
   const ringGeometry = size === 'sm' ? RING_GEOMETRY_SM : RING_GEOMETRY_MD;
-  const primaryMedia = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true })[0];
+  const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
+  const primaryMedia = mediaItems[0];
   const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
+
+  if (!loggedTrendingThumbnailPostIds.has(post.id)) {
+    loggedTrendingThumbnailPostIds.add(post.id);
+    console.info('[TrendingThumbnailDebug]', {
+      id: post.id,
+      rank: (post as any).rank,
+      content: post.content,
+      image_url: post.image_url,
+      image: post.image,
+      images: post.images,
+      videoUrl: post.videoUrl,
+      videoUrls: post.videoUrls,
+      resolvedMediaItems: mediaItems,
+      primaryMedia,
+      fallbackImageUrl,
+    });
+  }
 
   const renderImage = (url: string, showPlay = false) => (
     <div className={cn("relative w-full h-full", className)}>
+
       <img
         src={url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url}
         alt=""
