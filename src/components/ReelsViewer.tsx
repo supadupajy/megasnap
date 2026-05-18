@@ -2128,12 +2128,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 }) => {
   const localRef = useRef<HTMLVideoElement>(null);
   const [isReady, setIsReady] = useState(false);
-  const [videoAspect, setVideoAspect] = useState<number | null>(null);
 
   const setRefs = useCallback(
     (el: HTMLVideoElement | null) => {
       localRef.current = el;
-
       if (videoRef) {
         (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
       }
@@ -2143,12 +2141,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 
   useEffect(() => {
     setIsReady(false);
-    setVideoAspect(null);
   }, [src]);
 
   useEffect(() => {
     if (!isCurrent) return;
-
     const el = localRef.current;
     setIsReady(!!el && !el.paused && el.readyState >= 2);
   }, [isCurrent, src]);
@@ -2157,13 +2153,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     const el = localRef.current;
     if (!el) return;
     const markReady = () => setIsReady(true);
-    const updateAspect = () => {
-      if (el.videoWidth > 0 && el.videoHeight > 0) {
-        setVideoAspect(el.videoWidth / el.videoHeight);
-      }
-    };
     const handleLoadedData = () => {
-      updateAspect();
       if (!isCurrent) markReady();
     };
     const handleCanPlay = () => {
@@ -2176,15 +2166,12 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         });
       }
     };
-    el.addEventListener("loadedmetadata", updateAspect);
     el.addEventListener("loadeddata", handleLoadedData);
     el.addEventListener("playing", markReady);
     el.addEventListener("canplay", handleCanPlay);
-    updateAspect();
     if (isCurrent && !el.paused && el.readyState >= 2) markReady();
     if (!isCurrent && el.readyState >= 2) markReady();
     return () => {
-      el.removeEventListener("loadedmetadata", updateAspect);
       el.removeEventListener("loadeddata", handleLoadedData);
       el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
@@ -2210,40 +2197,23 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     el.load();
   }, [isCurrent, shouldWarmUp, src]);
 
-  const isNarrowerThanFrame = videoAspect != null && videoAspect < 3 / 4;
-  const foregroundMediaStyle: React.CSSProperties = {
-    top: '50%',
-    left: '50%',
-    width: isNarrowerThanFrame ? 'auto' : '100%',
-    height: isNarrowerThanFrame ? '100%' : 'auto',
-    maxWidth: '100%',
-    maxHeight: '100%',
-    transform: 'translate(-50%, -50%)',
-  };
-
   return (
     <>
-
       {posterUrl && (
         <img
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 z-0 h-full w-full object-cover pointer-events-none"
-          style={{
-            filter: 'blur(30px)',
-            transform: 'scale(1.22)',
-            opacity: 0.88,
-          }}
+          className="absolute inset-0 z-0 h-full w-full scale-125 object-cover blur-3xl opacity-75 pointer-events-none"
           draggable={false}
         />
       )}
-      <div className="absolute inset-0 z-[1] bg-black/45 pointer-events-none" />
+      <div className="absolute inset-0 z-[1] bg-black/35 pointer-events-none" />
 
       <video
         ref={setRefs}
         src={src}
-        className="absolute z-10 object-contain video-hq bg-transparent"
+        className="absolute inset-0 z-10 w-full h-full object-contain video-hq bg-transparent"
         // 1x1 투명 poster로 native 회색 placeholder 깜빡임 방지
         poster={posterUrl || TRANSPARENT_POSTER}
         playsInline
@@ -2251,7 +2221,6 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         muted={muted}
         preload={preload}
         style={{
-          ...foregroundMediaStyle,
           opacity: isCurrent && !isReady ? 0 : 1,
           transition: "opacity 200ms ease-out",
           backgroundColor: "transparent",
@@ -2264,9 +2233,8 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute z-20 object-contain pointer-events-none"
+          className="absolute inset-0 z-20 w-full h-full object-contain pointer-events-none"
           style={{
-            ...foregroundMediaStyle,
             opacity: isReady ? 0 : 1,
             transition: "opacity 200ms ease-out",
           }}
