@@ -1660,7 +1660,7 @@ const Index = () => {
   // ── 좋아요 토글 ──────────────────────────────────────────────
   const handleLikeToggle = useCallback((postId: string) => {
     if (!authUser?.id) return;
-    const isAdPost = postId.startsWith('ad-map-marker-');
+
     // Optimistic UI: 즉시 상태 반영
     let currentlyLiked = false;
     const updater = (p: Post) => {
@@ -1671,36 +1671,6 @@ const Index = () => {
     setAllPosts(prev => prev.map(updater));
     setGlobalTrendingPosts(prev => prev.map(updater));
 
-    if (isAdPost) {
-      // 광고 포스트: ad_likes 테이블에 저장
-      const userId = authUser.id;
-      if (currentlyLiked) {
-        supabase.from('ad_likes').delete().eq('ad_id', postId).eq('user_id', userId).then(({ error }) => {
-          if (error) {
-            // 실패 시 롤백
-            const rollback = (p: Post) => p.id === postId
-              ? { ...p, isLiked: true, likes: p.likes + 1 }
-              : p;
-            setAllPosts(prev => prev.map(rollback));
-            setGlobalTrendingPosts(prev => prev.map(rollback));
-          }
-        });
-      } else {
-        supabase.from('ad_likes').insert({ ad_id: postId, user_id: userId }).then(({ error }) => {
-          if (error && (error as any).code !== '23505') {
-            // 실패 시 롤백 (unique violation 제외)
-            const rollback = (p: Post) => p.id === postId
-              ? { ...p, isLiked: false, likes: Math.max(0, p.likes - 1) }
-              : p;
-            setAllPosts(prev => prev.map(rollback));
-            setGlobalTrendingPosts(prev => prev.map(rollback));
-          }
-        });
-      }
-      return;
-    }
-
-    // 일반 포스트: DB 쓰기 (트리거가 posts.likes 자동 동기화)
     toggleLikeInDb(postId, authUser.id, currentlyLiked).then(ok => {
       if (!ok) {
         // 실패 시 롤백

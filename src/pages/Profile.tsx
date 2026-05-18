@@ -156,10 +156,12 @@ const Profile = () => {
           ),
         ]);
 
-        adSavedPosts = (adsData || []).map((ad: any, index: number) =>
+        const adStatsByPostId = new Map(adPostIds.map((adPostId, index) => [adPostId, adStatsResults[index]]));
+
+        adSavedPosts = (adsData || []).map((ad: any) =>
           mapSavedAdToPost({
             ad,
-            stats: adStatsResults[index],
+            stats: adStatsByPostId.get(`ad-map-marker-${ad.id}`),
           })
         );
       }
