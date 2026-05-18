@@ -9,15 +9,10 @@ import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
 import { useAuth } from "@/components/AuthProvider";
 import HashtagText from "@/components/HashtagText";
-
-// 동영상 URL인지 판별 (mp4, mov, webm 등)
-const isVideoUrl = (url: string | undefined | null): boolean => {
-  if (!url) return false;
-  const lower = url.toLowerCase().split('?')[0];
-  return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
-};
+import { getPostMediaItems } from "@/utils/post-media";
 
 // ── 24시간 카운트다운 링 (지도 마커와 동일 룰) ─────────────────────────
+
 // 마커는 60x60 박스에 border-radius=20, 패딩=2 로 ring을 그리고 있다.
 // 썸네일은 박스 크기/모서리 반경이 다르므로, 외곽 크기·반경·테두리 두께를
 // 인자로 받아 동일한 path/spark 계산식을 그대로 적용한다.
@@ -159,11 +154,51 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
     let cancelled = false;
     const video = document.createElement('video');
     let timeoutId: number | undefined;
+    let captureAttempt = 0;
 
     const cleanup = () => {
       if (timeoutId) window.clearTimeout(timeoutId);
       video.src = '';
       video.load();
+    };
+
+    const markFailed = () => {
+      videoThumbCache.set(videoUrl, 'failed');
+      setFailed(true);
+      cleanup();
+    };
+
+    const isMostlyDarkFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+      const { data } = ctx.getImageData(0, 0, width, height);
+      let darkPixels = 0;
+      const pixelCount = data.length / 4;
+
+      for (let i = 0; i < data.length; i += 16) {
+        const luminance = data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722;
+        if (luminance < 18) darkPixels += 4;
+      }
+
+      return darkPixels / pixelCount > 0.88;
+    };
+
+    const seekToAttemptFrame = () => {
+      if (cancelled) return;
+
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      if (duration <= 0.2) {
+        capture();
+        return;
+      }
+
+      const candidates = [0.8, duration * 0.15, 1.6, duration * 0.35, duration * 0.55]
+        .map((time) => Math.min(Math.max(time, 0.1), duration - 0.05));
+      const seekTime = candidates[Math.min(captureAttempt, candidates.length - 1)];
+
+      try {
+        video.currentTime = seekTime;
+      } catch {
+        capture();
+      }
     };
 
     const capture = () => {
@@ -175,76 +210,55 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
         canvas.height = 120;
         const ctx = canvas.getContext('2d');
         if (!ctx) {
-          videoThumbCache.set(videoUrl, 'failed');
-          setFailed(true);
-          cleanup();
+          markFailed();
           return;
         }
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        if (isMostlyDarkFrame(ctx, canvas.width, canvas.height) && captureAttempt < 4) {
+          captureAttempt += 1;
+          seekToAttemptFrame();
+          return;
+        }
+
         const url = canvas.toDataURL('image/jpeg', 0.8);
         videoThumbCache.set(videoUrl, url);
         setThumbUrl(url);
+        cleanup();
       } catch {
-        videoThumbCache.set(videoUrl, 'failed');
-        setFailed(true);
-      }
-
-      cleanup();
-    };
-
-    const moveToCaptureFrame = () => {
-      if (cancelled) return;
-
-      const duration = Number.isFinite(video.duration) ? video.duration : 0;
-      if (duration <= 0.2) {
-        capture();
-        return;
-      }
-
-      const seekTime = Math.min(Math.max(duration * 0.15, 0.1), duration - 0.1);
-      try {
-        video.currentTime = seekTime;
-      } catch {
-        capture();
+        markFailed();
       }
     };
 
     video.crossOrigin = 'anonymous';
     video.muted = true;
     video.playsInline = true;
-    video.preload = 'metadata';
+    video.preload = 'auto';
     video.src = videoUrl;
 
-    video.addEventListener('loadedmetadata', moveToCaptureFrame);
+    video.addEventListener('loadedmetadata', seekToAttemptFrame);
     video.addEventListener('seeked', capture);
     video.addEventListener('error', () => {
-      if (!cancelled) {
-        videoThumbCache.set(videoUrl, 'failed');
-        setFailed(true);
-      }
-      cleanup();
+      if (!cancelled) markFailed();
     });
 
     timeoutId = window.setTimeout(() => {
-      if (!cancelled && !thumbUrl) {
-        videoThumbCache.set(videoUrl, 'failed');
-        setFailed(true);
-        cleanup();
-      }
+      if (!cancelled) markFailed();
     }, 8000);
 
     video.load();
 
     return () => {
       cancelled = true;
-      video.removeEventListener('loadedmetadata', moveToCaptureFrame);
+      video.removeEventListener('loadedmetadata', seekToAttemptFrame);
       video.removeEventListener('seeked', capture);
       cleanup();
     };
   }, [videoUrl]);
 
   if (thumbUrl) {
+
     return (
       <div className={cn("relative w-full h-full", className)}>
         <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
@@ -396,53 +410,43 @@ const PostThumbnail: React.FC<{
   now: number;
   borderWidth: number;
 }> = ({ post, className, imgClassName, onImgError, size = 'md', now, borderWidth }) => {
-  const videoUrl = post.videoUrl;
-  const imageUrl = post.image_url || post.image;
-  const hasStoredThumbnail = !!imageUrl && !isVideoUrl(imageUrl) && imageUrl !== '/placeholder.svg';
-  const isVideo = !!videoUrl || isVideoUrl(imageUrl);
   const ringGeometry = size === 'sm' ? RING_GEOMETRY_SM : RING_GEOMETRY_MD;
+  const primaryMedia = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true })[0];
+  const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
 
-  if (hasStoredThumbnail) {
-    return (
-      <div className={cn("relative w-full h-full", className)}>
-        <img
-          src={getOptimizedFeedImage(imageUrl, post.id)}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className={cn("w-full h-full object-cover", imgClassName)}
-          onError={onImgError}
-        />
-        {isVideo && <PlayOverlay size={size} />}
-        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
-      </div>
-    );
-  }
-
-  const effectiveVideoUrl = videoUrl || (isVideoUrl(imageUrl) ? imageUrl : null);
-
-  if (effectiveVideoUrl) {
-    return (
-      <div className={cn("relative w-full h-full", className)}>
-        <VideoThumbnail videoUrl={effectiveVideoUrl} size={size} />
-        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
-      </div>
-    );
-  }
-
-  return (
+  const renderImage = (url: string, showPlay = false) => (
     <div className={cn("relative w-full h-full", className)}>
       <img
-        src={getOptimizedFeedImage(imageUrl, post.id)}
+        src={url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url}
         alt=""
         loading="lazy"
         decoding="async"
         className={cn("w-full h-full object-cover", imgClassName)}
         onError={onImgError}
       />
+      {showPlay && <PlayOverlay size={size} />}
       <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
     </div>
   );
+
+  if (primaryMedia?.type === 'image') {
+    return renderImage(primaryMedia.url);
+  }
+
+  if (primaryMedia?.type === 'video') {
+    if (primaryMedia.posterUrl) {
+      return renderImage(primaryMedia.posterUrl, true);
+    }
+
+    return (
+      <div className={cn("relative w-full h-full", className)}>
+        <VideoThumbnail videoUrl={primaryMedia.url} size={size} />
+        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
+      </div>
+    );
+  }
+
+  return renderImage(fallbackImageUrl);
 };
 
 // ── 순위 변동 추적 유틸 ──────────────────────────────────────
