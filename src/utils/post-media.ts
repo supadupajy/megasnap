@@ -8,9 +8,16 @@ export const isValidMediaUrl = (url: unknown): url is string => {
   return typeof url === 'string' && url.trim().startsWith('http');
 };
 
+const VIDEO_BUCKET_PATH_REGEX = /\/post-videos\//i;
+const VIDEO_EXTENSION_REGEX = /\.(mp4|mov|webm|avi|m4v)(\?|#|$)/i;
+
 export const isVideoUrl = (url: string | undefined | null): boolean => {
   if (!url) return false;
-  return /\.(mp4|mov|webm|avi|m4v)(\?|#|$)/i.test(url);
+  if (VIDEO_EXTENSION_REGEX.test(url)) return true;
+  // Supabase storage URL은 확장자가 누락된 경우가 있다.
+  // post-videos 버킷에서 온 URL은 모두 영상으로 간주해 <img>에 들어가 검은 칸이 되는 것을 막는다.
+  if (VIDEO_BUCKET_PATH_REGEX.test(url)) return true;
+  return false;
 };
 
 export const isGeneratedVideoThumbnailUrl = (url: string | undefined | null): boolean => {
@@ -24,6 +31,7 @@ export const isGeneratedVideoThumbnailUrl = (url: string | undefined | null): bo
 
 const getTrustedPosterUrl = (url: string | undefined): string | undefined => {
   if (!isValidMediaUrl(url)) return undefined;
+  if (isVideoUrl(url)) return undefined;
   return isGeneratedVideoThumbnailUrl(url) ? undefined : url;
 };
 
@@ -43,17 +51,26 @@ export const getPostMediaItems = (
 
   const { trustGeneratedVideoThumbnails = false } = options;
 
+  const isUsableImageCandidate = (url: unknown): url is string => {
+    if (!isValidMediaUrl(url)) return false;
+    if (isVideoUrl(url)) return false;
+    return true;
+  };
+
   const resolvePoster = (url: string | undefined): string | undefined => {
-    if (trustGeneratedVideoThumbnails) {
-      return isValidMediaUrl(url) ? url : undefined;
-    }
+    if (!isUsableImageCandidate(url)) return undefined;
+    if (trustGeneratedVideoThumbnails) return url;
     return getTrustedPosterUrl(url);
   };
 
   const rawImages = Array.isArray(post.images) ? post.images : [];
-  const alignedImages = rawImages.map((url) => (isValidMediaUrl(url) ? url : undefined));
-  const images = alignedImages.filter(isValidMediaUrl);
-  const singleImage = isValidMediaUrl(post.image_url) ? post.image_url : isValidMediaUrl(post.image) ? post.image : undefined;
+  const alignedImages = rawImages.map((url) => (isUsableImageCandidate(url) ? url : undefined));
+  const images = alignedImages.filter(isUsableImageCandidate);
+  const singleImage = isUsableImageCandidate(post.image_url)
+    ? post.image_url
+    : isUsableImageCandidate(post.image)
+      ? post.image
+      : undefined;
 
   if (post.isAd) {
     const adImage = singleImage ?? images[0];
@@ -76,7 +93,7 @@ export const getPostMediaItems = (
 
       if (isValidMediaUrl(videoUrl)) {
         items.push({ type: 'video', url: videoUrl, posterUrl: resolvePoster(imageUrl) });
-      } else if (isValidMediaUrl(imageUrl)) {
+      } else if (isUsableImageCandidate(imageUrl)) {
         items.push({ type: 'image', url: imageUrl });
       }
     }
@@ -90,11 +107,9 @@ export const getPostMediaItems = (
   }
 
   const imageItems = (images.length > 0 ? images : singleImage ? [singleImage] : [])
-    .filter((url) => !isVideoUrl(url))
     .map((url) => ({ type: 'image' as const, url }));
 
   if (imageItems.length > 0) return imageItems;
 
-  const videoImage = (images.length > 0 ? images : singleImage ? [singleImage] : []).find(isVideoUrl);
-  return videoImage ? [{ type: 'video', url: videoImage }] : [];
+  return [];
 };

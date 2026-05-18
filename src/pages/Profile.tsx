@@ -339,10 +339,7 @@ const Profile = () => {
   }
 
   return (
-    <div
-      className="h-screen w-full max-w-full flex flex-col overflow-x-hidden bg-white overscroll-x-none"
-      style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
-    >
+    <div className="h-screen w-full max-w-full flex flex-col overflow-x-hidden bg-white overscroll-x-none">
       <div ref={stickyHeaderRef} className="sticky top-0 z-40 w-full max-w-full overflow-hidden bg-white pt-[64px]">
         <CollapsingHeader
           progress={headerProgress}
@@ -357,7 +354,11 @@ const Profile = () => {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none" ref={setScrollRef}>
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-white no-scrollbar overscroll-x-none"
+        ref={setScrollRef}
+        style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         {isDataLoading && myPosts.length === 0 ? (
           <ProfileHeaderSkeleton />
         ) : (
