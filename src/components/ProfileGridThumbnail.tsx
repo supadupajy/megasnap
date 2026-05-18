@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 
 import { Post } from '@/types';
@@ -50,38 +50,39 @@ const hasAnyVideoUrl = (post: Post): boolean => {
   return false;
 };
 
+const getFirstVideoUrl = (post: Post): string | undefined => {
+  if (isValidMediaUrl(post.videoUrl)) return post.videoUrl;
+  if (Array.isArray(post.videoUrls)) {
+    const found = post.videoUrls.find((url) => isValidMediaUrl(url));
+    if (found) return found;
+  }
+  return undefined;
+};
+
 /**
- * 로드된 <img>의 픽셀 평균 휘도를 측정해 너무 어두우면 검은 썸네일로 간주.
- * - sample step을 크게 잡아 비용은 그리드 칸 당 1회, 수 ms 이내로 끝난다.
- * - 같은 origin의 supabase storage 이미지는 보통 CORS 헤더가 동봉되어 toDataURL/getImageData가 가능.
- *   getImageData가 실패(보안 오류)하면 그냥 통과시켜 영향 0.
+ * 이미지 픽셀이 거의 검정인지 검사. CORS로 getImageData 실패하면 false(통과).
  */
 const isImageMostlyBlack = (img: HTMLImageElement): boolean => {
   try {
     const w = Math.min(48, img.naturalWidth || 48);
     const h = Math.min(48, img.naturalHeight || 48);
     if (w <= 0 || h <= 0) return false;
-
     const canvas = document.createElement('canvas');
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
     if (!ctx) return false;
-
     ctx.drawImage(img, 0, 0, w, h);
     const data = ctx.getImageData(0, 0, w, h).data;
-
     let totalLuma = 0;
     let brightPixels = 0;
     let sampledPixels = 0;
-
     for (let i = 0; i < data.length; i += 4) {
       const luminance = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
       totalLuma += luminance;
       if (luminance > 40) brightPixels += 1;
       sampledPixels += 1;
     }
-
     if (sampledPixels === 0) return false;
     const avgLuma = totalLuma / sampledPixels;
     const brightRatio = brightPixels / sampledPixels;
@@ -91,9 +92,129 @@ const isImageMostlyBlack = (img: HTMLImageElement): boolean => {
   }
 };
 
+/**
+ * 영상 파일 URL에서 클라이언트가 직접 첫 밝은 프레임을 추출해 dataURL로 반환.
+ * 모든 후보 시점이 검정이면 그중 가장 밝았던 프레임 dataURL을 반환.
+ * 어떤 이유로든 실패하면 null.
+ */
+const extractBrightVideoFrame = (videoUrl: string): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.src = videoUrl;
+
+    let settled = false;
+    let candidateTimes: number[] = [];
+    let cursor = 0;
+    let best: { dataUrl: string; luma: number } | null = null;
+    const timeoutId = window.setTimeout(() => finishWithBest(), 12000);
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      try {
+        video.removeAttribute('src');
+        video.load();
+      } catch {}
+    };
+
+    const finishWithBest = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(best ? best.dataUrl : null);
+    };
+
+    const finishWith = (dataUrl: string) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(dataUrl);
+    };
+
+    const measure = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+      const data = ctx.getImageData(0, 0, w, h).data;
+      let totalLuma = 0;
+      let brightPixels = 0;
+      let sampled = 0;
+      for (let i = 0; i < data.length; i += 4 * 8) {
+        const luminance = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+        totalLuma += luminance;
+        if (luminance > 40) brightPixels += 1;
+        sampled += 1;
+      }
+      const avgLuma = sampled > 0 ? totalLuma / sampled : 0;
+      const brightRatio = sampled > 0 ? brightPixels / sampled : 0;
+      return { avgLuma, brightRatio };
+    };
+
+    const tryNext = () => {
+      if (cursor >= candidateTimes.length) {
+        finishWithBest();
+        return;
+      }
+      const t = candidateTimes[cursor++];
+      try {
+        video.currentTime = t;
+      } catch {
+        tryNext();
+      }
+    };
+
+    const onSeeked = () => {
+      try {
+        const w = video.videoWidth || 320;
+        const h = video.videoHeight || 320;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          tryNext();
+          return;
+        }
+        ctx.drawImage(video, 0, 0, w, h);
+        const { avgLuma, brightRatio } = measure(ctx, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        if (!best || avgLuma > best.luma) best = { dataUrl, luma: avgLuma };
+        const acceptable = avgLuma >= 28 && brightRatio >= 0.12;
+        if (acceptable) {
+          finishWith(dataUrl);
+          return;
+        }
+        tryNext();
+      } catch {
+        tryNext();
+      }
+    };
+
+    video.addEventListener('loadedmetadata', () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      candidateTimes = duration > 0.3
+        ? [0.5, 1.0, 1.5, 2.0, 3.0, 5.0].filter((time) => time < duration - 0.05)
+        : [0];
+      if (candidateTimes.length === 0) candidateTimes = [0];
+      cursor = 0;
+      tryNext();
+    }, { once: true });
+
+    video.addEventListener('seeked', onSeeked);
+    video.addEventListener('error', () => finishWithBest(), { once: true });
+
+    try {
+      video.load();
+    } catch {
+      finishWithBest();
+    }
+  });
+};
+
 const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
-  const [didFallback, setDidFallback] = useState(false);
-  const checkedRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const checkedBlackRef = useRef(false);
+  const extractedRef = useRef(false);
 
   const mediaItems = useMemo(
     () => getPostMediaItems(post, { trustGeneratedVideoThumbnails: true }),
@@ -101,20 +222,73 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   );
   const firstMedia = mediaItems[0];
   const hasVideo = hasAnyVideoUrl(post);
+  const videoUrl = useMemo(() => getFirstVideoUrl(post), [post]);
+  const isVideoCard = firstMedia?.type === 'video';
 
+  const basePoster = useMemo(() => {
+    if (!isVideoCard) return FALLBACK_IMAGE;
+    return pickSafePosterCandidate(post, firstMedia?.posterUrl);
+  }, [isVideoCard, post, firstMedia]);
+
+  const [extractedFrameUrl, setExtractedFrameUrl] = useState<string | null>(null);
+  const [needsExtraction, setNeedsExtraction] = useState(false);
+  const [didFallback, setDidFallback] = useState(false);
+
+  // 검정 썸네일 감지 → 클라이언트 프레임 추출 트리거
   const handleLoadedImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    if (checkedRef.current || didFallback) return;
-    checkedRef.current = true;
-    const imgEl = event.currentTarget;
-    // 어두운 썸네일 감지 → placeholder로 교체
-    if (isImageMostlyBlack(imgEl)) {
-      setDidFallback(true);
+    if (checkedBlackRef.current) return;
+    checkedBlackRef.current = true;
+    if (!isVideoCard) return;
+    if (isImageMostlyBlack(event.currentTarget) && videoUrl) {
+      setNeedsExtraction(true);
     }
   };
 
+  // basePoster가 fallback이거나(=DB에 쓸 수 있는 JPG 자체가 없음) 또는 검정 감지된 경우,
+  // 컨테이너가 화면에 들어왔을 때 영상에서 직접 프레임을 추출한다.
+  useEffect(() => {
+    if (!isVideoCard) return;
+    if (!videoUrl) return;
+    if (extractedRef.current) return;
+
+    const shouldExtractEagerly = basePoster === FALLBACK_IMAGE;
+    if (!shouldExtractEagerly && !needsExtraction) return;
+
+    const target = containerRef.current;
+    if (!target) return;
+
+    const startExtraction = () => {
+      if (extractedRef.current) return;
+      extractedRef.current = true;
+      extractBrightVideoFrame(videoUrl).then((dataUrl) => {
+        if (dataUrl) {
+          setExtractedFrameUrl(dataUrl);
+        } else {
+          setDidFallback(true);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          startExtraction();
+          observer.disconnect();
+          break;
+        }
+      }
+    }, { rootMargin: '200px' });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [isVideoCard, videoUrl, basePoster, needsExtraction]);
+
   if (!firstMedia) {
     return (
-      <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
+      <div
+        ref={containerRef}
+        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+      >
         <img
           src={FALLBACK_IMAGE}
           alt=""
@@ -126,12 +300,17 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     );
   }
 
-  if (firstMedia.type === 'video') {
-    const safePoster = pickSafePosterCandidate(post, firstMedia.posterUrl);
-    const posterSrc = didFallback ? FALLBACK_IMAGE : safePoster;
+  if (isVideoCard) {
+    let posterSrc: string;
+    if (extractedFrameUrl) posterSrc = extractedFrameUrl;
+    else if (didFallback) posterSrc = FALLBACK_IMAGE;
+    else posterSrc = basePoster;
 
     return (
-      <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
+      <div
+        ref={containerRef}
+        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+      >
         <img
           src={posterSrc}
           alt=""
@@ -139,9 +318,14 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
           decoding="async"
           crossOrigin="anonymous"
           className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
-          onLoad={handleLoadedImage}
+          onLoad={extractedFrameUrl ? undefined : handleLoadedImage}
           onError={() => {
-            if (!didFallback) setDidFallback(true);
+            if (!videoUrl) {
+              setDidFallback(true);
+              return;
+            }
+            // 포스터 로드 실패 → 클라이언트 프레임 추출 강제 트리거
+            setNeedsExtraction(true);
           }}
         />
         <div className="absolute top-2 right-2 z-10">
@@ -151,21 +335,20 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     );
   }
 
-  const imageSrc = didFallback || !isUsableImageThumbnail(firstMedia.url) ? FALLBACK_IMAGE : firstMedia.url;
+  const imageSrc = !isUsableImageThumbnail(firstMedia.url) ? FALLBACK_IMAGE : firstMedia.url;
 
   return (
-    <div className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer">
+    <div
+      ref={containerRef}
+      className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+    >
       <img
         src={imageSrc}
         alt=""
         loading="lazy"
         decoding="async"
-        crossOrigin="anonymous"
         className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-        onLoad={handleLoadedImage}
-        onError={() => {
-          if (!didFallback) setDidFallback(true);
-        }}
+        onError={onError}
       />
       {hasVideo && (
         <div className="absolute top-2 right-2 z-10">
