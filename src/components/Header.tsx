@@ -1,10 +1,11 @@
 "use client";
 
 import React from 'react';
-import { Bell, MessageSquare } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { useNotifications } from '@/components/NotificationProvider';
+import BubbleChatIcon from './icons/BubbleChatIcon';
 
 const Header = () => {
   const location = useLocation();
@@ -52,7 +53,7 @@ const Header = () => {
             className="relative w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-full transition-all"
             onClick={() => openOverlay('messages')}
           >
-            <MessageSquare className="w-[18px] h-[18px] text-gray-700" />
+            <BubbleChatIcon className="w-[20px] h-[20px] text-gray-700" />
             {unreadMessages > 0 && (
               <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
                 {unreadMessages > 99 ? '99+' : unreadMessages}
