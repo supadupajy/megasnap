@@ -20,12 +20,13 @@ const HeaderAdBanner = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 max-w-[180px] ml-3 h-10 bg-gray-100 rounded-xl animate-pulse" />
+      <div className="flex-1 min-w-0 h-10 bg-gray-100 rounded-xl animate-pulse" />
     );
   }
 
   // 광고가 없거나 비활성이면 구인 슬롯 사용
   // 시작 시간 전(isPending) 슬롯은 표시할 콘텐츠가 없으므로 광고 문의 배너로 폴백한다.
+
   const resolvedSlot = ad && ad.is_active ? resolveActiveSlot(ad, now) : RECRUITMENT_SLOT;
   const slot = resolvedSlot.isPending ? RECRUITMENT_SLOT : resolvedSlot;
 
@@ -33,11 +34,12 @@ const HeaderAdBanner = () => {
   if (slot.isRecruitment) {
     return (
       <div
-        className="flex-1 max-w-[180px] ml-3 h-10 bg-gradient-to-r from-amber-100 via-amber-50 to-amber-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-amber-300/60"
+        className="flex-1 min-w-0 h-10 bg-gradient-to-r from-amber-100 via-amber-50 to-amber-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-amber-300/60"
         style={GPU_LAYER_STYLE}
         onClick={() => window.open('mailto:support@thesnappop.com', '_blank')}
       >
         <div className="absolute inset-0 flex items-center justify-center">
+
           <div className="flex flex-col items-left">
             <span className="text-[8px] font-black text-gray-900 leading-none tracking-tighter uppercase">광고 문의</span>
             <span className="text-[6px] font-bold text-amber-600 leading-none mt-0.5 tracking-[-0.08em]">support@thesnappop.com</span>
@@ -50,11 +52,12 @@ const HeaderAdBanner = () => {
 
   return (
     <div
-      className="flex-1 max-w-[180px] ml-3 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
+      className="flex-1 min-w-0 h-10 bg-black rounded-xl overflow-hidden relative group cursor-pointer shadow-md border border-white/10"
       style={GPU_LAYER_STYLE}
       onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank')}
     >
       {/* Background Image */}
+
       <img
         key={slot.image_url}
         src={getOptimizedBannerImage(slot.image_url, 'header-ad')}

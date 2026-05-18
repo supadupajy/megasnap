@@ -2,12 +2,11 @@
 
 import React from 'react';
 import { Bell, MessageSquare } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import HeaderAdBanner from './HeaderAdBanner';
 import { useNotifications } from '@/components/NotificationProvider';
 
 const Header = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { unreadMessages, unreadNotifs } = useNotifications();
 
@@ -33,20 +32,11 @@ const Header = () => {
     >
       <div className="h-[env(safe-area-inset-top,0px)] w-full bg-transparent" />
       
-      <div className="h-16 px-4 flex items-center gap-2 max-w-lg mx-auto">
-        <div
-          className="flex items-center gap-1.5 cursor-pointer active:scale-95 transition-transform shrink-0"
-          onClick={() => navigate('/')}
-        >
-          <h1 className="text-2xl font-black tracking-tighter" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-            <span className="text-gray-900">하이</span>
-            <span className="text-amber-500">버블</span>
-          </h1>
-        </div>
-
+      <div className="h-16 px-4 flex items-center gap-3 max-w-lg mx-auto">
         <HeaderAdBanner />
 
         <div className="flex items-center gap-2 shrink-0 ml-auto">
+
           <button
             className="relative w-10 h-10 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 rounded-full transition-all"
             onClick={() => openOverlay('notifications')}
