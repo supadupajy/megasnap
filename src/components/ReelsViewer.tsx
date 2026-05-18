@@ -794,8 +794,11 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
             {embeddedBottomExtensionHeight && (
               <div
                 aria-hidden="true"
-                className="absolute left-0 right-0 top-full pointer-events-none bg-black"
-                style={{ height: embeddedBottomExtensionHeight }}
+                className="absolute left-0 right-0 pointer-events-none bg-black"
+                style={{
+                  top: 'calc(100% - 2px)',
+                  height: `calc(${embeddedBottomExtensionHeight} + 2px)`,
+                }}
               />
             )}
             {item.kind === "post" ? (
