@@ -843,9 +843,9 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 aria-hidden="true"
                 className="absolute left-0 right-0 pointer-events-none z-[15]"
                 style={{
-                  top: 'calc(100% - 48px)',
-                  height: `calc(${embeddedBottomExtensionHeight} + 48px)`,
-                  background: 'linear-gradient(to bottom, transparent 0px, #000 44px, #000 100%)',
+                  top: 'calc(100% - 96px)',
+                  height: `calc(${embeddedBottomExtensionHeight} + 96px)`,
+                  background: 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.18) 28px, rgba(0,0,0,0.52) 58px, rgba(0,0,0,0.82) 82px, #000 112px, #000 100%)',
                 }}
               />
             )}
