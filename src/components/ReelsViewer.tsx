@@ -1674,7 +1674,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         onPointerUp={handlePointerUp}
       >
         <div
-          className="relative overflow-hidden bg-black rounded-2xl"
+          className="relative overflow-hidden bg-transparent rounded-2xl"
           style={{
             aspectRatio: "3 / 4",
             height: "100%",
@@ -1683,6 +1683,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             maxHeight: "100%",
           }}
         >
+
           {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용)
               순위 뱃지가 있을 때는 음소거 버튼을 뱃지 옆으로 옮긴다. */}
           {showInlineMuteButton && hasVideo && (
@@ -2647,10 +2648,11 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
           return (
             <div
               key={`${url}-${i}`}
-              className="relative h-full shrink-0 bg-black"
+              className="relative h-full shrink-0 bg-transparent"
               style={{ width: `${100 / mediaList.length}%` }}
             >
               {isVid ? (
+
                 <ReelsVideo
                   videoRef={isPlayable ? videoRef : undefined}
                   src={url}
