@@ -1085,7 +1085,7 @@ const MapContainer = ({
       const shouldDelayVideoMarker = !!firstVideoUrl && !storedVideoPoster && !cachedVideoThumb;
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
-      const markerFloatKey = 'float-v4';
+      const markerFloatKey = 'float-v5';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
@@ -2315,24 +2315,26 @@ const MapContainer = ({
         : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
 
     return `${adStyleTag}<div class="marker-content-wrapper">
-      <div class="${animationClass} marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
-        ${isAd ? adGlowLayer : ''}
-        ${isAd ? adFlipWrapperStart : ''}
-        ${isAd ? adLabelHtml : labelHtml}
-        <div class="${influencerClass}" style="${innerBoxStyle}">
-          ${isAd ? adSparklesHtml : ''}
-          <div style="width:100%;height:100%;position:relative;border-radius:50%;overflow:hidden;">
-            ${imgContent}
-            ${bubbleReflectionHtml}
-            <div style="position:absolute;bottom:3px;right:3px;background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:999px;z-index:5;line-height:1;display:flex;align-items:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
-              <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
-              <span>${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</span>
+      <div class="${animationClass}" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
+        <div class="marker-scaling-target" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
+          ${isAd ? adGlowLayer : ''}
+          ${isAd ? adFlipWrapperStart : ''}
+          ${isAd ? adLabelHtml : labelHtml}
+          <div class="${influencerClass}" style="${innerBoxStyle}">
+            ${isAd ? adSparklesHtml : ''}
+            <div style="width:100%;height:100%;position:relative;border-radius:50%;overflow:hidden;">
+              ${imgContent}
+              ${bubbleReflectionHtml}
+              <div style="position:absolute;bottom:3px;right:3px;background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:999px;z-index:5;line-height:1;display:flex;align-items:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+                <span>${post.likes >= 1000 ? (post.likes/1000).toFixed(1) + 'k' : post.likes}</span>
+              </div>
+              ${videoIconHtml}
+              ${countdownRingHtml}
             </div>
-            ${videoIconHtml}
-            ${countdownRingHtml}
           </div>
+          ${isAd ? adFlipWrapperEnd : ''}
         </div>
-        ${isAd ? adFlipWrapperEnd : ''}
       </div>
     </div>`;
   };
