@@ -9,7 +9,6 @@ import {
   Bookmark,
   Map,
   User as UserIcon,
-  Play
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,7 +24,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { toggleLikeInDb } from '@/utils/like-utils';
 import CollapsingHeader from '@/components/CollapsingHeader';
 import { useCollapsingHeader } from '@/hooks/use-collapsing-header';
-import { getPostMediaItems } from '@/utils/post-media';
+import ProfileGridThumbnail from '@/components/ProfileGridThumbnail';
 
 const FALLBACK_IMAGE = "/placeholder.svg";
 
@@ -62,7 +61,7 @@ const getTierFromFollowers = (followers: number) => {
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { profile, user: authUser, loading: authLoading, refreshProfile } = useAuth();
+  const { profile, user: authUser, loading: authLoading } = useAuth();
 
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
@@ -96,21 +95,6 @@ const Profile = () => {
   };
 
   const SAFE_FALLBACK = "/placeholder.svg";
-
-  const getProfileGridThumbnail = useCallback((post: Post) => {
-    const mediaItems = getPostMediaItems(post);
-    const firstMedia = mediaItems[0];
-
-    if (!firstMedia) {
-      return post.image_url || post.image || SAFE_FALLBACK;
-    }
-
-    if (firstMedia.type === 'video') {
-      return firstMedia.posterUrl || SAFE_FALLBACK;
-    }
-
-    return firstMedia.url || SAFE_FALLBACK;
-  }, []);
 
   const mapDbToPost = (p: any, isLiked = false, isSaved = false): Post => {
     let rawImage = isValidUrl(p.image_url) ? p.image_url : SAFE_FALLBACK;
@@ -311,7 +295,7 @@ const Profile = () => {
     const updatePost = (prev: Post[]) => prev.map(post => {
       if (post.id !== postId) return post;
       currentlyLiked = post.isLiked;
-      return { ...post, isLiked: !post.isLiked, likes: !post.isLiked ? post.likes + 1 : post.likes - 1 };
+      return { ...post, isLiked: !post.isLiked, likes: !post.likes ? post.likes + 1 : post.likes - 1 };
     });
     setMyPosts(updatePost);
     setSavedPosts(updatePost);
@@ -546,22 +530,12 @@ const Profile = () => {
                   {myPosts.map((post) => (
                     <div
                       key={post.id}
-                      className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
                       onClick={() => handleGridItemClick(post.id)}
                     >
-                      <img
-                        src={getOptimizedMarkerImage(getProfileGridThumbnail(post), post.id)}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover hover:opacity-80 transition-opacity"
+                      <ProfileGridThumbnail
+                        post={post}
                         onError={() => handleImageError(post.id)}
                       />
-                      {(post.videoUrl || (Array.isArray(post.videoUrls) && post.videoUrls.length > 0)) && (
-                        <div className="absolute top-2 right-2 z-10">
-                          <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
-                        </div>
-                      )}
                     </div>
                   ))}
                   {myPosts.length === 0 && (
