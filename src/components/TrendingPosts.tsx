@@ -9,7 +9,6 @@ import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
 import { useAuth } from "@/components/AuthProvider";
 import HashtagText from "@/components/HashtagText";
-import VideoThumbnailPreview from "@/components/VideoThumbnailPreview";
 import { getPostMediaItems } from "@/utils/post-media";
 
 // ── 24시간 카운트다운 링 (지도 마커와 동일 룰) ─────────────────────────
@@ -128,7 +127,132 @@ const isThumbnailExpirable = (post: Post): boolean => {
 };
 
 // ── 비디오 썸네일 인메모리 캐시 ──────────────────────────────
-const videoThumbCache = new Map<string, string | 'failed'>();
+type VideoThumbResult = string | 'failed';
+
+const videoThumbCache = new Map<string, VideoThumbResult>();
+const videoThumbPending = new Map<string, Set<(result: VideoThumbResult) => void>>();
+
+const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumbResult) => void) => {
+  const cached = videoThumbCache.get(videoUrl);
+  if (cached) {
+    onComplete(cached);
+    return () => {};
+  }
+
+  const existingListeners = videoThumbPending.get(videoUrl);
+  if (existingListeners) {
+    existingListeners.add(onComplete);
+    return () => {
+      existingListeners.delete(onComplete);
+    };
+  }
+
+  const listeners = new Set<(result: VideoThumbResult) => void>([onComplete]);
+  videoThumbPending.set(videoUrl, listeners);
+
+  const video = document.createElement('video');
+  let timeoutId: number | undefined;
+  let captureAttempt = 0;
+  let settled = false;
+
+  const cleanup = () => {
+    if (timeoutId) window.clearTimeout(timeoutId);
+    video.removeEventListener('loadedmetadata', seekToAttemptFrame);
+    video.removeEventListener('seeked', capture);
+    video.removeEventListener('error', handleError);
+    video.removeAttribute('src');
+    video.load();
+  };
+
+  const finish = (result: VideoThumbResult) => {
+    if (settled) return;
+    settled = true;
+    videoThumbCache.set(videoUrl, result);
+
+    const currentListeners = videoThumbPending.get(videoUrl);
+    videoThumbPending.delete(videoUrl);
+    currentListeners?.forEach((listener) => listener(result));
+
+    cleanup();
+  };
+
+  const isMostlyDarkFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const { data } = ctx.getImageData(0, 0, width, height);
+    let darkPixels = 0;
+    const pixelCount = data.length / 4;
+
+    for (let i = 0; i < data.length; i += 16) {
+      const luminance = data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722;
+      if (luminance < 18) darkPixels += 4;
+    }
+
+    return darkPixels / pixelCount > 0.88;
+  };
+
+  function seekToAttemptFrame() {
+    const duration = Number.isFinite(video.duration) ? video.duration : 0;
+    if (duration <= 0.2) {
+      capture();
+      return;
+    }
+
+    const candidates = [0.8, duration * 0.15, 1.6, duration * 0.35, duration * 0.55]
+      .map((time) => Math.min(Math.max(time, 0.1), duration - 0.05));
+    const seekTime = candidates[Math.min(captureAttempt, candidates.length - 1)];
+
+    try {
+      video.currentTime = seekTime;
+    } catch {
+      capture();
+    }
+  }
+
+  function capture() {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 120;
+      canvas.height = 120;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        finish('failed');
+        return;
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      if (isMostlyDarkFrame(ctx, canvas.width, canvas.height) && captureAttempt < 4) {
+        captureAttempt += 1;
+        seekToAttemptFrame();
+        return;
+      }
+
+      finish(canvas.toDataURL('image/jpeg', 0.8));
+    } catch {
+      finish('failed');
+    }
+  }
+
+  function handleError() {
+    finish('failed');
+  }
+
+  video.crossOrigin = 'anonymous';
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'metadata';
+  video.src = videoUrl;
+
+  video.addEventListener('loadedmetadata', seekToAttemptFrame);
+  video.addEventListener('seeked', capture);
+  video.addEventListener('error', handleError);
+
+  timeoutId = window.setTimeout(() => finish('failed'), 10000);
+  video.load();
+
+  return () => {
+    listeners.delete(onComplete);
+  };
+};
 
 const isOpeningThumbnailUrl = (url: string | undefined): boolean => {
   if (!url) return false;
@@ -140,7 +264,7 @@ const isOpeningThumbnailUrl = (url: string | undefined): boolean => {
 // - md: 펼쳐진 리스트의 w-12 h-12(48px) 썸네일용
 type PlayBadgeSize = 'sm' | 'md';
 
-// 동영상 썸네일을 canvas로 추출하는 컴포넌트
+// 동영상 썸네일을 canvas로 1회 추출한 뒤 같은 videoUrl에는 캐시 이미지를 재사용한다.
 const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: PlayBadgeSize }> = ({ videoUrl, className, size = 'md' }) => {
   const cached = videoThumbCache.get(videoUrl);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(
@@ -149,122 +273,28 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
   const [failed, setFailed] = React.useState(cached === 'failed');
 
   React.useEffect(() => {
-    // 캐시 히트 시 즉시 반환 (video 엘리먼트 생성 불필요)
-    if (videoThumbCache.has(videoUrl)) {
-      const c = videoThumbCache.get(videoUrl)!;
-      if (c === 'failed') setFailed(true);
-      else setThumbUrl(c);
+    const currentCached = videoThumbCache.get(videoUrl);
+    if (currentCached) {
+      setThumbUrl(currentCached === 'failed' ? null : currentCached);
+      setFailed(currentCached === 'failed');
       return;
     }
 
-    let cancelled = false;
-    const video = document.createElement('video');
-    let timeoutId: number | undefined;
-    let captureAttempt = 0;
+    setThumbUrl(null);
+    setFailed(false);
 
-    const cleanup = () => {
-      if (timeoutId) window.clearTimeout(timeoutId);
-      video.src = '';
-      video.load();
-    };
-
-    const markFailed = () => {
-      videoThumbCache.set(videoUrl, 'failed');
-      setFailed(true);
-      cleanup();
-    };
-
-    const isMostlyDarkFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
-      const { data } = ctx.getImageData(0, 0, width, height);
-      let darkPixels = 0;
-      const pixelCount = data.length / 4;
-
-      for (let i = 0; i < data.length; i += 16) {
-        const luminance = data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722;
-        if (luminance < 18) darkPixels += 4;
+    return requestVideoThumbnail(videoUrl, (result) => {
+      if (result === 'failed') {
+        setThumbUrl(null);
+        setFailed(true);
+      } else {
+        setThumbUrl(result);
+        setFailed(false);
       }
-
-      return darkPixels / pixelCount > 0.88;
-    };
-
-    const seekToAttemptFrame = () => {
-      if (cancelled) return;
-
-      const duration = Number.isFinite(video.duration) ? video.duration : 0;
-      if (duration <= 0.2) {
-        capture();
-        return;
-      }
-
-      const candidates = [0.8, duration * 0.15, 1.6, duration * 0.35, duration * 0.55]
-        .map((time) => Math.min(Math.max(time, 0.1), duration - 0.05));
-      const seekTime = candidates[Math.min(captureAttempt, candidates.length - 1)];
-
-      try {
-        video.currentTime = seekTime;
-      } catch {
-        capture();
-      }
-    };
-
-    const capture = () => {
-      if (cancelled) return;
-
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 120;
-        canvas.height = 120;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          markFailed();
-          return;
-        }
-
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        if (isMostlyDarkFrame(ctx, canvas.width, canvas.height) && captureAttempt < 4) {
-          captureAttempt += 1;
-          seekToAttemptFrame();
-          return;
-        }
-
-        const url = canvas.toDataURL('image/jpeg', 0.8);
-        videoThumbCache.set(videoUrl, url);
-        setThumbUrl(url);
-        cleanup();
-      } catch {
-        markFailed();
-      }
-    };
-
-    video.crossOrigin = 'anonymous';
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = 'auto';
-    video.src = videoUrl;
-
-    video.addEventListener('loadedmetadata', seekToAttemptFrame);
-    video.addEventListener('seeked', capture);
-    video.addEventListener('error', () => {
-      if (!cancelled) markFailed();
     });
-
-    timeoutId = window.setTimeout(() => {
-      if (!cancelled) markFailed();
-    }, 8000);
-
-    video.load();
-
-    return () => {
-      cancelled = true;
-      video.removeEventListener('loadedmetadata', seekToAttemptFrame);
-      video.removeEventListener('seeked', capture);
-      cleanup();
-    };
   }, [videoUrl]);
 
   if (thumbUrl) {
-
     return (
       <div className={cn("relative w-full h-full", className)}>
         <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
@@ -297,6 +327,7 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
 };
 
 // 플레이 버튼 오버레이 (영상 표시용)
+
 // - sm: 작은 썸네일(24px)에 어울리는 미니 배지
 // - md: 일반 리스트 썸네일(48px)용 기본 배지
 const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
@@ -448,12 +479,11 @@ const PostThumbnail: React.FC<{
 
     return (
       <div className={cn("relative w-full h-full", className)}>
-        <VideoThumbnailPreview
-          src={primaryMedia.url}
+        <VideoThumbnail
+          videoUrl={primaryMedia.url}
           className={cn("absolute inset-0 w-full h-full object-cover", imgClassName)}
-          startTime={1.2}
+          size={size}
         />
-        <PlayOverlay size={size} />
         <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
       </div>
     );
