@@ -9,6 +9,7 @@ import { useLocationDisplay } from "@/hooks/use-location-display";
 import { useAd, resolveActiveSlot, RECRUITMENT_SLOT, normalizeUrl } from "@/hooks/use-ad";
 import { useAuth } from "@/components/AuthProvider";
 import HashtagText from "@/components/HashtagText";
+import VideoThumbnailPreview from "@/components/VideoThumbnailPreview";
 import { getPostMediaItems } from "@/utils/post-media";
 
 // ── 24시간 카운트다운 링 (지도 마커와 동일 룰) ─────────────────────────
@@ -128,7 +129,11 @@ const isThumbnailExpirable = (post: Post): boolean => {
 
 // ── 비디오 썸네일 인메모리 캐시 ──────────────────────────────
 const videoThumbCache = new Map<string, string | 'failed'>();
-const loggedTrendingThumbnailPostIds = new Set<string>();
+
+const isOpeningThumbnailUrl = (url: string | undefined): boolean => {
+  if (!url) return false;
+  return /-opening-thumb\.(jpe?g|png|webp)(\?|#|$)/i.test(url);
+};
 
 // 플레이 오버레이/로딩 인디케이터 사이즈
 // - sm: collapsed 헤더의 w-6 h-6(24px) 썸네일용
@@ -217,16 +222,7 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
 
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const isDarkFrame = isMostlyDarkFrame(ctx, canvas.width, canvas.height);
-        console.info('[TrendingVideoFrameDebug]', {
-          videoUrl,
-          captureAttempt,
-          currentTime: video.currentTime,
-          duration: video.duration,
-          isDarkFrame,
-        });
-
-        if (isDarkFrame && captureAttempt < 4) {
+        if (isMostlyDarkFrame(ctx, canvas.width, canvas.height) && captureAttempt < 4) {
           captureAttempt += 1;
           seekToAttemptFrame();
           return;
@@ -236,8 +232,7 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
         videoThumbCache.set(videoUrl, url);
         setThumbUrl(url);
         cleanup();
-      } catch (error) {
-        console.warn('[TrendingVideoFrameDebug] capture failed', { videoUrl, error });
+      } catch {
         markFailed();
       }
     };
@@ -426,27 +421,10 @@ const PostThumbnail: React.FC<{
   const primaryMedia = mediaItems[0];
   const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
 
-  if (!loggedTrendingThumbnailPostIds.has(post.id)) {
-    loggedTrendingThumbnailPostIds.add(post.id);
-    console.info('[TrendingThumbnailDebug]', {
-      id: post.id,
-      rank: (post as any).rank,
-      content: post.content,
-      image_url: post.image_url,
-      image: post.image,
-      images: post.images,
-      videoUrl: post.videoUrl,
-      videoUrls: post.videoUrls,
-      resolvedMediaItems: mediaItems,
-      primaryMedia,
-      fallbackImageUrl,
-    });
-  }
-
   const renderImage = (url: string, showPlay = false) => (
     <div className={cn("relative w-full h-full", className)}>
-
       <img
+
         src={url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url}
         alt=""
         loading="lazy"
@@ -464,13 +442,18 @@ const PostThumbnail: React.FC<{
   }
 
   if (primaryMedia?.type === 'video') {
-    if (primaryMedia.posterUrl) {
+    if (primaryMedia.posterUrl && !isOpeningThumbnailUrl(primaryMedia.posterUrl)) {
       return renderImage(primaryMedia.posterUrl, true);
     }
 
     return (
       <div className={cn("relative w-full h-full", className)}>
-        <VideoThumbnail videoUrl={primaryMedia.url} size={size} />
+        <VideoThumbnailPreview
+          src={primaryMedia.url}
+          className={cn("absolute inset-0 w-full h-full object-cover", imgClassName)}
+          startTime={1.2}
+        />
+        <PlayOverlay size={size} />
         <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
       </div>
     );
