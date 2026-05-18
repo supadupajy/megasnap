@@ -138,19 +138,32 @@ const DBImageCompression = () => {
     return Array.from(urlSet);
   };
 
-  const getVideoSlots = (post: VideoThumbnailPost) => {
-    if (Array.isArray(post.video_urls)) {
-      return post.video_urls
-        .map((url, index) => ({ url: typeof url === 'string' ? url : '', index }))
-        .filter((slot) => !!slot.url);
-    }
-
-    return typeof post.video_url === 'string' && post.video_url
-      ? [{ url: post.video_url, index: 0 }]
-      : [];
+  const isVideoUrl = (url: unknown): url is string => {
+    if (typeof url !== 'string' || !url.trim()) return false;
+    return /\.(mp4|mov|webm|avi|m4v)(\?|#|$)/i.test(url) || /\/post-videos\//i.test(url);
   };
 
-  const fetchVideoPosts = async () => {
+  const getVideoSlots = (post: VideoThumbnailPost) => {
+    const slots: Array<{ url: string; index: number }> = [];
+    const seen = new Set<string>();
+    const addSlot = (url: unknown, index: number) => {
+      if (!isVideoUrl(url)) return;
+      if (seen.has(url)) return;
+      seen.add(url);
+      slots.push({ url, index });
+    };
+
+    if (Array.isArray(post.video_urls)) {
+      post.video_urls.forEach((url, index) => addSlot(url, index));
+    }
+
+    addSlot(post.video_url, 0);
+    addSlot(post.image_url, 0);
+
+    return slots;
+  };
+
+  const fetchVideoPostsFallback = async () => {
     const result: VideoThumbnailPost[] = [];
     let from = 0;
 
@@ -158,7 +171,6 @@ const DBImageCompression = () => {
       const { data: posts, error } = await supabase
         .from('posts')
         .select('id, user_id, image_url, images, video_url, video_urls')
-        .or('video_url.not.is.null,video_urls.not.is.null')
         .range(from, from + BATCH_SIZE - 1);
 
       if (error) throw error;
@@ -171,6 +183,16 @@ const DBImageCompression = () => {
     }
 
     return result;
+  };
+
+  const fetchVideoPosts = async () => {
+    const { data, error } = await supabase.rpc('get_video_posts_for_thumbnail_regen');
+    if (!error && Array.isArray(data)) {
+      return (data as VideoThumbnailPost[]).filter((post) => getVideoSlots(post).length > 0);
+    }
+
+    addThumbLog('ℹ️ 관리자 RPC를 사용할 수 없어 전체 posts 조회 방식으로 검사합니다.');
+    return fetchVideoPostsFallback();
   };
 
   const createThumbnailFromVideoUrl = async (videoUrl: string) => {
@@ -219,12 +241,21 @@ const DBImageCompression = () => {
       regenerated += 1;
     }
 
-    const { error } = await supabase
-      .from('posts')
-      .update({ image_url: nextImageUrl, images: nextImages })
-      .eq('id', post.id);
+    const { error: rpcError } = await supabase.rpc('update_post_video_thumbnails', {
+      target_post_id: post.id,
+      next_image_url: nextImageUrl,
+      next_images: nextImages,
+    });
 
-    if (error) throw error;
+    if (rpcError) {
+      const { error } = await supabase
+        .from('posts')
+        .update({ image_url: nextImageUrl, images: nextImages })
+        .eq('id', post.id);
+
+      if (error) throw error;
+    }
+
     return regenerated;
   };
 
