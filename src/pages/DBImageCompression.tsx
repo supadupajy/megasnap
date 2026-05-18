@@ -3,7 +3,7 @@ import { ChevronLeft, CheckCircle2, Database, Image, Loader2, RefreshCw, ShieldC
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { cn, compressImage, createVideoThumbnail } from '@/lib/utils';
+import { cn, compressImage } from '@/lib/utils';
 import { useAuth } from '@/components/AuthProvider';
 import { showError, showSuccess } from '@/utils/toast';
 
@@ -191,13 +191,90 @@ const DBImageCompression = () => {
 
   const createThumbnailFromVideoUrl = async (videoUrl: string) => {
     const source = getSupabasePath(videoUrl);
-    const fetchUrl = source ? getDirectPublicUrl(source.bucket, source.path) : videoUrl;
-    const res = await fetch(fetchUrl, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`영상 다운로드 실패: ${res.status}`);
+    const directUrl = source ? getDirectPublicUrl(source.bucket, source.path) : videoUrl;
 
-    const blob = await res.blob();
-    const file = new File([blob], 'existing-video.mp4', { type: blob.type || 'video/mp4' });
-    return createVideoThumbnail(file);
+    return new Promise<Blob>((resolve, reject) => {
+      const video = document.createElement('video');
+      let settled = false;
+      let timeoutId: number | undefined;
+
+      const cleanup = () => {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        video.pause();
+        video.removeEventListener('loadeddata', captureDecodedFrame);
+        video.removeEventListener('canplay', captureDecodedFrame);
+        video.removeEventListener('error', handleError);
+        video.removeAttribute('src');
+        video.load();
+      };
+
+      const finish = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        callback();
+      };
+
+      const fail = (error?: unknown) => {
+        finish(() => reject(error instanceof Error ? error : new Error('영상 썸네일을 생성할 수 없습니다.')));
+      };
+
+      const capture = () => {
+        try {
+          const width = video.videoWidth || 320;
+          const height = video.videoHeight || 320;
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            fail();
+            return;
+          }
+
+          ctx.drawImage(video, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              fail();
+              return;
+            }
+            finish(() => resolve(blob));
+          }, 'image/jpeg', 0.86);
+        } catch (error) {
+          fail(error);
+        }
+      };
+
+      function captureDecodedFrame() {
+        if (settled || video.readyState < 2) return;
+        if ('requestVideoFrameCallback' in video) {
+          video.requestVideoFrameCallback(() => capture());
+        } else {
+          window.setTimeout(capture, 80);
+        }
+      }
+
+      const handleError = () => fail(new Error('영상 로드 실패'));
+
+      timeoutId = window.setTimeout(() => {
+        if (video.readyState >= 2) {
+          captureDecodedFrame();
+          return;
+        }
+        fail(new Error('영상 첫 프레임 로드 시간이 초과되었습니다.'));
+      }, 20000);
+
+      video.crossOrigin = 'anonymous';
+      video.preload = 'auto';
+      video.muted = true;
+      video.playsInline = true;
+      video.currentTime = 0;
+      video.src = directUrl;
+      video.addEventListener('loadeddata', captureDecodedFrame, { once: true });
+      video.addEventListener('canplay', captureDecodedFrame, { once: true });
+      video.addEventListener('error', handleError, { once: true });
+      video.load();
+    });
   };
 
   const uploadRegeneratedThumbnail = async (blob: Blob, postId: string, slotIndex: number) => {
@@ -312,6 +389,7 @@ const DBImageCompression = () => {
         const post = posts[i];
 
         try {
+          addThumbLog(`⏳ [${i + 1}/${posts.length}] ${post.id} · 처리 시작`);
           const count = await regeneratePostVideoThumbnails(post);
           regeneratedCount += count;
           addThumbLog(`✅ [${i + 1}/${posts.length}] ${post.id} · 썸네일 ${count}개 재생성`);
@@ -321,6 +399,7 @@ const DBImageCompression = () => {
         }
 
         setThumbProgress({ done: i + 1, total: posts.length });
+        await new Promise((resolve) => window.setTimeout(resolve, 40));
       }
 
       addThumbLog(`\n완료! 재생성 ${regeneratedCount}개 / 실패 포스트 ${failCount}개`);
