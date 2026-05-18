@@ -21,13 +21,13 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// Flicks 페이지 컨테이너: 기본적으로 헤더와 BottomNav 사이에 표시하고,
-// BottomNav가 숨겨진 상태에서는 하단 예약 공간을 제거해 빈 배경이 드러나지 않게 한다.
-const CONTENT_FIXED_BASE_STYLE: React.CSSProperties = {
+// Flicks 페이지 컨테이너: 헤더(64px)와 BottomNav 영역(64px) 사이에만 표시.
+const CONTENT_FIXED_STYLE: React.CSSProperties = {
   position: 'fixed',
   left: 0,
   right: 0,
   top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+  bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
 };
 
 // 알림/메시지는 라우트가 아니라 오버레이로 동작하므로,
@@ -41,7 +41,7 @@ const Flicks = () => {
 
   const [videoPool, setVideoPool] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isBottomNavHidden, setIsBottomNavHidden] = useState(false);
+  const [activePosterUrl, setActivePosterUrl] = useState<string | null>(null);
   const hasLoaded = useRef(false);
 
   const fetchVideoPool = useCallback(async () => {
@@ -163,24 +163,24 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
-  useEffect(() => {
-    const handleBottomNavVisibility = (e: Event) => {
-      const detail = (e as CustomEvent<{ hidden?: boolean }>).detail;
-      setIsBottomNavHidden(!!detail?.hidden);
-    };
-
-    window.addEventListener('bottom-nav-visibility', handleBottomNavVisibility);
-    return () => {
-      window.removeEventListener('bottom-nav-visibility', handleBottomNavVisibility);
-    };
-  }, []);
-
-  const contentFixedStyle: React.CSSProperties = {
-    ...CONTENT_FIXED_BASE_STYLE,
-    bottom: isBottomNavHidden
-      ? 'env(safe-area-inset-bottom, 0px)'
-      : 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
-  };
+  const bottomBackdrop = (
+    <div
+      aria-hidden="true"
+      className="fixed left-0 right-0 bottom-0 pointer-events-none overflow-hidden bg-transparent"
+      style={{ height: 'calc(env(safe-area-inset-bottom, 0px) + 64px)' }}
+    >
+      {activePosterUrl && (
+        <>
+          <img
+            src={activePosterUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full scale-125 object-cover blur-2xl"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/30 to-transparent" />
+        </>
+      )}
+    </div>
+  );
 
   const handleClose = useCallback(() => {
     navigate(-1);
@@ -196,45 +196,55 @@ const Flicks = () => {
 
   if (isLoading) {
     return (
-      <div className="bg-black" style={contentFixedStyle}>
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
-          <Clapperboard className="w-10 h-10 text-white/80" />
-          <Loader2 className="w-6 h-6 animate-spin text-white/80" />
-          <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+      <>
+        <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
+            <Clapperboard className="w-10 h-10 text-white/80" />
+            <Loader2 className="w-6 h-6 animate-spin text-white/80" />
+            <span className="text-xs font-bold tracking-wider text-white/70">FLICKS 불러오는 중…</span>
+          </div>
         </div>
-      </div>
+        {bottomBackdrop}
+      </>
     );
   }
 
   if (videoPool.length === 0) {
     return (
-      <div className="bg-black" style={contentFixedStyle}>
-        <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
-          <Clapperboard className="w-12 h-12 text-white/70" />
-          <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
-          <p className="text-xs font-bold text-white/60 leading-relaxed">
-            영상이 등록된 컨텐츠가 없습니다.<br />영상을 업로드하면 여기서 즐길 수 있어요.
-          </p>
+      <>
+        <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+          <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
+            <Clapperboard className="w-12 h-12 text-white/70" />
+            <p className="text-base font-black tracking-tight">아직 재생할 영상이 없어요</p>
+            <p className="text-xs font-bold text-white/60 leading-relaxed">
+              영상이 등록된 컨텐츠가 없습니다.<br />영상을 업로드하면 여기서 즐길 수 있어요.
+            </p>
+          </div>
         </div>
-      </div>
+        {bottomBackdrop}
+      </>
     );
   }
 
   return (
-    <div className="bg-black" style={contentFixedStyle}>
-      <ReelsViewer
-        isOpen={true}
-        initialPost={videoPool[0]}
-        pool={videoPool}
-        onClose={handleClose}
-        onDelete={handlePostDeleted}
-        onUpdate={handlePostUpdated}
-        noRepeat
-        embedded
-        endMessage="더 이상 표시할 영상이 없습니다"
-        endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
-      />
-    </div>
+    <>
+      <div className="bg-black" style={CONTENT_FIXED_STYLE}>
+        <ReelsViewer
+          isOpen={true}
+          initialPost={videoPool[0]}
+          pool={videoPool}
+          onClose={handleClose}
+          onDelete={handlePostDeleted}
+          onUpdate={handlePostUpdated}
+          onActivePosterChange={setActivePosterUrl}
+          noRepeat
+          embedded
+          endMessage="더 이상 표시할 영상이 없습니다"
+          endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
+        />
+      </div>
+      {bottomBackdrop}
+    </>
   );
 };
 
