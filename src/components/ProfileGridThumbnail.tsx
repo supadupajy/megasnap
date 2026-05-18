@@ -233,14 +233,27 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   const [extractedFrameUrl, setExtractedFrameUrl] = useState<string | null>(null);
   const [needsExtraction, setNeedsExtraction] = useState(false);
   const [didFallback, setDidFallback] = useState(false);
+  // basePoster가 실제로 검정인지 검사가 끝나서 "보여줘도 안전"하다고 판정됐는지.
+  // - 검사 전: <img>는 opacity 0으로 숨김 (검정 픽셀이 사용자에게 노출되지 않도록)
+  // - 검사 결과 검정이 아니면 즉시 페이드 인
+  // - 검정으로 판정되면 그대로 숨겨둔 채 추출된 프레임으로 교체될 때까지 회색 플레이스홀더 유지
+  const [posterRevealed, setPosterRevealed] = useState(false);
 
   // 검정 썸네일 감지 → 클라이언트 프레임 추출 트리거
   const handleLoadedImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
     if (checkedBlackRef.current) return;
     checkedBlackRef.current = true;
-    if (!isVideoCard) return;
-    if (isImageMostlyBlack(event.currentTarget) && videoUrl) {
+    if (!isVideoCard) {
+      setPosterRevealed(true);
+      return;
+    }
+    const isBlack = isImageMostlyBlack(event.currentTarget);
+    if (isBlack && videoUrl) {
+      // 검정이면 이 <img>는 영영 보여주지 않는다. (다음 turn에서 extractedFrameUrl로 교체됨)
       setNeedsExtraction(true);
+    } else {
+      // 정상 썸네일이면 그제서야 부드럽게 노출
+      setPosterRevealed(true);
     }
   };
 
@@ -301,10 +314,19 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   }
 
   if (isVideoCard) {
+    // 어떤 소스를 보여줄지 결정.
+    // - 추출된 프레임이 있으면 그게 항상 최우선 (검정 걱정 없음)
+    // - 추출 실패(didFallback) → placeholder
+    // - 그 외에는 basePoster를 시도하되, "검정 검사"가 끝날 때까지는 화면에 노출하지 않는다.
     let posterSrc: string;
     if (extractedFrameUrl) posterSrc = extractedFrameUrl;
     else if (didFallback) posterSrc = FALLBACK_IMAGE;
     else posterSrc = basePoster;
+
+    // 추출된 프레임/플레이스홀더는 즉시 노출해도 안전.
+    // basePoster를 보여주는 경우에만 posterRevealed 게이트를 적용.
+    const safeToReveal =
+      !!extractedFrameUrl || didFallback || posterSrc === FALLBACK_IMAGE || posterRevealed;
 
     return (
       <div
@@ -318,6 +340,11 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
           decoding="async"
           crossOrigin="anonymous"
           className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
+          style={{
+            opacity: safeToReveal ? 1 : 0,
+            // 검사 통과 후 부드럽게 나타나도록 짧은 페이드
+            transition: 'opacity 120ms ease-out',
+          }}
           onLoad={extractedFrameUrl ? undefined : handleLoadedImage}
           onError={() => {
             if (!videoUrl) {
