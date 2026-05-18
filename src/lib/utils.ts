@@ -384,7 +384,8 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       const cleanup = () => {
         if (timeoutId) window.clearTimeout(timeoutId);
         video.pause();
-        video.removeEventListener('seeked', captureDecodedFrame);
+        video.removeEventListener('loadeddata', captureDecodedFrame);
+        video.removeEventListener('canplay', captureDecodedFrame);
         video.removeAttribute('src');
         video.load();
         URL.revokeObjectURL(objectUrl);
@@ -430,6 +431,7 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
       };
 
       function captureDecodedFrame() {
+        if (settled || video.readyState < 2) return;
         if ('requestVideoFrameCallback' in video) {
           video.requestVideoFrameCallback(() => capture());
         } else {
@@ -437,35 +439,24 @@ export const createVideoThumbnail = async (file: File): Promise<Blob> => {
         }
       }
 
-      const moveToOpeningFrame = () => {
-        const duration = Number.isFinite(video.duration) ? video.duration : 0;
-        // 정확한 0초는 일부 브라우저/코덱에서 아직 디코드 전 빈 프레임이 잡힐 수 있어
-        // 실제 첫 재생 화면과 거의 같은 초반 프레임을 썸네일로 저장한다.
-        const targetTime = duration > 0.12 ? Math.min(0.08, duration - 0.01) : 0;
-
-        if (targetTime <= 0) {
+      timeoutId = window.setTimeout(() => {
+        if (video.readyState >= 2) {
           captureDecodedFrame();
           return;
         }
-
-        try {
-          video.currentTime = targetTime;
-        } catch {
-          captureDecodedFrame();
-        }
-      };
-
-      timeoutId = window.setTimeout(() => {
         fail(new Error('비디오 썸네일 생성 시간이 초과되었습니다.'));
       }, 15000);
 
       video.preload = 'auto';
       video.muted = true;
       video.playsInline = true;
+      video.currentTime = 0;
       video.src = objectUrl;
 
-      video.addEventListener('loadedmetadata', moveToOpeningFrame, { once: true });
-      video.addEventListener('seeked', captureDecodedFrame);
+      // 모바일 WebView/Safari는 아주 초반 seek도 뒤쪽 키프레임으로 튈 수 있어,
+      // seek하지 않고 최초 디코드 프레임을 그대로 캡처한다.
+      video.addEventListener('loadeddata', captureDecodedFrame, { once: true });
+      video.addEventListener('canplay', captureDecodedFrame, { once: true });
       video.addEventListener('error', () => fail(), { once: true });
       video.load();
     });
