@@ -97,6 +97,13 @@ interface ReelsViewerProps {
   // - BottomNav 등 페이지 chrome이 그대로 노출됨
   // - 음소거 버튼은 영상 내부 좌상단에 배치됨
   embedded?: boolean;
+  // embedded 모드에서 하단에 비워둘 고정 공간(px).
+  // 예) Flicks 페이지처럼 ReelsViewer 컨테이너가 화면 하단까지 차서 BottomNav 알약 뒤로
+  // 블러 배경이 자연스럽게 이어지길 원하지만, 영상/정보 영역은 알약에 가려지면 안 될 때 사용.
+  // - 슬라이드 루트(블러 배경 포함)는 컨테이너 전체 높이를 유지한다.
+  // - 단, 슬라이드 트랙의 "한 슬라이드 높이" 계산과 영상/정보 영역의 bottom을 이 값만큼 줄여서
+  //   다음 슬라이드가 BottomNav 위 경계에서 시작/끝나도록 한다.
+  bottomReserve?: number;
   // embedded 모드에서 영상/이미지 우상단에 닫기(X) 버튼을 표시 (트렌딩 릴스 뷰어용)
   showInlineCloseButton?: boolean;
   // 내 포스팅 삭제 후 호출 (부모가 리스트에서 제거하도록)
@@ -119,6 +126,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   endMessage = "더 이상 표시할 영상이 없습니다",
   endSubMessage = "처음으로 돌아가거나 닫아주세요.",
   embedded = false,
+  bottomReserve = 0,
   showInlineCloseButton = false,
   onDelete,
   onUpdate,
@@ -775,15 +783,25 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         itemCount={items.length}
         onActiveIndexChange={setActiveIndexWithDir}
         embedded={embedded}
+        bottomReserve={bottomReserve}
       >
         {items.map((item, index) => (
+          // 각 슬라이드 컨테이너는 전체 높이(100%)를 차지하지만, 다음 슬라이드와의 간격은
+          // (100% - bottomReserve)로 좁혀 두 슬라이드가 BottomNav 영역에서 살짝 겹치게 한다.
+          // → 블러 배경이 화면 끝까지 자연스럽게 이어지면서도, 영상/정보 영역은 BottomNav 위에서 끝난다.
           <div
             key={item.key}
             data-reel-index={index}
             className="absolute left-0 right-0 w-full"
             style={
               embedded
-                ? { height: "100%", top: `${index * 100}%` }
+                ? {
+                    height: "100%",
+                    top:
+                      bottomReserve > 0
+                        ? `calc(${index} * (100% - ${bottomReserve}px))`
+                        : `${index * 100}%`,
+                  }
                 : { height: "100dvh", top: `${index * 100}dvh` }
             }
           >
@@ -813,6 +831,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                   }, 50);
                 }}
                 embedded={embedded}
+                bottomReserve={bottomReserve}
                 showInlineMuteButton={embedded}
                 onToggleMute={() => setMuted((m) => !m)}
                 showInlineCloseButton={embedded && showInlineCloseButton}
@@ -909,6 +928,9 @@ interface ReelsSlideTrackProps {
   children: React.ReactNode;
   // embedded면 슬라이드 높이를 100dvh 대신 컨테이너 100% 기준으로 계산
   embedded?: boolean;
+  // 한 슬라이드 전환 거리를 컨테이너 높이에서 이만큼 뺀 값(px)으로 만든다.
+  // (BottomNav 영역만큼 다음 슬라이드를 위로 끌어와서, 두 슬라이드가 BottomNav 영역에서 겹치게 함)
+  bottomReserve?: number;
 }
 
 const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
@@ -918,6 +940,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   onActiveIndexChange,
   children,
   embedded = false,
+  bottomReserve = 0,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -1141,8 +1164,13 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
         ref={trackRef}
         className="absolute inset-0 will-change-transform"
         style={{
+          // 슬라이드 한 칸 이동 거리는 (컨테이너 100% - bottomReserve)
+          // → 다음 슬라이드가 BottomNav 영역 바로 위에서 시작/끝나도록 한다.
+          //   (블러 배경은 슬라이드 루트 inset-0이라 화면 끝까지 자연스럽게 이어진다.)
           transform: embedded
-            ? `translate3d(0, calc(${-activeIndex * 100}% + ${dragOffset}px), 0)`
+            ? bottomReserve > 0
+              ? `translate3d(0, calc(${-activeIndex} * (100% - ${bottomReserve}px) + ${dragOffset}px), 0)`
+              : `translate3d(0, calc(${-activeIndex * 100}% + ${dragOffset}px), 0)`
             : `translate3d(0, calc(${-activeIndex * 100}dvh + ${dragOffset}px), 0)`,
           transition: isTransitioning ? "transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1)" : "none",
         }}
@@ -1190,6 +1218,9 @@ interface ReelSlideProps {
   onUserClick: () => void;
   // embedded: 페이지 안에 인라인으로 들어간 모드 (BottomNav 등이 보이는 상태)
   embedded?: boolean;
+  // BottomNav 등 페이지 chrome이 가리는 하단 영역(px). 영상/정보 영역을 이만큼 위로 올린다.
+  // 슬라이드 루트(=블러 배경)는 그대로 컨테이너 100%를 유지해 배경이 화면 끝까지 이어진다.
+  bottomReserve?: number;
   // 영상 내부 좌상단에 표시할 음소거 토글 (embedded 모드 전용)
   showInlineMuteButton?: boolean;
   onToggleMute?: () => void;
@@ -1221,6 +1252,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   onLocationClick,
   onUserClick,
   embedded = false,
+  bottomReserve = 0,
   showInlineMuteButton = false,
   onToggleMute,
   showInlineCloseButton = false,
@@ -1627,7 +1659,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         style={{
           top: "10px",
           bottom: embedded
-            ? `${infoHeight}px`
+            ? `${infoHeight + bottomReserve}px`
             : `calc(env(safe-area-inset-bottom, 0px) + ${infoHeight}px)`,
           cursor: "pointer",
         }}
@@ -1763,10 +1795,13 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           - 정보 영역 본체는 배경 없이 콘텐츠만 올린다. */}
       <div
         className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/95 via-black/55 to-transparent"
-        style={{ bottom: 0, height: `${infoHeight + 100}px` }}
+        style={{ bottom: `${bottomReserve}px`, height: `${infoHeight + 100}px` }}
         aria-hidden
       />
-      <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
+      <div
+        className="absolute left-0 right-0 z-20 pointer-events-none"
+        style={{ bottom: `${bottomReserve}px` }}
+      >
         <div
           ref={infoRef}
           className="px-4"

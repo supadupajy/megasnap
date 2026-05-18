@@ -22,29 +22,21 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
+// Flicks 페이지 컨테이너:
+// - 헤더(64px) 아래부터 화면 하단(0)까지 차지한다.
+// - ReelsViewer의 슬라이드 블러 배경이 BottomNav 알약 뒤까지 자연스럽게 이어진다.
+// - 영상/액션 영역이 BottomNav 알약 뒤에 가려지지 않도록 ReelsViewer에 `bottomReserve`(BottomNav 높이)를
+//   넘겨 영상과 정보 영역만 그만큼 위로 올린다.
 const CONTENT_FIXED_STYLE: React.CSSProperties = {
   position: 'fixed',
   left: 0,
   right: 0,
   top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
-  bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
+  bottom: 0,
 };
 
-// BottomNav가 떠 있는 영역(화면 하단 64px + safe area).
-// 이 영역 뒤로 App.tsx의 흰색 wrapper가 비쳐서 알약 좌/우/위가 흰색으로 보이는 문제가 있어서,
-// 활성 영상의 썸네일을 블러로 깔아 영상과 자연스럽게 이어지도록 채운다.
-const BOTTOM_BACKDROP_STYLE: React.CSSProperties = {
-  position: 'fixed',
-  left: 0,
-  right: 0,
-  bottom: 0,
-  // BottomNav 알약(약 60px) + 외부 패딩까지 충분히 덮도록 safe area + 80px 정도 잡는다
-  height: 'calc(env(safe-area-inset-bottom, 0px) + 80px)',
-  zIndex: 0,
-  pointerEvents: 'none',
-  overflow: 'hidden',
-  backgroundColor: '#000', // 이미지 로딩 전 깜빡임 방지
-};
+// BottomNav가 떠 있는 영역 높이(알약 + 패딩). 영상/정보 영역이 그 뒤로 가려지지 않도록 위로 올릴 양.
+const BOTTOM_NAV_RESERVE_PX = 64;
 
 // 알림/메시지는 라우트가 아니라 오버레이로 동작하므로,
 // Flicks 페이지가 unmount되지 않고 그대로 살아 있다. 이전에 있던 캐시/이어재생/
@@ -58,9 +50,6 @@ const Flicks = () => {
   const [videoPool, setVideoPool] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const hasLoaded = useRef(false);
-
-  // 현재 활성 슬라이드의 대표 이미지(영상 썸네일). BottomNav 뒤 블러 배경에 사용.
-  const [activePoster, setActivePoster] = useState<string | null>(null);
 
   const fetchVideoPool = useCallback(async () => {
     try {
@@ -193,28 +182,9 @@ const Flicks = () => {
     setVideoPool((prev) => prev.map((p) => (p.id === postId ? { ...p, content } : p)));
   }, []);
 
-  // BottomNav 뒤 블러 배경 레이어. 활성 영상의 썸네일이 있으면 그것을 깔고,
-  // 없으면 컨테이너 배경(검은색)만 깐다.
-  const renderBottomBackdrop = () => (
-    <div style={BOTTOM_BACKDROP_STYLE} aria-hidden>
-      {activePoster && (
-        <img
-          src={activePoster}
-          alt=""
-          aria-hidden="true"
-          // 영상 컨테이너 안에서 쓰는 fallback 블러와 동일한 톤으로 처리.
-          // object-cover로 가로 가득 채우고, blur-3xl + scale로 부드러운 분위기.
-          className="absolute inset-0 w-full h-full object-cover blur-3xl scale-150 opacity-100"
-          draggable={false}
-        />
-      )}
-    </div>
-  );
-
   if (isLoading) {
     return (
       <>
-        {renderBottomBackdrop()}
         <div className="bg-black" style={CONTENT_FIXED_STYLE}>
           <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white">
             <Clapperboard className="w-10 h-10 text-white/80" />
@@ -230,7 +200,6 @@ const Flicks = () => {
   if (videoPool.length === 0) {
     return (
       <>
-        {renderBottomBackdrop()}
         <div className="bg-black" style={CONTENT_FIXED_STYLE}>
           <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white px-10 text-center">
             <Clapperboard className="w-12 h-12 text-white/70" />
@@ -247,7 +216,6 @@ const Flicks = () => {
 
   return (
     <>
-      {renderBottomBackdrop()}
       <div className="bg-black" style={CONTENT_FIXED_STYLE}>
         <ReelsViewer
           isOpen={true}
@@ -256,9 +224,9 @@ const Flicks = () => {
           onClose={handleClose}
           onDelete={handlePostDeleted}
           onUpdate={handlePostUpdated}
-          onActivePosterChange={setActivePoster}
           noRepeat
           embedded
+          bottomReserve={BOTTOM_NAV_RESERVE_PX}
           endMessage="더 이상 표시할 영상이 없습니다"
           endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
         />
