@@ -132,8 +132,20 @@ const BottomNav = () => {
 
     // capture: true 로 등록해야 자식 스크롤 컨테이너의 scroll 이벤트도 잡힘
     window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+
+    // Flicks(ReelsViewer)처럼 transform 기반 슬라이더 페이지는 scroll 이벤트가
+    // 발생하지 않으므로, 커스텀 이벤트로 메뉴 숨김/노출 신호를 받는다.
+    // 다른 페이지의 스크롤 동작과 동일한 UX (위로 스와이프=숨김, 아래로=노출).
+    const handleVisibility = (e: Event) => {
+      const detail = (e as CustomEvent<{ hidden?: boolean }>).detail;
+      if (!detail) return;
+      setIsHidden(!!detail.hidden);
+    };
+    window.addEventListener('bottom-nav-visibility', handleVisibility);
+
     return () => {
       window.removeEventListener('scroll', handleScroll, { capture: true } as any);
+      window.removeEventListener('bottom-nav-visibility', handleVisibility);
     };
   }, []);
 

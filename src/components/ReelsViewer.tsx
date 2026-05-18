@@ -506,14 +506,43 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   // (useEffect 기반 비교는 빠른 연속 스와이프 시 batching/순서 꼬임으로
   //  방향이 가끔 반대로 잡히는 버그가 있었음 → 그 자리에서 즉시 set)
   const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
-  const setActiveIndexWithDir = useCallback((next: number | ((prev: number) => number)) => {
-    setActiveIndex((prev) => {
-      const resolved = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
-      if (resolved > prev) setSwipeDir(1);
-      else if (resolved < prev) setSwipeDir(-1);
-      return resolved;
-    });
-  }, []);
+  const setActiveIndexWithDir = useCallback(
+    (next: number | ((prev: number) => number)) => {
+      setActiveIndex((prev) => {
+        const resolved = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
+        if (resolved > prev) {
+          setSwipeDir(1);
+          // embedded 모드(Flicks 페이지)에서는 다른 페이지의 스크롤 UX와 동일하게,
+          // 위로 스와이프(=다음 컨텐츠로 이동) 시 하단 알약 메뉴바를 숨긴다.
+          if (embedded) {
+            window.dispatchEvent(
+              new CustomEvent("bottom-nav-visibility", { detail: { hidden: true } })
+            );
+          }
+        } else if (resolved < prev) {
+          setSwipeDir(-1);
+          // 아래로 스와이프(=이전 컨텐츠로 이동) 시 메뉴바 다시 노출.
+          if (embedded) {
+            window.dispatchEvent(
+              new CustomEvent("bottom-nav-visibility", { detail: { hidden: false } })
+            );
+          }
+        }
+        return resolved;
+      });
+    },
+    [embedded]
+  );
+
+  // ReelsViewer가 닫히거나 embedded가 꺼질 때 메뉴바를 다시 노출시킨다.
+  useEffect(() => {
+    if (!embedded) return;
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("bottom-nav-visibility", { detail: { hidden: false } })
+      );
+    };
+  }, [embedded]);
 
   // ── 내 포스팅 수정/삭제 핸들러 ───────────────────────────────
   const isPostMine = useCallback(
