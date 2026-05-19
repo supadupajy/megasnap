@@ -145,6 +145,9 @@ const PostCommentsDialog = ({
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const onCommentsChangeRef = useRef(onCommentsChange);
+  const commentsRef = useRef<Comment[]>([]);
+  const fetchSequenceRef = useRef(0);
+  const mutationSequenceRef = useRef(0);
   const isAdPost = useMemo(() => !isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
 
@@ -217,11 +220,22 @@ const PostCommentsDialog = ({
     onCommentsChangeRef.current = onCommentsChange;
   }, [onCommentsChange]);
 
+  const setLocalComments = (nextComments: Comment[]) => {
+    commentsRef.current = nextComments;
+    setComments(nextComments);
+  };
+
+  const syncComments = (nextComments: Comment[]) => {
+    commentsRef.current = nextComments;
+    setComments(nextComments);
+    onCommentsChangeRef.current(nextComments);
+  };
+
   useEffect(() => {
     if (!isOpen) return;
     // 광고 포스트는 fetchAdComments에서 직접 로드하므로 initialComments로 덮어쓰지 않음
     if (isAdPost) return;
-    setComments(initialComments || []);
+    setLocalComments(initialComments || []);
   }, [isOpen, initialComments, isAdPost]);
 
   // 댓글 조회: 일반 포스트는 기존 로직, 광고 포스트는 ad_comments 테이블
@@ -230,20 +244,24 @@ const PostCommentsDialog = ({
     if (!isOpen) return;
 
     let cancelled = false;
+    const requestSeq = ++fetchSequenceRef.current;
+    const mutationSeqAtStart = mutationSequenceRef.current;
     if (isAdPost) {
       fetchAdComments(postId)
         .then((freshComments) => {
           if (cancelled) return;
-          setComments(freshComments);
-          onCommentsChangeRef.current(freshComments);
+          if (requestSeq !== fetchSequenceRef.current) return;
+          if (mutationSequenceRef.current !== mutationSeqAtStart) return;
+          syncComments(freshComments);
         })
         .catch(() => {});
     } else {
       fetchCommentsByPostId(postId)
         .then((freshComments) => {
           if (cancelled) return;
-          setComments(freshComments);
-          onCommentsChangeRef.current(freshComments);
+          if (requestSeq !== fetchSequenceRef.current) return;
+          if (mutationSequenceRef.current !== mutationSeqAtStart) return;
+          syncComments(freshComments);
         })
         .catch(() => {});
     }
@@ -264,12 +282,8 @@ const PostCommentsDialog = ({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onOpenChange]);
 
-  const syncComments = (nextComments: Comment[]) => {
-    setComments(nextComments);
-    onCommentsChangeRef.current(nextComments);
-  };
-
   const stopSheetEvent = (e: React.SyntheticEvent) => {
+
     e.stopPropagation();
   };
 
@@ -326,8 +340,10 @@ const PostCommentsDialog = ({
         });
       }
 
-      syncComments([...comments, saved]);
+      mutationSequenceRef.current += 1;
+      syncComments([...commentsRef.current, saved]);
       markCommented(postId);
+
       setCommentInput('');
       requestAnimationFrame(() => commentInputRef.current?.focus());
       showSuccess('댓글이 등록되었습니다.');
@@ -367,8 +383,10 @@ const PostCommentsDialog = ({
       } else {
         saved = await updateComment({ commentId: comment.id, userId: authUser.id, content: nextText });
       }
-      syncComments(comments.map(item => item.id === saved.id ? saved : item));
+      mutationSequenceRef.current += 1;
+      syncComments(commentsRef.current.map(item => item.id === saved.id ? saved : item));
       setEditingCommentId(null);
+
       setEditCommentText('');
       showSuccess('댓글이 수정되었습니다.');
     } catch (err) {
@@ -398,7 +416,8 @@ const PostCommentsDialog = ({
     const nextIsLiked = !previousIsLiked;
     const nextLikesCount = Math.max(0, previousLikesCount + (nextIsLiked ? 1 : -1));
 
-    syncComments(comments.map(item =>
+    mutationSequenceRef.current += 1;
+    syncComments(commentsRef.current.map(item =>
       item.id === commentId
         ? { ...item, isLiked: nextIsLiked, likesCount: nextLikesCount }
         : item
@@ -419,12 +438,14 @@ const PostCommentsDialog = ({
         shouldLike: nextIsLiked,
       });
     } catch (err) {
-      syncComments(comments.map(item =>
+      mutationSequenceRef.current += 1;
+      syncComments(commentsRef.current.map(item =>
         item.id === commentId
           ? { ...item, isLiked: previousIsLiked, likesCount: previousLikesCount }
           : item
       ));
       showError('좋아요 처리 중 오류가 발생했습니다.');
+
     } finally {
       setLikingCommentIds(prev => {
         const next = new Set(prev);
@@ -444,8 +465,10 @@ const PostCommentsDialog = ({
       } else {
         await deleteComment({ commentId: commentToDelete.id, userId: authUser.id });
       }
-      const nextComments = comments.filter(item => item.id !== commentToDelete.id);
+      mutationSequenceRef.current += 1;
+      const nextComments = commentsRef.current.filter(item => item.id !== commentToDelete.id);
       syncComments(nextComments);
+
       // 해당 포스트에 내 댓글이 더 이상 없으면 commentedPostIds에서 제거
       const stillHasMine = nextComments.some(item => item.userId === authUser.id);
       if (!stillHasMine) unmarkCommented(postId);
