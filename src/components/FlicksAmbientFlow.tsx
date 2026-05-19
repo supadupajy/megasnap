@@ -170,42 +170,40 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         touchAction: "none",
       }}
     >
-      {/* 1) Ambient color wash — 큰 두 개의 radial glow가 좌/우 하단에서 위로 넓게 퍼진다.
-             영역(64px)을 훨씬 넘어서는 큰 반지름으로 그려 광활한 빛 느낌을 표현. */}
+      {/* 1) Ambient color wash — 큰 두 개의 radial glow가 좌/우에서 천천히 숨쉬듯 펄스 */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background: `
-            radial-gradient(220% 320% at 25% 130%, rgba(${colorStr}, 0.85) 0%, rgba(${colorStr}, 0.35) 30%, rgba(${colorStr}, 0.10) 55%, transparent 75%),
-            radial-gradient(220% 320% at 75% 130%, rgba(${colorStr}, 0.70) 0%, rgba(${colorStr}, 0.28) 30%, rgba(${colorStr}, 0.08) 55%, transparent 75%)
+            radial-gradient(120% 180% at 20% 120%, rgba(${colorStr}, 0.55) 0%, rgba(${colorStr}, 0.18) 35%, transparent 65%),
+            radial-gradient(120% 180% at 80% 130%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.12) 35%, transparent 65%)
           `,
           transition: "background 600ms ease",
         }}
       />
 
-      {/* 2) 중앙 큰 후광 — 알약 바로 아래에서 위로 강하게 번지는 메인 글로우.
-             "살짝 호흡"하면서 살아있는 느낌. */}
+      {/* 2) 살짝 호흡하는 ambient layer — opacity만 천천히 변동시켜 "살아있는" 느낌 */}
       <div
         className="absolute inset-0 pointer-events-none flicks-ambient-breathe"
         style={{
-          background: `radial-gradient(180% 280% at 50% 140%, rgba(${colorStr}, 0.75) 0%, rgba(${colorStr}, 0.30) 35%, transparent 70%)`,
+          background: `radial-gradient(100% 160% at 50% 130%, rgba(${colorStr}, 0.35) 0%, transparent 60%)`,
         }}
       />
 
       {/* 3) 상단 fade — 영상 컨테이너 하단의 검은 그라데이션과 자연스럽게 이어지도록
-              위쪽 일부만 살짝 어둡게. ambient를 더 위쪽까지 보이게 하려고 fade 영역은 더 좁게. */}
+              위쪽일수록 진한 검정. 이게 없으면 영상과 ambient 영역의 경계가 띠처럼 보일 수 있음. */}
       <div
         className="absolute inset-x-0 top-0 pointer-events-none"
         style={{
-          height: "30%",
-          background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0) 100%)`,
+          height: "55%",
+          background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)`,
         }}
       />
 
       {/* keyframes는 컴포넌트 안에 함께 둬서 다른 곳에 영향이 가지 않게 한다. */}
       <style>{`
         @keyframes flicksAmbientBreathe {
-          0%, 100% { opacity: 0.65; }
+          0%, 100% { opacity: 0.55; }
           50% { opacity: 1; }
         }
         .flicks-ambient-breathe {
