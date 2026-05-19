@@ -1124,21 +1124,6 @@ const MapContainer = ({
         : '';
       const storedVideoPoster = firstVideoUrl ? getStoredMarkerThumbnail(post) : '';
       const cachedVideoThumb = firstVideoUrl ? videoThumbCacheRef.current.get(post.id) : '';
-      // ── 디버그: 활성 영상 마커가 빈 어두운 배경으로 남는 원인 추적 ──
-      if (firstVideoUrl) {
-        // eslint-disable-next-line no-console
-        console.log('[ActiveVideoMarkerDebug]', {
-          postId: post.id,
-          videoUrl: firstVideoUrl,
-          image_url: post.image_url,
-          image: post.image,
-          images: post.images,
-          videoUrls: post.videoUrls,
-          storedVideoPoster,
-          cachedVideoThumb,
-          isAd: post.isAd,
-        });
-      }
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
       const markerFloatKey = 'float-v5';
@@ -1823,11 +1808,14 @@ const MapContainer = ({
           img = cached || '';
         }
       }
-      const optimized = img ? getOptimizedMarkerImage(img, id) : '';
+      const optimized = img
+        ? (isGeneratedVideoThumbnailUrl(img) ? img : getOptimizedMarkerImage(img, id))
+        : '';
 
       // 영상 포스트면 회색 점 중앙에 작은 ▶ 아이콘만 추가로 표시한다.
       // 이외 동작/디자인은 기존과 동일.
       const ghostFirstVideoUrl = (() => {
+
         const single = typeof (post as any).videoUrl === 'string' && (post as any).videoUrl.trim()
           ? (post as any).videoUrl
           : (typeof (post as any).video_url === 'string' && (post as any).video_url.trim() ? (post as any).video_url : '');
@@ -1838,17 +1826,8 @@ const MapContainer = ({
         return arr.find((u: unknown) => typeof u === 'string' && (u as string).trim()) || '';
       })();
       const ghostHasVideo = !!ghostFirstVideoUrl;
-      if (ghostHasVideo) {
-        // eslint-disable-next-line no-console
-        console.log('[GhostVideoMarkerDebug]', {
-          postId: id,
-          image_url: (post as any).image_url,
-          images: (post as any).images,
-          videoUrl: ghostFirstVideoUrl,
-          optimized,
-        });
-      }
       const ghostPlayIconHtml = ghostHasVideo
+
         ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,0.25);pointer-events:none;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
         : '';
 
@@ -2330,7 +2309,7 @@ const MapContainer = ({
     }
 
     const optimizedDisplayImage = displayImage
-      ? getOptimizedMarkerImage(displayImage, String(post.id))
+      ? (isGeneratedVideoThumbnailUrl(displayImage) ? displayImage : getOptimizedMarkerImage(displayImage, String(post.id)))
       : '';
 
     let borderType = post.borderType || 'none';
