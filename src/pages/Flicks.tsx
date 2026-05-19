@@ -268,6 +268,7 @@ const Flicks = () => {
           onActivePosterChange={setActivePosterUrl}
         />
       </div>
+      {bottomFill}
     </>
   );
 };
