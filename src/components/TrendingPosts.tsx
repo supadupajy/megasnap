@@ -1143,6 +1143,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     postId: null,
     count: 0,
   });
+  const previousCollapsedAnimatedPostIdRef = useRef<string | null>(null);
 
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
 
@@ -1345,10 +1346,17 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, [isExpanded, posts]);
 
   const currentPost = (posts[currentIndex] || posts[0]) as (Post & { rank: number }) | undefined;
+  const currentCollapsedPostKey = currentPost?.id ? String(currentPost.id) : null;
+  const shouldAnimateCollapsedText = previousCollapsedAnimatedPostIdRef.current !== currentCollapsedPostKey;
   const currentCollapsedThumbUrl = currentPost ? getTrendingThumbnailImageUrl(currentPost) : null;
   const visibleExpandedPosts = isExpanded ? posts.slice(0, visibleItemLimit) : [];
 
   useEffect(() => {
+    previousCollapsedAnimatedPostIdRef.current = currentCollapsedPostKey;
+  }, [currentCollapsedPostKey]);
+
+  useEffect(() => {
+
     const previousRender = previousCollapsedRenderRef.current;
     const nextPostId = currentPost?.id ? String(currentPost.id) : null;
     const nextRank = (currentPost as any)?.rank ?? null;
@@ -1357,6 +1365,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     console.log('[TrendingDebug][collapsed-render-reason]', {
       refreshTick,
       collapsedPostId,
+      shouldAnimateCollapsedText,
       next: {
         postId: nextPostId,
         rank: nextRank,
@@ -1382,7 +1391,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
       postRef: currentPost || null,
       refreshTick,
     };
-  }, [collapsedPostId, currentCollapsedThumbUrl, currentPost, refreshTick]);
+  }, [collapsedPostId, currentCollapsedThumbUrl, currentPost, refreshTick, shouldAnimateCollapsedText]);
 
   const handleScroll = useCallback(() => {
 
@@ -1556,11 +1565,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
                       <motion.p
                         key={currentPost?.id || 'empty-trending-post'}
-                        initial={{ y: 15, opacity: 0 }}
+                        initial={shouldAnimateCollapsedText ? { y: 15, opacity: 0 } : false}
                         animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: -15, opacity: 0 }}
-                        transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
+                        exit={shouldAnimateCollapsedText ? { y: -15, opacity: 0 } : undefined}
+                        transition={shouldAnimateCollapsedText ? { duration: 0.3, opacity: { duration: 0.2 } } : { duration: 0 }}
                         onAnimationStart={() => {
+                          if (!shouldAnimateCollapsedText) return;
                           const nextPostId = currentPost?.id ? String(currentPost.id) : null;
                           const previousAnimation = previousTextAnimationRef.current;
                           const nextCount = previousAnimation.postId === nextPostId ? previousAnimation.count + 1 : 1;
@@ -1573,23 +1583,25 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                             collapsedPostId,
                             animationCountForPost: nextCount,
                             samePostAsPreviousAnimation: previousAnimation.postId === nextPostId,
+                            shouldAnimateCollapsedText,
                             currentPost: getCollapsedPostDebugInfo(currentPost),
                           });
                         }}
                         onAnimationComplete={() => {
+                          if (!shouldAnimateCollapsedText) return;
                           // eslint-disable-next-line no-console
                           console.log('[TrendingDebug][collapsed-text-animation-complete]', {
                             collapsedPostId,
                             animationCountForPost: previousTextAnimationRef.current.count,
+                            shouldAnimateCollapsedText,
                             currentPost: getCollapsedPostDebugInfo(currentPost),
                           });
                         }}
-
                         className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                       >
-
                         <HashtagText text={currentPost?.content || ''} />
                       </motion.p>
+
                     </AnimatePresence>
                   </div>
                   {/* 순위 변동 */}
