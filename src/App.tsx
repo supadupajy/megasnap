@@ -15,6 +15,7 @@ import Header from "./components/Header";
 import BottomNav from "./components/BottomNav";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { NotificationProvider } from "./components/NotificationProvider";
+import { OverlayVisibilityProvider } from "./components/OverlayVisibilityProvider";
 import { Loader2 } from "lucide-react";
 import { usePushNotifications } from "./hooks/use-push-notifications";
 import PlaceSearchOverlay from "./components/PlaceSearchOverlay";
@@ -446,6 +447,7 @@ const App = () => {
           <AuthProvider>
             <PushNotificationBootstrap />
             <NotificationProvider>
+              <OverlayVisibilityProvider>
               <div className="min-h-screen w-full bg-white overflow-x-hidden">
                 <AnimatePresence mode="wait">
                   {showSplash ? (
@@ -455,6 +457,7 @@ const App = () => {
                   )}
                 </AnimatePresence>
               </div>
+              </OverlayVisibilityProvider>
             </NotificationProvider>
           </AuthProvider>
         </BrowserRouter>

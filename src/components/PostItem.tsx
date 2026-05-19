@@ -31,6 +31,7 @@ import { useLocationDisplay } from '@/hooks/use-location-display';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 import { useKeyboardSafeScroll } from '@/hooks/use-keyboard-safe-scroll';
 import { getPostMediaItems } from '@/utils/post-media';
+import { useOverlayVisibility } from './OverlayVisibilityProvider';
 
 interface PostItemProps {
   post: Post;
@@ -47,7 +48,7 @@ interface PostItemProps {
   isPlaying?: boolean;
 }
 
-const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, onMediaClick, onOwnUserClick, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
+const PostItemInner = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onSaveToggle, onMediaClick, onOwnUserClick, isViewed, disablePulse, autoPlayVideo, isPlaying = false }: PostItemProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, profile: authProfile, isAdmin, commentedPostIds } = useAuth();
@@ -65,11 +66,11 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
   const [isVisible, setIsVisible] = useState(false);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
   const [isCommentsDialogOpen, setIsCommentsDialogOpen] = useState(false);
-  // 외부 오버레이(댓글 시트 또는 알림/메시지 전역 오버레이)가 떠 있는 동안 비디오를 잠시 멈추기 위한 상태
-  const [isOverlayOpen, setIsOverlayOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return !!(window as any).__commentsDialogOpen || !!(window as any).__isAppOverlayOpen;
-  });
+  // 외부 오버레이(댓글 시트 또는 알림/메시지 전역 오버레이)가 떠 있는 동안 비디오를 잠시 멈추기 위한 상태.
+  // 각 PostItem이 window 이벤트를 따로 listen하면 피드에 카드가 100개 있을 때 같은 이벤트에
+  // 200개의 리스너가 붙어 모든 카드가 동시에 setState/리렌더링되어 모바일에서 큰 부하를 만든다.
+  // → OverlayVisibilityProvider가 앱 전체에서 1번만 listen하고 Context로 공유한다.
+  const { isAnyOverlayOpen: isOverlayOpen } = useOverlayVisibility();
   // 오버레이가 열릴 때 비디오가 재생 중이었는지 기억해두고, 닫힐 때 다시 재생
   const wasPlayingBeforeOverlayRef = useRef(false);
 
@@ -249,53 +250,27 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
 
   // 댓글 다이얼로그 또는 알림/메시지 전역 오버레이가 열려있는 동안 비디오를 멈추기 위한 추적.
   // 둘 중 하나라도 열려 있으면 일시정지, 모두 닫히면 재생 재개.
+  //
+  // isOverlayOpen 자체는 OverlayVisibilityProvider가 Context로 공급하므로,
+  // 여기서는 그 값이 바뀌는 순간에만 비디오 상태를 동기화한다.
   useEffect(() => {
     if (!autoPlayVideo) return;
 
-    let commentsOpen = !!(window as any).__commentsDialogOpen;
-    let appOverlayOpen = !!(window as any).__isAppOverlayOpen;
+    const video = videoRef.current;
+    if (!video) return;
 
-    const applyOverlayState = () => {
-      const nextOpen = commentsOpen || appOverlayOpen;
-      setIsOverlayOpen((prev) => {
-        if (prev === nextOpen) return prev;
-
-        const video = videoRef.current;
-        if (video) {
-          if (nextOpen) {
-            // 오버레이가 열리는 순간: 현재 재생 중이었는지 기록 후 일시정지
-            wasPlayingBeforeOverlayRef.current = !video.paused;
-            video.pause();
-          } else if (wasPlayingBeforeOverlayRef.current && isVisible && isReadyToPlay) {
-            // 오버레이가 닫히고 다시 보이는 상태라면 재생 재개
-            video.play().catch(() => {});
-            wasPlayingBeforeOverlayRef.current = false;
-          } else {
-            wasPlayingBeforeOverlayRef.current = false;
-          }
-        }
-        return nextOpen;
-      });
-    };
-
-    const handleComments = (e: Event) => {
-      commentsOpen = !!(e as CustomEvent).detail?.open;
-      applyOverlayState();
-    };
-    const handleAppOverlay = (e: Event) => {
-      appOverlayOpen = !!(e as CustomEvent).detail?.open;
-      applyOverlayState();
-    };
-
-    window.addEventListener('comments-dialog-visibility', handleComments);
-    window.addEventListener('app-overlay-visibility', handleAppOverlay);
-    applyOverlayState();
-
-    return () => {
-      window.removeEventListener('comments-dialog-visibility', handleComments);
-      window.removeEventListener('app-overlay-visibility', handleAppOverlay);
-    };
-  }, [autoPlayVideo, isVisible, isReadyToPlay]);
+    if (isOverlayOpen) {
+      // 오버레이가 열리는 순간: 현재 재생 중이었는지 기록 후 일시정지
+      wasPlayingBeforeOverlayRef.current = !video.paused;
+      video.pause();
+    } else if (wasPlayingBeforeOverlayRef.current && isVisible && isReadyToPlay) {
+      // 오버레이가 닫히고 다시 보이는 상태라면 재생 재개
+      video.play().catch(() => {});
+      wasPlayingBeforeOverlayRef.current = false;
+    } else {
+      wasPlayingBeforeOverlayRef.current = false;
+    }
+  }, [autoPlayVideo, isOverlayOpen, isVisible, isReadyToPlay]);
 
   useEffect(() => {
     setLocalContent(post.content || '');
@@ -874,5 +849,57 @@ const PostItem = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate, onS
     </div>
   );
 };
+
+/**
+ * PostItem을 React.memo로 감싸 부모(피드 페이지) 리렌더링 시 모든 카드가 따라서
+ * 리렌더링되는 것을 막는다. 부모는 좋아요 토글 등으로 매 렌더링마다 새 콜백을 만들지만,
+ * 콜백 참조가 바뀌어도 \"보여지는 결과\"는 동일하므로 콜백 prop은 비교에서 제외하고
+ * 의미 있는 데이터(post 내용, 표시 상태)만 비교한다.
+ *
+ * 이 비교는 모든 prop을 깊게 비교하지 않고, 카드가 실제로 다시 그려야 하는
+ * 트리거가 되는 필드만 얕게 비교한다 (PostItem 내부의 useEffect들은 자체적으로
+ * 필요한 부수 효과를 처리하므로 콜백 참조 변화는 화면에 영향을 주지 않는다).
+ */
+const arePostItemPropsEqual = (
+  prev: PostItemProps,
+  next: PostItemProps
+): boolean => {
+  if (prev.isViewed !== next.isViewed) return false;
+  if (prev.disablePulse !== next.disablePulse) return false;
+  if (prev.autoPlayVideo !== next.autoPlayVideo) return false;
+  if (prev.isPlaying !== next.isPlaying) return false;
+
+  const a = prev.post;
+  const b = next.post;
+  if (a === b) return true;
+  if (!a || !b) return false;
+
+  // 부모가 setPosts로 새 배열을 만들어도, 카드 내용에 영향을 주는 값들이 모두 같다면
+  // PostItem은 다시 그릴 필요가 없다.
+  return (
+    a.id === b.id &&
+    a.content === b.content &&
+    a.isLiked === b.isLiked &&
+    a.isSaved === b.isSaved &&
+    a.likes === b.likes &&
+    a.commentsCount === b.commentsCount &&
+    a.image_url === b.image_url &&
+    a.image === b.image &&
+    a.videoUrl === b.videoUrl &&
+    a.images === b.images &&
+    a.videoUrls === b.videoUrls &&
+    a.comments === b.comments &&
+    a.location === b.location &&
+    a.category === b.category &&
+    a.isNewRealtime === b.isNewRealtime &&
+    a.isFriendPost === b.isFriendPost &&
+    a.hasUserCommented === b.hasUserCommented &&
+    a.user?.name === b.user?.name &&
+    a.user?.avatar === b.user?.avatar &&
+    a.user?.id === b.user?.id
+  );
+};
+
+const PostItem = React.memo(PostItemInner, arePostItemPropsEqual);
 
 export default PostItem;

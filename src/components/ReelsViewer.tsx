@@ -39,6 +39,7 @@ import { fetchCommentsByPostId, isPersistedPostId } from "@/utils/comments";
 import { useVideoMuted } from "@/hooks/use-video-muted";
 import { useViewedPosts } from "@/hooks/use-viewed-posts";
 import { showSuccess, showError } from "@/utils/toast";
+import { useOverlayVisibility } from "@/components/OverlayVisibilityProvider";
 
 // 광고 삽입 주기 (포스팅 3개마다 광고 1개)
 const AD_INSERT_INTERVAL = 3;
@@ -1425,34 +1426,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
 
   // 댓글 다이얼로그 또는 알림/메시지 전역 오버레이가 떠 있는 동안 영상을 잠시 일시정지.
   // 닫히면 다시 재생된다 (현재 위치 유지).
-  const [isOverlayOpen, setIsOverlayOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return !!(window as any).__commentsDialogOpen || !!(window as any).__isAppOverlayOpen;
-  });
-
-  useEffect(() => {
-    let commentsOpen = !!(window as any).__commentsDialogOpen;
-    let appOverlayOpen = !!(window as any).__isAppOverlayOpen;
-    const apply = () => setIsOverlayOpen(commentsOpen || appOverlayOpen);
-
-    const handleComments = (e: Event) => {
-      commentsOpen = !!(e as CustomEvent).detail?.open;
-      apply();
-    };
-    const handleAppOverlay = (e: Event) => {
-      appOverlayOpen = !!(e as CustomEvent).detail?.open;
-      apply();
-    };
-
-    window.addEventListener('comments-dialog-visibility', handleComments);
-    window.addEventListener('app-overlay-visibility', handleAppOverlay);
-    apply();
-
-    return () => {
-      window.removeEventListener('comments-dialog-visibility', handleComments);
-      window.removeEventListener('app-overlay-visibility', handleAppOverlay);
-    };
-  }, []);
+  //
+  // OverlayVisibilityProvider가 앱 전체에서 1번만 window 이벤트를 listen해 Context로 공유한다.
+  // 슬라이드마다 각자 addEventListener하면 Reels 마운트된 모든 슬라이드가 같이 setState되어 부하가 누적됨.
+  const { isAnyOverlayOpen: isOverlayOpen } = useOverlayVisibility();
 
   // active 슬라이드 + 현재 미디어가 영상일 때만 재생, 음소거 상태 적용
   // (오버레이가 떠 있는 동안은 일시정지하고, 닫히면 다시 재생)

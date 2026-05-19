@@ -50,7 +50,17 @@ const PostSkeleton = () => (
 );
 
 // 친구 컨텐츠 - 조회 감지 컴포넌트
-const ViewedAwarePostItem = React.memo(({
+interface ViewedAwarePostItemProps {
+  post: Post;
+  isViewed?: boolean;
+  onVisible: (id: string) => void;
+  onLikeToggle: (id: string) => void;
+  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
+  onDelete: (id: string) => void;
+  scrollRoot?: Element | null;
+}
+
+const ViewedAwarePostItemInner = ({
   post,
   isViewed,
   onVisible,
@@ -58,15 +68,7 @@ const ViewedAwarePostItem = React.memo(({
   onLocationClick,
   onDelete,
   scrollRoot,
-}: {
-  post: Post;
-  isViewed: boolean;
-  onVisible: (id: string) => void;
-  onLikeToggle: () => void;
-  onLocationClick: (e: React.MouseEvent, lat: number, lng: number) => void;
-  onDelete: (id: string) => void;
-  scrollRoot?: Element | null;
-}) => {
+}: ViewedAwarePostItemProps) => {
   const itemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,12 +95,22 @@ const ViewedAwarePostItem = React.memo(({
     return () => observer.disconnect();
   }, [post.id, post.isAd, onVisible, scrollRoot]);
 
+  // PostItem이 React.memo로 감싸져 있어도 onLikeToggle 같은 콜백이 매 렌더링마다
+  // 새 함수 참조로 들어오면 비교 비용이 누적된다. 부모(Popular)는 한 번만 만든
+  // (id) => void 형태의 콜백을 넘기고, 여기서 그 콜백을 그대로 PostItem에 전달한다.
+  // PostItem 내부에서는 인자 없이 호출하므로 () => onLikeToggle(post.id) 어댑터를 만든다.
+  // 이 어댑터는 post.id가 같으면 의미상 동일하지만 참조는 새로 만들어진다.
+  // 그래도 PostItem 자체가 memo + 커스텀 비교(콜백 제외)이므로 리렌더링은 막힌다.
+  const handleLikeToggle = useCallback(() => {
+    onLikeToggle(post.id);
+  }, [onLikeToggle, post.id]);
+
   return (
     <div ref={itemRef} className="border-b border-gray-100 last:border-0 bg-white">
       <PostItem
         post={post}
         isViewed={isViewed}
-        onLikeToggle={onLikeToggle}
+        onLikeToggle={handleLikeToggle}
         onLocationClick={onLocationClick}
         onDelete={onDelete}
         autoPlayVideo={true}
@@ -106,7 +118,47 @@ const ViewedAwarePostItem = React.memo(({
       />
     </div>
   );
-});
+};
+
+// 부모(Popular)가 setPosts로 배열을 새로 만들어 모든 자식이 새 props를 받더라도,
+// post 내용/표시 상태가 변하지 않은 카드는 다시 그리지 않는다.
+// 콜백은 useCallback으로 안정화되어 같은 참조를 유지하므로 비교에 안전하게 포함된다.
+const areViewedAwarePropsEqual = (
+  prev: ViewedAwarePostItemProps,
+  next: ViewedAwarePostItemProps
+): boolean => {
+  if (prev.isViewed !== next.isViewed) return false;
+  if (prev.scrollRoot !== next.scrollRoot) return false;
+  if (prev.onVisible !== next.onVisible) return false;
+  if (prev.onLikeToggle !== next.onLikeToggle) return false;
+  if (prev.onLocationClick !== next.onLocationClick) return false;
+  if (prev.onDelete !== next.onDelete) return false;
+
+  const a = prev.post;
+  const b = next.post;
+  if (a === b) return true;
+  if (!a || !b) return false;
+
+  return (
+    a.id === b.id &&
+    a.content === b.content &&
+    a.isLiked === b.isLiked &&
+    a.isSaved === b.isSaved &&
+    a.likes === b.likes &&
+    a.commentsCount === b.commentsCount &&
+    a.image_url === b.image_url &&
+    a.videoUrl === b.videoUrl &&
+    a.images === b.images &&
+    a.videoUrls === b.videoUrls &&
+    a.isAd === b.isAd &&
+    a.isFriendPost === b.isFriendPost
+  );
+};
+
+const ViewedAwarePostItem = React.memo(
+  ViewedAwarePostItemInner,
+  areViewedAwarePropsEqual
+);
 
 const mapPost = (p: any, isFriend = false): Post => {
   const followers = Number(p.profiles?.followers ?? 0);
@@ -373,7 +425,9 @@ const Popular = () => {
                     isViewed={post.isFriendPost ? !sessionNewFriendIds.has(post.id) : undefined}
                     scrollRoot={scrollRef.current}
                     onVisible={markAsViewed}
-                    onLikeToggle={() => handleLikeToggle(post.id)}
+                    // 인자 없는 인라인 () => handleLikeToggle(post.id) 대신 (id)=>void 그대로 전달.
+                    // useCallback으로 안정된 참조이므로 memo 비교가 정상 동작한다.
+                    onLikeToggle={handleLikeToggle}
                     onLocationClick={handleLocationClick}
                     onDelete={handlePostDelete}
                   />
