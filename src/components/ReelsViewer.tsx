@@ -19,7 +19,8 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-import { Post } from "@/types";
+import { Comment, Post } from "@/types";
+
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toggleLikeInDb } from "@/utils/like-utils";
@@ -160,6 +161,26 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   const [commentMetaMap, setCommentMetaMap] = useState<
     Record<string, { count: number; hasMine: boolean }>
   >({});
+  const handleCommentsMetaChange = useCallback(
+    (postId: string, comments: Comment[]) => {
+      const uid = authUser?.id;
+      const nextMeta = {
+        count: comments.length,
+        hasMine: !!uid && comments.some((c) => c.userId === uid),
+      };
+      setCommentMetaMap((prev) => {
+        const prevMeta = prev[postId];
+        if (prevMeta?.count === nextMeta.count && prevMeta?.hasMine === nextMeta.hasMine) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [postId]: nextMeta,
+        };
+      });
+    },
+    [authUser?.id]
+  );
   // 내 포스팅 수정 후 즉시 슬라이드에 반영하기 위한 로컬 content 덮어쓰기 맵
   const [contentMap, setContentMap] = useState<Record<string, string>>({});
 
@@ -807,8 +828,11 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                 onLikeToggle={() => handleLikeToggle(item.post.id)}
                 onSaveToggle={() => handleSaveToggle(item.post.id)}
                 onCommentClick={() => setCommentsPostId(item.post.id)}
+                commentCountOverride={commentMetaMap[item.post.id]?.count}
+                hasUserCommentedOverride={commentMetaMap[item.post.id]?.hasMine}
                 onLocationClick={() => handleLocationClick(item.post)}
                 onUserClick={() => {
+
                   const targetUserId = item.post.owner_id || item.post.user_id || item.post.user.id;
                   const isValidUUID =
                     targetUserId &&
@@ -881,14 +905,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         profile={null}
         onCommentsChange={(comments) => {
           if (!commentsPostId) return;
-          const uid = authUser?.id;
-          setCommentMetaMap((prev) => ({
-            ...prev,
-            [commentsPostId]: {
-              count: comments.length,
-              hasMine: !!uid && comments.some((c) => c.userId === uid),
-            },
-          }));
+          handleCommentsMetaChange(commentsPostId, comments);
         }}
       />
 
@@ -1222,8 +1239,11 @@ interface ReelSlideProps {
   onLikeToggle: () => void;
   onSaveToggle: () => void;
   onCommentClick: () => void;
+  commentCountOverride?: number;
+  hasUserCommentedOverride?: boolean;
   onLocationClick: () => void;
   onUserClick: () => void;
+
   // embedded: 페이지 안에 인라인으로 들어간 모드 (BottomNav 등이 보이는 상태)
   embedded?: boolean;
   // 영상 내부 좌상단에 표시할 음소거 토글 (embedded 모드 전용)
@@ -1256,9 +1276,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   onLikeToggle,
   onSaveToggle,
   onCommentClick,
+  commentCountOverride,
+  hasUserCommentedOverride,
   onLocationClick,
   onUserClick,
   embedded = false,
+
   showInlineMuteButton = false,
   onToggleMute,
   showInlineCloseButton = false,
@@ -1328,13 +1351,14 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   // video 첫 프레임이 그려진 이후에만 큰 "재생/일시정지" 오버레이를 노출
   // (로딩 중에 회색 재생 버튼이 떠서 버그처럼 보이는 문제 방지)
   const [videoFirstFrameReady, setVideoFirstFrameReady] = useState(false);
-  const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
-  // 현재 로그인 사용자가 이 포스트에 댓글을 남겼는지 (댓글 아이콘 인디고 표시용)
+  const [commentsCount, setCommentsCount] = useState<number>(commentCountOverride ?? (post.commentsCount || 0));
+  // 현재 로그인 사용자가 이 포스트에 댓글을 남긴 포스트인지 (댓글 아이콘 인디고 표시용)
   // 초기값은 부모(Flicks 등)가 사전 fetch해서 넘겨준 post.hasUserCommented 사용,
   // 활성화 시 fetchCommentsByPostId 결과로 정확히 재계산한다.
-  const [hasUserCommented, setHasUserCommented] = useState<boolean>(!!post.hasUserCommented);
+  const [hasUserCommented, setHasUserCommented] = useState<boolean>(hasUserCommentedOverride ?? !!post.hasUserCommented);
 
   // 영상 타임라인 상태
+
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -1515,8 +1539,17 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
     };
   }, [activeMediaUrl, isScrubbing, isActive, activeIsVideo]);
 
+  useEffect(() => {
+    setCommentsCount(commentCountOverride ?? (post.commentsCount || 0));
+  }, [commentCountOverride, post.id, post.commentsCount]);
+
+  useEffect(() => {
+    setHasUserCommented(hasUserCommentedOverride ?? !!post.hasUserCommented);
+  }, [hasUserCommentedOverride, post.id, post.hasUserCommented]);
+
   // 댓글 수 + 내가 댓글을 남긴 포스팅인지 fetch (활성화 시 1회)
   useEffect(() => {
+
     if (!isActive) return;
     if (!isPersistedPostId(post.id)) return;
     let cancelled = false;

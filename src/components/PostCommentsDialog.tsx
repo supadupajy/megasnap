@@ -144,8 +144,10 @@ const PostCommentsDialog = ({
   const commentInputRef = useRef<HTMLInputElement>(null);
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
+  const onCommentsChangeRef = useRef(onCommentsChange);
   const isAdPost = useMemo(() => !isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
+
   const frozenSheetBottomRef = useRef<string | null>(null);
   const frozenSheetTopRef = useRef<number | null>(null);
   const liveSheetBottom = '0px';
@@ -212,6 +214,10 @@ const PostCommentsDialog = ({
   }, [shouldRender]);
 
   useEffect(() => {
+    onCommentsChangeRef.current = onCommentsChange;
+  }, [onCommentsChange]);
+
+  useEffect(() => {
     if (!isOpen) return;
     // 광고 포스트는 fetchAdComments에서 직접 로드하므로 initialComments로 덮어쓰지 않음
     if (isAdPost) return;
@@ -220,6 +226,7 @@ const PostCommentsDialog = ({
 
   // 댓글 조회: 일반 포스트는 기존 로직, 광고 포스트는 ad_comments 테이블
   useEffect(() => {
+
     if (!isOpen) return;
 
     let cancelled = false;
@@ -228,7 +235,7 @@ const PostCommentsDialog = ({
         .then((freshComments) => {
           if (cancelled) return;
           setComments(freshComments);
-          onCommentsChange(freshComments);
+          onCommentsChangeRef.current(freshComments);
         })
         .catch(() => {});
     } else {
@@ -236,13 +243,13 @@ const PostCommentsDialog = ({
         .then((freshComments) => {
           if (cancelled) return;
           setComments(freshComments);
-          onCommentsChange(freshComments);
+          onCommentsChangeRef.current(freshComments);
         })
         .catch(() => {});
     }
 
     return () => { cancelled = true; };
-  }, [isOpen, isAdPost, postId, onCommentsChange]);
+  }, [isOpen, isAdPost, postId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -259,7 +266,7 @@ const PostCommentsDialog = ({
 
   const syncComments = (nextComments: Comment[]) => {
     setComments(nextComments);
-    onCommentsChange(nextComments);
+    onCommentsChangeRef.current(nextComments);
   };
 
   const stopSheetEvent = (e: React.SyntheticEvent) => {
