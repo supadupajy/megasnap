@@ -1431,6 +1431,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   // 슬라이드마다 각자 addEventListener하면 Reels 마운트된 모든 슬라이드가 같이 setState되어 부하가 누적됨.
   const { isAnyOverlayOpen: isOverlayOpen } = useOverlayVisibility();
 
+  // 자동재생 정책으로 사운드 있는 재생이 차단됐을 때, 강제로 음소거 fallback이 발생하는 경우가 있다.
+  // 그 순간 UI(아이콘)와 실제 음소거 상태가 어긋나는 걸 막기 위해, 슬라이드 내부에서도
+  // 같은 hook(useVideoMuted)으로 setMuted에 접근한다. (sessionStorage 기반이라 부모와 자동 동기화됨)
+  const [, setMuted] = useVideoMuted();
+
   // active 슬라이드 + 현재 미디어가 영상일 때만 재생, 음소거 상태 적용
   // (오버레이가 떠 있는 동안은 일시정지하고, 닫히면 다시 재생)
   useEffect(() => {
@@ -1444,7 +1449,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           setIsPlaying(true);
         } catch {
           try {
+            // 브라우저 자동재생 정책으로 사운드 있는 재생이 차단된 경우,
+            // 음소거 상태로 강제 전환해 재생을 보장한다.
+            // 이때 React 전역 muted state도 함께 갱신해 UI(아이콘)와 실제 음소거 상태가 항상 일치하도록 한다.
             v.muted = true;
+            if (!muted) setMuted(true);
             await v.play();
             setIsPlaying(true);
           } catch {
@@ -2188,17 +2197,28 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     };
   }, [src, isCurrent]);
 
-  // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
+  // isCurrent가 false로 바뀌면 즉시 일시정지 처리.
   // (비활성 슬라이드의 영상이 백그라운드에서 계속 재생되어 소리가 겹치는 문제 방지)
+  // 음소거는 별도 effect에서 명령적으로 통일 관리한다 (아래 muted 동기화 effect).
   useEffect(() => {
     const el = localRef.current;
     if (!el) return;
     if (!isCurrent) {
-      el.muted = true;
       if (!el.paused) el.pause();
       el.currentTime = 0;
     }
   }, [isCurrent]);
+
+  // muted 명령적 동기화 — 단일 진실 원천(SSOT).
+  // <video> JSX의 muted prop을 제거하고 여기서만 DOM의 muted를 변경한다.
+  // 이렇게 해야 React state와 DOM 상태가 서로 어긋나는 문제를 막을 수 있다.
+  //   - 활성 슬라이드: prop `muted` 값을 그대로 반영
+  //   - 비활성 슬라이드: 무조건 true (소리 겹침 방지)
+  useEffect(() => {
+    const el = localRef.current;
+    if (!el) return;
+    el.muted = isCurrent ? muted : true;
+  }, [isCurrent, muted]);
 
   // 가까운 다음/이전 영상은 실제 재생하지 않고 네트워크 버퍼만 미리 채운다.
   useEffect(() => {
@@ -2217,7 +2237,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         poster={posterUrl || TRANSPARENT_POSTER}
         playsInline
         loop
-        muted={muted}
+        // 첫 자동 재생을 보장하기 위해 초기 DOM 속성은 muted=true로 시작한다 (브라우저 자동재생 정책).
+        // 마운트 직후 위의 muted 동기화 effect가 즉시 실행되어 prop 값에 맞게 갱신한다.
+        // 이후 muted 변경은 모두 위 effect에서만 처리한다(SSOT).
+        muted
         preload={preload}
         style={{
           opacity: isCurrent && !isReady ? 0 : 1,
