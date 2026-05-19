@@ -140,6 +140,23 @@ type VideoThumbResult = string | 'failed';
 
 const videoThumbCache = new Map<string, VideoThumbResult>();
 const videoThumbPending = new Map<string, Set<(result: VideoThumbResult) => void>>();
+
+// 실패한 영상은 일정 시간 후 다시 시도할 수 있도록 만료 시각을 기록한다.
+// (네트워크 일시 오류, CORS, 첫 시도에서의 디코딩 실패 등으로 한 번 실패한 영상이
+//  세션 내내 검은 박스로 남는 회귀를 방지)
+const VIDEO_THUMB_FAILED_TTL_MS = 30 * 1000; // 30초 후 재시도 허용
+const videoThumbFailedAt = new Map<string, number>();
+
+const isFailedCacheExpired = (videoUrl: string): boolean => {
+  const failedAt = videoThumbFailedAt.get(videoUrl);
+  if (!failedAt) return false;
+  return Date.now() - failedAt > VIDEO_THUMB_FAILED_TTL_MS;
+};
+
+const clearFailedCache = (videoUrl: string) => {
+  videoThumbCache.delete(videoUrl);
+  videoThumbFailedAt.delete(videoUrl);
+};
 const imagePreloadCache = new Set<string>();
 const imagePreloadPending = new Map<string, Promise<void>>();
 
@@ -169,8 +186,12 @@ const preloadImage = (url: string | null | undefined) => {
 const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumbResult) => void) => {
   const cached = videoThumbCache.get(videoUrl);
   if (cached) {
-    onComplete(cached);
-    return () => {};
+    // 성공 캐시(데이터 URL)는 즉시 반환. 실패 캐시는 TTL이 지났다면 폐기 후 재시도.
+    if (cached !== 'failed' || !isFailedCacheExpired(videoUrl)) {
+      onComplete(cached);
+      return () => {};
+    }
+    clearFailedCache(videoUrl);
   }
 
   const existingListeners = videoThumbPending.get(videoUrl);
@@ -202,6 +223,11 @@ const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumb
     if (settled) return;
     settled = true;
     videoThumbCache.set(videoUrl, result);
+    if (result === 'failed') {
+      videoThumbFailedAt.set(videoUrl, Date.now());
+    } else {
+      videoThumbFailedAt.delete(videoUrl);
+    }
 
     const currentListeners = videoThumbPending.get(videoUrl);
     videoThumbPending.delete(videoUrl);
@@ -295,25 +321,50 @@ const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumb
 type PlayBadgeSize = 'sm' | 'md';
 
 // 동영상 썸네일을 canvas로 1회 추출한 뒤 같은 videoUrl에는 캐시 이미지를 재사용한다.
+//
+// 실패 시 동작:
+// - 검은 박스 대신 부드러운 회색 그라데이션 + 플레이 아이콘을 표시한다.
+// - 캐시된 'failed' 결과는 30초 후 만료되므로, 마운트되어 있는 동안
+//   타이머로 자동 재시도해 일시적 네트워크/디코딩 실패에서 자연 복구한다.
 const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: PlayBadgeSize }> = ({ videoUrl, className, size = 'md' }) => {
   const cached = videoThumbCache.get(videoUrl);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(
     cached && cached !== 'failed' ? cached : null
   );
   const [failed, setFailed] = React.useState(cached === 'failed');
+  const [retryTick, setRetryTick] = React.useState(0);
 
   React.useEffect(() => {
+    let cancelled = false;
+
     const currentCached = videoThumbCache.get(videoUrl);
-    if (currentCached) {
+    if (currentCached === 'failed' && isFailedCacheExpired(videoUrl)) {
+      clearFailedCache(videoUrl);
+    } else if (currentCached) {
       setThumbUrl(currentCached === 'failed' ? null : currentCached);
       setFailed(currentCached === 'failed');
-      return;
+      // 실패 상태로 마운트된 경우 TTL이 지난 뒤 자동 재시도 예약
+      if (currentCached === 'failed') {
+        const failedAt = videoThumbFailedAt.get(videoUrl) ?? Date.now();
+        const remaining = Math.max(0, VIDEO_THUMB_FAILED_TTL_MS - (Date.now() - failedAt));
+        const timer = window.setTimeout(() => {
+          if (!cancelled) setRetryTick((t) => t + 1);
+        }, remaining + 50);
+        return () => {
+          cancelled = true;
+          window.clearTimeout(timer);
+        };
+      }
+      return () => {
+        cancelled = true;
+      };
     }
 
     setThumbUrl(null);
     setFailed(false);
 
-    return requestVideoThumbnail(videoUrl, (result) => {
+    const unsubscribe = requestVideoThumbnail(videoUrl, (result) => {
+      if (cancelled) return;
       if (result === 'failed') {
         setThumbUrl(null);
         setFailed(true);
@@ -322,7 +373,12 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
         setFailed(false);
       }
     });
-  }, [videoUrl]);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [videoUrl, retryTick]);
 
   if (thumbUrl) {
     return (
@@ -334,8 +390,15 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
   }
 
   if (failed) {
+    // 검은 박스 대신 부드러운 회색 그라데이션으로 fallback.
+    // 시각적으로 영상이 있다는 사실은 PlayOverlay로 명확히 전달된다.
     return (
-      <div className={cn("relative w-full h-full bg-gray-800", className)}>
+      <div
+        className={cn("relative w-full h-full", className)}
+        style={{
+          background: 'linear-gradient(135deg, #e5e7eb 0%, #d1d5db 60%, #9ca3af 100%)',
+        }}
+      >
         <PlayOverlay size={size} />
       </div>
     );
