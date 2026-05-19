@@ -2372,14 +2372,17 @@ const MapContainer = ({
     const adGlowLayer = '';
 
     const innerBoxBackground = hasVideo && !optimizedDisplayImage && !videoThumbCacheRef.current.get(post.id)
-      ? 'background:radial-gradient(circle at 24% 18%,rgba(255,255,255,0.18) 0 10%,transparent 30%),linear-gradient(150deg,#111827 0%,#1f2937 58%,#334155 100%);'
-      : 'background:radial-gradient(circle at 24% 18%,rgba(255,255,255,0.18) 0 9%,transparent 28%),linear-gradient(155deg,rgba(255,255,255,0.16) 0%,rgba(255,255,255,0.04) 30%,rgba(148,163,184,0.08) 100%);';
-    const innerBoxStyle = `width:60px;height:60px;border-radius:50%;position:relative;z-index:2;${inlineBorderStyle}box-shadow:0 7px 16px rgba(15,23,42,0.12),0 0 0 1px rgba(255,255,255,0.10),inset 0 1px 5px rgba(255,255,255,0.20),inset 0 -8px 14px rgba(15,23,42,0.08);${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
-    const bubbleReflectionHtml = `<div class="marker-bubble-reflection" style="position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:4;overflow:hidden;background:linear-gradient(155deg,rgba(255,255,255,0.14) 0%,rgba(255,255,255,0.06) 18%,transparent 40%,rgba(15,23,42,0.06) 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,0.12),inset 0 1px 5px rgba(255,255,255,0.14),inset 0 -8px 12px rgba(15,23,42,0.06);">
-      <div style="position:absolute;top:7px;left:9px;width:24px;height:13px;border-radius:999px;transform:rotate(-18deg);background:radial-gradient(ellipse at 34% 36%,rgba(255,255,255,0.82) 0 24%,rgba(255,255,255,0.30) 46%,rgba(255,255,255,0.08) 66%,transparent 82%);"></div>
-      <div style="position:absolute;top:18px;left:18px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.62) 0 26%,rgba(255,255,255,0.10) 62%,transparent 82%);"></div>
-      <div style="position:absolute;right:10px;bottom:10px;width:22px;height:10px;border-radius:999px;transform:rotate(-20deg);background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,0.08) 0 28%,rgba(255,255,255,0.03) 56%,transparent 76%);"></div>
-      <div style="position:absolute;inset:5px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);"></div>
+      ? 'background:radial-gradient(circle at 26% 18%,rgba(255,255,255,0.18) 0 11%,transparent 31%),linear-gradient(150deg,#111827 0%,#1f2937 58%,#334155 100%);'
+      : 'background:radial-gradient(circle at 26% 18%,rgba(255,255,255,0.12) 0 9%,transparent 28%),linear-gradient(155deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0.03) 34%,rgba(148,163,184,0.06) 100%);';
+    const innerBoxStyle = `width:60px;height:60px;border-radius:50%;position:relative;z-index:2;${inlineBorderStyle}box-shadow:0 9px 18px rgba(15,23,42,0.13),0 0 0 1px rgba(255,255,255,0.08),inset 0 1px 5px rgba(255,255,255,0.16),inset 0 -7px 12px rgba(15,23,42,0.06);${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
+    const bubbleReflectionHtml = `<div class="marker-bubble-reflection" style="position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:4;overflow:hidden;">
+      <div style="position:absolute;inset:1px;border-radius:50%;border:1.4px solid transparent;background:linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.03)) padding-box,conic-gradient(from 205deg,rgba(255,166,190,0.52),rgba(255,224,163,0.48),rgba(255,255,255,0.18),rgba(147,197,253,0.48),rgba(196,181,253,0.50),rgba(255,166,190,0.52)) border-box;opacity:0.78;"></div>
+      <div style="position:absolute;inset:4px;border-radius:50%;border:1px solid rgba(255,255,255,0.24);"></div>
+      <div style="position:absolute;top:5px;left:7px;width:29px;height:17px;border-radius:999px;transform:rotate(-18deg);background:radial-gradient(ellipse at 34% 38%,rgba(255,255,255,0.96) 0 24%,rgba(255,255,255,0.42) 46%,rgba(255,255,255,0.10) 68%,transparent 84%);filter:blur(0.2px);"></div>
+      <div style="position:absolute;top:9px;right:8px;width:16px;height:11px;border-radius:999px;transform:rotate(24deg);background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,0.78) 0 26%,rgba(255,255,255,0.18) 58%,transparent 80%);"></div>
+      <div style="position:absolute;top:18px;left:18px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.82) 0 28%,rgba(255,255,255,0.12) 64%,transparent 82%);"></div>
+      <div style="position:absolute;right:11px;bottom:9px;width:22px;height:11px;border-radius:999px;transform:rotate(-18deg);background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,0.10) 0 28%,rgba(255,255,255,0.03) 58%,transparent 80%);"></div>
+      <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 28% 18%,rgba(255,255,255,0.18) 0 13%,transparent 31%),radial-gradient(circle at 68% 84%,rgba(255,214,170,0.10) 0 14%,transparent 34%),radial-gradient(circle at 50% 115%,rgba(255,255,255,0.14) 0 18%,rgba(15,23,42,0.08) 38%,transparent 60%),linear-gradient(160deg,rgba(255,255,255,0.12) 0%,rgba(255,255,255,0.04) 20%,transparent 40%,rgba(59,130,246,0.05) 74%,rgba(15,23,42,0.06) 100%);"></div>
     </div>`;
 
     // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
