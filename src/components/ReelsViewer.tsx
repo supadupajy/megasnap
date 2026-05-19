@@ -146,6 +146,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<ReelItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const activeIndexForDirectionRef = useRef(0);
   // 음소거 상태는 앱 전역에서 공유 (localStorage 영구 저장)
   const [muted, setMuted] = useVideoMuted();
   const [showHint, setShowHint] = useState(true);
@@ -223,6 +224,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
       seenIdsRef.current = new Set(list.map((p) => p.id));
 
       setItems(rankedItems);
+      activeIndexForDirectionRef.current = startIdx;
       setActiveIndex(startIdx);
       setLikeMap(seedLikes);
       setSavedMap(seedSaved);
@@ -273,6 +275,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
     }
 
     setItems(withAds);
+    activeIndexForDirectionRef.current = 0;
     setActiveIndex(0);
 
     // 좋아요/저장 초기 상태 시드
@@ -560,30 +563,32 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   // (useEffect 기반 비교는 빠른 연속 스와이프 시 batching/순서 꼬임으로
   //  방향이 가끔 반대로 잡히는 버그가 있었음 → 그 자리에서 즉시 set)
   const [swipeDir, setSwipeDir] = useState<1 | -1>(1);
+
+  useEffect(() => {
+    activeIndexForDirectionRef.current = activeIndex;
+  }, [activeIndex]);
+
   const setActiveIndexWithDir = useCallback(
     (next: number | ((prev: number) => number)) => {
-      setActiveIndex((prev) => {
-        const resolved = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
-        if (resolved > prev) {
-          setSwipeDir(1);
-          // embedded 모드(Flicks 페이지)에서는 다른 페이지의 스크롤 UX와 동일하게,
-          // 위로 스와이프(=다음 컨텐츠로 이동) 시 하단 알약 메뉴바를 숨긴다.
-          if (embedded) {
-            window.dispatchEvent(
-              new CustomEvent("bottom-nav-visibility", { detail: { hidden: true } })
-            );
-          }
-        } else if (resolved < prev) {
-          setSwipeDir(-1);
-          // 아래로 스와이프(=이전 컨텐츠로 이동) 시 메뉴바 다시 노출.
-          if (embedded) {
-            window.dispatchEvent(
-              new CustomEvent("bottom-nav-visibility", { detail: { hidden: false } })
-            );
-          }
-        }
-        return resolved;
-      });
+      const prev = activeIndexForDirectionRef.current;
+      const resolved = typeof next === "function" ? (next as (p: number) => number)(prev) : next;
+
+      if (resolved > prev) {
+        setSwipeDir(1);
+      } else if (resolved < prev) {
+        setSwipeDir(-1);
+      }
+
+      activeIndexForDirectionRef.current = resolved;
+      setActiveIndex(resolved);
+
+      if (embedded && resolved !== prev) {
+        window.dispatchEvent(
+          new CustomEvent("bottom-nav-visibility", {
+            detail: { hidden: resolved > prev },
+          })
+        );
+      }
     },
     [embedded]
   );
