@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * FlicksAmbientFlow
@@ -18,6 +19,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  * 동작:
  *  - posterUrl이 주어지면 캔버스에 작게 다운샘플 → 평균색 추출 → ambient color로 저장.
  *  - posterUrl이 없으면 인디고 계열 fallback 톤을 쓴다.
+ *
+ * 렌더 위치:
+ *  - document.body 직속으로 portal 렌더한다. App.tsx의 AnimatePresence/motion.div가
+ *    transform stacking context를 만들기 때문에 그 안에서 position:fixed를 써도
+ *    motion.div 영역 밖(=BottomNav 영역)으로 빠져나갈 수 없다. portal로 body 직속에
+ *    띄워야 진짜 viewport 기준 fixed가 되어 BottomNav 알약 주변까지 채울 수 있다.
  */
 
 interface FlicksAmbientFlowProps {
@@ -146,7 +153,9 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
     transition: "background-color 600ms ease",
   };
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  const content = (
     <div
       aria-hidden="true"
       className="fixed left-0 right-0 bottom-0 overflow-hidden cursor-default select-none"
@@ -247,6 +256,8 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
       `}</style>
     </div>
   );
+
+  return createPortal(content, document.body);
 };
 
 /** 단순 채도 부스트 (RGB → HSL → RGB가 정석이지만 가볍게 처리) */
