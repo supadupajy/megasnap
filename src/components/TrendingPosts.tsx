@@ -592,20 +592,41 @@ const PostThumbnail: React.FC<{
   const primaryMedia = mediaItems[0];
   const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
 
-  const renderImage = (url: string, showPlay = false) => (
-    <div className={cn("relative w-full h-full", className)}>
-      <img
-        src={url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url}
-        alt=""
-        loading={imgLoading}
-        decoding="async"
-        className={cn("w-full h-full object-cover", imgClassName)}
-        onError={onImgError}
-      />
-      {showPlay && <PlayOverlay size={size} />}
-      <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
-    </div>
-  );
+  const renderImage = (url: string, showPlay = false) => {
+    const finalSrc = url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url;
+    return (
+      <div className={cn("relative w-full h-full", className)}>
+        <img
+          src={finalSrc}
+          alt=""
+          loading={imgLoading}
+          decoding="async"
+          className={cn("w-full h-full object-cover", imgClassName)}
+          onLoad={(e) => {
+            const img = e.currentTarget;
+            console.log('[TrendingThumb][img-load]', {
+              postId: post.id,
+              src: img.src,
+              naturalW: img.naturalWidth,
+              naturalH: img.naturalHeight,
+              showPlay,
+            });
+          }}
+          onError={(e) => {
+            console.log('[TrendingThumb][img-ERROR]', {
+              postId: post.id,
+              src: (e.currentTarget as HTMLImageElement).src,
+              originalUrl: url,
+              showPlay,
+            });
+            onImgError?.(e);
+          }}
+        />
+        {showPlay && <PlayOverlay size={size} />}
+        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
+      </div>
+    );
+  };
 
   if (primaryMedia?.type === 'image') {
     return renderImage(primaryMedia.url);
