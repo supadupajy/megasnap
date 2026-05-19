@@ -2192,7 +2192,21 @@ const ReelsVideoSkeleton = ({ posterUrl }: { posterUrl?: string }) => (
   </div>
 );
 
+const emitFlicksDebugLog = (label: string, data: Record<string, unknown> = {}) => {
+  console.log(label, data);
+  if (typeof window === "undefined") return;
+  if (!window.location.pathname.startsWith("/flicks")) return;
+  window.dispatchEvent(new CustomEvent("flicks-debug-log", {
+    detail: {
+      time: new Date().toLocaleTimeString(),
+      label,
+      data,
+    },
+  }));
+};
+
 interface ReelsVideoProps {
+
   src: string;
   videoRef?: React.RefObject<HTMLVideoElement>;
   muted: boolean;
@@ -2239,22 +2253,22 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 
   const logVideoState = useCallback((label: string, extra: Record<string, unknown> = {}) => {
     const el = localRef.current;
-    console.log("[ReelsVideo]", label, {
-      index: debugIndex,
-      isCurrent: isCurrentRef.current,
-      isReady: isReadyRef.current,
+    emitFlicksDebugLog("[ReelsVideo] " + label, {
+      i: debugIndex,
+      cur: isCurrentRef.current,
+      ready: isReadyRef.current,
       preload,
-      shouldWarmUp,
+      warm: shouldWarmUp,
       muted,
       src: debugSrc,
-      readyState: el?.readyState,
-      networkState: el?.networkState,
+      rs: el?.readyState,
+      ns: el?.networkState,
       paused: el?.paused,
-      currentTime: el?.currentTime,
-      duration: el?.duration,
-      videoWidth: el?.videoWidth,
-      videoHeight: el?.videoHeight,
-      error: el?.error ? { code: el.error.code, message: el.error.message } : null,
+      t: el?.currentTime,
+      dur: el?.duration,
+      vw: el?.videoWidth,
+      vh: el?.videoHeight,
+      err: el?.error ? { code: el.error.code, message: el.error.message } : null,
       ...extra,
     });
   }, [debugIndex, debugSrc, muted, preload, shouldWarmUp]);
@@ -2478,15 +2492,32 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
     mediaCountRef.current = mediaList.length;
   }, [mediaList.length]);
 
+  const [debugLines, setDebugLines] = useState<string[]>([]);
+  const showDebugOverlay = typeof window !== "undefined" && window.location.pathname.startsWith("/flicks") && mediaList.length > 1;
+
   useEffect(() => {
-    console.log("[MediaCarousel] current media changed", {
-      currentIndex,
-      mediaCount: mediaList.length,
-      isSlideActive,
-      currentIsVideo: isVideoUrl(mediaList[currentIndex]),
-      mediaTypes: mediaList.map((url) => (isVideoUrl(url) ? "video" : "image")),
+    emitFlicksDebugLog("[MediaCarousel] current media changed", {
+      idx: currentIndex,
+      count: mediaList.length,
+      active: isSlideActive,
+      currentVideo: isVideoUrl(mediaList[currentIndex]),
+      types: mediaList.map((url) => (isVideoUrl(url) ? "v" : "i")).join(""),
     });
   }, [currentIndex, isSlideActive, mediaList]);
+
+  useEffect(() => {
+    if (!showDebugOverlay) return;
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      const data = detail?.data ? JSON.stringify(detail.data) : "";
+      setDebugLines((prev) => [
+        ...prev,
+        `${detail?.time || ""} ${detail?.label || ""} ${data}`,
+      ].slice(-8));
+    };
+    window.addEventListener("flicks-debug-log", handler as EventListener);
+    return () => window.removeEventListener("flicks-debug-log", handler as EventListener);
+  }, [showDebugOverlay]);
 
   // 제스처 상태
 
@@ -2747,6 +2778,13 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
           );
         })}
       </div>
+      {showDebugOverlay && debugLines.length > 0 && (
+        <div className="pointer-events-none absolute left-2 right-2 top-16 z-[90] max-h-40 overflow-hidden rounded-xl border border-lime-300/60 bg-black/75 p-2 font-mono text-[9px] leading-tight text-lime-200 shadow-lg">
+          {debugLines.map((line, index) => (
+            <div key={`${index}-${line}`} className="truncate">{line}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
