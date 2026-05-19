@@ -954,8 +954,8 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 .ghost-marker-dot {
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 22%, rgba(255,255,255,0.55) 0 12%, rgba(203,213,225,0.9) 34%, #94a3b8 100%);
   border: 2px solid rgba(241, 245, 249, 0.95);

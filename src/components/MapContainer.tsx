@@ -1802,9 +1802,9 @@ const MapContainer = ({
         }
       }
 
-      // 영상 ▶ 아이콘 (활성 마커와 동일 스타일을 고스트 마커 크기(42px)에 맞춰 축소)
+      // 영상 ▶ 아이콘 (활성 마커와 동일 스타일을 고스트 마커 크기(52px)에 맞춰 축소)
       const ghostPlayIconHtml = ghostHasVideo
-        ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,0.25);pointer-events:none;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
+        ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:22px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,0.25);pointer-events:none;"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
         : '';
 
       // 영상인데 썸네일이 없으면 캐시에서 비동기로 추출 트리거 (활성 마커와 동일 흐름)
@@ -1817,7 +1817,7 @@ const MapContainer = ({
       // (::after가 z-index:1, ::before가 z-index:2 → img는 z-index:3, play 아이콘은 z-index:5).
       // 그레이스케일은 약하게만 적용해 사진이 너무 어둡지 않도록 함.
       const ghostImgHtml = rawThumbUrl
-        ? `<img src="${rawThumbUrl}" alt="" referrerpolicy="no-referrer" data-gid="${id}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;" onerror="this.style.display='none'" />`
+        ? `<img src="${rawThumbUrl}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;" onerror="this.style.display='none'" />`
         : '';
 
       // 썸네일이 있는 경우 `has-thumb` 클래스를 추가 → CSS의 ::before(흰색 하이라이트 그라데이션) /
@@ -1825,49 +1825,6 @@ const MapContainer = ({
       const dotClass = rawThumbUrl ? 'ghost-marker-dot has-thumb' : 'ghost-marker-dot';
 
       content.innerHTML = `<div class="${dotClass}">${ghostImgHtml}${ghostPlayIconHtml}</div>`;
-
-      // [DEBUG] 실제 DOM에 그려진 img의 계산된 스타일/크기를 측정
-      if (rawThumbUrl) {
-        const checkRender = () => {
-          const imgEl = content.querySelector(`img[data-gid="${id}"]`) as HTMLImageElement | null;
-          if (!imgEl) {
-            console.warn('[GhostImg:missing]', id, '— img element not found in DOM');
-            return;
-          }
-          const rect = imgEl.getBoundingClientRect();
-          const cs = window.getComputedStyle(imgEl);
-          const parentEl = imgEl.parentElement;
-          const parentRect = parentEl?.getBoundingClientRect();
-          const parentCs = parentEl ? window.getComputedStyle(parentEl) : null;
-          console.log('[GhostImg:probe]', {
-            id,
-            imgRect: { w: rect.width, h: rect.height, top: rect.top, left: rect.left },
-            imgStyle: {
-              display: cs.display,
-              visibility: cs.visibility,
-              opacity: cs.opacity,
-              width: cs.width,
-              height: cs.height,
-              position: cs.position,
-              zIndex: cs.zIndex,
-              transform: cs.transform,
-              clipPath: cs.clipPath,
-            },
-            parentRect: parentRect ? { w: parentRect.width, h: parentRect.height } : null,
-            parentStyle: parentCs ? {
-              display: parentCs.display,
-              position: parentCs.position,
-              width: parentCs.width,
-              height: parentCs.height,
-              overflow: parentCs.overflow,
-            } : null,
-          });
-        };
-        // 즉시 한 번, 그리고 한 프레임 뒤 한 번 (overlay가 카카오맵에 attach된 뒤)
-        checkRender();
-        requestAnimationFrame(() => requestAnimationFrame(checkRender));
-        setTimeout(checkRender, 300);
-      }
 
       // 롱프레스 숨김 모드면 즉시 숨김
       if (markersHiddenRef.current) {
