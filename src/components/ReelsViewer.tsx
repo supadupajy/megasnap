@@ -1481,32 +1481,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const activeMediaUrl = mediaList[mediaIndex] || "";
   const activeIsVideo = isVideoUrl(activeMediaUrl);
   const hasVideo = activeIsVideo; // 현재 보여지는 미디어가 영상인지
-  const mediaFrameRef = useRef<HTMLDivElement>(null);
-  const [activeVideoAspectRatio, setActiveVideoAspectRatio] = useState<number | null>(null);
-  const [mediaFrameSize, setMediaFrameSize] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    setActiveVideoAspectRatio(null);
-  }, [activeMediaUrl]);
-
-  useLayoutEffect(() => {
-    const el = mediaFrameRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      setMediaFrameSize({ width: rect.width, height: rect.height });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const mediaContainerWidth = useMemo(() => {
-    if (!activeIsVideo || mediaFrameSize.width <= 0 || mediaFrameSize.height <= 0) return "100%";
-    const ratio = activeVideoAspectRatio ?? 9 / 16;
-    return `${Math.min(mediaFrameSize.width, mediaFrameSize.height * ratio)}px`;
-  }, [activeIsVideo, activeVideoAspectRatio, mediaFrameSize.height, mediaFrameSize.width]);
 
   const fallbackImage = useMemo(() => {
     // 1순위: 일반 이미지 (영상이 아닌 슬라이드)
@@ -1769,8 +1743,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
           영상 위에 띄우므로 여기서는 bottom 여백을 두지 않는다(infoHeight 사용 X).
           상단 여백(top)은 순위 뱃지/닫기 버튼과의 자연스러운 갭을 위한 최소값만 유지. */}
       <div
-        ref={mediaFrameRef}
-        className="absolute flex justify-center"
+        className="absolute flex"
         style={{
           top: "1rem",
           bottom: 0,
@@ -1781,13 +1754,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
       >
-        <div
-          className="relative h-full max-w-full overflow-hidden rounded-2xl bg-black"
-          style={{ width: mediaContainerWidth }}
-        >
+        <div className="relative h-full w-full overflow-hidden rounded-2xl bg-black">
           {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용)
               순위 뱃지가 있을 때는 음소거 버튼을 뱃지 옆으로 옮긴다. */}
           {showInlineMuteButton && hasVideo && (
+
             <button
               type="button"
               onClick={(e) => {
@@ -1837,11 +1808,11 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             isSlideActive={isActive}
             shouldPreloadVideo={shouldPreloadVideo}
             videoPosterUrl={fallbackImage}
-            onVideoAspectRatioChange={setActiveVideoAspectRatio}
           />
 
           {/* 재생 오버레이 — 영상 컨테이너 정중앙에 위치 (9:16 영상의 시각적 중앙) */}
           {hasVideo && !isPlaying && videoFirstFrameReady && (
+
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
               <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">
 
@@ -2229,7 +2200,6 @@ interface ReelsVideoProps {
   shouldWarmUp?: boolean;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
   posterUrl?: string;
-  onAspectRatioChange?: (ratio: number) => void;
 }
 
 const ReelsVideo: React.FC<ReelsVideoProps> = ({
@@ -2240,10 +2210,10 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   isCurrent,
   shouldWarmUp = false,
   posterUrl,
-  onAspectRatioChange,
 }) => {
 
   const localRef = useRef<HTMLVideoElement>(null);
+
   const [isReady, setIsReady] = useState(false);
 
   const setRefs = useCallback(
@@ -2269,18 +2239,11 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   useEffect(() => {
     const el = localRef.current;
     if (!el) return;
-    const reportAspectRatio = () => {
-      if (el.videoWidth > 0 && el.videoHeight > 0) {
-        onAspectRatioChange?.(el.videoWidth / el.videoHeight);
-      }
-    };
     const markReady = () => setIsReady(true);
     const handleLoadedData = () => {
-      reportAspectRatio();
       if (!isCurrent) markReady();
     };
     const handleCanPlay = () => {
-      reportAspectRatio();
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
       if (isCurrent && el.paused) {
         el.play().catch(() => {
@@ -2290,20 +2253,17 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         });
       }
     };
-    el.addEventListener("loadedmetadata", reportAspectRatio);
     el.addEventListener("loadeddata", handleLoadedData);
     el.addEventListener("playing", markReady);
     el.addEventListener("canplay", handleCanPlay);
-    reportAspectRatio();
     if (isCurrent && !el.paused && el.readyState >= 2) markReady();
     if (!isCurrent && el.readyState >= 2) markReady();
     return () => {
-      el.removeEventListener("loadedmetadata", reportAspectRatio);
       el.removeEventListener("loadeddata", handleLoadedData);
       el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
     };
-  }, [src, isCurrent, onAspectRatioChange]);
+  }, [src, isCurrent]);
 
   // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
 
@@ -2381,7 +2341,6 @@ interface MediaCarouselProps {
   shouldPreloadVideo?: boolean;
   /** 영상 슬라이드용 fallback 썸네일 (첫 프레임 디코드 전 빈 화면 방지). */
   videoPosterUrl?: string;
-  onVideoAspectRatioChange?: (ratio: number) => void;
 }
 
 const MediaCarousel: React.FC<MediaCarouselProps> = ({
@@ -2393,10 +2352,10 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   isSlideActive,
   shouldPreloadVideo = false,
   videoPosterUrl,
-  onVideoAspectRatioChange,
 }) => {
 
   const rootRef = useRef<HTMLDivElement>(null);
+
   const [dragX, setDragX] = useState(0);
   // 트랜지션 문자열 자체를 state로: 빠른 flick엔 짧고 가파른 곡선, 느릴 땐 살짝 더 부드럽게.
   const [trackTransition, setTrackTransition] = useState<string>("none");
@@ -2665,7 +2624,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   isCurrent={isPlayable}
                   shouldWarmUp={shouldWarmUp}
                   posterUrl={videoPosterUrl}
-                  onAspectRatioChange={isCurrent ? onVideoAspectRatioChange : undefined}
                 />
               ) : (
                 <img
@@ -2676,6 +2634,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   draggable={false}
                 />
               )}
+
             </div>
           );
         })}
