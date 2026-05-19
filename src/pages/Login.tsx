@@ -161,7 +161,7 @@ const Login = () => {
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-36 h-36"
+            className="h-[101px] w-[101px]"
           >
             <HiBubbleIcon className="h-full w-full" />
           </motion.div>
