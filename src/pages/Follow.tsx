@@ -191,7 +191,7 @@ const Follow = () => {
 
               return (
                 <div key={user.id} onClick={() => navigate(`/profile/${user.id}`)} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all relative">
-                  <div className="p-[2px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative">
+                  <div className="p-[2px] rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shrink-0 relative">
                     <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                       <AvatarImage src={user.avatar_url} />
                       <AvatarFallback className="bg-indigo-50 text-indigo-600 font-bold">{user.nickname?.[0] || '?'}</AvatarFallback>

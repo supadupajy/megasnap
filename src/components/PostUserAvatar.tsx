@@ -58,16 +58,16 @@ const PostUserAvatar = ({
     );
   }
 
-  // 일반 포스트: 그라디언트 링 + 프로필 사진
+  // 일반 포스트: 앰버/밝은 노랑 그라디언트 링 + 프로필 사진
   if (avatarError || !avatar) {
     return (
-      <div className={`${sizeClass} rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 shrink-0 flex items-center justify-center border-2 border-white${pressClass}`}>
-        <span className="text-white font-bold text-sm">{initial}</span>
+      <div className={`${sizeClass} rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shrink-0 flex items-center justify-center border-2 border-white${pressClass}`}>
+        <span className="text-amber-950 font-bold text-sm">{initial}</span>
       </div>
     );
   }
   return (
-    <div className={`${sizeClass} rounded-full p-[2px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 relative${pressClass}`}>
+    <div className={`${sizeClass} rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shrink-0 relative${pressClass}`}>
       <img
         src={imageSrc}
         alt={name}

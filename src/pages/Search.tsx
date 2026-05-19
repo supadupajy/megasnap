@@ -192,7 +192,7 @@ const Search = () => {
                   className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-2xl cursor-pointer active:scale-[0.98] transition-all"
                 >
                   <div
-                    className="p-[2.5px] rounded-full bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0"
+                    className="p-[2.5px] rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shrink-0"
                     onClick={(e) => { e.stopPropagation(); navigate(`/user-profile/${user.id}`); }}
                   >
                     <Avatar className="w-14 h-14 border-2 border-white shadow-sm">

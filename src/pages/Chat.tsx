@@ -404,7 +404,7 @@ const Chat = () => {
           </button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 max-w-[60%]">
             <div
-              className="w-10 h-10 rounded-full p-[1.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 cursor-pointer"
+              className="w-10 h-10 rounded-full p-[1.5px] bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shrink-0 cursor-pointer"
               onClick={() => navigate(`/profile/${chatId}`)}
             >
               <img

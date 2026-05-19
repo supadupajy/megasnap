@@ -42,7 +42,7 @@ const ProfileStats = ({
   return (
     <div className="flex items-center gap-6 mb-8">
       <div className="relative">
-        <div className="relative w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
+        <div className="relative w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100">
           {!isAvatarLoaded && (
             <div className="absolute inset-1">
               <Skeleton className="h-full w-full rounded-full" />

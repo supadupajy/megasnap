@@ -324,7 +324,7 @@ const UserProfile = () => {
             {/* 프로필 정보 */}
             <div className="p-6">
               <div className="flex items-center gap-6 mb-8">
-                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 flex-shrink-0">
+                <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 flex-shrink-0">
                   <img src={getOptimizedMarkerImage(userProfile?.avatar_url || FALLBACK_IMAGE, userProfile?.id || 'profile')} alt="profile" loading="lazy" decoding="async" className="w-full h-full rounded-full object-cover border-4 border-white" />
                 </div>
                 <div className="flex-1">

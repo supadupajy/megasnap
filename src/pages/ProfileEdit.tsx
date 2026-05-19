@@ -279,7 +279,7 @@ const ProfileEdit = () => {
         {/* Avatar */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative group">
-            <div className="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600 shadow-xl">
+            <div className="w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shadow-xl">
               <Avatar className="w-full h-full border-4 border-white">
                 <AvatarImage
                   src={avatarUrl || '/placeholder.svg'}

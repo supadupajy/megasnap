@@ -101,7 +101,7 @@ const SwipeConversationItem: React.FC<SwipeConvItemProps> = ({
         className="relative bg-white flex items-center gap-4 py-4 px-1 cursor-pointer z-10"
       >
         <div
-          className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-yellow-400 to-indigo-600 shrink-0 shadow-sm relative"
+          className="w-14 h-14 rounded-full p-[2.5px] bg-gradient-to-tr from-amber-400 via-yellow-300 to-yellow-100 shrink-0 shadow-sm relative"
           onClick={(e) => { e.stopPropagation(); onProfileNavigate(conv.other_id); }}
         >
           <img
