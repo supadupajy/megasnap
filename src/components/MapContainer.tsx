@@ -1106,23 +1106,19 @@ const MapContainer = ({
         : '';
       const storedVideoPoster = firstVideoUrl ? getStoredMarkerThumbnail(post) : '';
       const cachedVideoThumb = firstVideoUrl ? videoThumbCacheRef.current.get(post.id) : '';
-      const shouldDelayVideoMarker = !!firstVideoUrl && !storedVideoPoster && !cachedVideoThumb;
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
       const markerFloatKey = 'float-v5';
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
-      if (shouldDelayVideoMarker) {
-        if (existingOverlay) {
-          existingOverlay.setMap(null);
-          overlaysRef.current.delete(post.id);
-          viewportVisibilityRef.current.delete(String(post.id));
-          clearViewportAnimationTimer(String(post.id));
-          clearMarkerFloatTimer(String(post.id));
-        }
+      // 영상 포스트라도 마커는 즉시 생성한다.
+      // 썸네일이 없으면 어두운 배경 + 플레이 아이콘만 먼저 보이고,
+      // 비동기로 추출/저장된 썸네일이 들어오면 img.src를 갱신한다.
+      // (예전엔 shouldDelayVideoMarker로 마커 생성을 미뤘는데, 추출 실패 시
+      //  영원히 마커가 안 보이는 버그가 있었음)
+      if (firstVideoUrl && !storedVideoPoster && !cachedVideoThumb) {
         extractVideoThumbRef.current(post.id, firstVideoUrl);
-        return;
       }
 
       if (!existingOverlay) {
