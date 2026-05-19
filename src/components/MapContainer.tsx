@@ -1784,9 +1784,24 @@ const MapContainer = ({
         onMarkerClickRef.current(post);
       };
 
+      // 영상 포스트면 회색 점 중앙에 작은 ▶ 아이콘만 추가로 표시한다.
+      // 이외 동작/디자인은 기존과 동일.
+      const ghostFirstVideoUrl = (() => {
+        const single = typeof (post as any).videoUrl === 'string' && (post as any).videoUrl.trim()
+          ? (post as any).videoUrl
+          : (typeof (post as any).video_url === 'string' && (post as any).video_url.trim() ? (post as any).video_url : '');
+        if (single) return single;
+        const arr = Array.isArray((post as any).videoUrls)
+          ? (post as any).videoUrls
+          : (Array.isArray((post as any).video_urls) ? (post as any).video_urls : []);
+        return arr.find((u: unknown) => typeof u === 'string' && (u as string).trim()) || '';
+      })();
+      const ghostHasVideo = !!ghostFirstVideoUrl;
+      const cachedGhostThumb = ghostHasVideo ? (videoThumbCacheRef.current.get(id) || '') : '';
+
       // 썸네일 결정 - 비디오 캐시 활용. 깨진/목업 URL이면 빈 회색 점.
       // image_url이 빠진 옛 포스트도 images 배열에 -opening-thumb.jpg가 있을 수 있으므로 폴백한다.
-      let img = (post as any).image_url || (post as any).image || '';
+      let img = cachedGhostThumb || (post as any).image_url || (post as any).image || '';
       const tryImagesArray = () => {
         const arr = Array.isArray((post as any).images) ? (post as any).images : [];
         return arr.find((u: unknown) => {
@@ -1804,28 +1819,16 @@ const MapContainer = ({
         if (arrFallback) {
           img = arrFallback;
         } else {
-          const cached = videoThumbCacheRef.current.get(id);
-          img = cached || '';
+          img = cachedGhostThumb || '';
         }
+      }
+      if (ghostHasVideo && ghostFirstVideoUrl && !cachedGhostThumb) {
+        extractVideoThumbRef.current(id, ghostFirstVideoUrl);
       }
       const optimized = img
         ? (isGeneratedVideoThumbnailUrl(img) ? img : getOptimizedMarkerImage(img, id))
         : '';
 
-      // 영상 포스트면 회색 점 중앙에 작은 ▶ 아이콘만 추가로 표시한다.
-      // 이외 동작/디자인은 기존과 동일.
-      const ghostFirstVideoUrl = (() => {
-
-        const single = typeof (post as any).videoUrl === 'string' && (post as any).videoUrl.trim()
-          ? (post as any).videoUrl
-          : (typeof (post as any).video_url === 'string' && (post as any).video_url.trim() ? (post as any).video_url : '');
-        if (single) return single;
-        const arr = Array.isArray((post as any).videoUrls)
-          ? (post as any).videoUrls
-          : (Array.isArray((post as any).video_urls) ? (post as any).video_urls : []);
-        return arr.find((u: unknown) => typeof u === 'string' && (u as string).trim()) || '';
-      })();
-      const ghostHasVideo = !!ghostFirstVideoUrl;
       const ghostPlayIconHtml = ghostHasVideo
 
         ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,0.25);pointer-events:none;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
@@ -2144,7 +2147,8 @@ const MapContainer = ({
       // 폴백으로 캐시에 넣어 빈 회색 버블이 남지 않게 한다. opening-thumb.jpg 같은
       // -thumb 패턴 URL도 영상 포스트에서는 신뢰한다.
       if (reason !== 'captured' && !videoThumbCacheRef.current.has(postId)) {
-        const post = postsRef.current.find((p) => p && p.id === postId);
+        const post = postsRef.current.find((p) => p && p.id === postId)
+          || ghostCandidatesRef.current.find((entry) => entry.post && entry.post.id === postId)?.post;
         if (post) {
           const fallback = getStoredMarkerThumbnail(post);
           if (fallback) {
@@ -2156,6 +2160,13 @@ const MapContainer = ({
             if (img) {
               img.src = fallback;
               img.style.opacity = '1';
+            }
+            const ghostOverlay = ghostOverlaysRef.current.get(postId);
+            const ghostContent = ghostOverlay?.getContent?.() as HTMLElement | null;
+            const ghostImg = ghostContent?.querySelector('.ghost-marker-dot img') as HTMLImageElement | null;
+            if (ghostImg) {
+              ghostImg.src = fallback;
+              ghostImg.style.opacity = '0.78';
             }
           }
         }
@@ -2177,23 +2188,27 @@ const MapContainer = ({
     };
 
     const refreshMarkerWithCachedThumb = () => {
-      const overlay = overlaysRef.current.get(postId);
-      if (!overlay) return;
-
-      const content = overlay.getContent() as HTMLElement;
-      if (!content) return;
-
       const dataUrl = videoThumbCacheRef.current.get(postId);
       if (!dataUrl) return;
 
-      const img = content.querySelector('[data-video-marker-img="true"]') as HTMLImageElement | null;
+      const overlay = overlaysRef.current.get(postId);
+      const content = overlay?.getContent?.() as HTMLElement | null;
+      const img = content?.querySelector('[data-video-marker-img="true"]') as HTMLImageElement | null;
       if (img) {
         img.src = dataUrl;
         img.style.opacity = '1';
       }
 
-      const state = content.getAttribute('data-content-state');
-      if (state) content.setAttribute('data-content-state', state.replace(/-[01]$/, '-1'));
+      const state = content?.getAttribute('data-content-state');
+      if (state && content) content.setAttribute('data-content-state', state.replace(/-[01]$/, '-1'));
+
+      const ghostOverlay = ghostOverlaysRef.current.get(postId);
+      const ghostContent = ghostOverlay?.getContent?.() as HTMLElement | null;
+      const ghostImg = ghostContent?.querySelector('.ghost-marker-dot img') as HTMLImageElement | null;
+      if (ghostImg) {
+        ghostImg.src = dataUrl;
+        ghostImg.style.opacity = '0.78';
+      }
     };
 
     const seekNextCandidate = () => {
