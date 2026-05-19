@@ -2779,10 +2779,28 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         })}
       </div>
       {showDebugOverlay && debugLines.length > 0 && (
-        <div className="pointer-events-none absolute left-2 right-2 top-16 z-[90] max-h-40 overflow-hidden rounded-xl border border-lime-300/60 bg-black/75 p-2 font-mono text-[9px] leading-tight text-lime-200 shadow-lg">
-          {debugLines.map((line, index) => (
-            <div key={`${index}-${line}`} className="truncate">{line}</div>
-          ))}
+        <div className="absolute left-2 right-2 top-16 z-[90] rounded-xl border border-lime-300/60 bg-black/85 p-2 font-mono text-[9px] leading-tight text-lime-200 shadow-lg">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <span className="font-bold text-lime-100">Flicks debug log</span>
+            <button
+              type="button"
+              className="pointer-events-auto rounded-md border border-lime-300/50 px-2 py-0.5 text-[10px] font-bold text-lime-100 active:scale-95"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard?.writeText(debugLines.join("\n")).catch(() => {});
+              }}
+            >
+              복사
+            </button>
+          </div>
+          <textarea
+            readOnly
+            value={debugLines.join("\n")}
+            className="pointer-events-auto h-32 w-full resize-none rounded-lg border border-lime-300/30 bg-black/60 p-1 text-[9px] leading-tight text-lime-200 outline-none"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
