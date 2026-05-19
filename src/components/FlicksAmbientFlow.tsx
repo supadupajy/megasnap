@@ -1,24 +1,23 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
  * FlicksAmbientFlow
  *
  * Flicks 페이지 하단(BottomNav가 떠 있는 검은 영역)을 단순 검정에서
- * "Ambient Light + Particle Flow" 효과를 가진 동적 배경으로 바꾼다.
+ * 영상 분위기에 맞춰 부드럽게 빛나는 "Ambient Light" 배경으로 바꾼다.
  *
  * 디자인 원칙:
- *  - 검은색을 완전히 대체하지 않는다. 어디까지나 검은 베이스 위에 은은한 빛이 깔리는 정도.
- *  - 위쪽(영상이 끝나는 지점)은 거의 완전한 검정 → 영상 컨테이너의 어두운 그라데이션과
- *    이음새 없이 자연스럽게 이어진다.
+ *  - 검은색 베이스 위에 영상 색감을 큰 radial glow로 깔아 시네마틱한 분위기를 만든다.
+ *  - 위쪽(영상이 끝나는 지점)은 살짝 어두워져 영상 컨테이너 하단 그라데이션과 자연스럽게 이어진다.
  *  - 영상이 바뀌면 ambient 색이 부드럽게 cross-fade 된다.
- *  - 위로 천천히 떠오르는 작은 빛 입자(particle)들이 "flick" 의미를 시각적으로 표현.
+ *  - 메인 glow가 천천히 호흡(opacity 펄스)하면서 살아있는 느낌을 준다.
  *
  * 동작:
  *  - posterUrl이 주어지면 캔버스에 작게 다운샘플 → 평균색 추출 → ambient color로 저장.
- *  - posterUrl이 없으면 인디고 계열 fallback 톤을 쓴다.
+ *  - 결과가 너무 어두우면 비율 유지 톤업, 무채색에 가까우면 fallback indigo 사용.
  *
  * 렌더 위치:
  *  - document.body 직속으로 portal 렌더한다. App.tsx의 AnimatePresence/motion.div가
@@ -51,22 +50,6 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
 }) => {
   // 현재 그려지고 있는 ambient color (cross-fade 결과)
   const [color, setColor] = useState<RGB>(FALLBACK_COLOR);
-
-  // [DEBUG] 마운트/렌더 추적
-  useEffect(() => {
-    console.log("[FlicksAmbientFlow] mounted. posterUrl=", posterUrl, "height=", height);
-    return () => {
-      console.log("[FlicksAmbientFlow] unmounted");
-    };
-  }, []);
-
-  useEffect(() => {
-    console.log("[FlicksAmbientFlow] posterUrl changed:", posterUrl);
-  }, [posterUrl]);
-
-  useEffect(() => {
-    console.log("[FlicksAmbientFlow] color updated:", color);
-  }, [color]);
 
   // posterUrl → 평균색 추출
   useEffect(() => {
@@ -144,10 +127,6 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
 
         // 너무 칙칙하지 않도록 살짝 채도를 올려준다 (간단한 saturation boost)
         const boosted = boostSaturation({ r, g, b }, 1.35);
-
-        // [DEBUG] 색 추출 결과를 보고 싶을 때
-        console.log("[FlicksAmbientFlow] extracted color:", { r, g, b, lum, boosted });
-
         setColor(boosted);
       } catch {
         // CORS 오류 등은 무시하고 fallback 유지
@@ -162,20 +141,6 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
       cancelled = true;
     };
   }, [posterUrl]);
-
-  // 파티클은 컴포넌트 마운트 시 한 번만 랜덤 생성 (각자 다른 delay/duration으로 흘러감)
-  const particles = useMemo(() => {
-    const COUNT = 14;
-    return Array.from({ length: COUNT }, (_, i) => {
-      const size = 2 + Math.random() * 4; // 2~6px
-      const left = Math.random() * 100; // %
-      const duration = 6 + Math.random() * 6; // 6~12s
-      const delay = -Math.random() * duration; // 마운트 직후에도 흩어진 상태에서 시작
-      const drift = (Math.random() - 0.5) * 30; // 좌우로 살짝 흔들리는 정도 (px)
-      const opacityPeak = 0.35 + Math.random() * 0.35; // 0.35~0.7
-      return { id: i, size, left, duration, delay, drift, opacityPeak };
-    });
-  }, []);
 
   const colorStr = `${color.r}, ${color.g}, ${color.b}`;
   // 부드럽게 cross-fade 되도록 background-color에 transition을 건다.
@@ -205,92 +170,46 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         touchAction: "none",
       }}
     >
-      {/* 1) Ambient color wash — 큰 두 개의 radial glow가 좌/우에서 천천히 숨쉬듯 펄스 */}
+      {/* 1) Ambient color wash — 큰 두 개의 radial glow가 좌/우 하단에서 위로 넓게 퍼진다.
+             영역(64px)을 훨씬 넘어서는 큰 반지름으로 그려 광활한 빛 느낌을 표현. */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background: `
-            radial-gradient(120% 180% at 20% 120%, rgba(${colorStr}, 0.55) 0%, rgba(${colorStr}, 0.18) 35%, transparent 65%),
-            radial-gradient(120% 180% at 80% 130%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.12) 35%, transparent 65%)
+            radial-gradient(220% 320% at 25% 130%, rgba(${colorStr}, 0.85) 0%, rgba(${colorStr}, 0.35) 30%, rgba(${colorStr}, 0.10) 55%, transparent 75%),
+            radial-gradient(220% 320% at 75% 130%, rgba(${colorStr}, 0.70) 0%, rgba(${colorStr}, 0.28) 30%, rgba(${colorStr}, 0.08) 55%, transparent 75%)
           `,
           transition: "background 600ms ease",
         }}
       />
 
-      {/* 2) 살짝 호흡하는 ambient layer — opacity만 천천히 변동시켜 "살아있는" 느낌 */}
+      {/* 2) 중앙 큰 후광 — 알약 바로 아래에서 위로 강하게 번지는 메인 글로우.
+             "살짝 호흡"하면서 살아있는 느낌. */}
       <div
         className="absolute inset-0 pointer-events-none flicks-ambient-breathe"
         style={{
-          background: `radial-gradient(100% 160% at 50% 130%, rgba(${colorStr}, 0.35) 0%, transparent 60%)`,
+          background: `radial-gradient(180% 280% at 50% 140%, rgba(${colorStr}, 0.75) 0%, rgba(${colorStr}, 0.30) 35%, transparent 70%)`,
         }}
       />
 
-      {/* 3) 위로 천천히 떠오르는 빛 입자들 */}
-      <div className="absolute inset-0 pointer-events-none">
-        {particles.map((p) => (
-          <span
-            key={p.id}
-            className="flicks-ambient-particle"
-            style={{
-              left: `${p.left}%`,
-              width: `${p.size}px`,
-              height: `${p.size}px`,
-              animationDuration: `${p.duration}s`,
-              animationDelay: `${p.delay}s`,
-              ["--drift" as any]: `${p.drift}px`,
-              ["--peak" as any]: p.opacityPeak,
-              backgroundColor: `rgba(${colorStr}, 0.9)`,
-              boxShadow: `0 0 ${p.size * 2}px rgba(${colorStr}, 0.7)`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* 4) 상단 fade — 영상 컨테이너 하단의 검은 그라데이션과 자연스럽게 이어지도록
-              위쪽일수록 진한 검정. 이게 없으면 영상과 ambient 영역의 경계가 띠처럼 보일 수 있음. */}
+      {/* 3) 상단 fade — 영상 컨테이너 하단의 검은 그라데이션과 자연스럽게 이어지도록
+              위쪽 일부만 살짝 어둡게. ambient를 더 위쪽까지 보이게 하려고 fade 영역은 더 좁게. */}
       <div
         className="absolute inset-x-0 top-0 pointer-events-none"
         style={{
-          height: "55%",
-          background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)`,
+          height: "30%",
+          background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0) 100%)`,
         }}
       />
 
       {/* keyframes는 컴포넌트 안에 함께 둬서 다른 곳에 영향이 가지 않게 한다. */}
       <style>{`
         @keyframes flicksAmbientBreathe {
-          0%, 100% { opacity: 0.55; }
+          0%, 100% { opacity: 0.65; }
           50% { opacity: 1; }
         }
         .flicks-ambient-breathe {
           animation: flicksAmbientBreathe 6s ease-in-out infinite;
-        }
-
-        @keyframes flicksParticleRise {
-          0% {
-            transform: translate(0, 100%) scale(0.6);
-            opacity: 0;
-          }
-          15% {
-            opacity: var(--peak, 0.6);
-          }
-          85% {
-            opacity: var(--peak, 0.6);
-          }
-          100% {
-            transform: translate(var(--drift, 0px), -120%) scale(1);
-            opacity: 0;
-          }
-        }
-        .flicks-ambient-particle {
-          position: absolute;
-          bottom: 0;
-          border-radius: 9999px;
-          will-change: transform, opacity;
-          animation-name: flicksParticleRise;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: infinite;
-          filter: blur(0.3px);
         }
       `}</style>
     </div>
