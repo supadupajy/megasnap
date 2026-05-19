@@ -1139,10 +1139,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     postRef: null,
     refreshTick: null,
   });
-  const previousTextAnimationRef = useRef<{ postId: string | null; count: number }>({
-    postId: null,
-    count: 0,
-  });
   const previousCollapsedAnimatedPostIdRef = useRef<string | null>(null);
 
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
@@ -1345,11 +1341,48 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     return () => clearInterval(timer);
   }, [isExpanded, posts]);
 
+  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
+  }, []);
+
   const currentPost = (posts[currentIndex] || posts[0]) as (Post & { rank: number }) | undefined;
+
   const currentCollapsedPostKey = currentPost?.id ? String(currentPost.id) : null;
   const shouldAnimateCollapsedText = previousCollapsedAnimatedPostIdRef.current !== currentCollapsedPostKey;
   const currentCollapsedThumbUrl = currentPost ? getTrendingThumbnailImageUrl(currentPost) : null;
   const visibleExpandedPosts = isExpanded ? posts.slice(0, visibleItemLimit) : [];
+  const collapsedThumbnailNode = React.useMemo(() => {
+    if (!currentPost) return null;
+    const collapsedIsMine = !!(authUserId && String((currentPost as any).owner_id || currentPost.user_id || '') === String(authUserId));
+    const collapsedFrame = getThumbnailFrameStyle(currentPost, collapsedIsMine);
+
+    return {
+      frame: collapsedFrame,
+      node: (
+        <PostThumbnail
+          post={currentPost}
+          onImgError={handleImageError}
+          size="sm"
+          imgLoading="eager"
+          now={thumbnailTimerNow}
+          borderWidth={collapsedFrame.borderWidth}
+        />
+      ),
+    };
+  }, [
+    authUserId,
+    currentCollapsedPostKey,
+    currentCollapsedThumbUrl,
+    currentPost?.borderType,
+    currentPost?.user_id,
+    (currentPost as any)?.owner_id,
+    handleImageError,
+    thumbnailTimerNow,
+  ]);
+
+  const collapsedTextNode = React.useMemo(() => {
+    return <HashtagText text={currentPost?.content || ''} />;
+  }, [currentCollapsedPostKey, currentPost?.content]);
 
   useEffect(() => {
     previousCollapsedAnimatedPostIdRef.current = currentCollapsedPostKey;
@@ -1405,11 +1438,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     setShowScrollUpArrow(!isAtTop);
   }, []);
 
-  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    (e.target as HTMLImageElement).src = FALLBACK_IMAGE;
-  }, []);
-
   useEffect(() => {
+
     const el = listRef.current;
     if (isExpanded && renderExpandedBody && posts.length > 5) {
       handleScroll();
@@ -1544,66 +1574,21 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
 
-                  {(() => {
-                    const collapsedIsMine = !!(authUserId && currentPost && String((currentPost as any).owner_id || currentPost.user_id || '') === String(authUserId));
-                    const collapsedFrame = currentPost
-                      ? getThumbnailFrameStyle(currentPost, collapsedIsMine)
-                      : { borderWidth: 0, border: 'none', boxShadow: undefined as string | undefined };
-                    return (
-                      <div
-                        className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 box-border"
-                        style={{ border: collapsedFrame.border, boxShadow: collapsedFrame.boxShadow }}
-                      >
-                        <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" imgLoading="eager" now={thumbnailTimerNow} borderWidth={collapsedFrame.borderWidth} />
-
-                      </div>
-                    );
-                  })()}
-                  <div className="flex-1 overflow-hidden relative h-5">
-
-                    <AnimatePresence mode="wait">
-
-                      <motion.p
-                        key={currentPost?.id || 'empty-trending-post'}
-                        initial={shouldAnimateCollapsedText ? { y: 15, opacity: 0 } : false}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={shouldAnimateCollapsedText ? { y: -15, opacity: 0 } : undefined}
-                        transition={shouldAnimateCollapsedText ? { duration: 0.3, opacity: { duration: 0.2 } } : { duration: 0 }}
-                        onAnimationStart={() => {
-                          if (!shouldAnimateCollapsedText) return;
-                          const nextPostId = currentPost?.id ? String(currentPost.id) : null;
-                          const previousAnimation = previousTextAnimationRef.current;
-                          const nextCount = previousAnimation.postId === nextPostId ? previousAnimation.count + 1 : 1;
-                          previousTextAnimationRef.current = {
-                            postId: nextPostId,
-                            count: nextCount,
-                          };
-                          // eslint-disable-next-line no-console
-                          console.log('[TrendingDebug][collapsed-text-animation-start]', {
-                            collapsedPostId,
-                            animationCountForPost: nextCount,
-                            samePostAsPreviousAnimation: previousAnimation.postId === nextPostId,
-                            shouldAnimateCollapsedText,
-                            currentPost: getCollapsedPostDebugInfo(currentPost),
-                          });
-                        }}
-                        onAnimationComplete={() => {
-                          if (!shouldAnimateCollapsedText) return;
-                          // eslint-disable-next-line no-console
-                          console.log('[TrendingDebug][collapsed-text-animation-complete]', {
-                            collapsedPostId,
-                            animationCountForPost: previousTextAnimationRef.current.count,
-                            shouldAnimateCollapsedText,
-                            currentPost: getCollapsedPostDebugInfo(currentPost),
-                          });
-                        }}
-                        className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
-                      >
-                        <HashtagText text={currentPost?.content || ''} />
-                      </motion.p>
-
-                    </AnimatePresence>
+                  <div
+                    className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 box-border"
+                    style={{
+                      border: collapsedThumbnailNode?.frame.border || 'none',
+                      boxShadow: collapsedThumbnailNode?.frame.boxShadow,
+                    }}
+                  >
+                    {collapsedThumbnailNode?.node}
                   </div>
+                  <div className="flex-1 overflow-hidden relative h-5">
+                    <p className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5">
+                      {collapsedTextNode}
+                    </p>
+                  </div>
+
                   {/* 순위 변동 */}
                   {(() => {
                     const rc = currentPost ? getRankChange(currentPost) : undefined;
