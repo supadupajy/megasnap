@@ -1797,9 +1797,14 @@ const MapContainer = ({
         extractVideoThumbRef.current(id, ghostFirstVideoUrl);
       }
 
-      content.innerHTML = `<div class="ghost-marker-dot">${
-        optimized ? `<img src="${optimized}" alt="" />` : ''
-      }${ghostPlayIconHtml}</div>`;
+      // img는 flex 컨테이너 내부의 사이징 이슈를 피하기 위해 position:absolute로 강제.
+      // 또한 .ghost-marker-dot::after(rgba(100,116,139,0.24)) 위로 올라오도록 z-index:2 부여 후
+      // 그레이스케일 필터는 살짝 유지해 만료 느낌은 그대로 둔다.
+      const ghostImgHtml = optimized
+        ? `<img src="${optimized}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:2;filter:grayscale(0.7) brightness(0.92);opacity:0.92;" />`
+        : '';
+
+      content.innerHTML = `<div class="ghost-marker-dot">${ghostImgHtml}${ghostPlayIconHtml}</div>`;
 
       // 롱프레스 숨김 모드면 즉시 숨김
       if (markersHiddenRef.current) {
@@ -2149,6 +2154,9 @@ const MapContainer = ({
           const imgEl = document.createElement('img');
           imgEl.src = dataUrl;
           imgEl.alt = '';
+          // 동기 생성과 동일한 스타일 — flex 컨테이너 내부 사이징 이슈 회피 +
+          // ::after 회색 오버레이(z-index:1) 위로 노출
+          imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:2;filter:grayscale(0.7) brightness(0.92);opacity:0.92;';
           // ▶ 아이콘 앞에 삽입 (img가 먼저, play 아이콘이 위에 겹쳐서 z-index로 노출)
           dot.insertBefore(imgEl, dot.firstChild);
         }
