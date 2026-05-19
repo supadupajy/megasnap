@@ -287,7 +287,7 @@ export const fetchExpiredPostsInBounds = async (
 
     let query = supabase
       .from('posts')
-      .select('id, latitude, longitude, image_url, video_url, video_urls, created_at, user_id, category')
+      .select('id, latitude, longitude, image_url, images, video_url, video_urls, created_at, user_id, category')
       .gte('latitude', Math.min(sw.lat, ne.lat))
       .lte('latitude', Math.max(sw.lat, ne.lat))
       .gte('longitude', Math.min(sw.lng, ne.lng))
@@ -310,12 +310,13 @@ export const fetchExpiredPostsInBounds = async (
 
     const { data, error } = await query;
     if (error) throw error;
-    // MapContainer가 사용하는 필드명으로 정규화 (lat, lng, image_url, videoUrl, createdAt)
+    // MapContainer가 사용하는 필드명으로 정규화 (lat, lng, image_url, images, videoUrl, createdAt)
     return (data || []).map((row: any) => ({
       id: row.id,
       lat: row.latitude,
       lng: row.longitude,
       image_url: row.image_url,
+      images: Array.isArray(row.images) ? row.images : undefined,
       videoUrl: row.video_url,
       videoUrls: Array.isArray(row.video_urls) ? row.video_urls : undefined,
       created_at: row.created_at,

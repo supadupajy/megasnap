@@ -1798,15 +1798,42 @@ const MapContainer = ({
       };
 
       // 썸네일 결정 - 비디오 캐시 활용. 깨진/목업 URL이면 빈 회색 점.
+      // image_url이 빠진 옛 포스트도 images 배열에 -opening-thumb.jpg가 있을 수 있으므로 폴백한다.
       let img = (post as any).image_url || (post as any).image || '';
+      const tryImagesArray = () => {
+        const arr = Array.isArray((post as any).images) ? (post as any).images : [];
+        return arr.find((u: unknown) => {
+          if (typeof u !== 'string' || !u || u === 'null' || u === 'undefined') return false;
+          if (u.startsWith('blob:')) return false;
+          const lo = u.toLowerCase().split('?')[0];
+          return !(lo.endsWith('.mp4') || lo.endsWith('.mov') || lo.endsWith('.webm') || lo.endsWith('.avi') || lo.endsWith('.m4v'));
+        }) || '';
+      };
       const isBroken = !img || img === 'null' || img === 'undefined' || (typeof img === 'string' && img.startsWith('blob:'));
       const lower = typeof img === 'string' ? img.toLowerCase().split('?')[0] : '';
       const isImgVideoUrl = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
       if (isBroken || isImgVideoUrl) {
-        const cached = videoThumbCacheRef.current.get(id);
-        img = cached || '';
+        const arrFallback = tryImagesArray();
+        if (arrFallback) {
+          img = arrFallback;
+        } else {
+          const cached = videoThumbCacheRef.current.get(id);
+          img = cached || '';
+        }
       }
       const optimized = img ? getOptimizedMarkerImage(img, id) : '';
+      // 디버그: 고스트 마커가 회색으로 빈 이유 추적
+      // eslint-disable-next-line no-console
+      console.log('[GhostMarkerDebug]', {
+        postId: id,
+        image_url: (post as any).image_url,
+        image: (post as any).image,
+        images: (post as any).images,
+        videoUrl: (post as any).videoUrl,
+        videoUrls: (post as any).videoUrls,
+        resolvedImg: img,
+        optimized,
+      });
 
       // 영상 포스트면 회색 점 중앙에 작은 ▶ 아이콘만 추가로 표시한다.
       // 이외 동작/디자인은 기존과 동일.
