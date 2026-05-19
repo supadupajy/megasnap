@@ -1674,7 +1674,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       <div
         className="absolute left-0 right-0 flex items-center justify-center"
         style={{
-          top: 0,
+          top: "1rem",
           bottom: 0,
           cursor: "pointer",
         }}
@@ -1760,40 +1760,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
               </div>
             </div>
           )}
-
-          {/* 영상 타임라인 (현재 미디어가 영상일 때만) */}
-          {hasVideo && (
-            <VideoTimeline
-              currentTime={isScrubbing ? scrubTime : currentTime}
-              duration={duration}
-              isScrubbing={isScrubbing}
-              compact={embedded}
-              onScrubStart={() => {
-                const v = videoRef.current;
-                if (!v) return;
-                wasPlayingBeforeScrubRef.current = !v.paused;
-                v.pause();
-                setIsScrubbing(true);
-                setScrubTime(v.currentTime || 0);
-              }}
-              onScrub={(t) => {
-                setScrubTime(t);
-                const v = videoRef.current;
-                if (v) v.currentTime = t;
-              }}
-              onScrubEnd={(t) => {
-                const v = videoRef.current;
-                if (v) {
-                  v.currentTime = t;
-                  setCurrentTime(t);
-                }
-                setIsScrubbing(false);
-                if (wasPlayingBeforeScrubRef.current && v) {
-                  v.play().then(() => setIsPlaying(true)).catch(() => {});
-                }
-              }}
-            />
-          )}
         </div>
       </div>
 
@@ -1821,6 +1787,44 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             paddingBottom: embedded ? "8px" : "calc(env(safe-area-inset-bottom, 0px) + 8px)",
           }}
         >
+          {/* 0) 영상 타임라인 — 액션 버튼 줄 바로 위에 위치.
+              영상 컨테이너 내부에 두지 않고 정보 오버레이 영역으로 옮겨서
+              좋아요/댓글 아이콘보다 약간 더 위에 배치되도록 한다. */}
+          {hasVideo && (
+            <div className="pointer-events-auto mb-2">
+              <VideoTimeline
+                currentTime={isScrubbing ? scrubTime : currentTime}
+                duration={duration}
+                isScrubbing={isScrubbing}
+                compact={embedded}
+                onScrubStart={() => {
+                  const v = videoRef.current;
+                  if (!v) return;
+                  wasPlayingBeforeScrubRef.current = !v.paused;
+                  v.pause();
+                  setIsScrubbing(true);
+                  setScrubTime(v.currentTime || 0);
+                }}
+                onScrub={(t) => {
+                  setScrubTime(t);
+                  const v = videoRef.current;
+                  if (v) v.currentTime = t;
+                }}
+                onScrubEnd={(t) => {
+                  const v = videoRef.current;
+                  if (v) {
+                    v.currentTime = t;
+                    setCurrentTime(t);
+                  }
+                  setIsScrubbing(false);
+                  if (wasPlayingBeforeScrubRef.current && v) {
+                    v.play().then(() => setIsPlaying(true)).catch(() => {});
+                  }
+                }}
+              />
+            </div>
+          )}
+
           {/* 1) 알약 액션 버튼 (이미지/영상 바로 아래) */}
           <div className="flex items-center justify-between gap-2 pointer-events-auto mb-2">
             <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -2703,7 +2707,7 @@ const VideoTimeline: React.FC<VideoTimelineProps> = ({
   return (
     <div
       className={cn(
-        "absolute bottom-0 left-0 right-0 z-30 select-none"
+        "relative w-full z-30 select-none"
       )}
       // 부모(미디어 영역)의 탭/스와이프 핸들러가 타임라인 조작을 가로채지 않도록 차단
       onClick={(e) => e.stopPropagation()}
