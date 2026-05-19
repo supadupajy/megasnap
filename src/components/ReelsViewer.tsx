@@ -2242,7 +2242,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     if (!el) return;
     const markReady = () => setIsReady(true);
     const handleLoadedData = () => {
-      if (!isCurrent) markReady();
+      markReady();
     };
     const handleCanPlay = () => {
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
@@ -2257,8 +2257,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     el.addEventListener("loadeddata", handleLoadedData);
     el.addEventListener("playing", markReady);
     el.addEventListener("canplay", handleCanPlay);
-    if (isCurrent && !el.paused && el.readyState >= 2) markReady();
-    if (!isCurrent && el.readyState >= 2) markReady();
+    if (el.readyState >= 2) markReady();
     return () => {
       el.removeEventListener("loadeddata", handleLoadedData);
       el.removeEventListener("playing", markReady);
