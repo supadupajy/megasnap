@@ -24,7 +24,6 @@ import PostMenuDropdown from './PostMenuDropdown';
 import ImageSliderDots from './ImageSliderDots';
 import HashtagText from './HashtagText';
 import PostItemVideo from './PostItemVideo';
-import VideoThumbnailPreview from './VideoThumbnailPreview';
 import { useMediaAspectRatio } from '@/hooks/use-media-aspect-ratio';
 import { useImageSliderDrag } from '@/hooks/use-image-slider-drag';
 
@@ -792,26 +791,31 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
             onClick={media.type === 'image' ? onClose : (e) => e.stopPropagation()}
           >
             {media.type === 'video' ? (
-
-              <>
-                <div className="absolute inset-0 z-[1] pointer-events-none">
-                  <VideoThumbnailPreview
+              // 같은 src의 <video>를 두 개(썸네일용 + 재생용) 동시 마운트하면
+              // 모바일 WebView/Safari에서 두 번째 video의 seeking이 첫 번째 video의
+              // 디코드를 멈추게 만들어 "영상이 1초쯤에서 멎고 타임라인만 계속 흐르는"
+              // 버그가 발생한다. PostItemVideo의 posterUrl이 첫 프레임 디코드 전
+              // 동일한 썸네일 효과를 내주므로 VideoThumbnailPreview는 제거한다.
+              index === currentImageIndex ? (
+                <div className="absolute inset-0 z-[2]">
+                  <PostItemVideo
                     src={media.url}
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                    startTime={0.8}
+                    posterUrl={media.posterUrl}
+                    autoPlay
+                    showControls
                   />
                 </div>
-                {index === currentImageIndex && (
-                  <div className="absolute inset-0 z-[2]">
-                    <PostItemVideo
-                      src={media.url}
-                      posterUrl={media.posterUrl}
-                      autoPlay
-                      showControls
-                    />
-                  </div>
-                )}
-              </>
+              ) : (
+                media.posterUrl ? (
+                  <img
+                    src={media.posterUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    draggable={false}
+                  />
+                ) : null
+              )
             ) : (
               <img
                 src={media.url}
