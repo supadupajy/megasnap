@@ -988,7 +988,7 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollDownArrow, setShowScrollDownArrow] = useState(false);
   const [showScrollUpArrow, setShowScrollUpArrow] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [collapsedPostId, setCollapsedPostId] = useState<string | null>(null);
   const [renderExpandedBody, setRenderExpandedBody] = useState(isExpanded);
   const [visibleItemLimit, setVisibleItemLimit] = useState(8);
   const [thumbnailTimerNow, setThumbnailTimerNow] = useState(() => Date.now());
@@ -1012,6 +1012,13 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
   const isExpandedRef = useRef(isExpanded);
 
+  const currentIndex = React.useMemo(() => {
+    if (posts.length === 0) return 0;
+    if (!collapsedPostId) return 0;
+    const nextIndex = posts.findIndex((post) => String(post.id) === collapsedPostId);
+    return nextIndex >= 0 ? nextIndex : 0;
+  }, [posts, collapsedPostId]);
+
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
   useEffect(() => {
     isExpandedRef.current = isExpanded;
@@ -1023,14 +1030,27 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, []);
 
   useEffect(() => {
+    if (posts.length === 0) {
+      setCollapsedPostId(null);
+      return;
+    }
+
+    setCollapsedPostId((prev) => {
+      if (prev && posts.some((post) => String(post.id) === prev)) return prev;
+      return String(posts[0].id);
+    });
+  }, [posts]);
+
+  useEffect(() => {
     // eslint-disable-next-line no-console
     console.log('[TrendingDebug][posts-prop-updated]', {
       refreshTick,
       postCount: posts.length,
+      currentCollapsedPostId: collapsedPostId,
       topIds: posts.slice(0, 5).map((post: any) => ({ id: post.id, rank: post.rank })),
     });
     posts.forEach((post) => warmTrendingThumbnail(post));
-  }, [posts, refreshTick]);
+  }, [collapsedPostId, posts, refreshTick]);
 
   useEffect(() => {
     if (posts.length === 0) return;
@@ -1040,11 +1060,12 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     // eslint-disable-next-line no-console
     console.log('[TrendingDebug][collapsed-current]', {
       currentIndex,
+      currentCollapsedPostId: collapsedPostId,
       current: getTrendingThumbnailDebugInfo(nextPosts[0]),
       prefetched: nextPosts.slice(1).map((post) => getTrendingThumbnailDebugInfo(post)),
     });
     nextPosts.forEach((post) => warmTrendingThumbnail(post));
-  }, [currentIndex, posts]);
+  }, [collapsedPostId, currentIndex, posts]);
 
   // 5분 간격 fetch가 한 번씩 완료될 때마다(=refreshTick 증가) 비교 기준을 갱신한다.
   // - 첫 번째 fetch(refreshTick === 1): 비교 기준이 없으므로 prevRanks를 그대로 두고
@@ -1133,11 +1154,17 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     if (isExpanded || posts.length <= 1) return;
 
     const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % posts.length);
+      setCollapsedPostId((prev) => {
+        const safeIndex = prev
+          ? posts.findIndex((post) => String(post.id) === prev)
+          : 0;
+        const nextIndex = ((safeIndex >= 0 ? safeIndex : 0) + 1) % posts.length;
+        return String(posts[nextIndex].id);
+      });
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [isExpanded, posts.length]);
+  }, [isExpanded, posts]);
 
   const currentPost = (posts[currentIndex] || posts[0]) as (Post & { rank: number }) | undefined;
   const visibleExpandedPosts = isExpanded ? posts.slice(0, visibleItemLimit) : [];
@@ -1297,13 +1324,14 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                     <AnimatePresence mode="wait">
 
                       <motion.p
-                        key={`${currentPost?.id}-${currentIndex}`}
+                        key={currentPost?.id || 'empty-trending-post'}
                         initial={{ y: 15, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -15, opacity: 0 }}
                         transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
                         className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                       >
+
                         <HashtagText text={currentPost?.content || ''} />
                       </motion.p>
                     </AnimatePresence>
