@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, CheckCircle2, Database, Image, Loader2, RefreshCw, ShieldCheck, Video } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, Database, Image, Loader2, RefreshCw, ShieldCheck, Video, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,13 +30,17 @@ const DBImageCompression = () => {
   const { user: authUser } = useAuth();
   const [status, setStatus] = useState<CompressionStatus>('idle');
   const [thumbStatus, setThumbStatus] = useState<CompressionStatus>('idle');
+  const [darkStatus, setDarkStatus] = useState<CompressionStatus>('idle');
   const [log, setLog] = useState<string[]>([]);
   const [thumbLog, setThumbLog] = useState<string[]>([]);
+  const [darkLog, setDarkLog] = useState<string[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [thumbProgress, setThumbProgress] = useState({ done: 0, total: 0 });
+  const [darkProgress, setDarkProgress] = useState({ done: 0, total: 0 });
 
   const addLog = (msg: string) => setLog(prev => [...prev, msg]);
   const addThumbLog = (msg: string) => setThumbLog(prev => [...prev, msg]);
+  const addDarkLog = (msg: string) => setDarkLog(prev => [...prev, msg]);
 
   const getSupabasePath = (url: string): { bucket: string; path: string } | null => {
     try {
@@ -428,6 +432,177 @@ const DBImageCompression = () => {
     }
   };
 
+  // ── 검은 썸네일 자동 감지 + 선택적 재생성 ────────────────────────
+  //
+  // 모든 영상 포스트를 재생성하는 것은 비용이 크기 때문에,
+  // 1) 현재 저장된 포스터 이미지를 다운로드해 평균 밝기를 측정하고
+  // 2) "거의 검정"으로 판정된 슬롯만 영상을 다시 읽어 새 썸네일로 교체한다.
+
+  const isUrlMostlyDark = async (url: string): Promise<boolean> => {
+    const source = getSupabasePath(url);
+    const directUrl = source ? getDirectPublicUrl(source.bucket, source.path) : url;
+
+    // CORS-안전한 이미지 로드 (post-images 버킷은 Access-Control-Allow-Origin: *)
+    const blob = await fetch(directUrl, { cache: 'no-store' }).then((r) => {
+      if (!r.ok) throw new Error(`fetch 실패: ${r.status}`);
+      return r.blob();
+    });
+
+    return new Promise<boolean>((resolve) => {
+      const objectUrl = URL.createObjectURL(blob);
+      const img = new window.Image();
+      img.onload = () => {
+        try {
+          const sample = 24;
+          const canvas = document.createElement('canvas');
+          canvas.width = sample;
+          canvas.height = sample;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(false);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, sample, sample);
+          const { data } = ctx.getImageData(0, 0, sample, sample);
+          let darkPixels = 0;
+          const pixelCount = data.length / 4;
+          for (let i = 0; i < data.length; i += 4) {
+            const luminance = data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722;
+            if (luminance < 18) darkPixels += 1;
+          }
+          resolve(darkPixels / pixelCount > 0.88);
+        } catch {
+          resolve(false);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(false);
+      };
+      img.src = objectUrl;
+    });
+  };
+
+  // 포스트의 각 비디오 슬롯 중 현재 포스터가 검정으로 판정된 것만 재생성한다.
+  // 반환값: 재생성된 슬롯 수
+  const regenerateDarkSlotsForPost = async (post: VideoThumbnailPost): Promise<number> => {
+    const slots = getVideoSlots(post);
+    if (slots.length === 0) return 0;
+
+    const nextImages = Array.isArray(post.images)
+      ? post.images.map((url) => (typeof url === 'string' ? url : ''))
+      : [];
+    let nextImageUrl = post.image_url || '';
+    let regenerated = 0;
+    let dirty = false;
+
+    for (const slot of slots) {
+      // 해당 슬롯의 현재 포스터 URL을 찾는다.
+      const posterCandidate =
+        (slot.index === 0 ? post.image_url : '') ||
+        (Array.isArray(post.images) && typeof post.images[slot.index] === 'string'
+          ? (post.images[slot.index] as string)
+          : '');
+
+      // 포스터가 없으면(= 영상 URL 자체가 image_url로 들어간 케이스 등) 무조건 재생성 후보로 본다.
+      const hasPoster = typeof posterCandidate === 'string'
+        && posterCandidate.length > 0
+        && !isVideoUrl(posterCandidate);
+
+      let needsRegen = !hasPoster;
+      if (hasPoster) {
+        try {
+          needsRegen = await isUrlMostlyDark(posterCandidate);
+        } catch {
+          // 포스터 검사에 실패한 슬롯은 안전하게 건너뛴다(원본 유지).
+          needsRegen = false;
+        }
+      }
+
+      if (!needsRegen) continue;
+
+      addDarkLog(`   ↳ 슬롯 ${slot.index} 검정 감지 — 영상에서 재추출`);
+      const thumbnailBlob = await createThumbnailFromVideoUrl(slot.url);
+      const thumbnailUrl = await uploadRegeneratedThumbnail(thumbnailBlob, post.id, slot.index);
+      nextImages[slot.index] = thumbnailUrl;
+      if (slot.index === 0 || !nextImageUrl) nextImageUrl = thumbnailUrl;
+      regenerated += 1;
+      dirty = true;
+    }
+
+    if (dirty) {
+      const { error } = await supabase
+        .from('posts')
+        .update({ image_url: nextImageUrl, images: nextImages })
+        .eq('id', post.id);
+      if (error) throw error;
+    }
+
+    return regenerated;
+  };
+
+  const handleRegenerateDarkOnly = async () => {
+    if (!authUser?.id) {
+      showError('로그인이 필요합니다.');
+      return;
+    }
+
+    setDarkStatus('running');
+    setDarkLog([]);
+    setDarkProgress({ done: 0, total: 0 });
+
+    try {
+      addDarkLog('영상 포스트 목록을 조회하는 중...');
+      const posts = await fetchVideoPosts();
+      setDarkProgress({ done: 0, total: posts.length });
+      addDarkLog(`총 ${posts.length}개 영상 포스트 — 검정 포스터만 검사`);
+
+      let regeneratedCount = 0;
+      let darkPostCount = 0;
+      let cleanPostCount = 0;
+      let failCount = 0;
+
+      for (let i = 0; i < posts.length; i++) {
+        const post = posts[i];
+        setDarkProgress({ done: i + 1, total: posts.length });
+
+        try {
+          const count = await regenerateDarkSlotsForPost(post);
+          if (count > 0) {
+            darkPostCount += 1;
+            regeneratedCount += count;
+            addDarkLog(`✅ [${i + 1}/${posts.length}] ${post.id} · 검정 ${count}개 교체`);
+          } else {
+            cleanPostCount += 1;
+            // 클린한 포스트는 너무 시끄러우므로 매 10개마다만 출력
+            if ((i + 1) % 10 === 0) {
+              addDarkLog(`⏭️ [${i + 1}/${posts.length}] 정상 포스터 ${cleanPostCount}개 확인`);
+            }
+          }
+        } catch (err: any) {
+          failCount++;
+          addDarkLog(`❌ [${i + 1}/${posts.length}] ${post.id} · 실패: ${err.message}`);
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 30));
+      }
+
+      addDarkLog(`\n완료! 검정 교체 ${regeneratedCount}개 (포스트 ${darkPostCount}개) / 정상 ${cleanPostCount}개 / 실패 ${failCount}개`);
+      setDarkStatus('done');
+      if (failCount === 0) {
+        showSuccess(`검은 썸네일 ${regeneratedCount}개를 새 프레임으로 교체했습니다.`);
+      } else {
+        showError(`일부 처리에 실패했습니다. 실패 ${failCount}개`);
+      }
+    } catch (err: any) {
+      addDarkLog(`치명적 오류: ${err.message}`);
+      setDarkStatus('error');
+      showError('검은 썸네일 자동 교체 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleRegenerateVideoThumbnails = async () => {
     if (!authUser?.id) {
       showError('로그인이 필요합니다.');
@@ -479,6 +654,7 @@ const DBImageCompression = () => {
 
   const progressPct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
   const thumbProgressPct = thumbProgress.total > 0 ? Math.round((thumbProgress.done / thumbProgress.total) * 100) : 0;
+  const darkProgressPct = darkProgress.total > 0 ? Math.round((darkProgress.done / darkProgress.total) * 100) : 0;
 
   return (
     <div className="h-[calc(100dvh-64px)] mt-16 bg-gray-50 flex flex-col">
@@ -582,6 +758,69 @@ const DBImageCompression = () => {
           </div>
         </div>
 
+        {/* 검은 썸네일 자동 감지 → 해당 슬롯만 재생성 (권장: 빠르고 안전) */}
+        <div className="mx-4 mt-5 bg-white rounded-3xl border border-purple-100 overflow-hidden shadow-sm">
+          <div className="p-4 border-b border-purple-50">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-purple-50 rounded-2xl flex items-center justify-center shrink-0">
+                <Moon className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-[15px] font-black text-gray-900" style={{ letterSpacing: '-0.04em' }}>검은 썸네일 자동 교체 (권장)</p>
+                <p className="text-[11px] text-gray-400 font-medium">각 포스터 이미지의 밝기를 검사해 검정으로 판정된 슬롯만 영상에서 재추출합니다</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-3">
+            {darkStatus === 'running' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-gray-500">
+                  <span>{darkProgress.done} / {darkProgress.total} 처리 중...</span>
+                  <span>{darkProgressPct}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-500 rounded-full transition-all duration-300"
+                    style={{ width: `${darkProgressPct}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {darkLog.length > 0 && (
+              <div className="bg-gray-50 rounded-2xl p-3 max-h-56 overflow-y-auto space-y-0.5">
+                {darkLog.map((line, i) => (
+                  <p key={i} className="text-[10px] font-mono text-gray-600 leading-relaxed whitespace-pre-wrap">{line}</p>
+                ))}
+              </div>
+            )}
+
+            <Button
+              onClick={handleRegenerateDarkOnly}
+              disabled={darkStatus === 'running'}
+              className={cn(
+                'w-full h-12 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2',
+                darkStatus === 'done'
+                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100 hover:bg-emerald-600'
+                  : darkStatus === 'error'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-purple-600 text-white shadow-lg shadow-purple-100 hover:bg-purple-700 disabled:opacity-50'
+              )}
+            >
+              {darkStatus === 'running'
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> 검사 및 교체 중...</>
+                : darkStatus === 'done'
+                  ? <><CheckCircle2 className="w-4 h-4" /> 완료됨 · 다시 검사하기</>
+                  : <><Moon className="w-4 h-4" /> 검은 썸네일만 자동 교체</>}
+            </Button>
+
+            <p className="text-[10px] text-gray-400 font-medium text-center leading-relaxed">
+              정상 포스터는 건드리지 않고 검은 프레임만 교체하므로, 아래의 "전체 재생성"보다 훨씬 빠르고 안전합니다.
+            </p>
+          </div>
+        </div>
+
         <div className="mx-4 mt-5 bg-white rounded-3xl border border-indigo-100 overflow-hidden shadow-sm">
           <div className="p-4 border-b border-indigo-50">
             <div className="flex items-center gap-3">
@@ -589,8 +828,8 @@ const DBImageCompression = () => {
                 <Video className="w-5 h-5 text-indigo-500" />
               </div>
               <div>
-                <p className="text-[15px] font-black text-gray-900" style={{ letterSpacing: '-0.04em' }}>기존 영상 썸네일 재생성</p>
-                <p className="text-[11px] text-gray-400 font-medium">DB의 기존 영상들을 다시 읽어 검은 프레임을 피한 대표 썸네일로 교체합니다</p>
+                <p className="text-[15px] font-black text-gray-900" style={{ letterSpacing: '-0.04em' }}>기존 영상 썸네일 전체 재생성</p>
+                <p className="text-[11px] text-gray-400 font-medium">DB의 모든 영상을 다시 읽어 대표 썸네일로 교체합니다 (검정 여부와 무관)</p>
               </div>
             </div>
 
