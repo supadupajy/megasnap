@@ -1120,7 +1120,10 @@ const MapContainer = ({
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
       const markerFloatKey = 'float-v5';
-      const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
+      // 영상 포스트가 서버측 -thumb.jpg 폴백을 쓰는지 여부도 키에 반영 →
+      // 기존 마커가 빈 상태로 캐시되어 있어도 데이터 흐름이 바뀌면 강제로 재생성된다.
+      const storedThumbKey = firstVideoUrl ? (storedVideoPoster ? 's1' : 's0') : '';
+      const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${storedThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
       // 영상 포스트라도 마커는 즉시 생성한다.
