@@ -367,6 +367,11 @@
 .animate-marker-float {
   will-change: transform;
   transform: translate3d(0, 0, 0);
+  /* 부모 .marker-content-wrapper의 drop-shadow 제거 후에도 자체 GPU 합성 레이어를
+     확정해 둥실 애니메이션의 translate3d가 시각적으로 항상 적용되도록 한다. */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
 }
 
 .animate-marker-float.marker-float-active {
