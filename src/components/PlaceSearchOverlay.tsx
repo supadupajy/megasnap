@@ -32,6 +32,9 @@ const PlaceSearchOverlay = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pagination, setPagination] = useState<any>(null);
 
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [isSwipeDragging, setIsSwipeDragging] = useState(false);
+
   const closeTimeoutRef = useRef<number | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const searchService = useRef<any>(null);
@@ -39,6 +42,21 @@ const PlaceSearchOverlay = () => {
   const isSearching = useRef(false);
   const lastQuery = useRef('');
   const onSelectRef = useRef<((place: Place) => void) | null>(null);
+
+  const handleAreaRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const dragOffsetYRef = useRef(0);
+  const isSwipeDraggingRef = useRef(false);
+  const swipeGestureRef = useRef<{
+    active: boolean;
+    source: 'handle' | 'scroll';
+    startX: number;
+    startY: number;
+    lastY: number;
+    lastTime: number;
+    velocityY: number;
+    axis: 'pending' | 'vertical' | 'horizontal';
+  } | null>(null);
 
   // open/close 이벤트
   useEffect(() => {
@@ -62,6 +80,21 @@ const PlaceSearchOverlay = () => {
     };
   }, []);
 
+  const syncDragOffsetY = (next: number) => {
+    dragOffsetYRef.current = next;
+    setDragOffsetY(next);
+  };
+
+  const syncSwipeDragging = (next: boolean) => {
+    isSwipeDraggingRef.current = next;
+    setIsSwipeDragging(next);
+  };
+
+  const resetSwipeGesture = () => {
+    swipeGestureRef.current = null;
+    syncSwipeDragging(false);
+  };
+
   // mount/unmount 애니메이션
   useEffect(() => {
     if (closeTimeoutRef.current) {
@@ -71,10 +104,15 @@ const PlaceSearchOverlay = () => {
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
+      syncSwipeDragging(false);
+      syncDragOffsetY(0);
+      swipeGestureRef.current = null;
       return;
     }
     if (shouldRender) {
       setIsClosing(true);
+      syncSwipeDragging(false);
+      swipeGestureRef.current = null;
       closeTimeoutRef.current = window.setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
@@ -82,6 +120,7 @@ const PlaceSearchOverlay = () => {
         setResults([]);
         setPagination(null);
         lastQuery.current = '';
+        syncDragOffsetY(0);
         closeTimeoutRef.current = null;
       }, 220);
     }
@@ -261,6 +300,131 @@ const PlaceSearchOverlay = () => {
     window.dispatchEvent(new CustomEvent('close-place-search'));
   }, []);
 
+  // 스와이프 다운 닫기 (댓글 다이얼로그와 동일 패턴)
+  useEffect(() => {
+    if (!shouldRender || !isOpen || isClosing) return;
+
+    const bindSwipeSource = (element: HTMLElement | null, source: 'handle' | 'scroll') => {
+      if (!element) return () => {};
+
+      const handleTouchStart = (e: TouchEvent) => {
+        if (!isOpen || isClosing) return;
+
+        const target = e.target as HTMLElement | null;
+        if (target?.closest('button, input, textarea, a, label, [role="button"], [data-place-no-swipe="true"]')) {
+          return;
+        }
+
+        if (source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
+          return;
+        }
+
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        swipeGestureRef.current = {
+          active: true,
+          source,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          lastY: touch.clientY,
+          lastTime: Date.now(),
+          velocityY: 0,
+          axis: 'pending',
+        };
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        const gesture = swipeGestureRef.current;
+        if (!gesture?.active || gesture.source !== source) return;
+
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        const dx = touch.clientX - gesture.startX;
+        const dy = touch.clientY - gesture.startY;
+
+        if (gesture.axis === 'pending') {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          gesture.axis = Math.abs(dx) > Math.abs(dy) + 6 ? 'horizontal' : 'vertical';
+        }
+
+        if (gesture.axis === 'horizontal') {
+          resetSwipeGesture();
+          syncDragOffsetY(0);
+          return;
+        }
+
+        if (gesture.source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
+          resetSwipeGesture();
+          syncDragOffsetY(0);
+          return;
+        }
+
+        if (dy <= 0) {
+          if (isSwipeDraggingRef.current || dragOffsetYRef.current > 0) {
+            syncSwipeDragging(true);
+            syncDragOffsetY(0);
+            e.preventDefault();
+          }
+          return;
+        }
+
+        const now = Date.now();
+        const deltaTime = Math.max(now - gesture.lastTime, 1);
+        gesture.velocityY = (touch.clientY - gesture.lastY) / deltaTime;
+        gesture.lastY = touch.clientY;
+        gesture.lastTime = now;
+
+        const limitedDy = dy <= 160 ? dy : 160 + (dy - 160) * 0.35;
+        syncSwipeDragging(true);
+        syncDragOffsetY(limitedDy);
+        e.preventDefault();
+      };
+
+      const handleTouchEnd = () => {
+        const gesture = swipeGestureRef.current;
+        if (!gesture || gesture.source !== source) {
+          syncSwipeDragging(false);
+          return;
+        }
+
+        const currentDragOffset = dragOffsetYRef.current;
+        const shouldClose = currentDragOffset > 120 || (currentDragOffset > 72 && gesture.velocityY > 0.55);
+
+        swipeGestureRef.current = null;
+        syncSwipeDragging(false);
+
+        if (shouldClose) {
+          close();
+          return;
+        }
+
+        syncDragOffsetY(0);
+      };
+
+      element.addEventListener('touchstart', handleTouchStart, { passive: true });
+      element.addEventListener('touchmove', handleTouchMove, { passive: false });
+      element.addEventListener('touchend', handleTouchEnd, { passive: true });
+      element.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+      return () => {
+        element.removeEventListener('touchstart', handleTouchStart);
+        element.removeEventListener('touchmove', handleTouchMove);
+        element.removeEventListener('touchend', handleTouchEnd);
+        element.removeEventListener('touchcancel', handleTouchEnd);
+      };
+    };
+
+    const unbindHandle = bindSwipeSource(handleAreaRef.current, 'handle');
+    const unbindScroll = bindSwipeSource(scrollAreaRef.current, 'scroll');
+
+    return () => {
+      unbindHandle();
+      unbindScroll();
+    };
+  }, [shouldRender, isOpen, isClosing, close]);
+
   const stopSheetEvent = (e: React.SyntheticEvent) => {
     e.stopPropagation();
   };
@@ -301,40 +465,50 @@ const PlaceSearchOverlay = () => {
         style={{
           top: `${sheetTopPx}px`,
           bottom: '0px',
+          transform: `translate(-50%, ${dragOffsetY}px)`,
+          transition: isSwipeDragging
+            ? 'none'
+            : 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
         onClick={stopSheetEvent}
       >
-        {/* 상단 핸들 */}
-        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
+        {/* 상단 핸들 + 헤더 (스와이프 영역) */}
+        <div ref={handleAreaRef} className="shrink-0 touch-none">
+          <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
 
-        {/* 헤더 */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-              <MapPin className="h-6 w-6" />
+          {/* 헤더 */}
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                <MapPin className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-lg font-black tracking-tight text-slate-950">장소 검색</p>
+                <p className="text-sm font-bold text-slate-400">
+                  {query.trim()
+                    ? `${results.length.toLocaleString()}개의 결과`
+                    : '장소명 또는 주소'}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-lg font-black tracking-tight text-slate-950">장소 검색</p>
-              <p className="text-sm font-bold text-slate-400">
-                {query.trim()
-                  ? `${results.length.toLocaleString()}개의 결과`
-                  : '장소명 또는 주소'}
-              </p>
-            </div>
+            <button
+              type="button"
+              onPointerDown={close}
+              onClick={close}
+              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
+              aria-label="검색 닫기"
+              data-place-no-swipe="true"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
-          <button
-            type="button"
-            onPointerDown={close}
-            onClick={close}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
-            aria-label="검색 닫기"
-          >
-            <X className="h-6 w-6" />
-          </button>
         </div>
 
         {/* 검색 입력 영역 */}
-        <div className="shrink-0 border-b border-slate-100 bg-white px-4 py-3">
+        <div
+          className="shrink-0 border-b border-slate-100 bg-white px-4 py-3"
+          data-place-no-swipe="true"
+        >
           <div className="relative">
             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-600 z-10" />
             <input
@@ -344,6 +518,7 @@ const PlaceSearchOverlay = () => {
               onChange={(e) => setQuery(e.target.value)}
               autoFocus={!query}
               autoComplete="off"
+              data-place-no-swipe="true"
             />
             {isLoading ? (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -355,6 +530,7 @@ const PlaceSearchOverlay = () => {
                 onClick={() => setQuery('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-500 transition active:scale-90"
                 aria-label="검색어 지우기"
+                data-place-no-swipe="true"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -363,7 +539,10 @@ const PlaceSearchOverlay = () => {
         </div>
 
         {/* 결과 영역 */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white">
+        <div
+          ref={scrollAreaRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white"
+        >
           <div className="p-4 space-y-1" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
             {results.map((place) => (
               <button
