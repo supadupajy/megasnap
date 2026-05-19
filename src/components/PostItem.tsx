@@ -379,7 +379,7 @@ const PostItemInner = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate
           currentIndex={currentImageIndex}
           activeWidthClass="w-4"
           inactiveColorClass="bg-white/50"
-          bottomClass="bottom-4"
+          bottomClass={displayMedia.some((media) => media.type === 'video') ? "bottom-[30px]" : "bottom-4"}
           zIndexClass="z-20"
         />
       </div>

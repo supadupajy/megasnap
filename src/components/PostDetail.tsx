@@ -838,7 +838,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
         currentIndex={currentImageIndex}
         activeWidthClass="w-6"
         inactiveColorClass="bg-white/40"
-        bottomClass="bottom-6"
+        bottomClass={displayMedia.some((media) => media.type === 'video') ? "bottom-[30px]" : "bottom-6"}
         zIndexClass="z-30"
       />
     </div>
