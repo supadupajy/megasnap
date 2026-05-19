@@ -259,7 +259,7 @@ const AdInquiry = () => {
             </div>
             <div>
               <p className="text-[11px] text-gray-400 font-bold">직접 이메일 문의</p>
-              <p className="text-sm font-black text-amber-600">support@thesnappop.com</p>
+              <p className="text-sm font-black text-amber-600">support@hibubblez.com</p>
             </div>
           </div>
 

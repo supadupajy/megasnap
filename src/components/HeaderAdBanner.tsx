@@ -36,15 +36,16 @@ const HeaderAdBanner = () => {
       <div
         className="flex-1 min-w-0 h-10 bg-gradient-to-r from-amber-100 via-amber-50 to-amber-100 rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-amber-300/60"
         style={GPU_LAYER_STYLE}
-        onClick={() => window.open('mailto:support@thesnappop.com', '_blank')}
+        onClick={() => window.open('mailto:support@hibubblez.com', '_blank')}
       >
         <div className="absolute inset-0 flex items-center justify-center">
 
           <div className="flex flex-col items-left">
             <span className="text-[8px] font-black text-gray-900 leading-none tracking-tighter uppercase">광고 문의</span>
-            <span className="text-[6px] font-bold text-amber-600 leading-none mt-0.5 tracking-[-0.08em]">support@thesnappop.com</span>
+            <span className="text-[6px] font-bold text-amber-600 leading-none mt-0.5 tracking-[-0.08em]">support@hibubblez.com</span>
           </div>
         </div>
+
         <Mail className="absolute top-2 right-2.5 w-2.5 h-2.5 text-amber-600" />
       </div>
     );

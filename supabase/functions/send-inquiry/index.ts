@@ -116,8 +116,8 @@ serve(async (req) => {
     console.log('[send-inquiry] 이메일 전송 시작...');
 
     await transporter.sendMail({
-      from: `"SnapPop Support" <support@thesnappop.com>`,
-      to: "support@thesnappop.com",
+      from: `"SnapPop Support" <support@hibubblez.com>`,
+      to: "support@hibubblez.com",
       replyTo: user.email,
       subject: `[SnapPop 문의] [${subjectCategory}] ${subjectTitle}`,
       html: htmlBody,

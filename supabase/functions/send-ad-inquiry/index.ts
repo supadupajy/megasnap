@@ -104,8 +104,8 @@ serve(async (req) => {
     console.log("[send-ad-inquiry] nodemailer 전송 시작...");
 
     await transporter.sendMail({
-      from: `"SnapPop Ads" <support@thesnappop.com>`,
-      to: "support@thesnappop.com",
+      from: `"SnapPop Ads" <support@hibubblez.com>`,
+      to: "support@hibubblez.com",
       subject: `[SnapPop 광고 문의] ${subjectCompany} - ${cleanHeader(adTypeLabel)}`,
       html: htmlBody,
     });

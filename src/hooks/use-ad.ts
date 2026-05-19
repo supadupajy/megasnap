@@ -51,11 +51,12 @@ export function normalizeUrl(url: string): string {
 export const RECRUITMENT_SLOT: AdSlot = {
   image_url: '/assets/ad-recruitment-banner.png',
   title: '광고 문의',
-  subtitle: 'support@thesnappop.com',
-  link_url: 'mailto:support@thesnappop.com',
+  subtitle: 'support@hibubblez.com',
+  link_url: 'mailto:support@hibubblez.com',
   brand_name: '하이버블즈',
   brand_logo_url: '',
   isNext: false,
+
   isRecruitment: true,
   isPending: false,
 };
