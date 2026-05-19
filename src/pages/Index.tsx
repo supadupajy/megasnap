@@ -54,7 +54,12 @@ const formatMapAddress = (result: any, lat: number, lng: number) => {
   ) || resolveOfflineLocationName(lat, lng);
 };
 
-const getMapAddressCacheKey = (lat: number, lng: number) => `${lat.toFixed(4)},${lng.toFixed(4)}`;
+// 지도 중심 주소 캐시 키 정밀도:
+//   toFixed(3) ≈ 약 110m 단위로 양자화.
+// 화면 하단 인디케이터가 보여주는 건 행정동(구/동) 단위 주소이므로
+// 110m 안에서는 어차피 같은 결과가 나온다. 정밀도를 일부러 낮춰서
+// 캐시 적중률을 끌어올리고 카카오 coord2Address 호출량을 줄인다.
+const getMapAddressCacheKey = (lat: number, lng: number) => `${lat.toFixed(3)},${lng.toFixed(3)}`;
 const MAP_ADDRESS_CACHE_STORAGE_KEY = 'map-center-address-cache';
 const MAP_ADDRESS_CACHE_LIMIT = 160;
 const getBoundsFetchKey = (
