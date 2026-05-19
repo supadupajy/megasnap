@@ -1816,8 +1816,9 @@ const MapContainer = ({
       // 또한 .ghost-marker-dot::after(rgba(100,116,139,0.24)) 위로 올라오도록 z-index:3 부여
       // (::after가 z-index:1, ::before가 z-index:2 → img는 z-index:3, play 아이콘은 z-index:5).
       // 그레이스케일은 약하게만 적용해 사진이 너무 어둡지 않도록 함.
+      // 인라인 style은 최소화하고 모든 강제 사이징/위치는 CSS의 .ghost-marker-dot.has-thumb img 규칙이 담당.
       const ghostImgHtml = rawThumbUrl
-        ? `<img src="${rawThumbUrl}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;" onerror="this.style.display='none'" />`
+        ? `<img src="${rawThumbUrl}" alt="" referrerpolicy="no-referrer" />`
         : '';
 
       // 썸네일이 있는 경우 `has-thumb` 클래스를 추가 → CSS의 ::before(흰색 하이라이트 그라데이션) /
@@ -2174,9 +2175,8 @@ const MapContainer = ({
           const imgEl = document.createElement('img');
           imgEl.src = dataUrl;
           imgEl.alt = '';
-          imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;';
           dot.insertBefore(imgEl, dot.firstChild);
-          // 썸네일이 들어왔으니 has-thumb 클래스 부여 → CSS 오버레이 약화
+          // 썸네일이 들어왔으니 has-thumb 클래스 부여 → CSS가 사이징/스타일링 담당
           dot.classList.add('has-thumb');
         }
       }
