@@ -76,15 +76,17 @@ const LogoDownloads = () => {
                 }}
               >
                 {item.cropped ? (
-                  <div className="relative h-32 w-32 overflow-hidden rounded-[27%] shadow-[0_14px_28px_rgba(249,115,22,0.18),0_10px_20px_rgba(15,23,42,0.1)]">
-                    <img
-                      src={item.previewPath}
-                      alt={item.title}
-                      className="absolute left-1/2 top-[49%] h-full w-full max-w-none -translate-x-1/2 -translate-y-1/2 scale-[1.84] object-contain"
-                      loading="eager"
-                      decoding="async"
-                    />
-                  </div>
+                  <div
+                    className="h-32 w-32 overflow-hidden rounded-[27%] bg-transparent"
+                    style={{
+                      backgroundImage: `url(${item.previewPath})`,
+                      backgroundPosition: '50% 47%',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: '222% 222%',
+                    }}
+                    aria-label={item.title}
+                    role="img"
+                  />
                 ) : (
 
                   <img
