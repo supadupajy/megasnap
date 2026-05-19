@@ -527,7 +527,6 @@ const PlaceSearchOverlay = () => {
                   className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  autoFocus={!query}
                   autoComplete="off"
                   data-place-no-swipe="true"
                 />
