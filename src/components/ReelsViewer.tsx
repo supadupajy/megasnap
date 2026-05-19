@@ -2201,6 +2201,7 @@ interface ReelsVideoProps {
   shouldWarmUp?: boolean;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
   posterUrl?: string;
+  debugIndex?: number;
 }
 
 const ReelsVideo: React.FC<ReelsVideoProps> = ({
@@ -2211,13 +2212,55 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   isCurrent,
   shouldWarmUp = false,
   posterUrl,
+  debugIndex,
 }) => {
 
   const localRef = useRef<HTMLVideoElement>(null);
 
   const [isReady, setIsReady] = useState(false);
+  const isCurrentRef = useRef(isCurrent);
+  const isReadyRef = useRef(isReady);
+
+  useEffect(() => {
+    isCurrentRef.current = isCurrent;
+  }, [isCurrent]);
+
+  useEffect(() => {
+    isReadyRef.current = isReady;
+  }, [isReady]);
+
+  const debugSrc = useMemo(() => {
+    try {
+      return new URL(src).pathname.split('/').pop() || src.slice(-60);
+    } catch {
+      return src.slice(-60);
+    }
+  }, [src]);
+
+  const logVideoState = useCallback((label: string, extra: Record<string, unknown> = {}) => {
+    const el = localRef.current;
+    console.log("[ReelsVideo]", label, {
+      index: debugIndex,
+      isCurrent: isCurrentRef.current,
+      isReady: isReadyRef.current,
+      preload,
+      shouldWarmUp,
+      muted,
+      src: debugSrc,
+      readyState: el?.readyState,
+      networkState: el?.networkState,
+      paused: el?.paused,
+      currentTime: el?.currentTime,
+      duration: el?.duration,
+      videoWidth: el?.videoWidth,
+      videoHeight: el?.videoHeight,
+      error: el?.error ? { code: el.error.code, message: el.error.message } : null,
+      ...extra,
+    });
+  }, [debugIndex, debugSrc, muted, preload, shouldWarmUp]);
 
   const setRefs = useCallback(
+
     (el: HTMLVideoElement | null) => {
       localRef.current = el;
       if (videoRef) {
@@ -2229,54 +2272,94 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 
   useEffect(() => {
     setIsReady(false);
+    logVideoState("src changed: reset ready");
   }, [src]);
 
   useEffect(() => {
     if (!isCurrent) return;
-    const el = localRef.current;
-    if (!el) return;
 
+    const el = localRef.current;
+    if (!el) {
+      logVideoState("became current but video element is null");
+      return;
+    }
+
+    logVideoState("became current: before load/play");
     el.muted = muted;
     if (el.readyState < 2) el.load();
 
     el.play()
-      .then(() => setIsReady(true))
-      .catch(() => {
+      .then(() => {
+        setIsReady(true);
+        logVideoState("play success");
+      })
+      .catch((err) => {
+        logVideoState("play failed, retry muted", { errorName: err?.name, errorMessage: err?.message });
         el.muted = true;
-        el.play().then(() => setIsReady(true)).catch(() => {});
+        el.play()
+          .then(() => {
+            setIsReady(true);
+            logVideoState("muted retry play success");
+          })
+          .catch((retryErr) => {
+            logVideoState("muted retry play failed", { errorName: retryErr?.name, errorMessage: retryErr?.message });
+          });
       });
 
-    if (el.readyState >= 2) setIsReady(true);
-  }, [isCurrent, muted, src]);
+    if (el.readyState >= 2) {
+      setIsReady(true);
+      logVideoState("became current: already readyState >= 2");
+    }
+  }, [isCurrent, logVideoState, muted, src]);
 
   useEffect(() => {
     const el = localRef.current;
     if (!el) return;
     const markReady = () => setIsReady(true);
+    const handleLoadedMetadata = () => logVideoState("event: loadedmetadata");
     const handleLoadedData = () => {
       markReady();
-
+      logVideoState("event: loadeddata");
     };
+    const handlePlaying = () => {
+      markReady();
+      logVideoState("event: playing");
+    };
+    const handleWaiting = () => logVideoState("event: waiting");
+    const handleStalled = () => logVideoState("event: stalled");
+    const handleError = () => logVideoState("event: error");
     const handleCanPlay = () => {
+      logVideoState("event: canplay");
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
       if (isCurrent && el.paused) {
-        el.play().catch(() => {
+        el.play().catch((err) => {
+          logVideoState("canplay play failed, retry muted", { errorName: err?.name, errorMessage: err?.message });
           // 사운드 정책 등으로 실패하면 muted로 재시도
           el.muted = true;
-          el.play().catch(() => {});
+          el.play().catch((retryErr) => {
+            logVideoState("canplay muted retry failed", { errorName: retryErr?.name, errorMessage: retryErr?.message });
+          });
         });
       }
     };
+    el.addEventListener("loadedmetadata", handleLoadedMetadata);
     el.addEventListener("loadeddata", handleLoadedData);
-    el.addEventListener("playing", markReady);
+    el.addEventListener("playing", handlePlaying);
     el.addEventListener("canplay", handleCanPlay);
+    el.addEventListener("waiting", handleWaiting);
+    el.addEventListener("stalled", handleStalled);
+    el.addEventListener("error", handleError);
     if (el.readyState >= 2) markReady();
     return () => {
+      el.removeEventListener("loadedmetadata", handleLoadedMetadata);
       el.removeEventListener("loadeddata", handleLoadedData);
-      el.removeEventListener("playing", markReady);
+      el.removeEventListener("playing", handlePlaying);
       el.removeEventListener("canplay", handleCanPlay);
+      el.removeEventListener("waiting", handleWaiting);
+      el.removeEventListener("stalled", handleStalled);
+      el.removeEventListener("error", handleError);
     };
-  }, [src, isCurrent]);
+  }, [src, isCurrent, logVideoState]);
 
   // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
 
@@ -2395,7 +2478,18 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
     mediaCountRef.current = mediaList.length;
   }, [mediaList.length]);
 
+  useEffect(() => {
+    console.log("[MediaCarousel] current media changed", {
+      currentIndex,
+      mediaCount: mediaList.length,
+      isSlideActive,
+      currentIsVideo: isVideoUrl(mediaList[currentIndex]),
+      mediaTypes: mediaList.map((url) => (isVideoUrl(url) ? "video" : "image")),
+    });
+  }, [currentIndex, isSlideActive, mediaList]);
+
   // 제스처 상태
+
   const gestureRef = useRef<{
     active: boolean;
     locked: "horizontal" | "vertical" | null;
@@ -2637,6 +2731,7 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   isCurrent={isPlayable}
                   shouldWarmUp={shouldWarmUp}
                   posterUrl={videoPosterUrl}
+                  debugIndex={i}
                 />
               ) : (
                 <img
