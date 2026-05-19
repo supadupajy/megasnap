@@ -151,10 +151,13 @@ const PostCommentsDialog = ({
 
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
+  const pendingScrollCommentIdRef = useRef<string | null>(null);
+  const commentRowElementsRef = useRef(new Map<string, HTMLDivElement>());
   const onCommentsChangeRef = useRef(onCommentsChange);
   const commentsRef = useRef<Comment[]>([]);
   const fetchSequenceRef = useRef(0);
   const mutationSequenceRef = useRef(0);
+
   const swipeGestureRef = useRef<{
     active: boolean;
     source: 'handle' | 'scroll';
@@ -238,6 +241,32 @@ const PostCommentsDialog = ({
       window.dispatchEvent(new CustomEvent('comments-dialog-visibility', { detail: { open: false } }));
     };
   }, [shouldRender]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      pendingScrollCommentIdRef.current = null;
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const pendingCommentId = pendingScrollCommentIdRef.current;
+    if (!pendingCommentId || !isOpen) return;
+
+    const target = commentRowElementsRef.current.get(pendingCommentId);
+    const scrollContainer = scrollAreaRef.current;
+    if (!target || !scrollContainer) return;
+
+    pendingScrollCommentIdRef.current = null;
+
+    requestAnimationFrame(() => {
+      const nextTarget = commentRowElementsRef.current.get(pendingCommentId);
+      const nextScrollContainer = scrollAreaRef.current;
+      if (!nextTarget || !nextScrollContainer) return;
+
+      const top = Math.max(0, nextTarget.offsetTop - 16);
+      nextScrollContainer.scrollTo({ top, behavior: 'smooth' });
+    });
+  }, [comments, isOpen]);
 
   useEffect(() => {
     onCommentsChangeRef.current = onCommentsChange;
@@ -504,12 +533,16 @@ const PostCommentsDialog = ({
       }
 
       mutationSequenceRef.current += 1;
+      if (saved.id) {
+        pendingScrollCommentIdRef.current = saved.id;
+      }
       syncComments([...commentsRef.current, saved]);
       markCommented(postId);
 
       setCommentInput('');
       requestAnimationFrame(() => commentInputRef.current?.focus());
       showSuccess('댓글이 등록되었습니다.');
+
     } catch (err) {
       showError('댓글 등록에 실패했습니다.');
     } finally {
@@ -676,8 +709,21 @@ const PostCommentsDialog = ({
     const showLikeOnly = !isEditing && !isOwnComment && !!likeButton;
 
     return (
-      <div key={commentKey} className="rounded-3xl px-4 py-3.5" style={{ backgroundColor: isOwnComment ? '#eef2ff' : '#f8fafc' }}>
+      <div
+        key={commentKey}
+        ref={(element) => {
+          if (!comment.id) return;
+          if (element) {
+            commentRowElementsRef.current.set(comment.id, element);
+          } else {
+            commentRowElementsRef.current.delete(comment.id);
+          }
+        }}
+        className="rounded-3xl px-4 py-3.5"
+        style={{ backgroundColor: isOwnComment ? '#eef2ff' : '#f8fafc' }}
+      >
         <div className={`flex justify-between gap-3 ${showLikeOnly ? 'items-center' : 'items-start'}`}>
+
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex items-center gap-2">
               <span className="truncate text-sm font-black text-slate-900">{comment.user}</span>
