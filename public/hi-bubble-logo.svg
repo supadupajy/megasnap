@@ -1,0 +1,24 @@
+<svg viewBox="0 0 700 160" role="img" aria-label="하이버블즈 로고" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="hi-bubble-bg-download" x1="18" y1="12" x2="102" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE066"/>
+      <stop offset="0.55" stop-color="#FFB703"/>
+      <stop offset="1" stop-color="#FF8A00"/>
+    </linearGradient>
+    <radialGradient id="hi-bubble-drop-download" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(50 44) rotate(48) scale(58)">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="0.58" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EAF7FF"/>
+    </radialGradient>
+  </defs>
+
+  <g transform="translate(20 20)">
+    <rect x="8" y="8" width="104" height="104" rx="28" fill="url(#hi-bubble-bg-download)"/>
+    <circle cx="60" cy="60" r="34" fill="url(#hi-bubble-drop-download)" opacity="0.76" stroke="#FFFFFF" stroke-width="3"/>
+    <ellipse cx="48" cy="44" rx="14" ry="8" fill="#FFFFFF" opacity="0.9" transform="rotate(-35 48 44)"/>
+    <path d="M82 58C82 73.5 73.5 84 60 88C77 88 92 75.5 92 60C92 48 85.5 38 76 32C79.8 38.8 82 47.8 82 58Z" fill="#DFF5FF" opacity="0.42"/>
+  </g>
+
+  <text x="160" y="98" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="78" font-weight="900" letter-spacing="-10" fill="#020617">하이</text>
+  <text x="328" y="98" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="78" font-weight="900" letter-spacing="-10" fill="#f59e0b">버블즈</text>
+</svg>
