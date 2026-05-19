@@ -1124,19 +1124,6 @@ const MapContainer = ({
         : '';
       const storedVideoPoster = firstVideoUrl ? getStoredMarkerThumbnail(post) : '';
       const cachedVideoThumb = firstVideoUrl ? videoThumbCacheRef.current.get(post.id) : '';
-      // ── 디버그: 영상 마커가 빈 상태로 보이는 원인을 추적하기 위한 임시 로그 ──
-      if (firstVideoUrl) {
-        // eslint-disable-next-line no-console
-        console.log('[VideoMarkerDebug]', {
-          postId: post.id,
-          videoUrl: firstVideoUrl,
-          image_url: post.image_url,
-          image: post.image,
-          images: post.images,
-          storedVideoPoster,
-          cachedVideoThumb,
-        });
-      }
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
       const markerFloatKey = 'float-v5';
@@ -1822,18 +1809,6 @@ const MapContainer = ({
         }
       }
       const optimized = img ? getOptimizedMarkerImage(img, id) : '';
-      // 디버그: 고스트 마커가 회색으로 빈 이유 추적
-      // eslint-disable-next-line no-console
-      console.log('[GhostMarkerDebug]', {
-        postId: id,
-        image_url: (post as any).image_url,
-        image: (post as any).image,
-        images: (post as any).images,
-        videoUrl: (post as any).videoUrl,
-        videoUrls: (post as any).videoUrls,
-        resolvedImg: img,
-        optimized,
-      });
 
       // 영상 포스트면 회색 점 중앙에 작은 ▶ 아이콘만 추가로 표시한다.
       // 이외 동작/디자인은 기존과 동일.
