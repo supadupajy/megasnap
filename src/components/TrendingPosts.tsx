@@ -295,7 +295,7 @@ const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumb
 type PlayBadgeSize = 'sm' | 'md';
 
 // 동영상 썸네일을 canvas로 1회 추출한 뒤 같은 videoUrl에는 캐시 이미지를 재사용한다.
-const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: PlayBadgeSize }> = ({ videoUrl, className, size = 'md' }) => {
+const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: PlayBadgeSize; debugPostId?: string; debugRank?: number }> = ({ videoUrl, className, size = 'md', debugPostId, debugRank }) => {
   const cached = videoThumbCache.get(videoUrl);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(
     cached && cached !== 'failed' ? cached : null
@@ -308,6 +308,8 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
       // eslint-disable-next-line no-console
       console.log('[TrendingDebug][video-thumb-cache-hit]', {
         videoUrl,
+        debugPostId,
+        debugRank,
         cached: currentCached === 'failed' ? 'failed' : 'data-url',
       });
       setThumbUrl(currentCached === 'failed' ? null : currentCached);
@@ -316,7 +318,7 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
     }
 
     // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][video-thumb-request]', { videoUrl });
+    console.log('[TrendingDebug][video-thumb-request]', { videoUrl, debugPostId, debugRank });
     setThumbUrl(null);
     setFailed(false);
 
@@ -324,6 +326,8 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
       // eslint-disable-next-line no-console
       console.log('[TrendingDebug][video-thumb-result]', {
         videoUrl,
+        debugPostId,
+        debugRank,
         result: result === 'failed' ? 'failed' : 'data-url',
       });
       if (result === 'failed') {
@@ -334,7 +338,20 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
         setFailed(false);
       }
     });
-  }, [videoUrl]);
+  }, [debugPostId, debugRank, videoUrl]);
+
+  React.useEffect(() => {
+    if (size !== 'sm') return;
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][collapsed-video-thumb-state]', {
+      debugPostId,
+      debugRank,
+      videoUrl,
+      hasThumbUrl: !!thumbUrl,
+      failed,
+      cacheState: videoThumbCache.get(videoUrl) || null,
+    });
+  }, [debugPostId, debugRank, failed, size, thumbUrl, videoUrl]);
 
   if (thumbUrl) {
     return (
@@ -481,6 +498,18 @@ const getTrendingThumbnailDebugInfo = (post: Post) => {
   };
 };
 
+const getTrendingPostsSignature = (posts: Post[]) => posts.map((post: any) => `${post.id}:${post.rank ?? 'na'}`).join('|');
+
+const getCollapsedPostDebugInfo = (post: Post | null | undefined) => {
+  if (!post) return null;
+  return {
+    postId: post.id,
+    rank: (post as any).rank,
+    contentPreview: (post.content || '').slice(0, 40),
+    ...getTrendingThumbnailDebugInfo(post),
+  };
+};
+
 // 지도 마커와 1:1 동일한 24시간 카운트다운 링.
 
 // - 12시 방향에서 시계 반대방향으로 한 바퀴 도는 둥근 사각형 path
@@ -579,6 +608,29 @@ const PostThumbnail: React.FC<{
   const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
   const primaryMedia = mediaItems[0];
   const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
+  const resolvedThumbUrl = getTrendingThumbnailImageUrl(post);
+  const isCollapsedThumb = size === 'sm';
+
+  useEffect(() => {
+    if (!isCollapsedThumb) return;
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][collapsed-thumb-render]', {
+      postId: post.id,
+      rank: (post as any).rank,
+      mediaType: primaryMedia?.type || 'fallback',
+      resolvedThumbUrl,
+      debugInfo: getTrendingThumbnailDebugInfo(post),
+    });
+
+    return () => {
+      // eslint-disable-next-line no-console
+      console.log('[TrendingDebug][collapsed-thumb-unmount]', {
+        postId: post.id,
+        rank: (post as any).rank,
+        mediaType: primaryMedia?.type || 'fallback',
+      });
+    };
+  }, [isCollapsedThumb, post, primaryMedia?.type, resolvedThumbUrl]);
 
   const renderImage = (url: string, showPlay = false) => (
     <div className={cn("relative w-full h-full", className)}>
@@ -588,7 +640,32 @@ const PostThumbnail: React.FC<{
         loading={imgLoading}
         decoding="async"
         className={cn("w-full h-full object-cover", imgClassName)}
-        onError={onImgError}
+        onLoad={(e) => {
+          if (isCollapsedThumb) {
+            // eslint-disable-next-line no-console
+            console.log('[TrendingDebug][collapsed-thumb-img-load]', {
+              postId: post.id,
+              rank: (post as any).rank,
+              requestedUrl: url,
+              currentSrc: e.currentTarget.currentSrc,
+              complete: e.currentTarget.complete,
+              naturalWidth: e.currentTarget.naturalWidth,
+              naturalHeight: e.currentTarget.naturalHeight,
+            });
+          }
+        }}
+        onError={(e) => {
+          if (isCollapsedThumb) {
+            // eslint-disable-next-line no-console
+            console.log('[TrendingDebug][collapsed-thumb-img-error]', {
+              postId: post.id,
+              rank: (post as any).rank,
+              requestedUrl: url,
+              currentSrc: e.currentTarget.currentSrc,
+            });
+          }
+          onImgError?.(e);
+        }}
       />
       {showPlay && <PlayOverlay size={size} />}
       <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
@@ -610,7 +687,10 @@ const PostThumbnail: React.FC<{
           videoUrl={primaryMedia.url}
           className={cn("absolute inset-0 w-full h-full object-cover", imgClassName)}
           size={size}
+          debugPostId={String(post.id)}
+          debugRank={(post as any).rank}
         />
+
         <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
       </div>
     );
@@ -1018,8 +1098,15 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     const nextIndex = posts.findIndex((post) => String(post.id) === collapsedPostId);
     return nextIndex >= 0 ? nextIndex : 0;
   }, [posts, collapsedPostId]);
+  const previousPostsSignatureRef = useRef<string>('');
+  const previousCurrentPostRef = useRef<{ postId: string | null; rank: number | null; collapsedPostId: string | null }>({
+    postId: null,
+    rank: null,
+    collapsedPostId: null,
+  });
 
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
+
   useEffect(() => {
     isExpandedRef.current = isExpanded;
   }, [isExpanded]);
@@ -1031,13 +1118,26 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
   useEffect(() => {
     if (posts.length === 0) {
+      // eslint-disable-next-line no-console
+      console.log('[TrendingDebug][collapsed-post-sync]', {
+        action: 'clear',
+        nextCollapsedPostId: null,
+      });
       setCollapsedPostId(null);
       return;
     }
 
     setCollapsedPostId((prev) => {
-      if (prev && posts.some((post) => String(post.id) === prev)) return prev;
-      return String(posts[0].id);
+      const preserved = !!(prev && posts.some((post) => String(post.id) === prev));
+      const nextCollapsedPostId = preserved ? prev : String(posts[0].id);
+      // eslint-disable-next-line no-console
+      console.log('[TrendingDebug][collapsed-post-sync]', {
+        action: preserved ? 'preserve' : 'reset-to-first-post',
+        previousCollapsedPostId: prev,
+        nextCollapsedPostId,
+        firstPostId: String(posts[0].id),
+      });
+      return nextCollapsedPostId;
     });
   }, [posts]);
 
@@ -1067,7 +1167,46 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     nextPosts.forEach((post) => warmTrendingThumbnail(post));
   }, [collapsedPostId, currentIndex, posts]);
 
+  useEffect(() => {
+    const postsSignature = getTrendingPostsSignature(posts);
+    const currentPost = posts[currentIndex] || posts[0];
+    const previousPostsSignature = previousPostsSignatureRef.current;
+    const previousCurrentPost = previousCurrentPostRef.current;
+    const signatureChanged = previousPostsSignature !== postsSignature;
+    const orderChanged = previousPostsSignature
+      ? previousPostsSignature.split('|').slice(0, 20).join('|') !== postsSignature.split('|').slice(0, 20).join('|')
+      : false;
+
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][collapsed-state-diff]', {
+      refreshTick,
+      isExpanded,
+      collapsedPostId,
+      currentIndex,
+      signatureChanged,
+      orderChanged,
+      previousPostsSignature,
+      postsSignature,
+      previousCurrent: previousCurrentPost,
+      nextCurrent: {
+        postId: currentPost?.id ? String(currentPost.id) : null,
+        rank: (currentPost as any)?.rank ?? null,
+        collapsedPostId,
+      },
+      currentDebug: getCollapsedPostDebugInfo(currentPost),
+    });
+
+    previousPostsSignatureRef.current = postsSignature;
+    previousCurrentPostRef.current = {
+      postId: currentPost?.id ? String(currentPost.id) : null,
+      rank: (currentPost as any)?.rank ?? null,
+      collapsedPostId,
+    };
+
+  }, [collapsedPostId, currentIndex, isExpanded, posts, refreshTick]);
+
   // 5분 간격 fetch가 한 번씩 완료될 때마다(=refreshTick 증가) 비교 기준을 갱신한다.
+
   // - 첫 번째 fetch(refreshTick === 1): 비교 기준이 없으므로 prevRanks를 그대로 두고
   //   현재 posts의 ranks만 ref에 저장 → 다음 갱신부터 정상 비교 가능.
   // - 두 번째 이후: 직전 fetch 시점의 ranks를 prevRanks로 설정 → 새 posts와 비교됨.
@@ -1302,8 +1441,23 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
+                  onAnimationStart={() => {
+                    // eslint-disable-next-line no-console
+                    console.log('[TrendingDebug][collapsed-content-animation-start]', {
+                      collapsedPostId,
+                      currentPost: getCollapsedPostDebugInfo(currentPost),
+                    });
+                  }}
+                  onAnimationComplete={() => {
+                    // eslint-disable-next-line no-console
+                    console.log('[TrendingDebug][collapsed-content-animation-complete]', {
+                      collapsedPostId,
+                      currentPost: getCollapsedPostDebugInfo(currentPost),
+                    });
+                  }}
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
+
                   {(() => {
                     const collapsedIsMine = !!(authUserId && currentPost && String((currentPost as any).owner_id || currentPost.user_id || '') === String(authUserId));
                     const collapsedFrame = currentPost
@@ -1329,6 +1483,20 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: -15, opacity: 0 }}
                         transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
+                        onAnimationStart={() => {
+                          // eslint-disable-next-line no-console
+                          console.log('[TrendingDebug][collapsed-text-animation-start]', {
+                            collapsedPostId,
+                            currentPost: getCollapsedPostDebugInfo(currentPost),
+                          });
+                        }}
+                        onAnimationComplete={() => {
+                          // eslint-disable-next-line no-console
+                          console.log('[TrendingDebug][collapsed-text-animation-complete]', {
+                            collapsedPostId,
+                            currentPost: getCollapsedPostDebugInfo(currentPost),
+                          });
+                        }}
                         className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                       >
 
