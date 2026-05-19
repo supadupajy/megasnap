@@ -235,44 +235,68 @@ const MapContainer = ({
     markerFloatTimersRef.current.delete(id);
   }, []);
 
-  const scheduleMarkerFloat = useCallback((id: string, content: HTMLElement) => {
-    clearMarkerFloatTimer(id);
+  // 마커 둥실 애니메이션 스케줄러.
+  //
+  // 주의: 이 함수는 마커가 생성될 때마다 호출되고, innerHTML 교체 시에도 다시 호출된다.
+  // 따라서 다음 사이클을 안전하게 이어가려면:
+  //   1) 다음 사이클 예약은 overlay 자체(=id)에 묶어 두고, 매번 querySelector로 최신 target을 찾는다.
+  //   2) target이 detached/없음이면 그냥 return하지 말고, 같은 사이클 주기로 재예약한다 (그래야 끊기지 않는다).
+  //   3) viewport 밖/숨김 상태일 때도 사이클은 계속 이어가되 클래스는 토글하지 않는다.
+  const scheduleMarkerFloat = useCallback((id: string, _content: HTMLElement) => {
+    // 이미 사이클이 도는 중이면 중복 예약하지 않는다. (innerHTML 교체 후 재호출 등에서도
+    // 기존 사이클을 그대로 유지해야 둥실 애니메이션이 끊기지 않는다.)
+    if (markerFloatTimersRef.current.has(id)) return;
 
-    const runNext = (delay: number) => {
-      const timerId = window.setTimeout(() => {
+    const runStart = (delay: number) => {
+      const startTimerId = window.setTimeout(() => {
+        // 시작 타이머 실행 직후, 같은 slot은 곧이어 종료 타이머로 덮어쓰여진다.
         const latestOverlay = overlaysRef.current.get(id);
         const latestContent = latestOverlay?.getContent?.() as HTMLElement | null;
-        const target = latestContent?.querySelector('.animate-marker-float') as HTMLElement | null;
 
-        if (!latestOverlay || !latestContent || !target || !target.isConnected) {
-          clearMarkerFloatTimer(id);
+        if (!latestOverlay || !latestContent) {
+          // overlay 자체가 사라졌으면 더 이상 사이클을 이어가지 않는다.
+          markerFloatTimersRef.current.delete(id);
           return;
         }
 
-        if (
+        const target = latestContent.querySelector('.animate-marker-float') as HTMLElement | null;
+        const skipThisCycle =
+          !target ||
+          !target.isConnected ||
           latestContent.classList.contains('marker-viewport-hidden') ||
           latestContent.classList.contains('markers-hidden') ||
-          latestContent.classList.contains('marker-disappear-animation')
-        ) {
-          runNext(8000 + Math.random() * 2000);
+          latestContent.classList.contains('marker-disappear-animation');
+
+        if (skipThisCycle) {
+          // target이 일시적으로 없거나 가려진 상태면 이번 사이클은 건너뛰고 짧게 재시도 →
+          // 그래야 다음 사이클이 영구히 끊기지 않는다.
+          runStart(3000 + Math.random() * 2000);
           return;
         }
 
         target.classList.remove('marker-float-active');
+        // reflow 강제로 애니메이션 재시작
         void target.offsetWidth;
         target.classList.add('marker-float-active');
 
         const endTimerId = window.setTimeout(() => {
-          target.classList.remove('marker-float-active');
-          runNext(8000 + Math.random() * 2000);
+          // 종료 시 target을 다시 조회 (그동안 innerHTML이 교체됐을 수 있음)
+          const overlayNow = overlaysRef.current.get(id);
+          const contentNow = overlayNow?.getContent?.() as HTMLElement | null;
+          const targetNow = contentNow?.querySelector('.animate-marker-float') as HTMLElement | null;
+          if (targetNow && targetNow.isConnected) {
+            targetNow.classList.remove('marker-float-active');
+          }
+          // 다음 사이클 예약
+          runStart(8000 + Math.random() * 2000);
         }, 3000);
         markerFloatTimersRef.current.set(id, endTimerId);
       }, delay);
-      markerFloatTimersRef.current.set(id, timerId);
+      markerFloatTimersRef.current.set(id, startTimerId);
     };
 
-    runNext(Math.random() * 2000);
-  }, [clearMarkerFloatTimer]);
+    runStart(Math.random() * 2000);
+  }, []);
 
   useEffect(() => {
     return () => {
