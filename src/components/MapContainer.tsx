@@ -1112,6 +1112,23 @@ const MapContainer = ({
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
+      // [DEBUG2] 일반(활성) 마커 진단 - 영상이 아닌 케이스 포함
+      console.log('[ActiveMarker:render]', {
+        id: post.id,
+        isAd: post.isAd,
+        isAdPending: post.isAdPending,
+        firstVideoUrl,
+        videoUrl: post.videoUrl,
+        videoUrls: post.videoUrls,
+        image_url: post.image_url,
+        image: post.image,
+        imagesLen: Array.isArray(post.images) ? post.images.length : '(not array)',
+        borderType: post.borderType,
+        createdAt: post.createdAt,
+        likes: post.likes,
+        hasExistingOverlay: !!existingOverlay,
+      });
+
       // 영상 포스트라도 마커는 즉시 생성한다.
       // 썸네일이 없으면 어두운 배경 + 플레이 아이콘만 먼저 보이고,
       // 비동기로 추출/저장된 썸네일이 들어오면 img.src를 갱신한다.
@@ -1744,6 +1761,16 @@ const MapContainer = ({
     kept.forEach((post) => {
       const id = String(post.id);
       if (ghostOverlaysRef.current.has(id)) return;
+
+      // [DEBUG2] 고스트 마커 진단 - 영상 정보가 있어도 회색 점으로 표시되는지 확인
+      console.log('[GhostMarker:create]', {
+        id: post.id,
+        videoUrl: post.videoUrl,
+        videoUrls: post.videoUrls,
+        image_url: post.image_url,
+        image: post.image,
+        created_at: post.created_at,
+      });
 
       const inViewport =
         post.lat >= minLat && post.lat <= maxLat &&
