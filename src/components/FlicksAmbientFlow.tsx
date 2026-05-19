@@ -253,7 +253,10 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
       className="fixed left-0 right-0 bottom-0 overflow-hidden cursor-default select-none"
       style={{
         ...ambientStyle,
-        zIndex: 19998,
+        // BottomNav의 흰색 safe-area 배경(z=19999)보다 위에 떠야 스마트폰의
+        // 노치/홈 인디케이터 영역에서도 그라데이션이 보이고, BottomNav 알약(z=20000)
+        // 아래에는 있어서 알약 자체는 정상적으로 위에 표시된다.
+        zIndex: 19999,
         pointerEvents: "auto",
         touchAction: "none",
       }}

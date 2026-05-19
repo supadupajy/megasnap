@@ -339,24 +339,32 @@ const BottomNav = () => {
 
   const isMapPillActive = navItems[safeIndex]?.path === '/';
 
+  // Flicks 페이지에서는 하단 전체를 FlicksAmbientFlow(영상 분위기 ambient 그라데이션)가
+  // 채우기 때문에, 흰색 safe area 배경이 위에 덮이면 그라데이션이 가려진다.
+  // → Flicks에서는 이 흰색 배경을 그리지 않는다.
+  const isFlicksPage = location.pathname.startsWith('/flicks');
+
   return (
     <>
       {/* 하단 safe area 배경 채우기
           - 시스템 네비게이션 바(|||, ○, <) 영역만 흰색으로 채움
-          - zIndex를 높게 설정해 카카오맵 위에 올라오도록 함 */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: safeAreaBottom > 0 ? `${safeAreaBottom}px` : 'env(safe-area-inset-bottom, 0px)',
-          backgroundColor: 'white',
-          zIndex: 19999,
-          pointerEvents: 'none',
-        }}
-      />
+          - zIndex를 높게 설정해 카카오맵 위에 올라오도록 함
+          - Flicks 페이지에서는 FlicksAmbientFlow가 같은 영역을 채우므로 생략 */}
+      {!isFlicksPage && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: safeAreaBottom > 0 ? `${safeAreaBottom}px` : 'env(safe-area-inset-bottom, 0px)',
+            backgroundColor: 'white',
+            zIndex: 19999,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       <div
         className="fixed bottom-0 left-0 right-0 z-[20000] pointer-events-none"
         style={{
