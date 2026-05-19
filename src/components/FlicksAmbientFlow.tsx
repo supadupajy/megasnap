@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -14,10 +14,13 @@ import { createPortal } from "react-dom";
  *  - 위쪽(영상이 끝나는 지점)은 살짝 어두워져 영상 컨테이너 하단 그라데이션과 자연스럽게 이어진다.
  *  - 영상이 바뀌면 ambient 색이 부드럽게 cross-fade 된다.
  *  - 메인 glow가 천천히 호흡(opacity 펄스)하면서 살아있는 느낌을 준다.
+ *  - 사용자가 위/아래 스와이프를 하면 그라데이션이 함께 늘어나고 눌리며 "살아있는" 인터랙션.
  *
  * 동작:
  *  - posterUrl이 주어지면 캔버스에 작게 다운샘플 → 평균색 추출 → ambient color로 저장.
  *  - 결과가 너무 어두우면 비율 유지 톤업, 무채색에 가까우면 fallback indigo 사용.
+ *  - window CustomEvent("flicks:swipe-progress")를 듣고 ref로 직접 transform 업데이트
+ *    (React 리렌더 없이 매 프레임 부드럽게 반응).
  *
  * 렌더 위치:
  *  - document.body 직속으로 portal 렌더한다. App.tsx의 AnimatePresence/motion.div가
@@ -50,6 +53,9 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
 }) => {
   // 현재 그려지고 있는 ambient color (cross-fade 결과)
   const [color, setColor] = useState<RGB>(FALLBACK_COLOR);
+
+  // 스와이프 진행도에 따라 변형되는 그라데이션 wrapper의 ref
+  const dynamicLayerRef = useRef<HTMLDivElement>(null);
 
   // posterUrl → 평균색 추출
   useEffect(() => {
@@ -142,6 +148,51 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
     };
   }, [posterUrl]);
 
+  // 스와이프 진행도 신호를 받아 ref로 직접 transform 업데이트
+  // (state setState로 매 프레임 리렌더하지 않도록 ref + DOM 직접 조작)
+  useEffect(() => {
+    const handler = (evt: Event) => {
+      const detail = (evt as CustomEvent).detail as
+        | { dy: number; settle: boolean; height?: number }
+        | undefined;
+      if (!detail) return;
+      const el = dynamicLayerRef.current;
+      if (!el) return;
+
+      const { dy, settle, height: maxH } = detail;
+
+      // 진행 비율(-1 ~ +1): 슬라이드 1개 분량 스와이프 = 100%
+      // 너무 격하지 않게 0.5 계수로 완화. 손가락 이동량에 따라 부드럽게 따라옴.
+      const slideH = maxH && maxH > 0 ? maxH : window.innerHeight || 800;
+      const ratio = Math.max(-1, Math.min(1, dy / slideH));
+
+      if (settle) {
+        // 손을 뗐을 때: spring 느낌으로 부드럽게 원위치 복귀
+        el.style.transition =
+          "transform 360ms cubic-bezier(0.22, 0.61, 0.36, 1)";
+        el.style.transform = "translateY(0px) scaleY(1)";
+        return;
+      }
+
+      // 드래그 중: 손가락에 즉시 반응 (transition 없음)
+      // - 아래로 스와이프(dy > 0) → 그라데이션이 위로 늘어나는 느낌 (translateY 음수 + scaleY > 1)
+      // - 위로 스와이프(dy < 0) → 그라데이션이 아래로 눌리는 느낌 (translateY 양수 + scaleY < 1)
+      // transform-origin이 bottom이라 아래쪽 끝은 고정된 채 위쪽만 늘어나거나 눌린다.
+      const translatePx = -ratio * 24; // ±24px 정도까지 위/아래로 움직임
+      const scaleY = 1 + ratio * 0.18; // 위로 당기면 1.18까지, 아래로 누르면 0.82까지
+      el.style.transition = "none";
+      el.style.transform = `translateY(${translatePx}px) scaleY(${scaleY})`;
+    };
+
+    window.addEventListener("flicks:swipe-progress", handler as EventListener);
+    return () => {
+      window.removeEventListener(
+        "flicks:swipe-progress",
+        handler as EventListener
+      );
+    };
+  }, []);
+
   const colorStr = `${color.r}, ${color.g}, ${color.b}`;
   // 부드럽게 cross-fade 되도록 background-color에 transition을 건다.
   const ambientStyle: React.CSSProperties = {
@@ -170,35 +221,47 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         touchAction: "none",
       }}
     >
-      {/* 1) Ambient color wash — 큰 두 개의 radial glow가 좌/우에서 천천히 숨쉬듯 펄스 */}
+      {/* 스와이프 진행도에 맞춰 살아 움직이는 그라데이션 wrapper.
+          transform-origin이 bottom이라 아래쪽이 고정된 채 위쪽이 늘어나거나 압축된다.
+          ref로 직접 transform을 갱신해 React 리렌더 없이 매 프레임 부드럽게 반응. */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        ref={dynamicLayerRef}
+        className="absolute inset-0 pointer-events-none will-change-transform"
         style={{
-          background: `
-            radial-gradient(120% 180% at 20% 120%, rgba(${colorStr}, 0.55) 0%, rgba(${colorStr}, 0.18) 35%, transparent 65%),
-            radial-gradient(120% 180% at 80% 130%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.12) 35%, transparent 65%)
-          `,
-          transition: "background 600ms ease",
+          transformOrigin: "center bottom",
+          transform: "translateY(0px) scaleY(1)",
         }}
-      />
+      >
+        {/* 1) Ambient color wash — 큰 두 개의 radial glow가 좌/우에서 천천히 숨쉬듯 펄스 */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `
+              radial-gradient(120% 180% at 20% 120%, rgba(${colorStr}, 0.55) 0%, rgba(${colorStr}, 0.18) 35%, transparent 65%),
+              radial-gradient(120% 180% at 80% 130%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.12) 35%, transparent 65%)
+            `,
+            transition: "background 600ms ease",
+          }}
+        />
 
-      {/* 2) 살짝 호흡하는 ambient layer — opacity만 천천히 변동시켜 "살아있는" 느낌 */}
-      <div
-        className="absolute inset-0 pointer-events-none flicks-ambient-breathe"
-        style={{
-          background: `radial-gradient(100% 160% at 50% 130%, rgba(${colorStr}, 0.35) 0%, transparent 60%)`,
-        }}
-      />
+        {/* 2) 살짝 호흡하는 ambient layer — opacity만 천천히 변동시켜 "살아있는" 느낌 */}
+        <div
+          className="absolute inset-0 pointer-events-none flicks-ambient-breathe"
+          style={{
+            background: `radial-gradient(100% 160% at 50% 130%, rgba(${colorStr}, 0.35) 0%, transparent 60%)`,
+          }}
+        />
 
-      {/* 3) 상단 fade — 영상 컨테이너 하단의 검은 그라데이션과 자연스럽게 이어지도록
-              위쪽일수록 진한 검정. 이게 없으면 영상과 ambient 영역의 경계가 띠처럼 보일 수 있음. */}
-      <div
-        className="absolute inset-x-0 top-0 pointer-events-none"
-        style={{
-          height: "55%",
-          background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)`,
-        }}
-      />
+        {/* 3) 상단 fade — 영상 컨테이너 하단의 검은 그라데이션과 자연스럽게 이어지도록
+                위쪽일수록 진한 검정. 이게 없으면 영상과 ambient 영역의 경계가 띠처럼 보일 수 있음. */}
+        <div
+          className="absolute inset-x-0 top-0 pointer-events-none"
+          style={{
+            height: "55%",
+            background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)`,
+          }}
+        />
+      </div>
 
       {/* keyframes는 컴포넌트 안에 함께 둬서 다른 곳에 영향이 가지 않게 한다. */}
       <style>{`

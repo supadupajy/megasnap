@@ -999,6 +999,13 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       const currentActive = activeIndexRef.current;
       const clamped = Math.max(0, Math.min(itemCountRef.current - 1, nextIndex));
 
+      // 슬라이드 전환/복귀 시 ambient 그라데이션도 부드럽게 원위치로 복귀하도록 신호 발사
+      window.dispatchEvent(
+        new CustomEvent("flicks:swipe-progress", {
+          detail: { dy: 0, settle: true },
+        })
+      );
+
       // 같은 인덱스면 단순 복귀
       if (clamped === currentActive) {
         setIsTransitioning(true);
@@ -1065,6 +1072,15 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (dy < -maxDrag) dy = -maxDrag;
 
       setDragOffset(dy);
+
+      // 하단 ambient 영역(FlicksAmbientFlow)이 스와이프 진행도에 맞춰 살아 움직이도록
+      // 외부에 가벼운 신호를 보낸다. window CustomEvent로 보내면 React 리렌더 없이
+      // ambient 컴포넌트가 ref로 직접 DOM transform을 업데이트할 수 있다.
+      window.dispatchEvent(
+        new CustomEvent("flicks:swipe-progress", {
+          detail: { dy, settle: false, height: maxDrag },
+        })
+      );
     };
 
     const handleTouchEnd = () => {
@@ -1078,6 +1094,11 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (consumedRef.current) {
         consumedRef.current = false;
         setDragOffset(0);
+        window.dispatchEvent(
+          new CustomEvent("flicks:swipe-progress", {
+            detail: { dy: 0, settle: true },
+          })
+        );
         return;
       }
       consumedRef.current = true; // 이번 제스처 소비 처리
