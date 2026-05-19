@@ -1919,15 +1919,42 @@ const Index = () => {
       }, 300);
     }
     if (routeState.adMarkerSaved) {
-      // 광고 저장 직후에는 새 마커가 보이도록 하이라이트만 띄운다.
-      // (지도 중심/줌은 위쪽 `else if (routeState.center)` 분기에서 이미 처리됨.
-      //  여기서 setMapCenter/setCurrentZoom을 다시 호출하면 smoothMoveTo가
-      //  중복 트리거되어 카카오맵의 이동/줌 상태가 꼬이고 지도가 멈춘 것처럼 보이는
-      //  버그가 발생함. 또한 routeState.zoom과 무관하게 4로 강제 줌하면 광고 위치가
-      //  엉뚱한 영역으로 튀어 보이는 문제도 있어 강제 줌을 제거함.)
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: routeState.adMarkerId || 'ad-map-marker', duration: 3000 } }));
-      }, 1000);
+      // 광고 저장 직후 흐름:
+      //  (1) adMarkerCenter로 부드럽게 이동 (smoothMoveTo)
+      //  (2) 이동 완료 신호(map-move-complete)를 받은 뒤에만 zoom 변경 + highlight
+      // 이렇게 분리해야 smoothMoveTo가 진행 중인데 setLevel이 끼어들어
+      // 카카오맵 내부 center 보간이 깨지고 지도가 엉뚱한 곳으로 튀거나
+      // 입력이 막히는 레이스 컨디션을 피할 수 있다.
+      const targetCenter = routeState.adMarkerCenter as { lat: number; lng: number } | undefined;
+      const highlightId = routeState.adMarkerId || 'ad-map-marker';
+
+      locationLockedRef.current = true;
+      setSelectedPostId(null);
+
+      const finalize = () => {
+        // 이동이 끝난 뒤에 zoom과 highlight를 적용 — 이동 중 setLevel 충돌 방지
+        setCurrentZoom(4);
+        currentZoomRef.current = 4;
+        window.dispatchEvent(new CustomEvent('highlight-marker', { detail: { id: highlightId, duration: 3000 } }));
+        setTimeout(() => { locationLockedRef.current = false; }, 1500);
+      };
+
+      if (targetCenter && targetCenter.lat != null && targetCenter.lng != null) {
+        let done = false;
+        const onMoveComplete = () => {
+          if (done) return;
+          done = true;
+          window.removeEventListener('map-move-complete', onMoveComplete);
+          finalize();
+        };
+        window.addEventListener('map-move-complete', onMoveComplete);
+        // 안전장치: 이동 완료 이벤트가 어떤 이유로 누락되어도 2초 뒤에는 finalize.
+        setTimeout(onMoveComplete, 2000);
+        setMapCenter(targetCenter);
+      } else {
+        // 좌표 없이 들어온 비정상 케이스는 그냥 하이라이트만.
+        setTimeout(finalize, 600);
+      }
     }
     navigate(location.pathname, { replace: true, state: null });
   }, [location]);

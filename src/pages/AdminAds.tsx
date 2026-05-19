@@ -925,11 +925,13 @@ const AdminAds = () => {
       setTimeout(() => {
         navigate('/', {
           state: {
-            center: { lat: savedAd.lat, lng: savedAd.lng },
-            // 저장한 광고 마커가 잘 보이도록 동(洞) 단위 정도의 줌(level 4)으로 진입.
-            // routeState.zoom 으로 전달하면 Index의 `else if (routeState.center)` 분기에서
-            // 한 번만 setCurrentZoom이 호출되어 smoothMoveTo와 충돌하지 않는다.
-            zoom: 4,
+            // 일반 `center` 키와 분리한다. (`center` + `zoom`을 함께 넘기면
+            //  Index의 `else if (routeState.center)` 분기와 `adMarkerSaved` 분기가
+            //  동시에 발화하면서 smoothMoveTo와 setLevel이 겹쳐 지도가 엉뚱한
+            //  곳으로 튀거나 멈추는 레이스 컨디션이 발생함.)
+            // adMarkerCenter는 Index에서 전용 분기로 처리해, 부드러운 이동이
+            // 완전히 끝난 뒤에만 zoom과 highlight를 적용한다.
+            adMarkerCenter: { lat: savedAd.lat, lng: savedAd.lng },
             adMarkerSaved: true,
             adMarkerId: `ad-map-marker-${savedAd.id}`,
           },

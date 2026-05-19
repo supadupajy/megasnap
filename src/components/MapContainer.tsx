@@ -1520,13 +1520,25 @@ const MapContainer = ({
     if (!map || !kakao || !kakao.maps?.LatLng) return;
 
     if (window.getSelection) window.getSelection()?.removeAllRanges();
-    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    // 진행 중인 이동이 있으면 깨끗이 종료시킨다.
+    //  - RAF를 취소하고
+    //  - map-is-moving 클래스와 map-programmatic-move-end 이벤트를 무조건 정리
+    // 이렇게 해야 새 이동이 시작될 때 클래스/RAF가 살아있어 카카오맵이 입력에
+    // 반응하지 않거나 두 이동이 겹쳐 startCenter가 어긋나는 문제를 막을 수 있다.
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+      containerRef.current?.classList.remove('map-is-moving');
+      try { window.dispatchEvent(new CustomEvent('map-programmatic-move-end')); } catch (e) {}
+    }
     // level 변경 타이머가 이동 중에 실행되면 카카오맵이 center를 리셋하므로 취소
     if (levelTimerRef.current) {
       clearTimeout(levelTimerRef.current);
       levelTimerRef.current = null;
     }
 
+    // 항상 카카오맵의 "현재 center"를 startCenter로 사용한다.
+    // (이전 호출이 중간에 끊겨도 안전하게 현재 위치에서 보간 시작)
     const startCenter = map.getCenter();
     const startLat = startCenter.getLat();
     const startLng = startCenter.getLng();
