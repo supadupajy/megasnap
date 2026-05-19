@@ -13,12 +13,13 @@ type LogoItem = {
 const LOGOS: LogoItem[] = [
   {
     title: '앱 아이콘',
-    description: '첫 번째 비눗방울 시안 그대로 적용된 아이콘',
-    previewPath: '/hi-bubble-icon.png',
-    downloadPath: '/hi-bubble-icon.png',
-    downloadFileName: 'hi-bubble-icon.png',
-    badge: 'PNG',
+    description: '회색 배경을 제거하고 크롭한 비눗방울 아이콘',
+    previewPath: '/hi-bubble-icon.svg',
+    downloadPath: '/hi-bubble-icon.svg',
+    downloadFileName: 'hi-bubble-icon.svg',
+    badge: 'SVG',
   },
+
   {
     title: '워드마크',
     description: '텍스트 로고 원본 SVG',

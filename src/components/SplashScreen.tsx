@@ -56,7 +56,7 @@ const SplashScreen = () => {
               damping: 20,
               delay: 0.4
             }}
-            className="w-28 h-28 drop-shadow-2xl"
+            className="w-36 h-36 drop-shadow-2xl"
           >
             <HiBubbleIcon className="h-full w-full" />
           </motion.div>

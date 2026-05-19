@@ -161,11 +161,12 @@ const Login = () => {
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="w-28 h-28"
+            className="w-36 h-36"
           >
             <HiBubbleIcon className="h-full w-full" />
           </motion.div>
           <div className="text-center">
+
             <HiBubbleWordmark className="text-5xl" />
             <p className="text-[10px] font-bold text-gray-400 mt-3 tracking-widest uppercase">
               Be here, Be seen.

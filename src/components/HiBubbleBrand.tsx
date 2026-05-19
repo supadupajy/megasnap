@@ -6,7 +6,7 @@ type BrandProps = {
 
 export const HiBubbleIcon = ({ className }: BrandProps) => (
   <img
-    src="/hi-bubble-icon.png"
+    src="/hi-bubble-icon.svg"
     alt="하이버블즈 아이콘"
     className={cn('block object-contain', className)}
     loading="eager"
@@ -22,8 +22,8 @@ export const HiBubbleWordmark = ({ className }: BrandProps) => (
 );
 
 export const HiBubbleBrand = ({ className }: BrandProps) => (
-  <div className={cn('inline-flex items-center gap-2.5', className)}>
-    <HiBubbleIcon className="h-9 w-9" />
+  <div className={cn('inline-flex items-center gap-3', className)}>
+    <HiBubbleIcon className="h-10 w-10" />
     <HiBubbleWordmark className="text-2xl" />
   </div>
 );
