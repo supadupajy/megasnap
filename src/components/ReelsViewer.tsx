@@ -1635,15 +1635,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         />
       )}
 
-      {/* 블러 배경 위 다크 톤 통일 오버레이.
-          썸네일의 색감/밝기에 따라 어떤 영상은 컬러풀하고 어떤 영상은 거의 검정으로
-          보이는 차이를 줄여, 모든 영상에서 일관된 다크 톤이 유지되도록 한다.
-          (인스타 릴스 톤 — 위는 살짝 어둡고 아래로 갈수록 진해짐) */}
-      <div
-        className="absolute inset-0 pointer-events-none bg-gradient-to-b from-black/40 via-black/55 to-black/70"
-        aria-hidden="true"
-      />
-
       {/* 트렌딩 릴스(showInlineCloseButton=true) 컨트롤.
           X 버튼도 슬라이드 내부에 두어 순위/음소거/메뉴 버튼처럼 스와이프 전환에 함께 움직이게 한다. */}
       {showInlineCloseButton && onClose && (
