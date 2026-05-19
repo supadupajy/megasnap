@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ArrowLeft, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -5,21 +6,21 @@ type LogoItem = {
   title: string;
   description: string;
   previewPath: string;
-  downloadPath: string;
-  downloadFileName: string;
+  downloadPath?: string;
+  downloadFileName?: string;
   badge: string;
   cropped?: boolean;
+  kind: 'transparent-icon-png' | 'file';
 };
 
 const LOGOS: LogoItem[] = [
   {
     title: '앱 아이콘',
-    description: '현재 앱에 적용된 크롭 버전 아이콘',
+    description: '배경 없는 투명 PNG로 받을 수 있는 앱 아이콘',
     previewPath: '/hi-bubble-icon.png',
-    downloadPath: '/hi-bubble-icon.png',
-    downloadFileName: 'hi-bubble-icon.png',
     badge: 'PNG',
     cropped: true,
+    kind: 'transparent-icon-png',
   },
   {
     title: '워드마크',
@@ -28,6 +29,7 @@ const LOGOS: LogoItem[] = [
     downloadPath: '/hi-bubble-wordmark.svg',
     downloadFileName: 'hi-bubble-wordmark.svg',
     badge: 'SVG',
+    kind: 'file',
   },
   {
     title: '조합 로고',
@@ -36,11 +38,85 @@ const LOGOS: LogoItem[] = [
     downloadPath: '/hi-bubble-logo.svg',
     downloadFileName: 'hi-bubble-logo.svg',
     badge: 'SVG',
+    kind: 'file',
   },
 ];
 
+const ICON_EXPORT_SIZE = 1024;
+const ICON_SCALE = 2.22;
+const ICON_POSITION_X = 0.5;
+const ICON_POSITION_Y = 0.47;
+const ICON_RADIUS = 276;
+
+const createRoundedRectPath = (ctx: CanvasRenderingContext2D, size: number, radius: number) => {
+  ctx.beginPath();
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(size - radius, 0);
+  ctx.quadraticCurveTo(size, 0, size, radius);
+  ctx.lineTo(size, size - radius);
+  ctx.quadraticCurveTo(size, size, size - radius, size);
+  ctx.lineTo(radius, size);
+  ctx.quadraticCurveTo(0, size, 0, size - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+};
+
 const LogoDownloads = () => {
   const navigate = useNavigate();
+  const [isGeneratingTransparentPng, setIsGeneratingTransparentPng] = useState(false);
+
+  const downloadTransparentIconPng = async () => {
+    setIsGeneratingTransparentPng(true);
+
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = '/hi-bubble-icon.png';
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = ICON_EXPORT_SIZE;
+      canvas.height = ICON_EXPORT_SIZE;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context 생성 실패');
+
+      ctx.clearRect(0, 0, ICON_EXPORT_SIZE, ICON_EXPORT_SIZE);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      ctx.save();
+      createRoundedRectPath(ctx, ICON_EXPORT_SIZE, ICON_RADIUS);
+      ctx.clip();
+
+      const drawSize = ICON_EXPORT_SIZE * ICON_SCALE;
+      const dx = (ICON_EXPORT_SIZE - drawSize) * ICON_POSITION_X;
+      const dy = (ICON_EXPORT_SIZE - drawSize) * ICON_POSITION_Y;
+
+      ctx.drawImage(image, dx, dy, drawSize, drawSize);
+      ctx.restore();
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, 'image/png');
+      });
+
+      if (!blob) throw new Error('PNG 생성 실패');
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'hi-bubble-icon-transparent.png';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsGeneratingTransparentPng(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-white">
@@ -56,14 +132,14 @@ const LogoDownloads = () => {
           </button>
           <div>
             <h1 className="text-2xl font-black tracking-tight text-slate-900">로고 다운로드</h1>
-            <p className="mt-1 text-sm text-slate-500">현재 적용된 비눗방울 로고를 그대로 다운로드할 수 있어요.</p>
+            <p className="mt-1 text-sm text-slate-500">앱 아이콘은 배경 없는 투명 PNG로 바로 다운로드할 수 있어요.</p>
           </div>
         </div>
 
         <div className="grid gap-5 md:grid-cols-3">
           {LOGOS.map((item) => (
             <div
-              key={item.downloadFileName}
+              key={item.title}
               className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_12px_35px_rgba(15,23,42,0.06)]"
             >
               <div
@@ -88,7 +164,6 @@ const LogoDownloads = () => {
                     role="img"
                   />
                 ) : (
-
                   <img
                     src={item.previewPath}
                     alt={item.title}
@@ -108,14 +183,26 @@ const LogoDownloads = () => {
               </div>
 
               <div className="mt-4 flex gap-2">
-                <a
-                  href={item.downloadPath}
-                  download={item.downloadFileName}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-full bg-amber-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-amber-100 active:scale-95"
-                >
-                  <Download className="h-4 w-4" />
-                  다운로드
-                </a>
+                {item.kind === 'transparent-icon-png' ? (
+                  <button
+                    type="button"
+                    onClick={downloadTransparentIconPng}
+                    disabled={isGeneratingTransparentPng}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-amber-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-amber-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    <Download className="h-4 w-4" />
+                    {isGeneratingTransparentPng ? '생성 중...' : '배경 없는 PNG'}
+                  </button>
+                ) : (
+                  <a
+                    href={item.downloadPath}
+                    download={item.downloadFileName}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-full bg-amber-500 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-amber-100 active:scale-95"
+                  >
+                    <Download className="h-4 w-4" />
+                    다운로드
+                  </a>
+                )}
               </div>
             </div>
           ))}

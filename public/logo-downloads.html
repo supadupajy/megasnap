@@ -73,7 +73,6 @@
         background-repeat: no-repeat;
         background-size: 222% 222%;
       }
-
       .meta {
         margin-top: 14px;
       }
@@ -105,6 +104,7 @@
         gap: 10px;
         margin-top: 14px;
       }
+      button.link,
       a.link {
         appearance: none;
         border: none;
@@ -119,24 +119,28 @@
         color: white;
         flex: 1;
       }
+      button.link:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
       <h1>하이버블즈 로고 다운로드</h1>
-      <p class="sub">현재 적용된 비눗방울 로고를 그대로 다운로드할 수 있어요.</p>
+      <p class="sub">앱 아이콘은 배경 없는 투명 PNG로 바로 다운로드할 수 있어요.</p>
 
       <div class="grid">
         <div class="card">
           <div class="preview">
-            <div class="preview-cropped"><img src="/hi-bubble-icon.png" alt="하이버블즈 앱 아이콘" /></div>
+            <div class="preview-cropped" aria-label="하이버블즈 앱 아이콘" role="img"></div>
           </div>
           <div class="meta">
             <div class="title-row"><div class="title">앱 아이콘</div><div class="badge">PNG</div></div>
-            <div class="desc">현재 앱에 적용된 크롭 버전 아이콘</div>
+            <div class="desc">배경 없는 투명 PNG로 받을 수 있는 앱 아이콘</div>
           </div>
           <div class="actions">
-            <a class="link" href="/hi-bubble-icon.png" download="hi-bubble-icon.png">다운로드</a>
+            <button class="link" id="transparent-png-download">배경 없는 PNG</button>
           </div>
         </div>
 
@@ -163,5 +167,89 @@
         </div>
       </div>
     </div>
+
+    <script>
+      const ICON_EXPORT_SIZE = 1024;
+      const ICON_SCALE = 2.22;
+      const ICON_POSITION_X = 0.5;
+      const ICON_POSITION_Y = 0.47;
+      const ICON_RADIUS = 276;
+
+      function createRoundedRectPath(ctx, size, radius) {
+        ctx.beginPath();
+        ctx.moveTo(radius, 0);
+        ctx.lineTo(size - radius, 0);
+        ctx.quadraticCurveTo(size, 0, size, radius);
+        ctx.lineTo(size, size - radius);
+        ctx.quadraticCurveTo(size, size, size - radius, size);
+        ctx.lineTo(radius, size);
+        ctx.quadraticCurveTo(0, size, 0, size - radius);
+        ctx.lineTo(0, radius);
+        ctx.quadraticCurveTo(0, 0, radius, 0);
+        ctx.closePath();
+      }
+
+      async function downloadTransparentIconPng() {
+        const button = document.getElementById('transparent-png-download');
+        const originalLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = '생성 중...';
+
+        try {
+          const image = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = '/hi-bubble-icon.png';
+          });
+
+          const canvas = document.createElement('canvas');
+          canvas.width = ICON_EXPORT_SIZE;
+          canvas.height = ICON_EXPORT_SIZE;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Canvas context 생성 실패');
+
+          ctx.clearRect(0, 0, ICON_EXPORT_SIZE, ICON_EXPORT_SIZE);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+
+          ctx.save();
+          createRoundedRectPath(ctx, ICON_EXPORT_SIZE, ICON_RADIUS);
+          ctx.clip();
+
+          const drawSize = ICON_EXPORT_SIZE * ICON_SCALE;
+          const dx = (ICON_EXPORT_SIZE - drawSize) * ICON_POSITION_X;
+          const dy = (ICON_EXPORT_SIZE - drawSize) * ICON_POSITION_Y;
+          ctx.drawImage(image, dx, dy, drawSize, drawSize);
+          ctx.restore();
+
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+          if (!blob) throw new Error('PNG 생성 실패');
+
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'hi-bubble-icon-transparent.png';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+
+          button.textContent = '완료';
+          setTimeout(() => {
+            button.textContent = originalLabel;
+            button.disabled = false;
+          }, 900);
+        } catch (error) {
+          console.error(error);
+          alert('PNG 생성 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
+          button.textContent = originalLabel;
+          button.disabled = false;
+        }
+      }
+
+      document.getElementById('transparent-png-download').addEventListener('click', downloadTransparentIconPng);
+    </script>
   </body>
 </html>
