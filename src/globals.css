@@ -910,8 +910,8 @@ video.post-item-video::-webkit-media-text-track-container {
   cursor: pointer;
   position: relative;
   z-index: 5;
-  width: 42px;
-  height: 42px;
+  width: 52px;
+  height: 52px;
   opacity: 0.7;
   contain: layout style;
   backface-visibility: hidden;
@@ -978,6 +978,13 @@ video.post-item-video::-webkit-media-text-track-container {
   opacity: 0.78;
   pointer-events: none;
   -webkit-user-drag: none;
+}
+
+/* 썸네일이 있을 때는 강한 회색조 필터를 약화시켜 이미지가 또렷이 보이도록 한다.
+   외부 회색 링/외곽 음영으로 만료된 마커임은 시각적으로 유지. */
+.ghost-marker-dot.has-thumb img {
+  filter: grayscale(0.35) brightness(1) contrast(1);
+  opacity: 1;
 }
 
 .ghost-marker-dot::before {

@@ -2404,7 +2404,7 @@ const MapContainer = ({
           ${isAd ? adLabelHtml : labelHtml}
           <div class="${influencerClass}" style="${innerBoxStyle}">
             ${isAd ? adSparklesHtml : ''}
-            <div style="width:100%;height:100%;position:relative;border-radius:50%;overflow:hidden;">
+            <div class="shine-overlay" style="width:100%;height:100%;position:relative;border-radius:50%;overflow:hidden;">
               ${imgContent}
               ${bubbleReflectionHtml}
               <div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);background:#fef2f2;border:1px solid #fecaca;color:#ef4444;font-size:9px;font-weight:900;padding:2px 5px 2px 4px;border-radius:999px;z-index:5;line-height:1;display:flex;align-items:center;justify-content:center;gap:3px;box-shadow:0 1px 3px rgba(0,0,0,0.12);white-space:nowrap;">
