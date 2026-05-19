@@ -19,9 +19,9 @@ export const HiBubbleIcon = ({ className }: BrandProps) => (
 );
 
 export const HiBubbleWordmark = ({ className }: BrandProps) => (
-  <div className={cn('inline-flex items-end font-black tracking-[-0.12em] leading-none', className)} aria-label="하이버블즈">
-    <span className="text-slate-950">하이</span>
-    <span className="ml-1 text-amber-500">버블즈</span>
+  <div className={cn('inline-flex items-end font-black tracking-[-0.06em] leading-none', className)} aria-label="Hi Bubblez">
+    <span className="text-slate-950">Hi</span>
+    <span className="ml-2 text-amber-500">Bubblez</span>
   </div>
 );
 
