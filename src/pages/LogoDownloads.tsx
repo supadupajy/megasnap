@@ -83,11 +83,12 @@ const LogoDownloads = () => {
                       backgroundPosition: '50% 47%',
                       backgroundRepeat: 'no-repeat',
                       backgroundSize: '222% 222%',
-                      filter: 'saturate(0.86) hue-rotate(-7deg) brightness(1.04)',
+                      filter: 'saturate(0.68) hue-rotate(-18deg) brightness(1.08) contrast(0.96)',
                     }}
                     aria-label={item.title}
                     role="img"
                   />
+
                 ) : (
 
                   <img
