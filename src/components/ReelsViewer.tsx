@@ -1805,7 +1805,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
-          className="px-4"
+          className="px-7"
           style={{
             paddingTop: "8px",
             paddingBottom: embedded ? "8px" : "calc(env(safe-area-inset-bottom, 0px) + 8px)",
