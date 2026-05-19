@@ -5,7 +5,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { mapCache } from '@/utils/map-cache';
 import { loadKakaoMapsSdk } from '@/utils/kakao-maps';
-import { getFallbackImage, getOptimizedMarkerImage } from '@/lib/utils';
+import { getFallbackImage, getOptimizedMarkerImage, PLACEHOLDER_IMAGE } from '@/lib/utils';
 import { isGeneratedVideoThumbnailUrl } from '@/utils/post-media';
 import HeatmapOverlay from '@/components/HeatmapOverlay';
 
@@ -56,6 +56,11 @@ const isMockMarkerImageUrl = (url: unknown) => {
   return url.includes('pexels.com') || url.includes('unsplash.com') || url.includes('picsum.photos') || url.includes('loremflickr') || url.includes('youtube.com') || url.includes('youtu.be');
 };
 
+const isPlaceholderMarkerImageUrl = (url: unknown) => {
+  if (typeof url !== 'string') return false;
+  return url === PLACEHOLDER_IMAGE || url.endsWith('/placeholder.svg');
+};
+
 const getStoredMarkerThumbnail = (post: any) => {
   // 영상 포스트의 경우, 서버측에서 자동 생성된 `-thumb.jpg`(예: opening-thumb.jpg)도
   // 신뢰할 수 있는 썸네일로 허용한다. 이렇게 해야 DB에 이미 저장된 썸네일이 즉시
@@ -71,6 +76,7 @@ const getStoredMarkerThumbnail = (post: any) => {
   const primary = post?.image_url || post?.image;
   if (
     !isBrokenMarkerImageUrl(primary) &&
+    !isPlaceholderMarkerImageUrl(primary) &&
     !isMarkerVideoUrl(primary) &&
     !isMockMarkerImageUrl(primary) &&
     (hasVideo || !isGeneratedVideoThumbnailUrl(primary))
@@ -81,6 +87,7 @@ const getStoredMarkerThumbnail = (post: any) => {
   if (!Array.isArray(post?.images)) return '';
   return post.images.find((url: unknown) => (
     !isBrokenMarkerImageUrl(url) &&
+    !isPlaceholderMarkerImageUrl(url) &&
     !isMarkerVideoUrl(url) &&
     !isMockMarkerImageUrl(url) &&
     (hasVideo || !isGeneratedVideoThumbnailUrl(typeof url === 'string' ? url : undefined))
@@ -1117,6 +1124,19 @@ const MapContainer = ({
         : '';
       const storedVideoPoster = firstVideoUrl ? getStoredMarkerThumbnail(post) : '';
       const cachedVideoThumb = firstVideoUrl ? videoThumbCacheRef.current.get(post.id) : '';
+      // ── 디버그: 영상 마커가 빈 상태로 보이는 원인을 추적하기 위한 임시 로그 ──
+      if (firstVideoUrl) {
+        // eslint-disable-next-line no-console
+        console.log('[VideoMarkerDebug]', {
+          postId: post.id,
+          videoUrl: firstVideoUrl,
+          image_url: post.image_url,
+          image: post.image,
+          images: post.images,
+          storedVideoPoster,
+          cachedVideoThumb,
+        });
+      }
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
       const markerFloatKey = 'float-v5';
