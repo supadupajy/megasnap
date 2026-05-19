@@ -599,14 +599,8 @@ const Index = () => {
           return mapRawToPost({ ...p, ...fullRow, isLiked: likedIds.has(String(p.id)) });
         });
         const trending = mapped.slice(0, 20).map((p: any, i: number) => ({ ...p, rank: i + 1 }));
-        // eslint-disable-next-line no-console
-        console.log('[TrendingDebug][fetch-complete]', {
-          force,
-          rpcCount: data.length,
-          mappedCount: mapped.length,
-          topIds: trending.slice(0, 5).map((post: any) => ({ id: post.id, rank: post.rank, image_url: post.image_url, videoUrl: post.videoUrl })),
-        });
         setGlobalTrendingPosts(trending);
+
         // 새 트렌딩 fetch 완료 신호 → TrendingPosts가 비교 기준(prevRanks)을 갱신할 수 있게 한다.
         setTrendingRefreshTick((t) => t + 1);
 

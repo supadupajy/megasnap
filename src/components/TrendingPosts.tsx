@@ -295,7 +295,7 @@ const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumb
 type PlayBadgeSize = 'sm' | 'md';
 
 // 동영상 썸네일을 canvas로 1회 추출한 뒤 같은 videoUrl에는 캐시 이미지를 재사용한다.
-const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: PlayBadgeSize; debugPostId?: string; debugRank?: number }> = ({ videoUrl, className, size = 'md', debugPostId, debugRank }) => {
+const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: PlayBadgeSize }> = ({ videoUrl, className, size = 'md' }) => {
   const cached = videoThumbCache.get(videoUrl);
   const [thumbUrl, setThumbUrl] = React.useState<string | null>(
     cached && cached !== 'failed' ? cached : null
@@ -305,31 +305,15 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
   React.useEffect(() => {
     const currentCached = videoThumbCache.get(videoUrl);
     if (currentCached) {
-      // eslint-disable-next-line no-console
-      console.log('[TrendingDebug][video-thumb-cache-hit]', {
-        videoUrl,
-        debugPostId,
-        debugRank,
-        cached: currentCached === 'failed' ? 'failed' : 'data-url',
-      });
       setThumbUrl(currentCached === 'failed' ? null : currentCached);
       setFailed(currentCached === 'failed');
       return;
     }
 
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][video-thumb-request]', { videoUrl, debugPostId, debugRank });
     setThumbUrl(null);
     setFailed(false);
 
     return requestVideoThumbnail(videoUrl, (result) => {
-      // eslint-disable-next-line no-console
-      console.log('[TrendingDebug][video-thumb-result]', {
-        videoUrl,
-        debugPostId,
-        debugRank,
-        result: result === 'failed' ? 'failed' : 'data-url',
-      });
       if (result === 'failed') {
         setThumbUrl(null);
         setFailed(true);
@@ -338,20 +322,7 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
         setFailed(false);
       }
     });
-  }, [debugPostId, debugRank, videoUrl]);
-
-  React.useEffect(() => {
-    if (size !== 'sm') return;
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][collapsed-video-thumb-state]', {
-      debugPostId,
-      debugRank,
-      videoUrl,
-      hasThumbUrl: !!thumbUrl,
-      failed,
-      cacheState: videoThumbCache.get(videoUrl) || null,
-    });
-  }, [debugPostId, debugRank, failed, size, thumbUrl, videoUrl]);
+  }, [videoUrl]);
 
   if (thumbUrl) {
     return (
@@ -459,57 +430,6 @@ const warmTrendingThumbnail = (post: Post) => {
   void preloadImage(fallbackImageUrl.startsWith('http') ? getOptimizedFeedImage(fallbackImageUrl, post.id) : fallbackImageUrl);
 };
 
-const getTrendingThumbnailDebugInfo = (post: Post) => {
-  const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
-  const primaryMedia = mediaItems[0];
-  const resolvedThumbUrl = getTrendingThumbnailImageUrl(post);
-
-  if (primaryMedia?.type === 'image') {
-    return {
-      postId: post.id,
-      rank: (post as any).rank,
-      mediaType: 'image',
-      sourceUrl: primaryMedia.url,
-      resolvedThumbUrl,
-      imagePreloaded: !!resolvedThumbUrl && imagePreloadCache.has(resolvedThumbUrl),
-    };
-  }
-
-  if (primaryMedia?.type === 'video') {
-    return {
-      postId: post.id,
-      rank: (post as any).rank,
-      mediaType: 'video',
-      videoUrl: primaryMedia.url,
-      posterUrl: primaryMedia.posterUrl || null,
-      resolvedThumbUrl,
-      videoThumbCache: videoThumbCache.get(primaryMedia.url) || null,
-      imagePreloaded: !!resolvedThumbUrl && imagePreloadCache.has(resolvedThumbUrl),
-    };
-  }
-
-  return {
-    postId: post.id,
-    rank: (post as any).rank,
-    mediaType: 'fallback',
-    sourceUrl: post.image_url || post.image || FALLBACK_IMAGE,
-    resolvedThumbUrl,
-    imagePreloaded: !!resolvedThumbUrl && imagePreloadCache.has(resolvedThumbUrl),
-  };
-};
-
-const getTrendingPostsSignature = (posts: Post[]) => posts.map((post: any) => `${post.id}:${post.rank ?? 'na'}`).join('|');
-
-const getCollapsedPostDebugInfo = (post: Post | null | undefined) => {
-  if (!post) return null;
-  return {
-    postId: post.id,
-    rank: (post as any).rank,
-    contentPreview: (post.content || '').slice(0, 40),
-    ...getTrendingThumbnailDebugInfo(post),
-  };
-};
-
 // 지도 마커와 1:1 동일한 24시간 카운트다운 링.
 
 // - 12시 방향에서 시계 반대방향으로 한 바퀴 도는 둥근 사각형 path
@@ -608,51 +528,6 @@ const PostThumbnail: React.FC<{
   const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
   const primaryMedia = mediaItems[0];
   const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
-  const resolvedThumbUrl = getTrendingThumbnailImageUrl(post);
-  const isCollapsedThumb = size === 'sm';
-
-  useEffect(() => {
-    if (!isCollapsedThumb) return;
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][collapsed-thumb-render]', {
-      postId: post.id,
-      rank: (post as any).rank,
-      mediaType: primaryMedia?.type || 'fallback',
-      resolvedThumbUrl,
-      debugInfo: getTrendingThumbnailDebugInfo(post),
-    });
-
-    return () => {
-      // eslint-disable-next-line no-console
-      console.log('[TrendingDebug][collapsed-thumb-effect-cleanup]', {
-        postId: post.id,
-        rank: (post as any).rank,
-        mediaType: primaryMedia?.type || 'fallback',
-        resolvedThumbUrl,
-      });
-    };
-  }, [isCollapsedThumb, post, primaryMedia?.type, resolvedThumbUrl]);
-
-  useEffect(() => {
-    if (!isCollapsedThumb) return;
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][collapsed-thumb-mount]', {
-      postId: post.id,
-      rank: (post as any).rank,
-      mediaType: primaryMedia?.type || 'fallback',
-    });
-
-    return () => {
-      // eslint-disable-next-line no-console
-      console.log('[TrendingDebug][collapsed-thumb-unmount]', {
-        postId: post.id,
-        rank: (post as any).rank,
-        mediaType: primaryMedia?.type || 'fallback',
-      });
-    };
-    // collapsed header thumbnail mount/unmount only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCollapsedThumb]);
 
   const renderImage = (url: string, showPlay = false) => (
     <div className={cn("relative w-full h-full", className)}>
@@ -662,32 +537,7 @@ const PostThumbnail: React.FC<{
         loading={imgLoading}
         decoding="async"
         className={cn("w-full h-full object-cover", imgClassName)}
-        onLoad={(e) => {
-          if (isCollapsedThumb) {
-            // eslint-disable-next-line no-console
-            console.log('[TrendingDebug][collapsed-thumb-img-load]', {
-              postId: post.id,
-              rank: (post as any).rank,
-              requestedUrl: url,
-              currentSrc: e.currentTarget.currentSrc,
-              complete: e.currentTarget.complete,
-              naturalWidth: e.currentTarget.naturalWidth,
-              naturalHeight: e.currentTarget.naturalHeight,
-            });
-          }
-        }}
-        onError={(e) => {
-          if (isCollapsedThumb) {
-            // eslint-disable-next-line no-console
-            console.log('[TrendingDebug][collapsed-thumb-img-error]', {
-              postId: post.id,
-              rank: (post as any).rank,
-              requestedUrl: url,
-              currentSrc: e.currentTarget.currentSrc,
-            });
-          }
-          onImgError?.(e);
-        }}
+        onError={onImgError}
       />
       {showPlay && <PlayOverlay size={size} />}
       <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
@@ -709,8 +559,6 @@ const PostThumbnail: React.FC<{
           videoUrl={primaryMedia.url}
           className={cn("absolute inset-0 w-full h-full object-cover", imgClassName)}
           size={size}
-          debugPostId={String(post.id)}
-          debugRank={(post as any).rank}
         />
 
         <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
@@ -1120,29 +968,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     const nextIndex = posts.findIndex((post) => String(post.id) === collapsedPostId);
     return nextIndex >= 0 ? nextIndex : 0;
   }, [posts, collapsedPostId]);
-  const previousPostsSignatureRef = useRef<string>('');
-  const previousCurrentPostRef = useRef<{ postId: string | null; rank: number | null; collapsedPostId: string | null }>({
-    postId: null,
-    rank: null,
-    collapsedPostId: null,
-  });
-  const previousCollapsedRenderRef = useRef<{
-    postId: string | null;
-    rank: number | null;
-    thumbUrl: string | null;
-    postRef: Post | null;
-    refreshTick: number | null;
-  }>({
-    postId: null,
-    rank: null,
-    thumbUrl: null,
-    postRef: null,
-    refreshTick: null,
-  });
-  const previousTextAnimationRef = useRef<{ postId: string | null; count: number }>({
-    postId: null,
-    count: 0,
-  });
   const previousCollapsedAnimatedPostIdRef = useRef<string | null>(null);
 
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
@@ -1158,92 +983,27 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
 
   useEffect(() => {
     if (posts.length === 0) {
-      // eslint-disable-next-line no-console
-      console.log('[TrendingDebug][collapsed-post-sync]', {
-        action: 'clear',
-        nextCollapsedPostId: null,
-      });
       setCollapsedPostId(null);
       return;
     }
 
     setCollapsedPostId((prev) => {
-      const preserved = !!(prev && posts.some((post) => String(post.id) === prev));
-      const nextCollapsedPostId = preserved ? prev : String(posts[0].id);
-      // eslint-disable-next-line no-console
-      console.log('[TrendingDebug][collapsed-post-sync]', {
-        action: preserved ? 'preserve' : 'reset-to-first-post',
-        previousCollapsedPostId: prev,
-        nextCollapsedPostId,
-        firstPostId: String(posts[0].id),
-      });
-      return nextCollapsedPostId;
+      if (prev && posts.some((post) => String(post.id) === prev)) return prev;
+      return String(posts[0].id);
     });
   }, [posts]);
 
   useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][posts-prop-updated]', {
-      refreshTick,
-      postCount: posts.length,
-      currentCollapsedPostId: collapsedPostId,
-      topIds: posts.slice(0, 5).map((post: any) => ({ id: post.id, rank: post.rank })),
-    });
     posts.forEach((post) => warmTrendingThumbnail(post));
-  }, [collapsedPostId, posts, refreshTick]);
+  }, [posts, refreshTick]);
 
   useEffect(() => {
     if (posts.length === 0) return;
     const nextPosts = [0, 1, 2]
       .map((offset) => posts[(currentIndex + offset) % posts.length])
       .filter(Boolean);
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][collapsed-current]', {
-      currentIndex,
-      currentCollapsedPostId: collapsedPostId,
-      current: getTrendingThumbnailDebugInfo(nextPosts[0]),
-      prefetched: nextPosts.slice(1).map((post) => getTrendingThumbnailDebugInfo(post)),
-    });
     nextPosts.forEach((post) => warmTrendingThumbnail(post));
-  }, [collapsedPostId, currentIndex, posts]);
-
-  useEffect(() => {
-    const postsSignature = getTrendingPostsSignature(posts);
-    const currentPost = posts[currentIndex] || posts[0];
-    const previousPostsSignature = previousPostsSignatureRef.current;
-    const previousCurrentPost = previousCurrentPostRef.current;
-    const signatureChanged = previousPostsSignature !== postsSignature;
-    const orderChanged = previousPostsSignature
-      ? previousPostsSignature.split('|').slice(0, 20).join('|') !== postsSignature.split('|').slice(0, 20).join('|')
-      : false;
-
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][collapsed-state-diff]', {
-      refreshTick,
-      isExpanded,
-      collapsedPostId,
-      currentIndex,
-      signatureChanged,
-      orderChanged,
-      previousPostsSignature,
-      postsSignature,
-      previousCurrent: previousCurrentPost,
-      nextCurrent: {
-        postId: currentPost?.id ? String(currentPost.id) : null,
-        rank: (currentPost as any)?.rank ?? null,
-        collapsedPostId,
-      },
-      currentDebug: getCollapsedPostDebugInfo(currentPost),
-    });
-
-    previousPostsSignatureRef.current = postsSignature;
-    previousCurrentPostRef.current = {
-      postId: currentPost?.id ? String(currentPost.id) : null,
-      rank: (currentPost as any)?.rank ?? null,
-      collapsedPostId,
-    };
-
-  }, [collapsedPostId, currentIndex, isExpanded, posts, refreshTick]);
+  }, [currentIndex, posts]);
 
   // 5분 간격 fetch가 한 번씩 완료될 때마다(=refreshTick 증가) 비교 기준을 갱신한다.
 
@@ -1348,50 +1108,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   const currentPost = (posts[currentIndex] || posts[0]) as (Post & { rank: number }) | undefined;
   const currentCollapsedPostKey = currentPost?.id ? String(currentPost.id) : null;
   const shouldAnimateCollapsedText = previousCollapsedAnimatedPostIdRef.current !== currentCollapsedPostKey;
-  const currentCollapsedThumbUrl = currentPost ? getTrendingThumbnailImageUrl(currentPost) : null;
   const visibleExpandedPosts = isExpanded ? posts.slice(0, visibleItemLimit) : [];
 
   useEffect(() => {
     previousCollapsedAnimatedPostIdRef.current = currentCollapsedPostKey;
   }, [currentCollapsedPostKey]);
-
-  useEffect(() => {
-
-    const previousRender = previousCollapsedRenderRef.current;
-    const nextPostId = currentPost?.id ? String(currentPost.id) : null;
-    const nextRank = (currentPost as any)?.rank ?? null;
-
-    // eslint-disable-next-line no-console
-    console.log('[TrendingDebug][collapsed-render-reason]', {
-      refreshTick,
-      collapsedPostId,
-      shouldAnimateCollapsedText,
-      next: {
-        postId: nextPostId,
-        rank: nextRank,
-        thumbUrl: currentCollapsedThumbUrl,
-      },
-      previous: {
-        postId: previousRender.postId,
-        rank: previousRender.rank,
-        thumbUrl: previousRender.thumbUrl,
-        refreshTick: previousRender.refreshTick,
-      },
-      samePostId: previousRender.postId === nextPostId,
-      sameRank: previousRender.rank === nextRank,
-      sameThumbUrl: previousRender.thumbUrl === currentCollapsedThumbUrl,
-      sameObjectRef: previousRender.postRef === (currentPost || null),
-      refreshTickChanged: previousRender.refreshTick !== refreshTick,
-    });
-
-    previousCollapsedRenderRef.current = {
-      postId: nextPostId,
-      rank: nextRank,
-      thumbUrl: currentCollapsedThumbUrl,
-      postRef: currentPost || null,
-      refreshTick,
-    };
-  }, [collapsedPostId, currentCollapsedThumbUrl, currentPost, refreshTick, shouldAnimateCollapsedText]);
 
   const handleScroll = useCallback(() => {
 
@@ -1527,20 +1248,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -8 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
-                  onAnimationStart={() => {
-                    // eslint-disable-next-line no-console
-                    console.log('[TrendingDebug][collapsed-content-animation-start]', {
-                      collapsedPostId,
-                      currentPost: getCollapsedPostDebugInfo(currentPost),
-                    });
-                  }}
-                  onAnimationComplete={() => {
-                    // eslint-disable-next-line no-console
-                    console.log('[TrendingDebug][collapsed-content-animation-complete]', {
-                      collapsedPostId,
-                      currentPost: getCollapsedPostDebugInfo(currentPost),
-                    });
-                  }}
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
 
@@ -1569,34 +1276,6 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         animate={{ y: 0, opacity: 1 }}
                         exit={shouldAnimateCollapsedText ? { y: -15, opacity: 0 } : undefined}
                         transition={shouldAnimateCollapsedText ? { duration: 0.3, opacity: { duration: 0.2 } } : { duration: 0 }}
-                        onAnimationStart={() => {
-                          if (!shouldAnimateCollapsedText) return;
-                          const nextPostId = currentPost?.id ? String(currentPost.id) : null;
-                          const previousAnimation = previousTextAnimationRef.current;
-                          const nextCount = previousAnimation.postId === nextPostId ? previousAnimation.count + 1 : 1;
-                          previousTextAnimationRef.current = {
-                            postId: nextPostId,
-                            count: nextCount,
-                          };
-                          // eslint-disable-next-line no-console
-                          console.log('[TrendingDebug][collapsed-text-animation-start]', {
-                            collapsedPostId,
-                            animationCountForPost: nextCount,
-                            samePostAsPreviousAnimation: previousAnimation.postId === nextPostId,
-                            shouldAnimateCollapsedText,
-                            currentPost: getCollapsedPostDebugInfo(currentPost),
-                          });
-                        }}
-                        onAnimationComplete={() => {
-                          if (!shouldAnimateCollapsedText) return;
-                          // eslint-disable-next-line no-console
-                          console.log('[TrendingDebug][collapsed-text-animation-complete]', {
-                            collapsedPostId,
-                            animationCountForPost: previousTextAnimationRef.current.count,
-                            shouldAnimateCollapsedText,
-                            currentPost: getCollapsedPostDebugInfo(currentPost),
-                          });
-                        }}
                         className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                       >
                         <HashtagText text={currentPost?.content || ''} />
