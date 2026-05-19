@@ -1126,9 +1126,20 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   transition={{ duration: 0.25, ease: "easeOut" }}
                   className="flex flex-1 items-center gap-2 overflow-hidden"
                 >
-                  <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
-                    <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" now={thumbnailTimerNow} borderWidth={0} />
-                  </div>
+                  {(() => {
+                    const collapsedIsMine = !!(authUserId && currentPost && String((currentPost as any).owner_id || currentPost.user_id || '') === String(authUserId));
+                    const collapsedFrame = currentPost
+                      ? getThumbnailFrameStyle(currentPost, collapsedIsMine)
+                      : { borderWidth: 0, border: 'none', boxShadow: undefined as string | undefined };
+                    return (
+                      <div
+                        className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 box-border"
+                        style={{ border: collapsedFrame.border, boxShadow: collapsedFrame.boxShadow }}
+                      >
+                        <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" now={thumbnailTimerNow} borderWidth={collapsedFrame.borderWidth} />
+                      </div>
+                    );
+                  })()}
                   <div className="flex-1 overflow-hidden relative h-5">
 
                     <AnimatePresence mode="wait">
