@@ -144,7 +144,11 @@ const PostCommentsDialog = ({
   const [dragOffsetY, setDragOffsetY] = useState(0);
   const [isSwipeDragging, setIsSwipeDragging] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const handleAreaRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const dragOffsetYRef = useRef(0);
+  const isSwipeDraggingRef = useRef(false);
+
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const onCommentsChangeRef = useRef(onCommentsChange);
@@ -190,8 +194,8 @@ const PostCommentsDialog = ({
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
-      setIsSwipeDragging(false);
-      setDragOffsetY(0);
+      syncSwipeDragging(false);
+      syncDragOffsetY(0);
       swipeGestureRef.current = null;
       frozenSheetBottomRef.current = null;
       frozenSheetTopRef.current = null;
@@ -202,13 +206,13 @@ const PostCommentsDialog = ({
       frozenSheetBottomRef.current = liveSheetBottom;
       frozenSheetTopRef.current = liveSheetTopPx;
       setIsClosing(true);
-      setIsSwipeDragging(false);
+      syncSwipeDragging(false);
       swipeGestureRef.current = null;
       closeTimeoutRef.current = window.setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
         setSheetTopPx(null);
-        setDragOffsetY(0);
+        syncDragOffsetY(0);
         frozenSheetBottomRef.current = null;
         frozenSheetTopRef.current = null;
         closeTimeoutRef.current = null;
@@ -318,105 +322,144 @@ const PostCommentsDialog = ({
     onOpenChange(false);
   };
 
+  const syncDragOffsetY = (next: number) => {
+    dragOffsetYRef.current = next;
+    setDragOffsetY(next);
+  };
+
+  const syncSwipeDragging = (next: boolean) => {
+    isSwipeDraggingRef.current = next;
+    setIsSwipeDragging(next);
+  };
+
   const resetSwipeGesture = () => {
     swipeGestureRef.current = null;
-    setIsSwipeDragging(false);
+    syncSwipeDragging(false);
   };
 
-  const beginSwipeGesture = (e: React.TouchEvent, source: 'handle' | 'scroll') => {
-    if (!isOpen || isClosing || commentToDelete) return;
+  useEffect(() => {
+    if (!shouldRender || !isOpen || isClosing) return;
 
-    const target = e.target as HTMLElement | null;
-    if (target?.closest('button, input, textarea, a, label, [role="button"], [data-comment-no-swipe="true"]')) {
-      return;
-    }
+    const bindSwipeSource = (element: HTMLElement | null, source: 'handle' | 'scroll') => {
+      if (!element) return () => {};
 
-    if (source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
-      return;
-    }
+      const handleTouchStart = (e: TouchEvent) => {
+        if (!isOpen || isClosing || commentToDelete) return;
 
-    const touch = e.touches[0];
-    if (!touch) return;
+        const target = e.target as HTMLElement | null;
+        if (target?.closest('button, input, textarea, a, label, [role="button"], [data-comment-no-swipe="true"]')) {
+          return;
+        }
 
-    swipeGestureRef.current = {
-      active: true,
-      source,
-      startX: touch.clientX,
-      startY: touch.clientY,
-      lastY: touch.clientY,
-      lastTime: Date.now(),
-      velocityY: 0,
-      axis: 'pending',
-    };
-  };
+        if (source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
+          return;
+        }
 
-  const moveSwipeGesture = (e: React.TouchEvent) => {
-    const gesture = swipeGestureRef.current;
-    if (!gesture?.active) return;
+        const touch = e.touches[0];
+        if (!touch) return;
 
-    const touch = e.touches[0];
-    if (!touch) return;
+        swipeGestureRef.current = {
+          active: true,
+          source,
+          startX: touch.clientX,
+          startY: touch.clientY,
+          lastY: touch.clientY,
+          lastTime: Date.now(),
+          velocityY: 0,
+          axis: 'pending',
+        };
+      };
 
-    const dx = touch.clientX - gesture.startX;
-    const dy = touch.clientY - gesture.startY;
+      const handleTouchMove = (e: TouchEvent) => {
+        const gesture = swipeGestureRef.current;
+        if (!gesture?.active || gesture.source !== source) return;
 
-    if (gesture.axis === 'pending') {
-      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-      gesture.axis = Math.abs(dx) > Math.abs(dy) + 6 ? 'horizontal' : 'vertical';
-    }
+        const touch = e.touches[0];
+        if (!touch) return;
 
-    if (gesture.axis === 'horizontal') {
-      resetSwipeGesture();
-      setDragOffsetY(0);
-      return;
-    }
+        const dx = touch.clientX - gesture.startX;
+        const dy = touch.clientY - gesture.startY;
 
-    if (gesture.source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
-      resetSwipeGesture();
-      setDragOffsetY(0);
-      return;
-    }
+        if (gesture.axis === 'pending') {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          gesture.axis = Math.abs(dx) > Math.abs(dy) + 6 ? 'horizontal' : 'vertical';
+        }
 
-    if (dy <= 0) {
-      if (isSwipeDragging || dragOffsetY > 0) {
-        setIsSwipeDragging(true);
-        setDragOffsetY(0);
+        if (gesture.axis === 'horizontal') {
+          resetSwipeGesture();
+          syncDragOffsetY(0);
+          return;
+        }
+
+        if (gesture.source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
+          resetSwipeGesture();
+          syncDragOffsetY(0);
+          return;
+        }
+
+        if (dy <= 0) {
+          if (isSwipeDraggingRef.current || dragOffsetYRef.current > 0) {
+            syncSwipeDragging(true);
+            syncDragOffsetY(0);
+            e.preventDefault();
+          }
+          return;
+        }
+
+        const now = Date.now();
+        const deltaTime = Math.max(now - gesture.lastTime, 1);
+        gesture.velocityY = (touch.clientY - gesture.lastY) / deltaTime;
+        gesture.lastY = touch.clientY;
+        gesture.lastTime = now;
+
+        const limitedDy = dy <= 160 ? dy : 160 + (dy - 160) * 0.35;
+        syncSwipeDragging(true);
+        syncDragOffsetY(limitedDy);
         e.preventDefault();
-      }
-      return;
-    }
+      };
 
-    const now = Date.now();
-    const deltaTime = Math.max(now - gesture.lastTime, 1);
-    gesture.velocityY = (touch.clientY - gesture.lastY) / deltaTime;
-    gesture.lastY = touch.clientY;
-    gesture.lastTime = now;
+      const handleTouchEnd = () => {
+        const gesture = swipeGestureRef.current;
+        if (!gesture || gesture.source !== source) {
+          syncSwipeDragging(false);
+          return;
+        }
 
-    const limitedDy = dy <= 160 ? dy : 160 + (dy - 160) * 0.35;
-    setIsSwipeDragging(true);
-    setDragOffsetY(limitedDy);
-    e.preventDefault();
-  };
+        const currentDragOffset = dragOffsetYRef.current;
+        const shouldClose = currentDragOffset > 120 || (currentDragOffset > 72 && gesture.velocityY > 0.55);
 
-  const endSwipeGesture = () => {
-    const gesture = swipeGestureRef.current;
-    if (!gesture) {
-      setIsSwipeDragging(false);
-      return;
-    }
+        swipeGestureRef.current = null;
+        syncSwipeDragging(false);
 
-    const shouldClose = dragOffsetY > 120 || (dragOffsetY > 72 && gesture.velocityY > 0.55);
+        if (shouldClose) {
+          closeCommentsDialog();
+          return;
+        }
 
-    swipeGestureRef.current = null;
-    setIsSwipeDragging(false);
+        syncDragOffsetY(0);
+      };
 
-    if (shouldClose) {
-      closeCommentsDialog();
-      return;
-    }
+      element.addEventListener('touchstart', handleTouchStart, { passive: true });
+      element.addEventListener('touchmove', handleTouchMove, { passive: false });
+      element.addEventListener('touchend', handleTouchEnd, { passive: true });
+      element.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
-    setDragOffsetY(0);
-  };
+      return () => {
+        element.removeEventListener('touchstart', handleTouchStart);
+        element.removeEventListener('touchmove', handleTouchMove);
+        element.removeEventListener('touchend', handleTouchEnd);
+        element.removeEventListener('touchcancel', handleTouchEnd);
+      };
+    };
+
+    const unbindHandle = bindSwipeSource(handleAreaRef.current, 'handle');
+    const unbindScroll = bindSwipeSource(scrollAreaRef.current, 'scroll');
+
+    return () => {
+      unbindHandle();
+      unbindScroll();
+    };
+  }, [shouldRender, isOpen, isClosing, commentToDelete, onOpenChange]);
 
   const handleAddComment = async (e: React.FormEvent) => {
 
@@ -752,12 +795,10 @@ const PostCommentsDialog = ({
             }}
           >
             <div
+              ref={handleAreaRef}
               className="shrink-0 touch-none"
-              onTouchStart={(e) => beginSwipeGesture(e, 'handle')}
-              onTouchMove={moveSwipeGesture}
-              onTouchEnd={endSwipeGesture}
-              onTouchCancel={endSwipeGesture}
             >
+
               <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
 
               <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -786,11 +827,8 @@ const PostCommentsDialog = ({
             <div
               ref={scrollAreaRef}
               className="min-h-0 flex-1 overflow-y-auto px-4 py-4 overscroll-contain"
-              onTouchStart={(e) => beginSwipeGesture(e, 'scroll')}
-              onTouchMove={moveSwipeGesture}
-              onTouchEnd={endSwipeGesture}
-              onTouchCancel={endSwipeGesture}
             >
+
               {comments.length === 0 ? (
                 <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
                   <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
