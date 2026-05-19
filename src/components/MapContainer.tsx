@@ -1124,6 +1124,21 @@ const MapContainer = ({
         : '';
       const storedVideoPoster = firstVideoUrl ? getStoredMarkerThumbnail(post) : '';
       const cachedVideoThumb = firstVideoUrl ? videoThumbCacheRef.current.get(post.id) : '';
+      // ── 디버그: 활성 영상 마커가 빈 어두운 배경으로 남는 원인 추적 ──
+      if (firstVideoUrl) {
+        // eslint-disable-next-line no-console
+        console.log('[ActiveVideoMarkerDebug]', {
+          postId: post.id,
+          videoUrl: firstVideoUrl,
+          image_url: post.image_url,
+          image: post.image,
+          images: post.images,
+          videoUrls: post.videoUrls,
+          storedVideoPoster,
+          cachedVideoThumb,
+          isAd: post.isAd,
+        });
+      }
       // 비디오 썸네일 캐시 여부를 key에 포함 → 썸네일 추출 완료 시 마커 갱신 트리거
       const hasThumbKey = firstVideoUrl ? (cachedVideoThumb ? '1' : '0') : '';
       const markerFloatKey = 'float-v5';
