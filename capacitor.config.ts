@@ -2,8 +2,9 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.chorasnap.chorasnap',
-  appName: 'SnapPop',
+  appName: '하이버블즈',
   webDir: 'dist',
+
   server: {
     hostname: 'localhost',
     iosScheme: 'http',
