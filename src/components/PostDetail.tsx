@@ -789,8 +789,10 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
               scrollSnapStop: 'always',
               backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
             }}
+            onClick={media.type === 'image' ? onClose : (e) => e.stopPropagation()}
           >
             {media.type === 'video' ? (
+
               <>
                 <div className="absolute inset-0 z-[1] pointer-events-none">
                   <VideoThumbnailPreview
