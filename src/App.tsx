@@ -57,7 +57,7 @@ const DeleteAccount = lazy(() => import("./pages/DeleteAccount"));
 const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const NearbyPosts = lazy(() => import("./pages/NearbyPosts"));
 const Flicks = lazy(() => import("./pages/Flicks"));
-const NaverTest = lazy(() => import("./pages/NaverTest"));
+const LogoDownloads = lazy(() => import("./pages/LogoDownloads"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,7 +93,7 @@ const NON_INDEX_ROUTE_PREFIXES = [
   '/settings',
   '/write',
   '/flicks',
-  '/naver-test',
+  '/logo-downloads',
 ];
 
 const shouldShowIndex = (pathname: string): boolean => {
@@ -147,13 +147,11 @@ const AnimatedRoutes = () => {
 
   const hideAppChrome =
     location.pathname === "/login" ||
-    location.pathname === "/splash" ||
-    location.pathname === "/naver-test";
+    location.pathname === "/splash";
 
   const hideBottomNav =
     location.pathname === "/login" ||
-    location.pathname === "/splash" ||
-    location.pathname === "/naver-test";
+    location.pathname === "/splash";
 
   const [isPostListVisible, setIsPostListVisible] = useState(false);
   const [isReelsViewerOpen, setIsReelsViewerOpen] = useState(false);
@@ -400,7 +398,7 @@ const AnimatedRoutes = () => {
                   <Route path="/settings/delete-account" element={<ProtectedRoute><DeleteAccount /></ProtectedRoute>} />
                   <Route path="/write" element={<ProtectedRoute><WritePage /></ProtectedRoute>} />
                   <Route path="/flicks" element={<ProtectedRoute><Flicks /></ProtectedRoute>} />
-                  <Route path="/naver-test" element={<NaverTest />} />
+                  <Route path="/logo-downloads" element={<LogoDownloads />} />
                 </Routes>
               </Suspense>
             </motion.div>
