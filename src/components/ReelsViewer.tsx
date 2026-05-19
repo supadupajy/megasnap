@@ -1409,36 +1409,32 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   const wasPlayingBeforeScrubRef = useRef(false);
 
   // ── 다중 미디어 (이미지/영상 여러개) ────────────────────
-  // post.videoUrl이 있으면 영상이 우선 미디어가 되고, post.image_url/post.image는
-  // "영상 썸네일"이므로 슬라이드에 중복 추가하지 않는다.
-  // 단, post.images에 영상 외 추가 이미지가 들어 있다면 그것은 보여준다(영상+추가사진 케이스).
+  // 영상 포스트는 단일 videoUrl뿐 아니라 videoUrls 배열까지 모두 포함한다.
+  // image_url/image는 보통 영상 썸네일이므로 영상이 있는 경우 슬라이드 미디어에서는 제외하고,
+  // images 배열 안의 추가 이미지/영상만 중복 없이 합친다.
   const mediaList = useMemo<string[]>(() => {
     const candidates: string[] = [];
     const thumbnailUrl = post.image_url || post.image;
+    const addCandidate = (url: string | undefined | null) => {
+      if (!url) return;
+      if (url === thumbnailUrl && (post.videoUrl || (Array.isArray(post.videoUrls) && post.videoUrls.length > 0))) return;
+      if (candidates.includes(url)) return;
+      candidates.push(url);
+    };
 
-    if (post.videoUrl) {
-      candidates.push(post.videoUrl);
-      // 영상이 있을 땐 대표 썸네일은 슬라이드에서 제외하고,
-      // images 배열에서 썸네일/영상과 다른 추가 이미지만 합친다.
-      if (Array.isArray(post.images) && post.images.length > 0) {
-        post.images.forEach((u) => {
-          if (!u) return;
-          if (u === post.videoUrl) return;
-          if (u === thumbnailUrl) return;
-          if (candidates.includes(u)) return;
-          candidates.push(u);
-        });
-      }
-    } else if (Array.isArray(post.images) && post.images.length > 0) {
-      post.images.forEach((u) => {
-        if (u && !candidates.includes(u)) candidates.push(u);
-      });
-    } else if (thumbnailUrl) {
-      candidates.push(thumbnailUrl);
+    addCandidate(post.videoUrl);
+    if (Array.isArray(post.videoUrls)) {
+      post.videoUrls.forEach(addCandidate);
+    }
+
+    if (Array.isArray(post.images) && post.images.length > 0) {
+      post.images.forEach(addCandidate);
+    } else if (candidates.length === 0) {
+      addCandidate(thumbnailUrl);
     }
 
     return candidates.filter(Boolean) as string[];
-  }, [post.videoUrl, post.images, post.image_url, post.image]);
+  }, [post.videoUrl, post.videoUrls, post.images, post.image_url, post.image]);
 
   const [mediaIndex, setMediaIndex] = useState(0);
 
@@ -1780,16 +1776,6 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             videoPosterUrl={fallbackImage}
           />
 
-          {/* 미디어 인디케이터 도트 (다중일 때만) — 이미지 아래쪽 (타임라인 위) */}
-          <ImageSliderDots
-            count={mediaList.length}
-            currentIndex={mediaIndex}
-            activeWidthClass="w-4"
-            inactiveColorClass="bg-white/50"
-            bottomClass={hasVideo ? "bottom-6" : "bottom-4"}
-            zIndexClass="z-30"
-          />
-
           {/* 재생 오버레이 — 영상 컨테이너 정중앙에 위치 (9:16 영상의 시각적 중앙) */}
           {hasVideo && !isPlaying && videoFirstFrameReady && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -1817,6 +1803,20 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             paddingBottom: embedded ? "8px" : "calc(env(safe-area-inset-bottom, 0px) + 8px)",
           }}
         >
+          {/* 다중 미디어 인디케이터 — 하단 본문 쪽이 아니라 타임라인 바로 위 중앙에 고정 */}
+          {mediaList.length > 1 && (
+            <div className="relative h-3 mb-1">
+              <ImageSliderDots
+                count={mediaList.length}
+                currentIndex={mediaIndex}
+                activeWidthClass="w-4"
+                inactiveColorClass="bg-white/50"
+                bottomClass="bottom-0"
+                zIndexClass="z-30"
+              />
+            </div>
+          )}
+
           {/* 0) 영상 타임라인 — 액션 버튼 줄 바로 위에 위치.
               영상 컨테이너 내부에 두지 않고 정보 오버레이 영역으로 옮겨서
               좋아요/댓글 아이콘보다 약간 더 위에 배치되도록 한다. */}
