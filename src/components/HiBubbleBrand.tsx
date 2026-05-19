@@ -8,13 +8,16 @@ export const HiBubbleIcon = ({ className }: BrandProps) => (
   <div
     role="img"
     aria-label="하이버블즈 아이콘"
-    className={cn('relative overflow-hidden', className)}
+    className={cn(
+      'relative isolate overflow-hidden rounded-[27%] shadow-[0_14px_28px_rgba(249,115,22,0.22),0_10px_20px_rgba(15,23,42,0.12)]',
+      className,
+    )}
   >
     <img
       src="/hi-bubble-icon.png"
       alt=""
       aria-hidden="true"
-      className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full max-w-none -translate-x-1/2 -translate-y-1/2 scale-[1.72] object-contain select-none"
+      className="pointer-events-none absolute left-1/2 top-[49%] h-full w-full max-w-none -translate-x-1/2 -translate-y-1/2 scale-[1.84] object-contain select-none"
       loading="eager"
       decoding="async"
     />
