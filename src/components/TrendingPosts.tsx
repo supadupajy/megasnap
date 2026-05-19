@@ -612,6 +612,19 @@ const PostThumbnail: React.FC<{
   }
 
   if (primaryMedia?.type === 'video') {
+    // [DEBUG] 트렌딩 영상 썸네일 분기 추적
+    if (typeof window !== 'undefined') {
+      console.log('[TrendingThumb][video]', {
+        postId: post.id,
+        hasPoster: !!primaryMedia.posterUrl,
+        posterUrl: primaryMedia.posterUrl,
+        videoUrl: primaryMedia.url,
+        rawImageUrl: (post as any).image_url,
+        rawImage: (post as any).image,
+        rawImages: (post as any).images,
+        cachedThumb: videoThumbCache.get(primaryMedia.url),
+      });
+    }
     if (primaryMedia.posterUrl) {
       return renderImage(primaryMedia.posterUrl, true);
     }
