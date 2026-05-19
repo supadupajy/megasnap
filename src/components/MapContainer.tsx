@@ -57,12 +57,23 @@ const isMockMarkerImageUrl = (url: unknown) => {
 };
 
 const getStoredMarkerThumbnail = (post: any) => {
+  // 영상 포스트의 경우, 서버측에서 자동 생성된 `-thumb.jpg`(예: opening-thumb.jpg)도
+  // 신뢰할 수 있는 썸네일로 허용한다. 이렇게 해야 DB에 이미 저장된 썸네일이 즉시
+  // 표시되어, 클라이언트 비동기 video 프레임 추출이 실패하더라도 빈 회색 버블이
+  // 노출되지 않는다.
+  const hasVideo = !!(
+    (typeof post?.videoUrl === 'string' && post.videoUrl.trim()) ||
+    (typeof post?.video_url === 'string' && post.video_url.trim()) ||
+    (Array.isArray(post?.videoUrls) && post.videoUrls.some((u: unknown) => typeof u === 'string' && (u as string).trim())) ||
+    (Array.isArray(post?.video_urls) && post.video_urls.some((u: unknown) => typeof u === 'string' && (u as string).trim()))
+  );
+
   const primary = post?.image_url || post?.image;
   if (
     !isBrokenMarkerImageUrl(primary) &&
     !isMarkerVideoUrl(primary) &&
     !isMockMarkerImageUrl(primary) &&
-    !isGeneratedVideoThumbnailUrl(primary)
+    (hasVideo || !isGeneratedVideoThumbnailUrl(primary))
   ) {
     return primary;
   }
@@ -72,7 +83,7 @@ const getStoredMarkerThumbnail = (post: any) => {
     !isBrokenMarkerImageUrl(url) &&
     !isMarkerVideoUrl(url) &&
     !isMockMarkerImageUrl(url) &&
-    !isGeneratedVideoThumbnailUrl(typeof url === 'string' ? url : undefined)
+    (hasVideo || !isGeneratedVideoThumbnailUrl(typeof url === 'string' ? url : undefined))
   )) || '';
 };
 
@@ -2094,11 +2105,32 @@ const MapContainer = ({
       video.load();
     };
 
-    const finish = (_reason?: string) => {
+    const finish = (reason?: string) => {
       if (isDone) return;
       isDone = true;
       cleanup();
       videoThumbPendingRef.current.delete(postId);
+
+      // 추출이 성공하지 못한 경우(captured 외)는 서버측에서 저장된 썸네일(image_url 등)을
+      // 폴백으로 캐시에 넣어 빈 회색 버블이 남지 않게 한다. opening-thumb.jpg 같은
+      // -thumb 패턴 URL도 영상 포스트에서는 신뢰한다.
+      if (reason !== 'captured' && !videoThumbCacheRef.current.has(postId)) {
+        const post = postsRef.current.find((p) => p && p.id === postId);
+        if (post) {
+          const fallback = getStoredMarkerThumbnail(post);
+          if (fallback) {
+            videoThumbCacheRef.current.set(postId, fallback);
+            setVideoThumbRevision((revision) => revision + 1);
+            const overlay = overlaysRef.current.get(postId);
+            const content = overlay?.getContent?.() as HTMLElement | null;
+            const img = content?.querySelector('[data-video-marker-img="true"]') as HTMLImageElement | null;
+            if (img) {
+              img.src = fallback;
+              img.style.opacity = '1';
+            }
+          }
+        }
+      }
     };
 
     const isMostlyBlackFrame = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
