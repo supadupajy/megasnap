@@ -1,48 +1,6 @@
-<svg viewBox="0 0 700 160" role="img" aria-label="하이버블즈 로고" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="hi-bubble-bg-download" x1="18" y1="12" x2="102" y2="110" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFE066"/>
-      <stop offset="0.55" stop-color="#FFB703"/>
-      <stop offset="1" stop-color="#FF8A00"/>
-    </linearGradient>
-    <radialGradient id="hi-bubble-bubble-fill-download" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(46 42) rotate(42) scale(58)">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.96"/>
-      <stop offset="0.42" stop-color="#FFFDF7" stop-opacity="0.88"/>
-      <stop offset="0.72" stop-color="#F5FBFF" stop-opacity="0.72"/>
-      <stop offset="1" stop-color="#DFF4FF" stop-opacity="0.56"/>
-    </radialGradient>
-    <radialGradient id="hi-bubble-bubble-glow-download" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(60 63) rotate(90) scale(33)">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.3"/>
-      <stop offset="0.72" stop-color="#FFFFFF" stop-opacity="0.08"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="hi-bubble-rainbow-stroke-download" x1="34" y1="45" x2="76" y2="28" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#6EE7FF"/>
-      <stop offset="0.28" stop-color="#7C9CFF"/>
-      <stop offset="0.56" stop-color="#D39BFF"/>
-      <stop offset="0.78" stop-color="#FFC7D9"/>
-      <stop offset="1" stop-color="#FFF2A8"/>
-    </linearGradient>
-    <filter id="hi-bubble-shadow-download" x="23" y="24" width="74" height="76" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#C97800" flood-opacity="0.18"/>
-    </filter>
-  </defs>
-
-  <g transform="translate(20 20)">
-    <rect x="8" y="8" width="104" height="104" rx="28" fill="url(#hi-bubble-bg-download)"/>
-
-    <g filter="url(#hi-bubble-shadow-download)">
-      <circle cx="60" cy="63" r="33" fill="url(#hi-bubble-bubble-fill-download)" stroke="#FFFFFF" stroke-width="2.4" stroke-opacity="0.68"/>
-      <circle cx="60" cy="63" r="31.2" fill="url(#hi-bubble-bubble-glow-download)"/>
-      <path d="M36 47C42 39.5 52 32.5 66.5 31C70.8 30.5 74.8 31.1 78.4 32.4" fill="none" stroke="url(#hi-bubble-rainbow-stroke-download)" stroke-width="4.4" stroke-linecap="round" opacity="0.95"/>
-      <path d="M33.5 53.5C40.2 43.8 50.4 37.6 62.5 35.7" fill="none" stroke="#FFFFFF" stroke-width="1.7" stroke-linecap="round" stroke-opacity="0.8"/>
-      <ellipse cx="48" cy="47" rx="12.5" ry="8" fill="#FFFFFF" opacity="0.86" transform="rotate(-30 48 47)"/>
-      <ellipse cx="79" cy="80" rx="16" ry="18" fill="#CFF4FF" opacity="0.18" transform="rotate(12 79 80)"/>
-      <circle cx="82" cy="43" r="3.2" fill="#FFFFFF" opacity="0.78"/>
-      <circle cx="86.5" cy="38.5" r="1.4" fill="#FFF6C7" opacity="0.9"/>
-    </g>
-  </g>
-
-  <text x="160" y="98" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="78" font-weight="900" letter-spacing="-10" fill="#020617">하이</text>
-  <text x="328" y="98" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="78" font-weight="900" letter-spacing="-10" fill="#f59e0b">버블즈</text>
+<svg viewBox="0 0 980 220" role="img" aria-label="하이버블즈 로고" xmlns="http://www.w3.org/2000/svg">
+  <rect width="980" height="220" fill="none"/>
+  <image href="/hi-bubble-icon.png" x="20" y="10" width="180" height="180" preserveAspectRatio="xMidYMid meet"/>
+  <text x="230" y="138" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="104" font-weight="900" letter-spacing="-12" fill="#020617">하이</text>
+  <text x="455" y="138" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="104" font-weight="900" letter-spacing="-12" fill="#f59e0b">버블즈</text>
 </svg>

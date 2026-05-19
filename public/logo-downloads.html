@@ -60,16 +60,29 @@
       }
       .preview img {
         max-width: 100%;
-        max-height: 120px;
+        max-height: 126px;
         object-fit: contain;
       }
       .meta {
         margin-top: 14px;
       }
+      .title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
       .title {
         font-size: 18px;
         font-weight: 800;
         letter-spacing: -0.03em;
+      }
+      .badge {
+        border-radius: 999px;
+        background: #fef3c7;
+        color: #b45309;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 3px 8px;
       }
       .desc {
         margin-top: 4px;
@@ -81,7 +94,7 @@
         gap: 10px;
         margin-top: 14px;
       }
-      button, a.link {
+      a.link {
         appearance: none;
         border: none;
         border-radius: 999px;
@@ -91,135 +104,51 @@
         cursor: pointer;
         text-decoration: none;
         text-align: center;
-      }
-      button.primary {
         background: #f59e0b;
         color: white;
         flex: 1;
-      }
-      a.link {
-        background: #f8fafc;
-        color: #334155;
-        border: 1px solid #e2e8f0;
-      }
-      .footer {
-        margin-top: 24px;
-        font-size: 12px;
-        color: #6b7280;
       }
     </style>
   </head>
   <body>
     <div class="wrap">
       <h1>하이버블즈 로고 다운로드</h1>
-      <p class="sub">투명 배경 PNG로 바로 저장할 수 있게 준비했습니다. 오른쪽 버튼은 원본 SVG 다운로드입니다.</p>
+      <p class="sub">현재 적용된 첫 번째 비눗방울 시안을 그대로 다운로드할 수 있게 준비했습니다.</p>
 
       <div class="grid">
         <div class="card">
-          <div class="preview"><img src="/hi-bubble-icon.svg" alt="하이버블즈 아이콘" /></div>
+          <div class="preview"><img src="/hi-bubble-icon.png" alt="하이버블즈 앱 아이콘" /></div>
           <div class="meta">
-            <div class="title">아이콘</div>
-            <div class="desc">앱 아이콘형 심볼</div>
+            <div class="title-row"><div class="title">앱 아이콘</div><div class="badge">PNG</div></div>
+            <div class="desc">첫 번째 비눗방울 시안 그대로 적용된 아이콘</div>
           </div>
           <div class="actions">
-            <button class="primary" data-svg="/hi-bubble-icon.svg" data-file="hi-bubble-icon.png" data-width="120" data-height="120">PNG 다운로드</button>
-            <a class="link" href="/hi-bubble-icon.svg" download>SVG</a>
+            <a class="link" href="/hi-bubble-icon.png" download="hi-bubble-icon.png">다운로드</a>
           </div>
         </div>
 
         <div class="card">
           <div class="preview"><img src="/hi-bubble-wordmark.svg" alt="하이버블즈 워드마크" /></div>
           <div class="meta">
-            <div class="title">워드마크</div>
-            <div class="desc">텍스트 로고</div>
+            <div class="title-row"><div class="title">워드마크</div><div class="badge">SVG</div></div>
+            <div class="desc">텍스트 로고 원본 SVG</div>
           </div>
           <div class="actions">
-            <button class="primary" data-svg="/hi-bubble-wordmark.svg" data-file="hi-bubble-wordmark.png" data-width="520" data-height="120">PNG 다운로드</button>
-            <a class="link" href="/hi-bubble-wordmark.svg" download>SVG</a>
+            <a class="link" href="/hi-bubble-wordmark.svg" download="hi-bubble-wordmark.svg">다운로드</a>
           </div>
         </div>
 
         <div class="card">
           <div class="preview"><img src="/hi-bubble-logo.svg" alt="하이버블즈 조합 로고" /></div>
           <div class="meta">
-            <div class="title">조합 로고</div>
-            <div class="desc">아이콘 + 워드마크</div>
+            <div class="title-row"><div class="title">조합 로고</div><div class="badge">SVG</div></div>
+            <div class="desc">비눗방울 아이콘 + 워드마크 조합</div>
           </div>
           <div class="actions">
-            <button class="primary" data-svg="/hi-bubble-logo.svg" data-file="hi-bubble-logo.png" data-width="700" data-height="160">PNG 다운로드</button>
-            <a class="link" href="/hi-bubble-logo.svg" download>SVG</a>
+            <a class="link" href="/hi-bubble-logo.svg" download="hi-bubble-logo.svg">다운로드</a>
           </div>
         </div>
       </div>
-
-      <p class="footer">PNG는 브라우저에서 SVG를 캔버스로 변환해서 생성하므로 배경은 투명하게 유지됩니다.</p>
     </div>
-
-    <script>
-      async function downloadSvgAsPng(svgUrl, fileName, width, height) {
-        const response = await fetch(svgUrl, { cache: 'force-cache' });
-        const svgText = await response.text();
-        const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-        const objectUrl = URL.createObjectURL(blob);
-
-        try {
-          const image = await new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = objectUrl;
-          });
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) throw new Error('Canvas context 생성 실패');
-
-          ctx.clearRect(0, 0, width, height);
-          ctx.drawImage(image, 0, 0, width, height);
-
-          const pngBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-          if (!pngBlob) throw new Error('PNG 변환 실패');
-
-          const pngUrl = URL.createObjectURL(pngBlob);
-          const link = document.createElement('a');
-          link.href = pngUrl;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          URL.revokeObjectURL(pngUrl);
-        } finally {
-          URL.revokeObjectURL(objectUrl);
-        }
-      }
-
-      document.querySelectorAll('button[data-svg]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const originalText = button.textContent;
-          button.disabled = true;
-          button.textContent = '생성 중...';
-          try {
-            await downloadSvgAsPng(
-              button.dataset.svg,
-              button.dataset.file,
-              Number(button.dataset.width),
-              Number(button.dataset.height)
-            );
-            button.textContent = '완료';
-            setTimeout(() => {
-              button.textContent = originalText;
-              button.disabled = false;
-            }, 900);
-          } catch (error) {
-            console.error(error);
-            alert('PNG 생성 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.');
-            button.textContent = originalText;
-            button.disabled = false;
-          }
-        });
-      });
-    </script>
   </body>
 </html>
