@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatCount, getOptimizedMarkerImage } from '@/lib/utils';
 
 interface ProfileStatsProps {
@@ -29,19 +30,39 @@ const ProfileStats = ({
   onPostsClick,
 }: ProfileStatsProps) => {
   const navigate = useNavigate();
+  const optimizedAvatarUrl = getOptimizedMarkerImage(avatarUrl, userId || 'profile');
+  const [imageSrc, setImageSrc] = useState(optimizedAvatarUrl);
+  const [isAvatarLoaded, setIsAvatarLoaded] = useState(false);
+
+  useEffect(() => {
+    setImageSrc(optimizedAvatarUrl);
+    setIsAvatarLoaded(false);
+  }, [optimizedAvatarUrl]);
 
   return (
     <div className="flex items-center gap-6 mb-8">
       <div className="relative">
-        <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
+        <div className="relative w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-yellow-400 to-indigo-600">
+          {!isAvatarLoaded && (
+            <div className="absolute inset-1">
+              <Skeleton className="h-full w-full rounded-full" />
+            </div>
+          )}
           <img
-            src={getOptimizedMarkerImage(avatarUrl, userId || 'profile')}
+            src={imageSrc}
             alt="profile"
             loading="lazy"
             decoding="async"
-            className="w-full h-full rounded-full object-cover border-4 border-white"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = fallbackImage;
+            className="w-full h-full rounded-full object-cover border-4 border-white transition-opacity duration-200"
+            style={{ opacity: isAvatarLoaded ? 1 : 0 }}
+            onLoad={() => setIsAvatarLoaded(true)}
+            onError={() => {
+              if (imageSrc === fallbackImage) {
+                setIsAvatarLoaded(true);
+                return;
+              }
+              setImageSrc(fallbackImage);
+              setIsAvatarLoaded(false);
             }}
           />
         </div>

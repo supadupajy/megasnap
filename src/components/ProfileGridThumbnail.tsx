@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Play } from 'lucide-react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { Post } from '@/types';
 import {
   getPostMediaItems,
@@ -245,7 +246,9 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   const [extractedFrameUrl, setExtractedFrameUrl] = useState<string | null>(null);
   const [needsExtraction, setNeedsExtraction] = useState(false);
   const [didFallback, setDidFallback] = useState(false);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   // basePoster가 검정인지 검사가 끝나서 "보여줘도 안전"한지.
+
   //  - 검사 전: <img>는 opacity 0으로 숨김 → 검정 픽셀이 paint될 기회 자체가 없음
   //  - 검사 결과 검정 아님 → 페이드 인
   //  - 검정으로 판정 → 그대로 숨긴 채 추출된 프레임으로 교체
@@ -254,20 +257,30 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   // <img>가 디코드 직후 검정인지 검사.
   // 영상 카드일 때만 검사하고, 그 외에는 즉시 노출.
   const handleLoadedImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    if (checkedBlackRef.current) return;
-    checkedBlackRef.current = true;
     if (!isVideoCard) {
       setPosterRevealed(true);
+      setIsImageLoaded(true);
       return;
     }
+
+    if (extractedFrameUrl || didFallback) {
+      setIsImageLoaded(true);
+      return;
+    }
+
+    if (checkedBlackRef.current) return;
+    checkedBlackRef.current = true;
+
     const isBlack = isImageMostlyBlack(event.currentTarget);
     if (isBlack && videoUrl) {
       // 검정 → 이 <img>는 끝까지 숨김. extractedFrameUrl이 도착하면 교체된다.
       setNeedsExtraction(true);
-    } else {
-      // 정상 → 즉시 노출
-      setPosterRevealed(true);
+      return;
     }
+
+    // 정상 → 즉시 노출
+    setPosterRevealed(true);
+    setIsImageLoaded(true);
   };
 
   // basePoster가 fallback이거나(=DB에 쓸 수 있는 JPG 자체가 없음) 또는 검정 감지된 경우,
@@ -342,13 +355,14 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     //  - 그 외(아직 검사 전이거나, placeholder/추출 대기 상태) → 숨겨서 부모의 옅은 회색
     //    배경(bg-gray-100)만 보이게 한다. placeholder.svg의 "이미지 없음" 그래픽이
     //    잠깐이라도 노출되는 어색함을 피하기 위함.
-    const safeToReveal = !!extractedFrameUrl || (posterSrc !== FALLBACK_IMAGE && posterRevealed);
+    const safeToReveal = didFallback || !!extractedFrameUrl || (posterSrc !== FALLBACK_IMAGE && posterRevealed);
 
     return (
       <div
         ref={containerRef}
         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
       >
+        {(!safeToReveal || !isImageLoaded) && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
         <img
           src={posterSrc}
           alt=""
@@ -360,12 +374,13 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
           crossOrigin="anonymous"
           className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
           style={{
-            opacity: safeToReveal ? 1 : 0,
+            opacity: safeToReveal && isImageLoaded ? 1 : 0,
             // 검사 통과 후 부드럽게 나타나도록 짧은 페이드
             transition: 'opacity 120ms ease-out',
           }}
-          onLoad={extractedFrameUrl ? undefined : handleLoadedImage}
+          onLoad={handleLoadedImage}
           onError={() => {
+            setIsImageLoaded(false);
             if (!videoUrl) {
               setDidFallback(true);
               return;
@@ -388,13 +403,19 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
       ref={containerRef}
       className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
     >
+      {!isImageLoaded && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
       <img
         src={imageSrc}
         alt=""
         loading="lazy"
         decoding="async"
-        className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-        onError={onError}
+        className="w-full h-full object-cover hover:opacity-80 transition-opacity duration-200"
+        style={{ opacity: isImageLoaded ? 1 : 0 }}
+        onLoad={() => setIsImageLoaded(true)}
+        onError={() => {
+          setIsImageLoaded(false);
+          onError();
+        }}
       />
       {hasVideo && (
         <div className="absolute top-2 right-2 z-10">
