@@ -944,9 +944,9 @@ video.post-item-video::-webkit-media-text-track-container {
   cursor: pointer;
   position: relative;
   z-index: 5;
-  width: 42px;
-  height: 42px;
-  opacity: 0.7;
+  width: 40px;
+  height: 40px;
+  opacity: 0.52;
   contain: layout style;
   backface-visibility: hidden;
   /* 일반 마커(.marker-container)와 동일한 페이드 트랜지션 */
@@ -961,12 +961,12 @@ video.post-item-video::-webkit-media-text-track-container {
   pointer-events: none !important;
 }
 
-/* 고스트 마커 등장 — 경쾌한 pop 효과. 최종 opacity가 0.7. */
+/* 고스트 마커 등장 — 경쾌한 pop 효과. 최종 opacity가 0.52. */
 @keyframes ghost-marker-appear {
-  0%   { opacity: 0;   transform: scale(0); }
-  50%  { opacity: 0.7; transform: scale(1.15); }
-  75%  { transform: scale(0.94); }
-  100% { opacity: 0.7; transform: scale(1); }
+  0%   { opacity: 0;    transform: scale(0); }
+  50%  { opacity: 0.52; transform: scale(1.12); }
+  75%  { transform: scale(0.95); }
+  100% { opacity: 0.52; transform: scale(1); }
 }
 
 .ghost-marker-container.ghost-marker-appear-animation {
@@ -976,9 +976,9 @@ video.post-item-video::-webkit-media-text-track-container {
 
 /* 고스트 마커 사라짐 — pop! 살짝 부풀었다가 사라짐. */
 @keyframes ghost-marker-disappear {
-  0%   { opacity: 0.7; transform: scale(1); }
-  30%  { opacity: 0.7; transform: scale(1.15); }
-  100% { opacity: 0;   transform: scale(0); }
+  0%   { opacity: 0.52; transform: scale(1); }
+  30%  { opacity: 0.52; transform: scale(1.12); }
+  100% { opacity: 0;    transform: scale(0); }
 }
 
 .ghost-marker-container.ghost-disappear {
@@ -988,15 +988,15 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 .ghost-marker-dot {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: radial-gradient(circle at 28% 18%, rgba(255,255,255,0.10) 0 10%, transparent 28%), linear-gradient(155deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 34%, rgba(148,163,184,0.05) 100%);
-  border: 2px solid rgba(241, 245, 249, 0.55);
+  background: radial-gradient(circle at 28% 18%, rgba(255,255,255,0.08) 0 9%, transparent 26%), linear-gradient(155deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 34%, rgba(148,163,184,0.03) 100%);
+  border: 1.5px solid rgba(241, 245, 249, 0.34);
   box-shadow:
-    0 7px 14px rgba(71, 85, 105, 0.18),
-    inset 0 1px 4px rgba(255, 255, 255, 0.12),
-    inset 0 -6px 10px rgba(51, 65, 85, 0.08);
+    0 5px 10px rgba(71, 85, 105, 0.10),
+    inset 0 1px 3px rgba(255, 255, 255, 0.08),
+    inset 0 -4px 7px rgba(51, 65, 85, 0.04);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -1008,8 +1008,8 @@ video.post-item-video::-webkit-media-text-track-container {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(1) brightness(0.88) contrast(0.92);
-  opacity: 0.82;
+  filter: grayscale(0.38) saturate(0.82) brightness(1.03) contrast(0.84);
+  opacity: 0.52;
   pointer-events: none;
   -webkit-user-drag: none;
   position: relative;
@@ -1043,7 +1043,7 @@ video.post-item-video::-webkit-media-text-track-container {
   transition: opacity 0.25s ease-out !important;
 }
 .ghost-marker-container.markers-revealing {
-  opacity: 0.7 !important;
+  opacity: 0.52 !important;
   pointer-events: auto !important;
   transition: opacity 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
