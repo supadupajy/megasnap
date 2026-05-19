@@ -157,6 +157,62 @@ const clearFailedCache = (videoUrl: string) => {
   videoThumbCache.delete(videoUrl);
   videoThumbFailedAt.delete(videoUrl);
 };
+
+// 서버에 저장된 자동 생성 비디오 포스터(`-thumb.jpg`) 중 거의 검정인 것을 마킹.
+// 한 번 검사한 posterUrl은 이 Set에 캐시되어 같은 URL의 다른 인스턴스도 즉시 폴백.
+const darkPosterUrls = new Set<string>();
+const inspectedPosterUrls = new Set<string>();
+
+// posterUrl의 실제 픽셀 밝기를 측정해 검은 프레임이면 darkPosterUrls에 등록한다.
+// CORS 차단으로 getImageData가 실패하면 무시(원본 표시 유지).
+const verifyVideoPosterBrightness = (originalUrl: string, imgEl: HTMLImageElement) => {
+  if (!originalUrl) return;
+  if (inspectedPosterUrls.has(originalUrl)) return;
+  inspectedPosterUrls.add(originalUrl);
+
+  // 디코딩 완료 후 다음 프레임에 측정 (image-rendering 안정성 확보)
+  const measure = () => {
+    try {
+      const w = imgEl.naturalWidth;
+      const h = imgEl.naturalHeight;
+      if (!w || !h) return;
+
+      const sample = 24;
+      const canvas = document.createElement('canvas');
+      canvas.width = sample;
+      canvas.height = sample;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.drawImage(imgEl, 0, 0, sample, sample);
+      const { data } = ctx.getImageData(0, 0, sample, sample);
+
+      let darkPixels = 0;
+      const pixelCount = data.length / 4;
+      for (let i = 0; i < data.length; i += 4) {
+        const luminance = data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722;
+        if (luminance < 18) darkPixels += 1;
+      }
+
+      if (darkPixels / pixelCount > 0.88) {
+        darkPosterUrls.add(originalUrl);
+        // 같은 페이지에 동일 posterUrl을 쓰는 다른 인스턴스도 폴백 분기를 타도록 리렌더 트리거
+        window.dispatchEvent(new CustomEvent('trending-dark-poster-detected', {
+          detail: { url: originalUrl },
+        }));
+      }
+    } catch {
+      // CORS 등으로 픽셀 접근 실패 — 원본 표시를 유지하고 한 번만 시도한 채로 둔다.
+    }
+  };
+
+  if (imgEl.complete && imgEl.naturalWidth > 0) {
+    // 이미 디코딩된 경우 microtask로 비동기 처리하여 onLoad 호출 컨텍스트를 가볍게 유지
+    queueMicrotask(measure);
+  } else {
+    imgEl.addEventListener('load', measure, { once: true });
+  }
+};
 const imagePreloadCache = new Set<string>();
 const imagePreloadPending = new Map<string, Promise<void>>();
 
@@ -592,61 +648,48 @@ const PostThumbnail: React.FC<{
   const primaryMedia = mediaItems[0];
   const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
 
-  const renderImage = (url: string, showPlay = false) => {
-    const finalSrc = url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url;
-    return (
-      <div className={cn("relative w-full h-full", className)}>
-        <img
-          src={finalSrc}
-          alt=""
-          loading={imgLoading}
-          decoding="async"
-          className={cn("w-full h-full object-cover", imgClassName)}
-          onLoad={(e) => {
-            const img = e.currentTarget;
-            console.log('[TrendingThumb][img-load]', {
-              postId: post.id,
-              src: img.src,
-              naturalW: img.naturalWidth,
-              naturalH: img.naturalHeight,
-              showPlay,
-            });
-          }}
-          onError={(e) => {
-            console.log('[TrendingThumb][img-ERROR]', {
-              postId: post.id,
-              src: (e.currentTarget as HTMLImageElement).src,
-              originalUrl: url,
-              showPlay,
-            });
-            onImgError?.(e);
-          }}
-        />
-        {showPlay && <PlayOverlay size={size} />}
-        <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
-      </div>
-    );
-  };
+  // posterUrl이 검은 프레임으로 감지되면 동일 URL을 쓰는 모든 인스턴스가 즉시 폴백 분기를 타도록 리렌더.
+  const [, forceRender] = React.useReducer((n: number) => n + 1, 0);
+  React.useEffect(() => {
+    const targetPoster = primaryMedia?.type === 'video' ? primaryMedia.posterUrl : undefined;
+    if (!targetPoster) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { url?: string } | undefined;
+      if (detail?.url === targetPoster) forceRender();
+    };
+    window.addEventListener('trending-dark-poster-detected', handler as EventListener);
+    return () => window.removeEventListener('trending-dark-poster-detected', handler as EventListener);
+  }, [primaryMedia?.type === 'video' ? primaryMedia.posterUrl : null]);
+
+  const renderImage = (url: string, showPlay = false) => (
+    <div className={cn("relative w-full h-full", className)}>
+      <img
+        src={url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url}
+        alt=""
+        loading={imgLoading}
+        decoding="async"
+        crossOrigin="anonymous"
+        className={cn("w-full h-full object-cover", imgClassName)}
+        onLoad={showPlay ? (e) => verifyVideoPosterBrightness(url, e.currentTarget) : undefined}
+        onError={onImgError}
+      />
+      {showPlay && <PlayOverlay size={size} />}
+      <ThumbnailCountdownRing post={post} now={now} geometry={ringGeometry} borderWidth={borderWidth} />
+    </div>
+  );
 
   if (primaryMedia?.type === 'image') {
     return renderImage(primaryMedia.url);
   }
 
   if (primaryMedia?.type === 'video') {
-    // [DEBUG] 트렌딩 영상 썸네일 분기 추적
-    if (typeof window !== 'undefined') {
-      console.log('[TrendingThumb][video]', {
-        postId: post.id,
-        hasPoster: !!primaryMedia.posterUrl,
-        posterUrl: primaryMedia.posterUrl,
-        videoUrl: primaryMedia.url,
-        rawImageUrl: (post as any).image_url,
-        rawImage: (post as any).image,
-        rawImages: (post as any).images,
-        cachedThumb: videoThumbCache.get(primaryMedia.url),
-      });
-    }
-    if (primaryMedia.posterUrl) {
+    // posterUrl이 있어도 그 이미지가 "검은 프레임"으로 판정된 적이 있다면 신뢰하지 않고
+    // 클라이언트 측 VideoThumbnail로 폴백한다. (영상 0초 근처를 캡처한 -thumb.jpg가
+    // 거의 검정이라 그대로 표시하면 검은 동그라미가 되는 회귀를 방지)
+    const posterIsBlackFrame =
+      primaryMedia.posterUrl ? darkPosterUrls.has(primaryMedia.posterUrl) : false;
+
+    if (primaryMedia.posterUrl && !posterIsBlackFrame) {
       return renderImage(primaryMedia.posterUrl, true);
     }
 
