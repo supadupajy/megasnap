@@ -2372,12 +2372,18 @@ const MapContainer = ({
     const adGlowLayer = '';
 
     const innerBoxBackground = hasVideo && !optimizedDisplayImage && !videoThumbCacheRef.current.get(post.id)
-      ? 'background:radial-gradient(circle at 30% 22%,rgba(255,255,255,0.18) 0 12%,transparent 32%),linear-gradient(135deg,#111827,#374151);'
-      : 'background:radial-gradient(circle at 30% 22%,rgba(255,255,255,0.45) 0 10%,rgba(229,231,235,0.85) 32%,#e5e7eb 100%);';
-    const innerBoxStyle = `width:60px;height:60px;border-radius:50%;position:relative;z-index:2;${inlineBorderStyle}box-shadow:${inlineShadow};${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
-    const bubbleReflectionHtml = `<div class="marker-bubble-reflection" style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 30% 20%,rgba(255,255,255,0.58) 0 10%,rgba(255,255,255,0.22) 11%,transparent 32%),radial-gradient(circle at 72% 78%,rgba(255,255,255,0.16) 0 14%,transparent 38%),linear-gradient(145deg,rgba(255,255,255,0.26) 0%,transparent 44%,rgba(15,23,42,0.16) 100%);box-shadow:inset 0 2px 6px rgba(255,255,255,0.42),inset 0 -10px 16px rgba(15,23,42,0.13);pointer-events:none;z-index:4;"></div>`;
+      ? 'background:radial-gradient(circle at 28% 20%,rgba(255,255,255,0.22) 0 12%,transparent 34%),radial-gradient(circle at 76% 82%,rgba(147,197,253,0.12) 0 14%,transparent 35%),linear-gradient(145deg,#0f172a 0%,#1f2937 52%,#374151 100%);'
+      : 'background:radial-gradient(circle at 28% 20%,rgba(255,255,255,0.55) 0 10%,rgba(255,255,255,0.12) 11%,transparent 34%),radial-gradient(circle at 76% 82%,rgba(191,219,254,0.24) 0 14%,transparent 34%),linear-gradient(150deg,#f8fafc 0%,#e2e8f0 56%,#cbd5e1 100%);';
+    const innerBoxStyle = `width:60px;height:60px;border-radius:50%;position:relative;z-index:2;${inlineBorderStyle}box-shadow:0 10px 22px rgba(15,23,42,0.18),inset 0 3px 10px rgba(255,255,255,0.62),inset 0 -12px 18px rgba(15,23,42,0.18);${innerBoxBackground}box-sizing:border-box;overflow:hidden;`;
+    const bubbleReflectionHtml = `<div class="marker-bubble-reflection" style="position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:4;overflow:hidden;background:linear-gradient(150deg,rgba(255,255,255,0.22) 0%,rgba(255,255,255,0.08) 24%,transparent 45%,rgba(15,23,42,0.14) 100%);box-shadow:inset 0 2px 7px rgba(255,255,255,0.46),inset 0 -12px 18px rgba(15,23,42,0.14);">
+      <div style="position:absolute;top:7px;left:8px;width:25px;height:16px;border-radius:999px;transform:rotate(-16deg);background:radial-gradient(ellipse at 35% 35%,rgba(255,255,255,0.98) 0 28%,rgba(255,255,255,0.54) 48%,rgba(255,255,255,0.12) 68%,transparent 80%);filter:blur(0.2px);"></div>
+      <div style="position:absolute;top:18px;left:16px;width:10px;height:10px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.92) 0 26%,rgba(255,255,255,0.18) 62%,transparent 82%);"></div>
+      <div style="position:absolute;right:9px;bottom:10px;width:24px;height:12px;border-radius:999px;transform:rotate(-18deg);background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,0.18) 0 25%,rgba(255,255,255,0.06) 48%,transparent 72%);"></div>
+      <div style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 32% 18%,rgba(255,255,255,0.34) 0 12%,transparent 34%),radial-gradient(circle at 50% 112%,rgba(15,23,42,0.16) 0 34%,transparent 58%);"></div>
+    </div>`;
 
     // ── 24시간 카운트다운 형광 그린 링 ────────────────────────────────
+
     // 광고/광고대기 마커에는 표시하지 않음. createdAt이 없는 포스트도 skip.
     // path는 12시 방향에서 시작해 시계 반대방향으로 한 바퀴 도는 원형.
     const createdAtMs = getPostCreatedAtMs(post);
