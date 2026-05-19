@@ -141,13 +141,26 @@ const PostCommentsDialog = ({
   const [sheetTopPx, setSheetTopPx] = useState<number | null>(null);
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
+  const [isSwipeDragging, setIsSwipeDragging] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const isSubmittingRef = useRef(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const onCommentsChangeRef = useRef(onCommentsChange);
   const commentsRef = useRef<Comment[]>([]);
   const fetchSequenceRef = useRef(0);
   const mutationSequenceRef = useRef(0);
+  const swipeGestureRef = useRef<{
+    active: boolean;
+    source: 'handle' | 'scroll';
+    startX: number;
+    startY: number;
+    lastY: number;
+    lastTime: number;
+    velocityY: number;
+    axis: 'pending' | 'vertical' | 'horizontal';
+  } | null>(null);
   const isAdPost = useMemo(() => !isPersistedPostId(postId), [postId]);
   const keyboardOffset = useKeyboardOffset(isOpen);
 
@@ -177,6 +190,9 @@ const PostCommentsDialog = ({
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
+      setIsSwipeDragging(false);
+      setDragOffsetY(0);
+      swipeGestureRef.current = null;
       frozenSheetBottomRef.current = null;
       frozenSheetTopRef.current = null;
       return;
@@ -186,10 +202,13 @@ const PostCommentsDialog = ({
       frozenSheetBottomRef.current = liveSheetBottom;
       frozenSheetTopRef.current = liveSheetTopPx;
       setIsClosing(true);
+      setIsSwipeDragging(false);
+      swipeGestureRef.current = null;
       closeTimeoutRef.current = window.setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
         setSheetTopPx(null);
+        setDragOffsetY(0);
         frozenSheetBottomRef.current = null;
         frozenSheetTopRef.current = null;
         closeTimeoutRef.current = null;
@@ -299,7 +318,108 @@ const PostCommentsDialog = ({
     onOpenChange(false);
   };
 
+  const resetSwipeGesture = () => {
+    swipeGestureRef.current = null;
+    setIsSwipeDragging(false);
+  };
+
+  const beginSwipeGesture = (e: React.TouchEvent, source: 'handle' | 'scroll') => {
+    if (!isOpen || isClosing || commentToDelete) return;
+
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('button, input, textarea, a, label, [role="button"], [data-comment-no-swipe="true"]')) {
+      return;
+    }
+
+    if (source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
+      return;
+    }
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    swipeGestureRef.current = {
+      active: true,
+      source,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      lastY: touch.clientY,
+      lastTime: Date.now(),
+      velocityY: 0,
+      axis: 'pending',
+    };
+  };
+
+  const moveSwipeGesture = (e: React.TouchEvent) => {
+    const gesture = swipeGestureRef.current;
+    if (!gesture?.active) return;
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const dx = touch.clientX - gesture.startX;
+    const dy = touch.clientY - gesture.startY;
+
+    if (gesture.axis === 'pending') {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      gesture.axis = Math.abs(dx) > Math.abs(dy) + 6 ? 'horizontal' : 'vertical';
+    }
+
+    if (gesture.axis === 'horizontal') {
+      resetSwipeGesture();
+      setDragOffsetY(0);
+      return;
+    }
+
+    if (gesture.source === 'scroll' && (scrollAreaRef.current?.scrollTop ?? 0) > 0) {
+      resetSwipeGesture();
+      setDragOffsetY(0);
+      return;
+    }
+
+    if (dy <= 0) {
+      if (isSwipeDragging || dragOffsetY > 0) {
+        setIsSwipeDragging(true);
+        setDragOffsetY(0);
+        e.preventDefault();
+      }
+      return;
+    }
+
+    const now = Date.now();
+    const deltaTime = Math.max(now - gesture.lastTime, 1);
+    gesture.velocityY = (touch.clientY - gesture.lastY) / deltaTime;
+    gesture.lastY = touch.clientY;
+    gesture.lastTime = now;
+
+    const limitedDy = dy <= 160 ? dy : 160 + (dy - 160) * 0.35;
+    setIsSwipeDragging(true);
+    setDragOffsetY(limitedDy);
+    e.preventDefault();
+  };
+
+  const endSwipeGesture = () => {
+    const gesture = swipeGestureRef.current;
+    if (!gesture) {
+      setIsSwipeDragging(false);
+      return;
+    }
+
+    const shouldClose = dragOffsetY > 120 || (dragOffsetY > 72 && gesture.velocityY > 0.55);
+
+    swipeGestureRef.current = null;
+    setIsSwipeDragging(false);
+
+    if (shouldClose) {
+      closeCommentsDialog();
+      return;
+    }
+
+    setDragOffsetY(0);
+  };
+
   const handleAddComment = async (e: React.FormEvent) => {
+
     e.preventDefault();
     await submitComment();
   };
@@ -615,93 +735,124 @@ const PostCommentsDialog = ({
       />
 
       <section
-        className={`fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] pointer-events-auto sm:rounded-[32px] ${isClosing ? 'comment-sheet-exit' : 'comment-sheet-enter'}`}
+        className="fixed left-1/2 z-[1] w-full max-w-md pointer-events-auto"
         style={{
           top: effectiveSheetTopPx == null ? undefined : `${effectiveSheetTopPx}px`,
           bottom: sheetBottom,
+          transform: 'translateX(-50%)',
         }}
         onClick={stopSheetEvent}
       >
-        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
-
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-              <MessageCircle className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-lg font-black tracking-tight text-slate-950">댓글</p>
-              <p className="text-sm font-bold text-slate-400">{formatCount(comments.length)}개의 이야기</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onPointerDown={closeCommentsDialog}
-            onClick={closeCommentsDialog}
-            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
-            aria-label="댓글 닫기"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 overscroll-contain">
-          {comments.length === 0 ? (
-            <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
-              <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
-                <MessageCircle className="h-8 w-8" />
-              </div>
-              <p className="text-base font-black text-slate-700">아직 댓글이 없어요</p>
-              <p className="mt-1 text-sm font-medium text-slate-400">첫 댓글을 남겨보세요.</p>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {comments.map(renderCommentRow)}
-            </div>
-          )}
-        </div>
-
-        <form
-          onSubmit={handleAddComment}
-          className="border-t border-slate-100 bg-white px-4 pt-3"
-          style={{
-            paddingBottom: keyboardOffset > 0
-              ? '12px'
-              : 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
-          }}
-        >
+        <div className={`flex h-full flex-col ${isClosing ? 'comments-dialog-sheet-exit' : 'comments-dialog-sheet-enter'}`}>
           <div
-            className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner"
-            onClick={focusCommentInput}
+            className="flex h-full flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] sm:rounded-[32px]"
+            style={{
+              transform: `translate3d(0, ${dragOffsetY}px, 0)`,
+              transition: isSwipeDragging ? 'none' : 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+            }}
           >
-            <Input
-              ref={commentInputRef}
-              placeholder={authUser ? '댓글을 입력하세요...' : '로그인이 필요합니다'}
-              value={commentInput}
-              onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
-              maxLength={COMMENT_MAX_LENGTH}
-              disabled={!authUser || isSubmitting}
-              className="h-10 flex-1 cursor-text border-none bg-transparent text-sm focus-visible:ring-0"
-            />
-            <button
-              type="submit"
-              disabled={!authUser || !commentInput.trim() || isSubmitting}
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                void submitComment();
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-200 transition active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
-              aria-label="댓글 등록"
+            <div
+              className="shrink-0 touch-none"
+              onTouchStart={(e) => beginSwipeGesture(e, 'handle')}
+              onTouchMove={moveSwipeGesture}
+              onTouchEnd={endSwipeGesture}
+              onTouchCancel={endSwipeGesture}
             >
-              <Send className="h-4 w-4" />
-            </button>
+              <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
+
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                    <MessageCircle className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-black tracking-tight text-slate-950">댓글</p>
+                    <p className="text-sm font-bold text-slate-400">{formatCount(comments.length)}개의 이야기</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onPointerDown={closeCommentsDialog}
+                  onClick={closeCommentsDialog}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
+                  aria-label="댓글 닫기"
+                  data-comment-no-swipe="true"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={scrollAreaRef}
+              className="min-h-0 flex-1 overflow-y-auto px-4 py-4 overscroll-contain"
+              onTouchStart={(e) => beginSwipeGesture(e, 'scroll')}
+              onTouchMove={moveSwipeGesture}
+              onTouchEnd={endSwipeGesture}
+              onTouchCancel={endSwipeGesture}
+            >
+              {comments.length === 0 ? (
+                <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
+                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+                    <MessageCircle className="h-8 w-8" />
+                  </div>
+                  <p className="text-base font-black text-slate-700">아직 댓글이 없어요</p>
+                  <p className="mt-1 text-sm font-medium text-slate-400">첫 댓글을 남겨보세요.</p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {comments.map(renderCommentRow)}
+                </div>
+              )}
+            </div>
+
+            <form
+              onSubmit={handleAddComment}
+              className="border-t border-slate-100 bg-white px-4 pt-3"
+              style={{
+                paddingBottom: keyboardOffset > 0
+                  ? '12px'
+                  : 'calc(env(safe-area-inset-bottom, 0px) + 16px)',
+              }}
+              data-comment-no-swipe="true"
+            >
+              <div
+                className="flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 shadow-inner"
+                onClick={focusCommentInput}
+                data-comment-no-swipe="true"
+              >
+                <Input
+                  ref={commentInputRef}
+                  placeholder={authUser ? '댓글을 입력하세요...' : '로그인이 필요합니다'}
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value.slice(0, COMMENT_MAX_LENGTH))}
+                  maxLength={COMMENT_MAX_LENGTH}
+                  disabled={!authUser || isSubmitting}
+                  className="h-10 flex-1 cursor-text border-none bg-transparent text-sm focus-visible:ring-0"
+                  data-comment-no-swipe="true"
+                />
+                <button
+                  type="submit"
+                  disabled={!authUser || !commentInput.trim() || isSubmitting}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void submitComment();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-200 transition active:scale-95 disabled:bg-slate-300 disabled:shadow-none"
+                  aria-label="댓글 등록"
+                  data-comment-no-swipe="true"
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </section>
 
       {commentToDelete && (
