@@ -869,26 +869,15 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
               />
             )}
             {embeddedBottomExtensionHeight && (
-              <>
-                <div
-                  aria-hidden="true"
-                  className="absolute left-0 right-0 pointer-events-none z-[15]"
-                  style={{
-                    top: 'calc(100% - 96px)',
-                    height: '96px',
-                    background: 'linear-gradient(to bottom, transparent 0px, rgba(0,0,0,0.18) 28px, rgba(0,0,0,0.52) 58px, rgba(0,0,0,0.82) 82px, #000 96px)',
-                  }}
-                />
-                <div
-                  aria-hidden="true"
-                  className="absolute left-0 right-0 top-full z-[16] bg-black cursor-default"
-                  style={{
-                    height: embeddedBottomExtensionHeight,
-                    pointerEvents: 'auto',
-                    touchAction: 'none',
-                  }}
-                />
-              </>
+              <div
+                aria-hidden="true"
+                className="absolute left-0 right-0 top-full z-[16] bg-black cursor-default"
+                style={{
+                  height: embeddedBottomExtensionHeight,
+                  pointerEvents: 'auto',
+                  touchAction: 'none',
+                }}
+              />
             )}
           </div>
         ))}
