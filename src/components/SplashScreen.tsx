@@ -86,53 +86,61 @@ const SplashScreen = () => {
 
           {slot && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
-              className="mt-12 w-full max-w-[320px] cursor-pointer"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: 0.1, duration: 0.5, ease: "easeOut" }}
+              className="mt-10 w-full max-w-[360px] cursor-pointer"
               onClick={() => slot.link_url && window.open(normalizeUrl(slot.link_url), '_blank', 'noopener,noreferrer')}
             >
               {slot.isRecruitment ? (
-                <div className="w-full aspect-[16/9] bg-gradient-to-br from-yellow-100 via-amber-50 to-orange-100 rounded-2xl shadow-lg shadow-amber-100 border border-amber-200/60 relative overflow-hidden p-5 flex flex-col justify-between">
-                  {/* 장식 원형 */}
-                  <div className="absolute -top-8 -right-8 w-32 h-32 bg-yellow-300/30 rounded-full" />
-                  <div className="absolute -top-3 -right-3 w-20 h-20 bg-amber-300/30 rounded-full" />
-                  {/* 상단 레이블 */}
-                  <span className="text-[11px] font-bold text-amber-600 tracking-wide">광고 문의</span>
-                  {/* 메인 카피 */}
-                  <div className="flex flex-col gap-1">
-                    <h2 className="text-[22px] font-black text-gray-900 leading-tight tracking-tight">
-                      좋은 브랜드를<br />기다리고 있어요.
-                    </h2>
-                    <p className="text-[12px] font-medium text-amber-700">광고 문의는 언제든 환영이에요.</p>
+                <div className="w-full aspect-[16/9] bg-gradient-to-br from-yellow-100 via-amber-50 to-orange-100 rounded-[28px] shadow-2xl shadow-amber-200/40 border border-white/80 relative overflow-hidden p-5 flex flex-col justify-between">
+                  <div className="absolute -top-10 -right-10 w-36 h-36 bg-yellow-300/35 rounded-full" />
+                  <div className="absolute top-5 right-5 w-16 h-16 bg-white/55 rounded-full blur-sm" />
+
+                  <div className="relative flex items-center justify-between">
+                    <span className="rounded-full bg-white/75 px-3 py-1 text-[11px] font-black text-amber-700 tracking-wide shadow-sm border border-amber-200/70">
+                      광고 문의
+                    </span>
+                    <Mail className="w-5 h-5 text-amber-600" />
                   </div>
-                  {/* 이메일 버튼 */}
-                  <div className="flex items-center gap-3 bg-white/70 rounded-xl px-3 py-2.5 border border-amber-200/60">
+
+                  <div className="relative flex flex-col gap-1.5">
+                    <h2 className="text-[25px] font-black text-gray-950 leading-[1.05] tracking-tight">
+                      좋은 브랜드를<br />기다리고 있어요
+                    </h2>
+                    <p className="text-[13px] font-bold text-amber-700 leading-snug">
+                      하이버블 스플래시에서 브랜드를 알려보세요.
+                    </p>
+                  </div>
+
+                  <div className="relative flex items-center gap-2.5 bg-white/80 rounded-2xl px-3.5 py-2.5 border border-amber-200/70 shadow-sm">
                     <Mail className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span className="flex-1 text-[13px] font-bold text-gray-900 tracking-tight">support@hibubblez.com</span>
-                    <div className="w-6 h-6 bg-yellow-200 rounded-lg flex items-center justify-center">
-                      <svg className="w-3 h-3 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                    <span className="flex-1 text-[13px] font-black text-gray-950 tracking-tight truncate">support@hibubblez.com</span>
+                    <div className="w-7 h-7 bg-yellow-300 rounded-xl flex items-center justify-center shadow-sm">
+                      <svg className="w-3.5 h-3.5 text-amber-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                     </div>
                   </div>
 
                 </div>
               ) : (
-                <div className="aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border border-gray-100 relative group">
+                <div className="relative aspect-[16/9] rounded-[28px] overflow-hidden shadow-[0_22px_50px_rgba(15,23,42,0.28)] border border-white/70 bg-slate-950 group">
                   <img
                     src={getOptimizedBannerImage(slot.image_url, 'splash-ad')}
                     alt={slot.brand_name}
                     loading="eager"
                     decoding="async"
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex flex-col justify-end p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        {slot.title && <span className="text-[10px] font-black text-white uppercase tracking-tighter">{slot.title}</span>}
-                        {slot.subtitle && <span className="text-[8px] font-bold text-white/70">{slot.subtitle}</span>}
-                      </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
+                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 to-transparent" />
+
+                  <div className="relative z-10 h-full p-5 flex flex-col justify-between">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="rounded-full bg-white/90 px-3 py-1 text-[10px] font-black text-gray-950 tracking-[0.16em] shadow-sm">
+                        AD
+                      </span>
                       {slot.brand_logo_url && (
-                        <div className="w-7 h-7 bg-white rounded-full p-1 shadow-sm">
+                        <div className="w-11 h-11 bg-white rounded-2xl p-1.5 shadow-lg shrink-0">
                           <img
                             src={getOptimizedMarkerImage(slot.brand_logo_url, 'splash-ad-logo')}
                             alt={slot.brand_name}
@@ -140,6 +148,27 @@ const SplashScreen = () => {
                             decoding="async"
                             className="w-full h-full object-contain"
                           />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-end justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        {slot.title && (
+                          <h2 className="text-[23px] font-black text-white leading-[1.08] tracking-tight drop-shadow-lg break-keep">
+                            {slot.title}
+                          </h2>
+                        )}
+                        {slot.subtitle && (
+                          <p className="mt-1.5 text-[13px] font-bold text-white/90 leading-snug drop-shadow-md break-keep">
+                            {slot.subtitle}
+                          </p>
+                        )}
+                      </div>
+
+                      {slot.link_url && (
+                        <div className="shrink-0 w-9 h-9 rounded-2xl bg-white text-gray-950 flex items-center justify-center shadow-lg">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                         </div>
                       )}
                     </div>
