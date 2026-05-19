@@ -48,7 +48,7 @@ const PostSkeleton = () => (
         <Skeleton className="h-3 w-32" />
       </div>
     </div>
-    <Skeleton className="w-full aspect-[4/3] rounded-xl" />
+    <Skeleton className="w-full aspect-[9/16] rounded-xl" />
     <div className="space-y-2">
       <Skeleton className="h-4 w-full" />
       <Skeleton className="h-4 w-3/4" />

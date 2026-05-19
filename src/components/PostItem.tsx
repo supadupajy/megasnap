@@ -746,7 +746,7 @@ const PostItemInner = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate
             </div>
 
             {/* Media Section */}
-            <div className="relative mx-4 aspect-[3/4] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner">
+            <div className="relative mx-4 aspect-[9/16] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner">
               <div className="absolute inset-0 bg-gray-200" aria-hidden="true" />
               {renderMedia()}
             </div>
@@ -795,7 +795,7 @@ const PostItemInner = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate
           {/* Media Section */}
           <div
             className={cn(
-              "relative mx-4 aspect-[3/4] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner",
+              "relative mx-4 aspect-[9/16] w-auto rounded-2xl overflow-hidden bg-gray-200 group shadow-inner",
               onMediaClick && "cursor-pointer"
             )}
             {...(onMediaClick ? {

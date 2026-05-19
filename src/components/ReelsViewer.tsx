@@ -1686,7 +1686,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         <div
           className="relative overflow-hidden bg-black rounded-2xl"
           style={{
-            aspectRatio: "3 / 4",
+            aspectRatio: "9 / 16",
             height: "100%",
             width: "auto",
             maxWidth: "100%",
@@ -1756,7 +1756,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             zIndexClass="z-30"
           />
 
-          {/* 재생 오버레이 — 영상 컨테이너 정중앙에 위치 (3:4 영상의 시각적 중앙) */}
+          {/* 재생 오버레이 — 영상 컨테이너 정중앙에 위치 (9:16 영상의 시각적 중앙) */}
           {hasVideo && !isPlaying && videoFirstFrameReady && (
             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
               <div className="w-20 h-20 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center">

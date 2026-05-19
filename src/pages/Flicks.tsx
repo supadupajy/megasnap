@@ -35,7 +35,7 @@ const FlicksLoadingSkeleton = () => (
   <div className="relative h-full w-full overflow-hidden bg-black">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_25%,rgba(79,70,229,0.22),transparent_34%),linear-gradient(180deg,#111827_0%,#030712_55%,#000_100%)]" />
     <div className="absolute inset-x-0 top-3 bottom-[116px] flex items-end justify-center px-3">
-      <div className="relative h-full max-h-full aspect-[3/4] max-w-full overflow-hidden rounded-2xl bg-white/[0.07]">
+      <div className="relative h-full max-h-full aspect-[9/16] max-w-full overflow-hidden rounded-2xl bg-white/[0.07]">
         <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/[0.10] via-white/[0.045] to-white/[0.08]" />
         <div className="absolute inset-x-6 bottom-6 h-1 rounded-full bg-white/12 animate-pulse" />
       </div>

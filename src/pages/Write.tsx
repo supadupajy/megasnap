@@ -1030,7 +1030,7 @@ const Write = () => {
                       ref={containerRef}
                       className="w-full rounded-2xl overflow-hidden shadow-2xl relative select-none bg-slate-100"
                       style={{
-                        aspectRatio: '3 / 4',
+                        aspectRatio: '9 / 16',
                         touchAction: isCurrentLandscape ? 'pan-x pan-y' : isCurrentPortrait ? 'none' : 'pan-y',
                       }}
                       onTouchStart={handlePreviewSwipeStart}
@@ -1223,7 +1223,7 @@ const Write = () => {
                   <div
                     onClick={() => mediaInputRef.current?.click()}
                     className="w-full rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-4 pb-15"
-                    style={{ aspectRatio: '3 / 4' }}
+                    style={{ aspectRatio: '9 / 16' }}
                   >
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-20 h-20 bg-indigo-50 rounded-[20px] flex items-center justify-center shadow-sm">

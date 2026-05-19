@@ -225,7 +225,7 @@ export const cropImageToAspectRatio = (
   file: File,
   crop: { x: number; y: number } = { x: 50, y: 50 },
   zoom = 1,
-  aspectRatio = 3 / 4,
+  aspectRatio = 9 / 16,
   maxHeight = 1920,
   quality = 0.86
 ): Promise<File> => {
@@ -283,7 +283,7 @@ export const cropImageToAspectRatio = (
             return;
           }
           const baseName = file.name.replace(/\.[^.]+$/, '');
-          const cropped = new File([blob], `${baseName}-3x4.jpg`, {
+          const cropped = new File([blob], `${baseName}-9x16.jpg`, {
             type: 'image/jpeg',
             lastModified: Date.now(),
           });
@@ -304,14 +304,14 @@ export const cropImageToAspectRatio = (
 };
 
 /**
- * 원본 이미지의 특정 사각형(sx, sy, sw, sh)을 그대로 잘라 3:4 캔버스에 그려 업로드용 파일을 만든다.
- * - 사각형 비율이 3:4가 아니어도 letterbox(상하 또는 좌우 여백) 없이 비율을 유지해 contain 방식으로 배치.
+ * 원본 이미지의 특정 사각형(sx, sy, sw, sh)을 그대로 잘라 9:16 캔버스에 그려 업로드용 파일을 만든다.
+ * - 사각형 비율이 9:16이 아니어도 letterbox(상하 또는 좌우 여백) 없이 비율을 유지해 contain 방식으로 배치.
  * - 가로 이미지의 미리보기 가시 영역을 그대로 업로드할 때 사용.
  */
 export const cropImageBySourceRect = (
   file: File,
   sourceRect: { sx: number; sy: number; sw: number; sh: number },
-  aspectRatio = 3 / 4,
+  aspectRatio = 9 / 16,
   maxHeight = 1920,
   quality = 0.86
 ): Promise<File> => {
