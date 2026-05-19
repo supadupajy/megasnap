@@ -873,6 +873,7 @@ const PostCommentsDialog = ({
             <div
               ref={scrollAreaRef}
               className="min-h-0 flex-1 overflow-y-auto px-4 py-4 overscroll-contain"
+              data-bottom-nav-keep="true"
             >
 
               {comments.length === 0 ? (
