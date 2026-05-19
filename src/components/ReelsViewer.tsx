@@ -1142,6 +1142,25 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       }, 120);
     };
 
+    // 휠/트랙패드/키보드처럼 점진적인 dragOffset이 없는 입력에서도
+    // ambient 그라데이션이 살아 있는 느낌을 주도록 임팩트 펄스를 발사한다.
+    // direction === 1 (다음 영상으로): 위로 스와이프와 동일 → 그라데이션이 아래로 눌림
+    // direction === -1 (이전 영상으로): 아래로 스와이프와 동일 → 그라데이션이 위로 늘어남
+    // 짧게 dy를 한 번 주고, 곧바로 goTo가 settle:true 신호를 보내 spring-back된다.
+    const pulseAmbient = (direction: number) => {
+      // dy 부호와 swipe 방향의 매핑: 손가락이 아래로 움직이면 dy>0(이전 영상)이므로
+      // direction=-1 → dy>0, direction=1 → dy<0 으로 맞춰서 터치 인터랙션과 시각적으로 일치시킨다.
+      const slideH = root.clientHeight || window.innerHeight || 800;
+      // 슬라이드 높이의 ~22%만큼 살짝 출렁이게 (너무 격하지 않게)
+      const dy = -direction * slideH * 0.22;
+      // impact=true → ambient 컴포넌트가 짧은 펄스 후 자동 복귀시킨다.
+      window.dispatchEvent(
+        new CustomEvent("flicks:swipe-progress", {
+          detail: { dy, settle: false, height: slideH, impact: true },
+        })
+      );
+    };
+
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
 
@@ -1160,6 +1179,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (wheelLocked) {
         // 방향이 반대로 바뀌었으면 즉시 새 제스처로 인정
         if (direction !== lockedDirection) {
+          pulseAmbient(direction);
           goTo(activeIndexRef.current + direction);
           lockedDirection = direction;
         }
@@ -1169,6 +1189,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       }
 
       // 첫 이벤트: 1칸 이동 + 락
+      pulseAmbient(direction);
       goTo(activeIndexRef.current + direction);
       wheelLocked = true;
       lockedDirection = direction;
@@ -1179,9 +1200,11 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (lockTransitionRef.current) return;
       if (e.key === "ArrowDown" || e.key === "PageDown") {
         e.preventDefault();
+        pulseAmbient(1);
         goTo(activeIndexRef.current + 1);
       } else if (e.key === "ArrowUp" || e.key === "PageUp") {
         e.preventDefault();
+        pulseAmbient(-1);
         goTo(activeIndexRef.current - 1);
       }
     };
@@ -1789,14 +1812,22 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             1) 액션 버튼 줄 (좋아요/댓글/공유 + 저장/위치보기) — 이미지/영상 바로 아래
             2) 아바타 + (닉네임/위치 세로) — 위치 정보가 닉네임 바로 밑, 모두 아바타 우측에 위치
             3) 본문 */}
-      {/* 하단 그라데이션 — 영상 끝 위쪽(투명)에서 시작해서 본문 아래까지
-          한 줄기로 자연스럽게 어두워진다.
+      {/* 하단 그라데이션 — 영상 박스 끝 근처(살짝 안쪽)에서 시작해서 본문 아래까지
+          짧고 자연스럽게 어두워진다. 영상 콘텐츠를 너무 일찍 가리지 않도록
+          그라데이션의 시작점(=상단)을 영상 박스 끝 부근에 맞추고, 본문 영역(infoHeight)
+          전체에 깊은 검정이 깔려 가독성을 확보한다.
           - 별도 레이어로 두어 정보 영역(infoRef) 높이 측정값에는 포함되지 않음
             → blur 배경이 아이콘 영역까지 잘리지 않고 자연스럽게 비친다.
-          - 정보 영역 본체는 배경 없이 콘텐츠만 올린다. */}
+          - 정보 영역 본체는 배경 없이 콘텐츠만 올린다.
+          - 4-stop 그라데이션: 영상 끝(transparent) → 페이드 시작(black/30) → 본문 시작(black/85) → 바닥(black/95) */}
       <div
-        className="absolute left-0 right-0 z-10 pointer-events-none bg-gradient-to-t from-black/95 via-black/55 to-transparent"
-        style={{ bottom: 0, height: `${infoHeight + 100}px` }}
+        className="absolute left-0 right-0 z-10 pointer-events-none"
+        style={{
+          bottom: 0,
+          height: `${infoHeight + 40}px`,
+          background:
+            "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 35%, rgba(0,0,0,0.45) 75%, rgba(0,0,0,0) 100%)",
+        }}
         aria-hidden
       />
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">

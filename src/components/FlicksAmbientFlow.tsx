@@ -151,28 +151,40 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
   // 스와이프 진행도 신호를 받아 ref로 직접 transform 업데이트
   // (state setState로 매 프레임 리렌더하지 않도록 ref + DOM 직접 조작)
   useEffect(() => {
+    // 임팩트 펄스(휠/키보드/탭 같은 비연속 입력)일 때 자동으로 spring-back 시키는 타이머
+    let impactSettleTimer: number | null = null;
+    // 마지막으로 받은 dy 부호. 새 펄스가 와도 같은 방향이면 타이머만 갱신해 자연스럽게 이어지도록.
+    let lastIsImpact = false;
+
+    const settleNow = (el: HTMLDivElement) => {
+      el.style.transition =
+        "transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1)";
+      el.style.transform = "translateY(0px) scaleY(1)";
+    };
+
     const handler = (evt: Event) => {
       const detail = (evt as CustomEvent).detail as
-        | { dy: number; settle: boolean; height?: number }
+        | { dy: number; settle: boolean; height?: number; impact?: boolean }
         | undefined;
       if (!detail) return;
       const el = dynamicLayerRef.current;
       if (!el) return;
 
-      const { dy, settle, height: maxH } = detail;
-
-      // 진행 비율(-1 ~ +1): 슬라이드 1개 분량 스와이프 = 100%
-      // 너무 격하지 않게 0.5 계수로 완화. 손가락 이동량에 따라 부드럽게 따라옴.
-      const slideH = maxH && maxH > 0 ? maxH : window.innerHeight || 800;
-      const ratio = Math.max(-1, Math.min(1, dy / slideH));
+      const { dy, settle, height: maxH, impact } = detail;
 
       if (settle) {
-        // 손을 뗐을 때: spring 느낌으로 부드럽게 원위치 복귀
-        el.style.transition =
-          "transform 360ms cubic-bezier(0.22, 0.61, 0.36, 1)";
-        el.style.transform = "translateY(0px) scaleY(1)";
+        // 손을 뗐을 때 또는 슬라이드 전환 시: spring 느낌으로 원위치 복귀.
+        // 단, 직전에 임팩트 펄스가 막 들어왔다면 그 펄스가 살짝이라도 보이도록 무시한다.
+        // (impactSettleTimer가 돌고 있는 동안은 자체적으로 복귀하므로 이 settle은 건너뜀.)
+        if (impactSettleTimer != null) return;
+        settleNow(el);
         return;
       }
+
+      // 진행 비율(-1 ~ +1): 슬라이드 1개 분량 스와이프 = 100%
+      // 너무 격하지 않게 손가락 이동량에 따라 부드럽게 따라옴.
+      const slideH = maxH && maxH > 0 ? maxH : window.innerHeight || 800;
+      const ratio = Math.max(-1, Math.min(1, dy / slideH));
 
       // 드래그 중: 손가락에 즉시 반응 (transition 없음)
       // - 아래로 스와이프(dy > 0) → 그라데이션이 위로 늘어나는 느낌 (translateY 음수 + scaleY > 1)
@@ -180,8 +192,32 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
       // transform-origin이 bottom이라 아래쪽 끝은 고정된 채 위쪽만 늘어나거나 눌린다.
       const translatePx = -ratio * 24; // ±24px 정도까지 위/아래로 움직임
       const scaleY = 1 + ratio * 0.18; // 위로 당기면 1.18까지, 아래로 누르면 0.82까지
-      el.style.transition = "none";
-      el.style.transform = `translateY(${translatePx}px) scaleY(${scaleY})`;
+
+      if (impact) {
+        // 휠/키보드 같은 비연속 입력: 짧고 부드러운 펄스 후 자동 복귀
+        // - 진입은 110ms 동안 부드럽게 (out-curve)
+        // - 그 후 420ms cubic-bezier로 spring-back
+        el.style.transition = "transform 110ms cubic-bezier(0.22, 1, 0.36, 1)";
+        el.style.transform = `translateY(${translatePx}px) scaleY(${scaleY})`;
+        lastIsImpact = true;
+
+        if (impactSettleTimer != null) window.clearTimeout(impactSettleTimer);
+        impactSettleTimer = window.setTimeout(() => {
+          impactSettleTimer = null;
+          lastIsImpact = false;
+          const e2 = dynamicLayerRef.current;
+          if (e2) settleNow(e2);
+        }, 140);
+      } else {
+        // 터치 드래그: 손가락에 즉시 반응 (transition 없음)
+        if (impactSettleTimer != null) {
+          window.clearTimeout(impactSettleTimer);
+          impactSettleTimer = null;
+        }
+        lastIsImpact = false;
+        el.style.transition = "none";
+        el.style.transform = `translateY(${translatePx}px) scaleY(${scaleY})`;
+      }
     };
 
     window.addEventListener("flicks:swipe-progress", handler as EventListener);
@@ -190,6 +226,7 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         "flicks:swipe-progress",
         handler as EventListener
       );
+      if (impactSettleTimer != null) window.clearTimeout(impactSettleTimer);
     };
   }, []);
 
