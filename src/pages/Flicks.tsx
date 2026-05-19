@@ -205,7 +205,7 @@ const Flicks = () => {
   // 떠오르는 빛 입자(particle) 효과를 보여줘 단조로운 검은 여백을 한 단계 더 시네마틱하게 만든다.
   const bottomFill = (
     <FlicksAmbientFlow
-      height="calc(env(safe-area-inset-bottom, 0px) + 132px)"
+      height="calc(env(safe-area-inset-bottom, 0px) + 64px)"
       posterUrl={activePosterUrl}
     />
   );

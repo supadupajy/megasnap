@@ -49,7 +49,7 @@ const FALLBACK_COLOR: RGB = { r: 79, g: 70, b: 229 }; // indigo-600
 const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
   height,
   posterUrl,
-  topFadeStrength = 0.35,
+  topFadeStrength = 0.85,
 }) => {
   // 현재 그려지고 있는 ambient color (cross-fade 결과)
   const [color, setColor] = useState<RGB>(FALLBACK_COLOR);
@@ -253,10 +253,8 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
       className="fixed left-0 right-0 bottom-0 overflow-hidden cursor-default select-none"
       style={{
         ...ambientStyle,
-        // BottomNav 알약(z=20000) 바로 아래, 일반 페이지 safe-area 배경보다 위.
-        // Flicks에서는 BottomNav의 흰 safe-area 배경을 숨기므로 이 레이어가 하단 전체를 채운다.
-        zIndex: 19999,
-        pointerEvents: "none",
+        zIndex: 19998,
+        pointerEvents: "auto",
         touchAction: "none",
       }}
     >
@@ -276,9 +274,8 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
           className="absolute inset-0 pointer-events-none"
           style={{
             background: `
-              radial-gradient(115% 125% at 50% 72%, rgba(${colorStr}, 0.72) 0%, rgba(${colorStr}, 0.36) 38%, transparent 76%),
-              radial-gradient(90% 120% at 16% 88%, rgba(${colorStr}, 0.46) 0%, rgba(${colorStr}, 0.20) 42%, transparent 72%),
-              radial-gradient(90% 120% at 84% 88%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.16) 42%, transparent 72%)
+              radial-gradient(120% 180% at 20% 120%, rgba(${colorStr}, 0.55) 0%, rgba(${colorStr}, 0.18) 35%, transparent 65%),
+              radial-gradient(120% 180% at 80% 130%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.12) 35%, transparent 65%)
             `,
             transition: "background 600ms ease",
           }}
@@ -288,17 +285,17 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         <div
           className="absolute inset-0 pointer-events-none flicks-ambient-breathe"
           style={{
-            background: `radial-gradient(95% 120% at 50% 82%, rgba(${colorStr}, 0.42) 0%, transparent 68%)`,
+            background: `radial-gradient(100% 160% at 50% 130%, rgba(${colorStr}, 0.35) 0%, transparent 60%)`,
           }}
         />
 
-        {/* 3) 상단 fade — 영상과 ambient 영역의 경계만 살짝 눌러주고,
-                BottomNav 뒤쪽 인디고 빛은 가리지 않도록 약하게 처리. */}
+        {/* 3) 상단 fade — 영상 컨테이너 하단의 검은 그라데이션과 자연스럽게 이어지도록
+                위쪽일수록 진한 검정. 이게 없으면 영상과 ambient 영역의 경계가 띠처럼 보일 수 있음. */}
         <div
           className="absolute inset-x-0 top-0 pointer-events-none"
           style={{
-            height: "34%",
-            background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.16) 52%, rgba(0,0,0,0) 100%)`,
+            height: "55%",
+            background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)`,
           }}
         />
       </div>
