@@ -457,137 +457,150 @@ const PlaceSearchOverlay = () => {
         aria-label="검색 닫기 배경"
       />
 
-      {/* 시트 본체 */}
+      {/* 시트 본체 — 댓글창과 동일한 2단 구조:
+          - 외부 section: 위치 + 등장/사라짐 애니메이션 전담 (translateX(-50%))
+          - 내부 wrapper: 드래그 transform 전담 */}
       <section
-        className={`fixed left-1/2 z-[1] flex w-full max-w-md flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] pointer-events-auto sm:rounded-[32px] ${
-          isClosing ? 'comment-sheet-exit' : 'comment-sheet-enter'
-        }`}
+        className="fixed left-1/2 z-[1] w-full max-w-md pointer-events-auto"
         style={{
           top: `${sheetTopPx}px`,
           bottom: '0px',
-          transform: `translate(-50%, ${dragOffsetY}px)`,
-          transition: isSwipeDragging
-            ? 'none'
-            : 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+          transform: 'translateX(-50%)',
         }}
         onClick={stopSheetEvent}
       >
-        {/* 상단 핸들 + 헤더 (스와이프 영역) */}
-        <div ref={handleAreaRef} className="shrink-0 touch-none">
-          <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
+        <div
+          className={`flex h-full flex-col ${
+            isClosing ? 'comments-dialog-sheet-exit' : 'comments-dialog-sheet-enter'
+          }`}
+        >
+          <div
+            className="flex h-full flex-col overflow-hidden rounded-t-[32px] border border-white/80 bg-white shadow-[0_-18px_60px_rgba(79,70,229,0.20)] sm:rounded-[32px]"
+            style={{
+              transform: `translate3d(0, ${dragOffsetY}px, 0)`,
+              transition: isSwipeDragging
+                ? 'none'
+                : 'transform 180ms cubic-bezier(0.22, 1, 0.36, 1)',
+            }}
+          >
+            {/* 상단 핸들 + 헤더 (스와이프 영역) */}
+            <div ref={handleAreaRef} className="shrink-0 touch-none">
+              <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-slate-200" />
 
-          {/* 헤더 */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-                <MapPin className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-lg font-black tracking-tight text-slate-950">장소 검색</p>
-                <p className="text-sm font-bold text-slate-400">
-                  {query.trim()
-                    ? `${results.length.toLocaleString()}개의 결과`
-                    : '장소명 또는 주소'}
-                </p>
+              {/* 헤더 */}
+              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+                    <MapPin className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-black tracking-tight text-slate-950">장소 검색</p>
+                    <p className="text-sm font-bold text-slate-400">
+                      {query.trim()
+                        ? `${results.length.toLocaleString()}개의 결과`
+                        : '장소명 또는 주소'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onPointerDown={close}
+                  onClick={close}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
+                  aria-label="검색 닫기"
+                  data-place-no-swipe="true"
+                >
+                  <X className="h-6 w-6" />
+                </button>
               </div>
             </div>
-            <button
-              type="button"
-              onPointerDown={close}
-              onClick={close}
-              className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 transition active:scale-95"
-              aria-label="검색 닫기"
+
+            {/* 검색 입력 영역 */}
+            <div
+              className="shrink-0 border-b border-slate-100 bg-white px-4 py-3"
               data-place-no-swipe="true"
             >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-        </div>
-
-        {/* 검색 입력 영역 */}
-        <div
-          className="shrink-0 border-b border-slate-100 bg-white px-4 py-3"
-          data-place-no-swipe="true"
-        >
-          <div className="relative">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-600 z-10" />
-            <input
-              placeholder="장소명 또는 주소 검색"
-              className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              autoFocus={!query}
-              autoComplete="off"
-              data-place-no-swipe="true"
-            />
-            {isLoading ? (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : query ? (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-500 transition active:scale-90"
-                aria-label="검색어 지우기"
-                data-place-no-swipe="true"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : null}
-          </div>
-        </div>
-
-        {/* 결과 영역 */}
-        <div
-          ref={scrollAreaRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white"
-        >
-          <div className="p-4 space-y-1" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
-            {results.map((place) => (
-              <button
-                key={place.id}
-                onClick={() => handleSelectPlace(place)}
-                className="w-full flex items-start gap-4 p-4 hover:bg-indigo-50/50 rounded-2xl transition-all text-left group active:scale-[0.98]"
-              >
-                <div className={cn(
-                  "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-gray-100",
-                  place.isAddress ? "bg-indigo-600" : "bg-white"
-                )}>
-                  <MapPin className={cn("w-5 h-5", place.isAddress ? "text-white" : "text-indigo-600")} />
-                </div>
-                <div className="flex-1 min-w-0 py-0.5">
-                  <div className="flex items-center gap-2">
-                    <p className="font-black text-gray-900 truncate text-base">{place.name}</p>
-                    {place.isAddress && (
-                      <span className="bg-indigo-100 text-indigo-600 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">Address</span>
-                    )}
+              <div className="relative">
+                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-600 z-10" />
+                <input
+                  placeholder="장소명 또는 주소 검색"
+                  className="w-full pl-12 pr-12 h-12 bg-indigo-50/50 border border-indigo-100 rounded-2xl outline-none text-sm font-semibold placeholder:text-slate-400 placeholder:font-medium shadow-inner transition-all focus:border-indigo-300 focus:bg-white"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  autoFocus={!query}
+                  autoComplete="off"
+                  data-place-no-swipe="true"
+                />
+                {isLoading ? (
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                    <div className="h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
                   </div>
-                  <p className="text-xs text-gray-400 font-bold truncate mt-0.5 uppercase tracking-tighter">{place.address}</p>
-                </div>
-              </button>
-            ))}
-
-            {pagination?.hasNextPage && (
-              <div ref={loadMoreRef} className="py-8 flex justify-center">
-                <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                ) : query ? (
+                  <button
+                    type="button"
+                    onClick={() => setQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-500 transition active:scale-90"
+                    aria-label="검색어 지우기"
+                    data-place-no-swipe="true"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
               </div>
-            )}
+            </div>
 
-            {!isLoading && query.trim() && results.length === 0 && (
-              <div className="py-20 text-center text-gray-400 font-bold">검색 결과가 없습니다.</div>
-            )}
+            {/* 결과 영역 */}
+            <div
+              ref={scrollAreaRef}
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white"
+            >
+              <div className="p-4 space-y-1" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))' }}>
+                {results.map((place) => (
+                  <button
+                    key={place.id}
+                    onClick={() => handleSelectPlace(place)}
+                    className="w-full flex items-start gap-4 p-4 hover:bg-indigo-50/50 rounded-2xl transition-all text-left group active:scale-[0.98]"
+                  >
+                    <div className={cn(
+                      "w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-gray-100",
+                      place.isAddress ? "bg-indigo-600" : "bg-white"
+                    )}>
+                      <MapPin className={cn("w-5 h-5", place.isAddress ? "text-white" : "text-indigo-600")} />
+                    </div>
+                    <div className="flex-1 min-w-0 py-0.5">
+                      <div className="flex items-center gap-2">
+                        <p className="font-black text-gray-900 truncate text-base">{place.name}</p>
+                        {place.isAddress && (
+                          <span className="bg-indigo-100 text-indigo-600 text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase">Address</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 font-bold truncate mt-0.5 uppercase tracking-tighter">{place.address}</p>
+                    </div>
+                  </button>
+                ))}
 
-            {!query.trim() && (
-              <div className="py-20 flex flex-col items-center justify-center text-center px-10">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <SearchIcon className="w-8 h-8 text-gray-200" />
-                </div>
-                <p className="text-sm text-gray-400 font-bold leading-relaxed">
-                  궁금한 장소나 주소를 입력하여<br />지도를 탐험해보세요!
-                </p>
+                {pagination?.hasNextPage && (
+                  <div ref={loadMoreRef} className="py-8 flex justify-center">
+                    <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                  </div>
+                )}
+
+                {!isLoading && query.trim() && results.length === 0 && (
+                  <div className="py-20 text-center text-gray-400 font-bold">검색 결과가 없습니다.</div>
+                )}
+
+                {!query.trim() && (
+                  <div className="py-20 flex flex-col items-center justify-center text-center px-10">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                      <SearchIcon className="w-8 h-8 text-gray-200" />
+                    </div>
+                    <p className="text-sm text-gray-400 font-bold leading-relaxed">
+                      궁금한 장소나 주소를 입력하여<br />지도를 탐험해보세요!
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </section>
