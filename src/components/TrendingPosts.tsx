@@ -1034,30 +1034,30 @@ const TrendingAdBanner: React.FC = () => {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-transparent" />
         </div>
-        <div className="relative z-10 p-4 flex flex-col justify-between h-full">
+        <div className="relative z-10 px-3.5 py-2.5 flex flex-col justify-between h-full min-w-0 max-w-[65%]">
           <div className="flex items-center gap-2">
-            <span className="bg-white text-black text-[10px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
+            <span className="bg-white text-black text-[9px] font-black px-1.5 py-[2px] rounded-[4px] uppercase tracking-wider leading-none">AD</span>
             {slot.brand_logo_url && (
               <img
                 src={getOptimizedMarkerImage(slot.brand_logo_url, 'trending-ad-logo')}
                 alt={slot.brand_name || 'Brand'}
                 loading="lazy"
                 decoding="async"
-                className="h-3.5 invert brightness-200"
+                className="h-3 invert brightness-200"
               />
             )}
           </div>
-          <div>
-            <h3 className="text-xl font-black italic tracking-tighter leading-tight mb-0.5 drop-shadow-lg">
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-black italic tracking-tight leading-[1.1] truncate drop-shadow-lg">
               {slot.title}
             </h3>
-            <p className="text-[12px] font-bold text-white/90 drop-shadow-md">
+            <p className="text-[11px] font-medium text-white/85 leading-tight truncate drop-shadow-md mt-0.5">
               {slot.subtitle}
             </p>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Shop Now</p>
-            <ExternalLink className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+          <div className="flex items-center gap-1.5">
+            <p className="text-[9px] text-white/70 font-bold uppercase tracking-[0.15em] leading-none">Shop Now</p>
+            <ExternalLink className="w-3 h-3 text-white/50 group-hover:text-white transition-colors" />
           </div>
         </div>
       </div>
