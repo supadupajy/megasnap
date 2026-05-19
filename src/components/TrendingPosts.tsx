@@ -263,12 +263,8 @@ const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumb
   };
 };
 
-const isOpeningThumbnailUrl = (url: string | undefined): boolean => {
-  if (!url) return false;
-  return /-opening-thumb\.(jpe?g|png|webp)(\?|#|$)/i.test(url);
-};
-
 // 플레이 오버레이/로딩 인디케이터 사이즈
+
 // - sm: collapsed 헤더의 w-6 h-6(24px) 썸네일용
 // - md: 펼쳐진 리스트의 w-12 h-12(48px) 썸네일용
 type PlayBadgeSize = 'sm' | 'md';
@@ -482,7 +478,7 @@ const PostThumbnail: React.FC<{
   }
 
   if (primaryMedia?.type === 'video') {
-    if (primaryMedia.posterUrl && !isOpeningThumbnailUrl(primaryMedia.posterUrl)) {
+    if (primaryMedia.posterUrl) {
       return renderImage(primaryMedia.posterUrl, true);
     }
 
