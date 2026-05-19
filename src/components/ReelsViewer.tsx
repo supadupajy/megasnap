@@ -1811,20 +1811,8 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
             1) 액션 버튼 줄 (좋아요/댓글/공유 + 저장/위치보기) — 이미지/영상 바로 아래
             2) 아바타 + (닉네임/위치 세로) — 위치 정보가 닉네임 바로 밑, 모두 아바타 우측에 위치
             3) 본문 */}
-      {/* 하단 그라데이션 — 영상의 끝 지점이 시각적으로 명확히 인지되되,
-          영상 콘텐츠를 너무 많이 가리지 않도록 짧고 컴팩트하게.
-          - 그라데이션 시작점이 영상 박스의 아래 ~20% 지점 정도에서만 페이드 시작.
-          - 본문/액션 버튼 영역은 풀 블랙으로 가독성 확보. */}
-      <div
-        className="absolute left-0 right-0 z-10 pointer-events-none"
-        style={{
-          bottom: 0,
-          height: `${infoHeight + 80}px`,
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.9) 45%, rgba(0,0,0,0.6) 75%, rgba(0,0,0,0) 100%)",
-        }}
-        aria-hidden
-      />
+      {/* 하단 그라데이션 제거 — 영상 위에 닉네임/본문/액션 알약이 직접 떠 있는 형태.
+          (드롭섀도우/backdrop-blur로 가독성 확보) */}
       <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none">
         <div
           ref={infoRef}
