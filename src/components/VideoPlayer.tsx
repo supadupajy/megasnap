@@ -121,7 +121,7 @@ const VideoPlayer = ({ src, className, posterUrl }: VideoPlayerProps) => {
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className={cn(className ?? 'w-full h-full object-cover', 'absolute inset-0')}
+          className={cn(className ?? 'w-full h-full object-contain bg-black', 'absolute inset-0')}
           draggable={false}
           style={{
             opacity: isReady ? 0 : 1,
@@ -133,7 +133,7 @@ const VideoPlayer = ({ src, className, posterUrl }: VideoPlayerProps) => {
       <video
         ref={videoRef}
         src={src}
-        className={cn(className ?? 'w-full h-full object-cover', 'relative z-[1] video-hq')}
+        className={cn(className ?? 'w-full h-full object-contain bg-black', 'relative z-[1] video-hq')}
         poster={posterUrl || TRANSPARENT_POSTER}
         autoPlay
         loop

@@ -1738,8 +1738,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
 
       {/* 메인 미디어 — 가로폭은 인기 컨텐츠와 동일하게 mx-4 마진,
           세로는 사용 가능한 공간(top: 1rem ~ bottom: 0) 전체로 확장.
-          비율은 최소 9:16 이상(영상 자체는 object-cover로 채워짐)으로
-          허용해 영상 박스가 본문 영역 바로 위까지 길게 내려오도록 한다.
+          영상은 object-contain으로 표시해 가로 영상도 좌우가 잘리지 않도록 한다.
           닉네임/위치/본문/액션 알약 등 모든 UI는 별도의 absolute 오버레이로
           영상 위에 띄우므로 여기서는 bottom 여백을 두지 않는다(infoHeight 사용 X).
           상단 여백(top)은 순위 뱃지/닫기 버튼과의 자연스러운 갭을 위한 최소값만 유지. */}
@@ -2175,7 +2174,7 @@ const ReelsVideoSkeleton = ({ posterUrl }: { posterUrl?: string }) => (
         src={posterUrl}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-contain"
         draggable={false}
       />
     )}
@@ -2286,7 +2285,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       <video
         ref={setRefs}
         src={src}
-        className="absolute inset-0 w-full h-full object-cover video-hq bg-black"
+        className="absolute inset-0 w-full h-full object-contain video-hq bg-black"
         // 1x1 투명 poster로 native 회색 placeholder 깜빡임 방지
         poster={posterUrl || TRANSPARENT_POSTER}
         playsInline
@@ -2307,7 +2306,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+          className="absolute inset-0 w-full h-full object-contain pointer-events-none"
           style={{
             opacity: isReady ? 0 : 1,
             transition: "opacity 200ms ease-out",

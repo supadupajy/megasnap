@@ -334,8 +334,12 @@ const PostItemInner = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate
             return (
             <div
               key={`${media.type}-${index}`}
-              className="relative w-full h-full shrink-0 snap-center snap-always overflow-hidden bg-neutral-950 bg-cover bg-center"
-              style={{ backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined }}
+              className="relative w-full h-full shrink-0 snap-center snap-always overflow-hidden bg-neutral-950 bg-center"
+              style={{
+                backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
+                backgroundSize: media.type === 'video' ? 'contain' : 'cover',
+                backgroundRepeat: 'no-repeat',
+              }}
             >
               <div className="absolute inset-0 bg-gray-200/0" aria-hidden="true" />
               {media.type === 'video' ? (
@@ -343,7 +347,7 @@ const PostItemInner = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate
                   <div className="absolute inset-0 z-[1] pointer-events-none">
                     <VideoThumbnailPreview
                       src={media.url}
-                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                      className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                       startTime={0.8}
                     />
                   </div>

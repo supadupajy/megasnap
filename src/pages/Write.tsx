@@ -1139,8 +1139,8 @@ const Write = () => {
                       ) : (
                         <video
                           src={currentMedia?.url}
-                          className="video-hq"
-                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+                          className="video-hq bg-neutral-950"
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain' }}
                           autoPlay muted loop playsInline
                         />
                       )}

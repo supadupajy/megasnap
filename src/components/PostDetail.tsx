@@ -783,10 +783,12 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
           return (
           <div
             key={`${media.type}-${index}`}
-            className="w-full h-full shrink-0 snap-center relative overflow-hidden bg-neutral-950 bg-cover bg-center"
+            className="w-full h-full shrink-0 snap-center relative overflow-hidden bg-neutral-950 bg-center"
             style={{
               scrollSnapStop: 'always',
               backgroundImage: backgroundUrl ? `url(${backgroundUrl})` : undefined,
+              backgroundSize: media.type === 'video' ? 'contain' : 'cover',
+              backgroundRepeat: 'no-repeat',
             }}
             onClick={media.type === 'image' ? onClose : (e) => e.stopPropagation()}
           >
@@ -811,7 +813,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
                     src={media.posterUrl}
                     alt=""
                     aria-hidden="true"
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none"
                     draggable={false}
                   />
                 ) : null

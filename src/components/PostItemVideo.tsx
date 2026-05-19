@@ -158,13 +158,13 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
   };
 
   return (
-    <div className="relative h-full w-full bg-transparent">
+    <div className="relative h-full w-full bg-neutral-950">
       {posterUrl && (
         <img
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 z-[1] w-full h-full object-cover pointer-events-none"
+          className="absolute inset-0 z-[1] w-full h-full object-contain pointer-events-none"
           draggable={false}
         />
       )}
@@ -172,7 +172,7 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
       <video
         ref={setVideoRefs}
         src={src}
-        className="absolute inset-0 z-[2] w-full h-full object-cover post-item-video video-hq transition-opacity duration-75"
+        className="absolute inset-0 z-[2] w-full h-full object-contain post-item-video video-hq transition-opacity duration-75"
         poster={posterUrl || TRANSPARENT_POSTER}
         loop
         muted={muted}
