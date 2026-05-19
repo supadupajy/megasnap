@@ -1,6 +1,11 @@
 <svg viewBox="0 0 980 220" role="img" aria-label="하이버블즈 로고" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="icon-clip">
+      <rect x="20" y="12" width="184" height="184" rx="0" ry="0" />
+    </clipPath>
+  </defs>
   <rect width="980" height="220" fill="none"/>
-  <image href="/hi-bubble-icon.svg" x="20" y="12" width="184" height="184" preserveAspectRatio="xMidYMid meet"/>
+  <image href="/hi-bubble-icon.png" x="-48" y="-56" width="320" height="320" preserveAspectRatio="xMidYMid meet" clip-path="url(#icon-clip)"/>
   <text x="230" y="138" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="104" font-weight="900" letter-spacing="-12" fill="#020617">하이</text>
   <text x="455" y="138" font-family="Inter, Pretendard, Apple SD Gothic Neo, Noto Sans KR, sans-serif" font-size="104" font-weight="900" letter-spacing="-12" fill="#f59e0b">버블즈</text>
 </svg>

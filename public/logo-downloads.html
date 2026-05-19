@@ -60,8 +60,23 @@
       }
       .preview img {
         max-width: 100%;
-        max-height: 140px;
+        max-height: 132px;
         object-fit: contain;
+      }
+      .preview-cropped {
+        position: relative;
+        width: 128px;
+        height: 128px;
+        overflow: hidden;
+      }
+      .preview-cropped img {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        transform: translate(-50%, -50%) scale(1.72);
       }
       .meta {
         margin-top: 14px;
@@ -113,17 +128,19 @@
   <body>
     <div class="wrap">
       <h1>하이버블즈 로고 다운로드</h1>
-      <p class="sub">회색 여백을 제거한 비눗방울 로고를 그대로 다운로드할 수 있게 준비했습니다.</p>
+      <p class="sub">현재 적용된 비눗방울 로고를 그대로 다운로드할 수 있어요.</p>
 
       <div class="grid">
         <div class="card">
-          <div class="preview"><img src="/hi-bubble-icon.svg" alt="하이버블즈 앱 아이콘" /></div>
+          <div class="preview">
+            <div class="preview-cropped"><img src="/hi-bubble-icon.png" alt="하이버블즈 앱 아이콘" /></div>
+          </div>
           <div class="meta">
-            <div class="title-row"><div class="title">앱 아이콘</div><div class="badge">SVG</div></div>
-            <div class="desc">회색 배경 없이 크롭된 비눗방울 아이콘</div>
+            <div class="title-row"><div class="title">앱 아이콘</div><div class="badge">PNG</div></div>
+            <div class="desc">현재 앱에 적용된 크롭 버전 아이콘</div>
           </div>
           <div class="actions">
-            <a class="link" href="/hi-bubble-icon.svg" download="hi-bubble-icon.svg">다운로드</a>
+            <a class="link" href="/hi-bubble-icon.png" download="hi-bubble-icon.png">다운로드</a>
           </div>
         </div>
 
@@ -142,7 +159,7 @@
           <div class="preview"><img src="/hi-bubble-logo.svg" alt="하이버블즈 조합 로고" /></div>
           <div class="meta">
             <div class="title-row"><div class="title">조합 로고</div><div class="badge">SVG</div></div>
-            <div class="desc">크롭된 비눗방울 아이콘 + 워드마크 조합</div>
+            <div class="desc">비눗방울 아이콘 + 워드마크 조합</div>
           </div>
           <div class="actions">
             <a class="link" href="/hi-bubble-logo.svg" download="hi-bubble-logo.svg">다운로드</a>

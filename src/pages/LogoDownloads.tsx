@@ -8,18 +8,19 @@ type LogoItem = {
   downloadPath: string;
   downloadFileName: string;
   badge: string;
+  cropped?: boolean;
 };
 
 const LOGOS: LogoItem[] = [
   {
     title: '앱 아이콘',
-    description: '회색 배경을 제거하고 크롭한 비눗방울 아이콘',
-    previewPath: '/hi-bubble-icon.svg',
-    downloadPath: '/hi-bubble-icon.svg',
-    downloadFileName: 'hi-bubble-icon.svg',
-    badge: 'SVG',
+    description: '현재 앱에 적용된 크롭 버전 아이콘',
+    previewPath: '/hi-bubble-icon.png',
+    downloadPath: '/hi-bubble-icon.png',
+    downloadFileName: 'hi-bubble-icon.png',
+    badge: 'PNG',
+    cropped: true,
   },
-
   {
     title: '워드마크',
     description: '텍스트 로고 원본 SVG',
@@ -74,13 +75,25 @@ const LogoDownloads = () => {
                   backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0',
                 }}
               >
-                <img
-                  src={item.previewPath}
-                  alt={item.title}
-                  className="max-h-32 max-w-full object-contain"
-                  loading="eager"
-                  decoding="async"
-                />
+                {item.cropped ? (
+                  <div className="relative h-32 w-32 overflow-hidden">
+                    <img
+                      src={item.previewPath}
+                      alt={item.title}
+                      className="absolute left-1/2 top-1/2 h-full w-full max-w-none -translate-x-1/2 -translate-y-1/2 scale-[1.72] object-contain"
+                      loading="eager"
+                      decoding="async"
+                    />
+                  </div>
+                ) : (
+                  <img
+                    src={item.previewPath}
+                    alt={item.title}
+                    className="max-h-32 max-w-full object-contain"
+                    loading="eager"
+                    decoding="async"
+                  />
+                )}
               </div>
 
               <div className="mt-4">

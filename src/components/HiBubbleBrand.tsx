@@ -5,13 +5,20 @@ type BrandProps = {
 };
 
 export const HiBubbleIcon = ({ className }: BrandProps) => (
-  <img
-    src="/hi-bubble-icon.svg"
-    alt="하이버블즈 아이콘"
-    className={cn('block object-contain', className)}
-    loading="eager"
-    decoding="async"
-  />
+  <div
+    role="img"
+    aria-label="하이버블즈 아이콘"
+    className={cn('relative overflow-hidden', className)}
+  >
+    <img
+      src="/hi-bubble-icon.png"
+      alt=""
+      aria-hidden="true"
+      className="pointer-events-none absolute left-1/2 top-1/2 h-full w-full max-w-none -translate-x-1/2 -translate-y-1/2 scale-[1.72] object-contain select-none"
+      loading="eager"
+      decoding="async"
+    />
+  </div>
 );
 
 export const HiBubbleWordmark = ({ className }: BrandProps) => (
