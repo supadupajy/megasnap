@@ -250,23 +250,26 @@ const PostCommentsDialog = ({
 
   useEffect(() => {
     const pendingCommentId = pendingScrollCommentIdRef.current;
-    if (!pendingCommentId || !isOpen) return;
+    if (!pendingCommentId || !isOpen || isClosing || keyboardOffset > 0) return;
 
     const target = commentRowElementsRef.current.get(pendingCommentId);
     const scrollContainer = scrollAreaRef.current;
     if (!target || !scrollContainer) return;
 
-    pendingScrollCommentIdRef.current = null;
-
-    requestAnimationFrame(() => {
+    const scrollToPendingComment = () => {
       const nextTarget = commentRowElementsRef.current.get(pendingCommentId);
       const nextScrollContainer = scrollAreaRef.current;
       if (!nextTarget || !nextScrollContainer) return;
 
       const top = Math.max(0, nextTarget.offsetTop - 16);
       nextScrollContainer.scrollTo({ top, behavior: 'smooth' });
+      pendingScrollCommentIdRef.current = null;
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToPendingComment);
     });
-  }, [comments, isOpen]);
+  }, [comments, isOpen, isClosing, keyboardOffset]);
 
   useEffect(() => {
     onCommentsChangeRef.current = onCommentsChange;
@@ -540,7 +543,10 @@ const PostCommentsDialog = ({
       markCommented(postId);
 
       setCommentInput('');
-      requestAnimationFrame(() => commentInputRef.current?.focus());
+      commentInputRef.current?.blur();
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
       showSuccess('댓글이 등록되었습니다.');
 
     } catch (err) {
