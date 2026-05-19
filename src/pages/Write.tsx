@@ -1028,7 +1028,7 @@ const Write = () => {
                   <div className="space-y-3">
                     <div
                       ref={containerRef}
-                      className="w-full rounded-[32px] overflow-hidden shadow-2xl relative select-none bg-slate-100"
+                      className="w-full rounded-2xl overflow-hidden shadow-2xl relative select-none bg-slate-100"
                       style={{
                         aspectRatio: '3 / 4',
                         touchAction: isCurrentLandscape ? 'pan-x pan-y' : isCurrentPortrait ? 'none' : 'pan-y',
@@ -1222,7 +1222,7 @@ const Write = () => {
                 ) : (
                   <div
                     onClick={() => mediaInputRef.current?.click()}
-                    className="w-full rounded-[32px] bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-4 pb-15"
+                    className="w-full rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors flex flex-col items-center justify-center gap-4 pb-15"
                     style={{ aspectRatio: '3 / 4' }}
                   >
                     <div className="flex flex-col items-center gap-3">

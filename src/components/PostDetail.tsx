@@ -852,7 +852,7 @@ const PostDetail = ({ posts, initialIndex, isOpen, onClose, onDelete, onUpdate, 
 
     return (
       <div
-        className="relative rounded-3xl overflow-hidden bg-neutral-950 bg-cover bg-center shadow-inner transition-[height] duration-300"
+        className="relative rounded-2xl overflow-hidden bg-neutral-950 bg-cover bg-center shadow-inner transition-[height] duration-300"
         style={{
           aspectRatio: mediaAspectRatio,
           backgroundImage: activeBackgroundUrl ? `url(${activeBackgroundUrl})` : undefined,
