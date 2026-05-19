@@ -250,6 +250,52 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
     <div
       aria-hidden="true"
       data-flicks-ambient-flow="true"
+      ref={(el) => {
+        if (!el) return;
+        // 마운트/리렌더 시 실제 그려지는 위치/크기 + 화면을 가리는 다른 요소가 있는지 확인
+        requestAnimationFrame(() => {
+          const rect = el.getBoundingClientRect();
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const cs = getComputedStyle(el);
+          console.log("[FlicksAmbientFlow] mounted/updated", {
+            rect: { x: rect.x, y: rect.y, w: rect.width, h: rect.height, bottom: rect.bottom },
+            viewport: { vw, vh },
+            heightProp: height,
+            computed: {
+              position: cs.position,
+              zIndex: cs.zIndex,
+              backgroundColor: cs.backgroundColor,
+              visibility: cs.visibility,
+              opacity: cs.opacity,
+              display: cs.display,
+              transform: cs.transform,
+            },
+            safeAreaInsetBottom: getComputedStyle(document.documentElement).getPropertyValue("--sat-bottom") || "(not set)",
+          });
+
+          // 화면 하단 중앙 / 왼쪽 / 오른쪽에서 ambient 위에 무엇이 깔려 있는지 확인
+          const samples = [
+            { label: "bottom-center", x: vw / 2, y: vh - 10 },
+            { label: "bottom-left", x: 20, y: vh - 10 },
+            { label: "bottom-right", x: vw - 20, y: vh - 10 },
+            { label: "ambient-top-edge", x: vw / 2, y: Math.max(0, rect.top + 2) },
+            { label: "above-pill", x: vw / 2, y: vh - 60 },
+          ];
+          samples.forEach((s) => {
+            const stack = document.elementsFromPoint(s.x, s.y).slice(0, 6).map((e) => {
+              const tag = e.tagName.toLowerCase();
+              const id = (e as HTMLElement).id ? `#${(e as HTMLElement).id}` : "";
+              const cls = (e as HTMLElement).className
+                ? `.${String((e as HTMLElement).className).split(" ").filter(Boolean).slice(0, 2).join(".")}`
+                : "";
+              const z = getComputedStyle(e).zIndex;
+              return `${tag}${id}${cls}[z=${z}]`;
+            });
+            console.log(`[FlicksAmbientFlow] elementsFromPoint(${s.label} ${s.x.toFixed(0)},${s.y.toFixed(0)}):`, stack);
+          });
+        });
+      }}
       className="fixed left-0 right-0 bottom-0 overflow-hidden cursor-default select-none"
       style={{
         ...ambientStyle,
@@ -259,6 +305,11 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         zIndex: 19999,
         pointerEvents: "auto",
         touchAction: "none",
+        // 디버그: 그라데이션 자체가 안 보이는 건지, 위에 무언가 깔려 있는 건지 구분하기 위해
+        // 빨간색 outline + 강한 자홍색 base color로 임시 표시. 보이면 그라데이션 표현 문제,
+        // 안 보이면 위에 다른 레이어가 덮고 있다는 의미.
+        outline: "3px dashed magenta",
+        outlineOffset: "-3px",
       }}
     >
       {/* 스와이프 진행도에 맞춰 살아 움직이는 그라데이션 wrapper.
