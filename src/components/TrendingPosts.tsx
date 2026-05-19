@@ -305,15 +305,27 @@ const VideoThumbnail: React.FC<{ videoUrl: string; className?: string; size?: Pl
   React.useEffect(() => {
     const currentCached = videoThumbCache.get(videoUrl);
     if (currentCached) {
+      // eslint-disable-next-line no-console
+      console.log('[TrendingDebug][video-thumb-cache-hit]', {
+        videoUrl,
+        cached: currentCached === 'failed' ? 'failed' : 'data-url',
+      });
       setThumbUrl(currentCached === 'failed' ? null : currentCached);
       setFailed(currentCached === 'failed');
       return;
     }
 
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][video-thumb-request]', { videoUrl });
     setThumbUrl(null);
     setFailed(false);
 
     return requestVideoThumbnail(videoUrl, (result) => {
+      // eslint-disable-next-line no-console
+      console.log('[TrendingDebug][video-thumb-result]', {
+        videoUrl,
+        result: result === 'failed' ? 'failed' : 'data-url',
+      });
       if (result === 'failed') {
         setThumbUrl(null);
         setFailed(true);
@@ -428,6 +440,45 @@ const warmTrendingThumbnail = (post: Post) => {
 
   const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
   void preloadImage(fallbackImageUrl.startsWith('http') ? getOptimizedFeedImage(fallbackImageUrl, post.id) : fallbackImageUrl);
+};
+
+const getTrendingThumbnailDebugInfo = (post: Post) => {
+  const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
+  const primaryMedia = mediaItems[0];
+  const resolvedThumbUrl = getTrendingThumbnailImageUrl(post);
+
+  if (primaryMedia?.type === 'image') {
+    return {
+      postId: post.id,
+      rank: (post as any).rank,
+      mediaType: 'image',
+      sourceUrl: primaryMedia.url,
+      resolvedThumbUrl,
+      imagePreloaded: !!resolvedThumbUrl && imagePreloadCache.has(resolvedThumbUrl),
+    };
+  }
+
+  if (primaryMedia?.type === 'video') {
+    return {
+      postId: post.id,
+      rank: (post as any).rank,
+      mediaType: 'video',
+      videoUrl: primaryMedia.url,
+      posterUrl: primaryMedia.posterUrl || null,
+      resolvedThumbUrl,
+      videoThumbCache: videoThumbCache.get(primaryMedia.url) || null,
+      imagePreloaded: !!resolvedThumbUrl && imagePreloadCache.has(resolvedThumbUrl),
+    };
+  }
+
+  return {
+    postId: post.id,
+    rank: (post as any).rank,
+    mediaType: 'fallback',
+    sourceUrl: post.image_url || post.image || FALLBACK_IMAGE,
+    resolvedThumbUrl,
+    imagePreloaded: !!resolvedThumbUrl && imagePreloadCache.has(resolvedThumbUrl),
+  };
 };
 
 // 지도 마커와 1:1 동일한 24시간 카운트다운 링.
@@ -972,14 +1023,26 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][posts-prop-updated]', {
+      refreshTick,
+      postCount: posts.length,
+      topIds: posts.slice(0, 5).map((post: any) => ({ id: post.id, rank: post.rank })),
+    });
     posts.forEach((post) => warmTrendingThumbnail(post));
-  }, [posts]);
+  }, [posts, refreshTick]);
 
   useEffect(() => {
     if (posts.length === 0) return;
     const nextPosts = [0, 1, 2]
       .map((offset) => posts[(currentIndex + offset) % posts.length])
       .filter(Boolean);
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][collapsed-current]', {
+      currentIndex,
+      current: getTrendingThumbnailDebugInfo(nextPosts[0]),
+      prefetched: nextPosts.slice(1).map((post) => getTrendingThumbnailDebugInfo(post)),
+    });
     nextPosts.forEach((post) => warmTrendingThumbnail(post));
   }, [currentIndex, posts]);
 
