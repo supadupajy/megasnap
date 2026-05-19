@@ -973,10 +973,12 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   const activeIndexRef = useRef(activeIndex);
   const itemCountRef = useRef(itemCount);
   const isDraggingRef = useRef(false);
+  const startXRef = useRef(0);
   const startYRef = useRef(0);
   const lastYRef = useRef(0);
   const startTimeRef = useRef(0);
   const startIndexRef = useRef(0); // 이번 터치 시작 시점의 인덱스 (고정)
+  const gestureAxisRef = useRef<"horizontal" | "vertical" | null>(null);
   const lockTransitionRef = useRef(false);
   const consumedRef = useRef(false); // 이번 터치 제스처가 이미 슬라이드를 소비했는지
 
@@ -1037,6 +1039,8 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (!touch) return;
       isDraggingRef.current = true;
       consumedRef.current = false;
+      gestureAxisRef.current = null;
+      startXRef.current = touch.clientX;
       startYRef.current = touch.clientY;
       lastYRef.current = touch.clientY;
       startTimeRef.current = Date.now();
@@ -1048,10 +1052,27 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       if (!isDraggingRef.current || consumedRef.current) return;
       const touch = e.touches[0];
       if (!touch) return;
-      e.preventDefault();
 
+      const dx = touch.clientX - startXRef.current;
       let dy = touch.clientY - startYRef.current;
       lastYRef.current = touch.clientY;
+
+      if (!gestureAxisRef.current) {
+        const absX = Math.abs(dx);
+        const absY = Math.abs(dy);
+        if (absX > 8 || absY > 8) {
+          gestureAxisRef.current = absX > absY ? "horizontal" : "vertical";
+        }
+      }
+
+      // 좌우 스와이프는 Flicks 내부 가로 캐러셀/브라우저 제스처로 남겨두고,
+      // 세로 슬라이더와 BottomNav 숨김/노출 로직이 반응하지 않도록 한다.
+      if (gestureAxisRef.current === "horizontal") {
+        setDragOffset(0);
+        return;
+      }
+
+      e.preventDefault();
 
       const startIdx = startIndexRef.current;
       const atTop = startIdx === 0 && dy > 0;
@@ -1087,6 +1108,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       // 이미 소비된 제스처는 무시
       if (consumedRef.current) {
         consumedRef.current = false;
+        gestureAxisRef.current = null;
         setDragOffset(0);
         window.dispatchEvent(
           new CustomEvent("flicks:swipe-progress", {
@@ -1095,6 +1117,14 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
         );
         return;
       }
+
+      if (gestureAxisRef.current === "horizontal") {
+        gestureAxisRef.current = null;
+        consumedRef.current = false;
+        setDragOffset(0);
+        return;
+      }
+
       consumedRef.current = true; // 이번 제스처 소비 처리
 
       const dy = lastYRef.current - startYRef.current;
@@ -2138,14 +2168,23 @@ const ReelContentEditOverlay: React.FC<ReelContentEditOverlayProps> = ({
 // 투명 poster로 네이티브 placeholder를 막고, 첫 프레임 준비 전까지 video를 숨겨둔다.
 const TRANSPARENT_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
 
-const ReelsVideoSkeleton = () => (
+const ReelsVideoSkeleton = ({ posterUrl }: { posterUrl?: string }) => (
   <div className="absolute inset-0 z-[5] overflow-hidden bg-black pointer-events-none">
-    <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-white/[0.10] via-white/[0.04] to-white/[0.08]" />
+    {posterUrl && (
+      <img
+        src={posterUrl}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover"
+        draggable={false}
+      />
+    )}
+    <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-black/15 via-black/5 to-black/20" />
     <div className="absolute left-4 right-4 bottom-4 space-y-2">
-      <div className="h-1 rounded-full bg-white/15 animate-pulse" />
+      <div className="h-1 rounded-full bg-white/20 animate-pulse" />
       <div className="flex items-center justify-between pt-2">
-        <div className="h-3 w-24 rounded-full bg-white/15 animate-pulse" />
-        <div className="h-3 w-12 rounded-full bg-white/10 animate-pulse" />
+        <div className="h-3 w-24 rounded-full bg-white/20 animate-pulse" />
+        <div className="h-3 w-12 rounded-full bg-white/15 animate-pulse" />
       </div>
     </div>
   </div>
@@ -2277,8 +2316,8 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
         />
       )}
 
-      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 스피너 대신 스켈레톤을 표시 */}
-      {isCurrent && !isReady && <ReelsVideoSkeleton />}
+      {/* 영상이 활성 슬라이드인데 첫 프레임이 아직 안 그려졌다면 썸네일 기반 스켈레톤을 표시 */}
+      {isCurrent && !isReady && <ReelsVideoSkeleton posterUrl={posterUrl} />}
     </>
   );
 };
@@ -2553,11 +2592,17 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
         {mediaList.map((url, i) => {
           const isVid = isVideoUrl(url);
           const isCurrent = i === currentIndex;
+          const isAdjacentToCurrent = Math.abs(i - currentIndex) === 1;
           // 캐러셀 내부 활성 미디어이면서 동시에 부모 슬라이드가 활성 상태일 때만
           // "재생 가능 상태"로 취급한다. 그래야 화면에 보이지 않는 다른 슬라이드의
           // 영상이 canplay/loadeddata 이벤트로 자동 재생되어 소리가 겹치는 문제가 사라진다.
           const isPlayable = isCurrent && isSlideActive;
-          const shouldWarmUp = isCurrent && shouldPreloadVideo && !isSlideActive;
+          // Flicks 가로 스와이프에서 다음/이전 영상이 검은 화면으로 보이지 않도록
+          // 현재 활성 슬라이드의 인접 가로 영상도 미리 네트워크 버퍼를 채운다.
+          const shouldWarmUp =
+            isVid &&
+            ((isSlideActive && isAdjacentToCurrent) ||
+              (isCurrent && shouldPreloadVideo && !isSlideActive));
           return (
             <div
               key={`${url}-${i}`}
