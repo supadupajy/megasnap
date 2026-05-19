@@ -1222,7 +1222,13 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
     <div
       ref={containerRef}
       className={cn("absolute inset-0", bottomExtensionHeight ? "overflow-visible" : "overflow-hidden")}
-      style={{ touchAction: "none" }}
+      style={{
+        touchAction: "none",
+        // embedded(Flicks)에서는 영상 박스가 left/right 1rem, top 1rem, rounded-2xl로 잡혀 있다.
+        // 아래로 스와이프할 때 부모의 사각 클리핑 경계가 먼저 보이면 하단 코너가 사각형처럼
+        // 보이므로, 슬라이더의 보이는 클리핑 경계도 영상 박스와 같은 곡률로 맞춘다.
+        clipPath: embedded ? "inset(1rem 1rem 0 1rem round 1rem)" : undefined,
+      }}
     >
       <div
         ref={trackRef}
