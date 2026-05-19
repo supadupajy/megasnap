@@ -262,6 +262,7 @@ const Flicks = () => {
           onUpdate={handlePostUpdated}
           noRepeat
           embedded
+          embeddedFixedMediaFrame
           endMessage="더 이상 표시할 영상이 없습니다"
           endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
           onActivePosterChange={setActivePosterUrl}

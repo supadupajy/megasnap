@@ -105,6 +105,8 @@ interface ReelsViewerProps {
   embedded?: boolean;
   // embedded 모드에서 영상/이미지 우상단에 닫기(X) 버튼을 표시 (트렌딩 릴스 뷰어용)
   showInlineCloseButton?: boolean;
+  // embedded 모드에서 미디어 컨테이너를 9:16 프레임으로 고정해 모서리 라운드가 보이도록 함 (Flicks용)
+  embeddedFixedMediaFrame?: boolean;
   // embedded 모드에서 슬라이드 하단에 함께 움직일 검은 확장 영역 높이 (Flicks 하단 예약 영역용)
   embeddedBottomExtensionHeight?: string;
   // 내 포스팅 삭제 후 호출 (부모가 리스트에서 제거하도록)
@@ -128,6 +130,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
   endSubMessage = "처음으로 돌아가거나 닫아주세요.",
   embedded = false,
   showInlineCloseButton = false,
+  embeddedFixedMediaFrame = false,
   embeddedBottomExtensionHeight,
   onDelete,
   onUpdate,
@@ -809,6 +812,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
         itemCount={items.length}
         onActiveIndexChange={setActiveIndexWithDir}
         embedded={embedded}
+        fixedMediaFrame={embeddedFixedMediaFrame}
         bottomExtensionHeight={embedded ? embeddedBottomExtensionHeight : undefined}
       >
         {items.map((item, index) => (
@@ -851,6 +855,7 @@ const ReelsViewer: React.FC<ReelsViewerProps> = ({
                   }, 50);
                 }}
                 embedded={embedded}
+                embeddedFixedMediaFrame={embeddedFixedMediaFrame}
                 showInlineMuteButton={embedded}
                 onToggleMute={() => setMuted((m) => !m)}
                 showInlineCloseButton={embedded && showInlineCloseButton}
@@ -952,6 +957,8 @@ interface ReelsSlideTrackProps {
   children: React.ReactNode;
   // embedded면 슬라이드 높이를 100dvh 대신 컨테이너 100% 기준으로 계산
   embedded?: boolean;
+  // 미디어 컨테이너를 9:16 프레임으로 고정하는 embedded 모드인지 여부
+  fixedMediaFrame?: boolean;
   // 슬라이드와 같은 transform으로 움직일 하단 검은 확장 영역 높이
   bottomExtensionHeight?: string;
 }
@@ -963,6 +970,7 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
   onActiveIndexChange,
   children,
   embedded = false,
+  fixedMediaFrame = false,
   bottomExtensionHeight,
 }) => {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -1259,10 +1267,14 @@ const ReelsSlideTrack: React.FC<ReelsSlideTrackProps> = ({
       className={cn("absolute inset-0", bottomExtensionHeight ? "overflow-visible" : "overflow-hidden")}
       style={{
         touchAction: "none",
-        // embedded(Flicks)에서는 영상 박스가 left/right 1rem, top 1rem, rounded-2xl로 잡혀 있다.
-        // 아래로 스와이프할 때 부모의 사각 클리핑 경계가 먼저 보이면 하단 코너가 사각형처럼
+        // embedded에서는 영상 박스가 1rem 여백과 rounded-2xl로 잡혀 있다.
+        // 아래로 스와이프할 때 부모의 사각 클리핑 경계가 먼저 보이면 코너가 사각형처럼
         // 보이므로, 슬라이더의 보이는 클리핑 경계도 영상 박스와 같은 곡률로 맞춘다.
-        clipPath: embedded ? "inset(1rem 1rem 0 1rem round 1rem)" : undefined,
+        clipPath: embedded
+          ? fixedMediaFrame
+            ? "inset(1rem 1rem 1rem 1rem round 1rem)"
+            : "inset(1rem 1rem 0 1rem round 1rem)"
+          : undefined,
       }}
     >
       <div
@@ -1321,6 +1333,8 @@ interface ReelSlideProps {
 
   // embedded: 페이지 안에 인라인으로 들어간 모드 (BottomNav 등이 보이는 상태)
   embedded?: boolean;
+  // 미디어 컨테이너를 9:16 프레임으로 고정하는 embedded 모드인지 여부
+  embeddedFixedMediaFrame?: boolean;
   // 영상 내부 좌상단에 표시할 음소거 토글 (embedded 모드 전용)
   showInlineMuteButton?: boolean;
   onToggleMute?: () => void;
@@ -1356,6 +1370,7 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
   onLocationClick,
   onUserClick,
   embedded = false,
+  embeddedFixedMediaFrame = false,
 
   showInlineMuteButton = false,
   onToggleMute,
@@ -1736,17 +1751,17 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         </div>
       )}
 
-      {/* 메인 미디어 — 가로폭은 인기 컨텐츠와 동일하게 mx-4 마진,
-          세로는 사용 가능한 공간(top: 1rem ~ bottom: 0) 전체로 확장.
+      {/* 메인 미디어 — 기본 embedded 뷰어는 가용 영역을 채우고,
+          Flicks는 다른 포스팅 미디어와 같은 9:16 프레임으로 고정해
+          실제 영상 컨테이너의 네 모서리 라운드가 보이도록 한다.
           영상은 object-contain으로 표시해 가로 영상도 좌우가 잘리지 않도록 한다.
           닉네임/위치/본문/액션 알약 등 모든 UI는 별도의 absolute 오버레이로
-          영상 위에 띄우므로 여기서는 bottom 여백을 두지 않는다(infoHeight 사용 X).
-          상단 여백(top)은 순위 뱃지/닫기 버튼과의 자연스러운 갭을 위한 최소값만 유지. */}
+          영상 위에 띄운다. */}
       <div
-        className="absolute flex"
+        className={cn("absolute flex", embeddedFixedMediaFrame && "items-center justify-center")}
         style={{
           top: "1rem",
-          bottom: 0,
+          bottom: embeddedFixedMediaFrame ? "1rem" : 0,
           left: "1rem",
           right: "1rem",
           cursor: "pointer",
@@ -1755,7 +1770,10 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         onPointerUp={handlePointerUp}
       >
         <div
-          className="relative overflow-hidden bg-black rounded-2xl w-full h-full"
+          className={cn(
+            "relative overflow-hidden bg-black rounded-2xl",
+            embeddedFixedMediaFrame ? "h-full max-h-full aspect-[9/16] max-w-full" : "w-full h-full"
+          )}
         >
           {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용)
               순위 뱃지가 있을 때는 음소거 버튼을 뱃지 옆으로 옮긴다. */}
