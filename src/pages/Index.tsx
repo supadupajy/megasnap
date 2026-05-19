@@ -523,8 +523,20 @@ const Index = () => {
       ? p.images
       : (prev?.images && prev.images.length > 0 ? prev.images : [img]);
     const images = isAd ? [img] : rawImages;
-    const videoUrl = isAd ? undefined : (p.video_url ?? prev?.videoUrl);
-    const videoUrls = isAd ? undefined : (Array.isArray(p.video_urls) ? p.video_urls : prev?.videoUrls);
+    // video_url / video_urls 정규화:
+    //   - DB에 video_urls가 [null]이나 ['', null] 같은 형태로 저장된 케이스가 있어,
+    //     downstream(MapContainer 등)에서 firstVideoUrl 추출이 실패하고 영상으로 인식되지 않는 버그가 있었음.
+    //   - 여기서 null/공백/비문자열을 제거하고, 결과가 비면 undefined로 통일한다.
+    const rawVideoUrl = typeof p.video_url === 'string' && p.video_url.trim() ? p.video_url : null;
+    const cleanedVideoUrls = Array.isArray(p.video_urls)
+      ? p.video_urls.filter((u: unknown): u is string => typeof u === 'string' && u.trim().length > 0)
+      : [];
+    const videoUrl = isAd
+      ? undefined
+      : (rawVideoUrl ?? cleanedVideoUrls[0] ?? prev?.videoUrl);
+    const videoUrls = isAd
+      ? undefined
+      : (cleanedVideoUrls.length > 0 ? cleanedVideoUrls : (prev?.videoUrls && prev.videoUrls.length > 0 ? prev.videoUrls : undefined));
 
     return {
       id: p.id,

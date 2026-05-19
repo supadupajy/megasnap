@@ -1091,20 +1091,9 @@ const MapContainer = ({
 
     const nowForExpiry = Date.now();
     posts.forEach(post => {
-      if (!post || post.lat == null || post.lng == null) {
-        // [DEBUG] 좌표가 없는 영상 포스트 진단
-        if (post && (post.videoUrl || (Array.isArray(post.videoUrls) && post.videoUrls.length > 0))) {
-          console.log('[VideoMarker:skip:no-coords]', { id: post.id, lat: post.lat, lng: post.lng });
-        }
-        return;
-      }
+      if (!post || post.lat == null || post.lng == null) return;
       // 24시간 지난 일반 포스트(광고 제외)는 마커를 만들지 않음
-      if (isMarkerExpired(post, nowForExpiry)) {
-        if (post.videoUrl || (Array.isArray(post.videoUrls) && post.videoUrls.length > 0)) {
-          console.log('[VideoMarker:skip:expired]', { id: post.id, createdAt: post.createdAt });
-        }
-        return;
-      }
+      if (isMarkerExpired(post, nowForExpiry)) return;
       const position = new kakao.maps.LatLng(post.lat, post.lng);
 
       const isViewed = combinedViewedIds.has(post.id);
@@ -1123,31 +1112,10 @@ const MapContainer = ({
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
-      // [DEBUG] 영상 포스트 마커 생성 진단
-      if (firstVideoUrl || post.videoUrl || (Array.isArray(post.videoUrls) && post.videoUrls.length > 0)) {
-        console.log('[VideoMarker:render]', {
-          id: post.id,
-          isAd: post.isAd,
-          videoUrl: post.videoUrl,
-          videoUrls: post.videoUrls,
-          videoUrlsItem0: Array.isArray(post.videoUrls) ? post.videoUrls[0] : '(not array)',
-          videoUrlsItem0Type: Array.isArray(post.videoUrls) ? typeof post.videoUrls[0] : '(not array)',
-          videoUrlsItem0JSON: Array.isArray(post.videoUrls) ? JSON.stringify(post.videoUrls[0]) : '(not array)',
-          firstVideoUrl,
-          image_url: post.image_url,
-          image: post.image,
-          images: post.images,
-          storedVideoPoster,
-          cachedVideoThumb: cachedVideoThumb ? cachedVideoThumb.slice(0, 60) + '...' : '',
-          hasExistingOverlay: !!existingOverlay,
-        });
-      }
-
       // 영상 포스트라도 마커는 즉시 생성한다.
       // 썸네일이 없으면 어두운 배경 + 플레이 아이콘만 먼저 보이고,
       // 비동기로 추출/저장된 썸네일이 들어오면 img.src를 갱신한다.
       if (firstVideoUrl && !storedVideoPoster && !cachedVideoThumb) {
-        console.log('[VideoMarker:extract:trigger]', { id: post.id, firstVideoUrl });
         extractVideoThumbRef.current(post.id, firstVideoUrl);
       }
 
@@ -2084,15 +2052,8 @@ const MapContainer = ({
   // ── 비디오 마커 썸네일 비동기 추출 및 마커 img 교체 ──────────
   // ref에 함수를 저장해서 마커 생성 useEffect에서 항상 최신 함수를 참조할 수 있게 함
   extractVideoThumbRef.current = (postId: string, videoUrl: string) => {
-    if (videoThumbCacheRef.current.has(postId)) {
-      console.log('[VideoMarker:extract:skip-cached]', { postId });
-      return;
-    }
-    if (videoThumbPendingRef.current.has(postId)) {
-      console.log('[VideoMarker:extract:skip-pending]', { postId });
-      return;
-    }
-    console.log('[VideoMarker:extract:start]', { postId, videoUrl });
+    if (videoThumbCacheRef.current.has(postId)) return;
+    if (videoThumbPendingRef.current.has(postId)) return;
     videoThumbPendingRef.current.add(postId);
 
     const video = document.createElement('video');
@@ -2119,7 +2080,6 @@ const MapContainer = ({
     const finish = (_reason?: string) => {
       if (isDone) return;
       isDone = true;
-      console.log('[VideoMarker:extract:finish]', { postId, reason: _reason });
       cleanup();
       videoThumbPendingRef.current.delete(postId);
     };
@@ -2371,20 +2331,6 @@ const MapContainer = ({
       : hasVideo
         ? `<img data-video-marker-img="true" alt="" style="width:100%;height:100%;object-fit:cover;display:block;opacity:0;" />`
         : `<img src="${FALLBACK_IMAGE}" style="width:100%;height:100%;object-fit:cover;display:block;" />`;
-
-    // [DEBUG] 영상 마커 innerHTML 생성 결과 확인
-    if (hasVideo) {
-      console.log('[VideoMarker:innerHTML]', {
-        id: post.id,
-        hasVideo,
-        firstVideoUrl,
-        displayImage,
-        optimizedDisplayImage,
-        cachedVideoThumb: cachedVideoThumb ? cachedVideoThumb.slice(0, 60) + '...' : '',
-        markerImage: markerImage ? markerImage.slice(0, 60) + '...' : '',
-        videoIconHtmlPresent: !!videoIconHtml,
-      });
-    }
 
     return `${adStyleTag}<div class="marker-content-wrapper">
       <div class="${animationClass}" style="display:flex;flex-direction:column;align-items:center;width:60px;position:relative;">
