@@ -1838,6 +1838,16 @@ const MapContainer = ({
         return arr.find((u: unknown) => typeof u === 'string' && (u as string).trim()) || '';
       })();
       const ghostHasVideo = !!ghostFirstVideoUrl;
+      if (ghostHasVideo) {
+        // eslint-disable-next-line no-console
+        console.log('[GhostVideoMarkerDebug]', {
+          postId: id,
+          image_url: (post as any).image_url,
+          images: (post as any).images,
+          videoUrl: ghostFirstVideoUrl,
+          optimized,
+        });
+      }
       const ghostPlayIconHtml = ghostHasVideo
         ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,0.25);pointer-events:none;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
         : '';
