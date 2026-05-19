@@ -33,10 +33,15 @@ const MARKER_IMAGE_TRANSFORM = {
 // 업로드된 포스팅 이미지는 3:4 비율로 저장되므로, 표시용 트랜스폼도 동일한 3:4 비율을 사용해
 // Supabase image render가 추가로 정사각형으로 크롭하지 않도록 한다.
 // (정사각형으로 두면 가로 이미지의 좌우, 또는 세로 이미지의 위아래가 잘려 사용자가 의도한 구도와 달라진다.)
+//
+// 모바일 친화 사이즈: 일반 모바일 폭(~400px) × DPR 2 = ~800px가 실제 필요한 픽셀.
+// 1200×1600 (q88)에서 800×1066 (q82)로 축소해도 화면상 차이가 거의 없으며,
+// 페이로드는 약 50% 감소하여 스크롤/디코딩 부담이 크게 줄어든다.
+// (풀스크린 상세 보기는 별도의 DETAIL_IMAGE_TRANSFORM이 사용된다.)
 const FEED_IMAGE_TRANSFORM = {
-  width: 1200,
-  height: 1600,
-  quality: 88,
+  width: 800,
+  height: 1066,
+  quality: 82,
   resize: 'cover' as const,
 };
 

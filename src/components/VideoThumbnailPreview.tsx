@@ -63,7 +63,10 @@ const VideoThumbnailPreview = ({
         className={`${className ?? ''} video-hq`.trim()}
         muted
         playsInline
-        preload="auto"
+        // 슬라이드 미리보기는 정지된 첫 프레임 한 장만 보여주면 충분하다.
+        // 전체 영상을 다운로드할 필요가 없으므로 metadata만 받아 모바일 부담을 줄인다.
+        // (대부분의 브라우저는 metadata 단계에서 이미 첫 프레임을 디코드해준다.)
+        preload="metadata"
         style={{
           opacity: isReady ? 1 : 0,
           transition: 'opacity 80ms linear',

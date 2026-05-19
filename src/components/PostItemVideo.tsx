@@ -177,7 +177,10 @@ const PostItemVideo: React.FC<PostItemVideoProps> = ({
         loop
         muted={muted}
         playsInline
-        preload="auto"
+        // 활성(autoPlay) 상태일 때만 적극 로드. 비활성 슬라이드에서는
+        // 메타데이터(=영상 길이/첫 프레임 디코드 준비)만 받아 모바일 데이터/CPU/메모리 부담을 줄인다.
+        // 활성으로 전환되는 즉시 브라우저가 추가 데이터를 받아오므로 사용자 체감 지연은 거의 없다.
+        preload={autoPlay ? "auto" : "metadata"}
         disablePictureInPicture
         controls={false}
         controlsList="nodownload noplaybackrate nofullscreen noremoteplayback"
