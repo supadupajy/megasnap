@@ -52,6 +52,22 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
   // 현재 그려지고 있는 ambient color (cross-fade 결과)
   const [color, setColor] = useState<RGB>(FALLBACK_COLOR);
 
+  // [DEBUG] 마운트/렌더 추적
+  useEffect(() => {
+    console.log("[FlicksAmbientFlow] mounted. posterUrl=", posterUrl, "height=", height);
+    return () => {
+      console.log("[FlicksAmbientFlow] unmounted");
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("[FlicksAmbientFlow] posterUrl changed:", posterUrl);
+  }, [posterUrl]);
+
+  useEffect(() => {
+    console.log("[FlicksAmbientFlow] color updated:", color);
+  }, [color]);
+
   // posterUrl → 평균색 추출
   useEffect(() => {
     if (!posterUrl) {
@@ -158,9 +174,13 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
   const content = (
     <div
       aria-hidden="true"
+      data-flicks-ambient-flow="true"
       className="fixed left-0 right-0 bottom-0 overflow-hidden cursor-default select-none"
       style={{
         ...ambientStyle,
+        // [DEBUG] 컴포넌트가 진짜 그려지고 있는지 시각적으로 확인하기 위한 임시 빨간 테두리 + 강한 배경
+        backgroundColor: "magenta",
+        outline: "4px solid red",
         zIndex: 19998,
         pointerEvents: "auto",
         touchAction: "none",
