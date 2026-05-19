@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getFallbackImage } from '@/lib/utils';
 import { fetchLikedPostIds } from '@/utils/like-utils';
 import ReelsViewer from '@/components/ReelsViewer';
+import FlicksAmbientFlow from '@/components/FlicksAmbientFlow';
 
 // Fisher-Yates 셔플
 const shuffle = <T,>(arr: T[]): T[] => {
@@ -76,6 +77,9 @@ const Flicks = () => {
   const [videoPool, setVideoPool] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const hasLoaded = useRef(false);
+  // 현재 활성 슬라이드의 대표 이미지(영상 썸네일/첫 이미지) URL.
+  // 하단 FlicksAmbientFlow가 이 이미지로부터 ambient 색상을 추출해서 분위기를 표현한다.
+  const [activePosterUrl, setActivePosterUrl] = useState<string | null>(null);
 
   const fetchVideoPool = useCallback(async () => {
     try {
@@ -196,16 +200,13 @@ const Flicks = () => {
     fetchVideoPool();
   }, [authLoading, authUser, fetchVideoPool, navigate]);
 
+  // 하단 BottomNav 알약 주변 영역.
+  // 단순 검정 박스 대신, 현재 활성 영상의 색감을 추출해서 부드러운 ambient glow + 위로
+  // 떠오르는 빛 입자(particle) 효과를 보여줘 단조로운 검은 여백을 한 단계 더 시네마틱하게 만든다.
   const bottomFill = (
-    <div
-      aria-hidden="true"
-      className="fixed left-0 right-0 bottom-0 bg-black cursor-default"
-      style={{
-        height: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
-        zIndex: 19998,
-        pointerEvents: 'auto',
-        touchAction: 'none',
-      }}
+    <FlicksAmbientFlow
+      height="calc(env(safe-area-inset-bottom, 0px) + 64px)"
+      posterUrl={activePosterUrl}
     />
   );
 
@@ -264,6 +265,7 @@ const Flicks = () => {
           embeddedBottomExtensionHeight="calc(env(safe-area-inset-bottom, 0px) + 64px)"
           endMessage="더 이상 표시할 영상이 없습니다"
           endSubMessage="새로운 영상이 올라오면 여기서 만나볼 수 있어요."
+          onActivePosterChange={setActivePosterUrl}
         />
       </div>
     </>
