@@ -2234,8 +2234,20 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   useEffect(() => {
     if (!isCurrent) return;
     const el = localRef.current;
-    setIsReady(!!el && !el.paused && el.readyState >= 2);
-  }, [isCurrent, src]);
+    if (!el) return;
+
+    el.muted = muted;
+    if (el.readyState < 2) el.load();
+
+    el.play()
+      .then(() => setIsReady(true))
+      .catch(() => {
+        el.muted = true;
+        el.play().then(() => setIsReady(true)).catch(() => {});
+      });
+
+    if (el.readyState >= 2) setIsReady(true);
+  }, [isCurrent, muted, src]);
 
   useEffect(() => {
     const el = localRef.current;
@@ -2243,6 +2255,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
     const markReady = () => setIsReady(true);
     const handleLoadedData = () => {
       markReady();
+
     };
     const handleCanPlay = () => {
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
