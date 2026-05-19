@@ -91,11 +91,11 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         ctx.drawImage(img, 0, 0, W, H);
         const data = ctx.getImageData(0, 0, W, H).data;
 
+        // 1차: 적당한 밝기 + 어느 정도 채도 있는 픽셀만 골라 평균
         let r = 0;
         let g = 0;
         let b = 0;
         let count = 0;
-        // 너무 어두운(검정) / 너무 밝은(흰) 픽셀은 가중치를 낮춰 채도 있는 색이 잘 잡히도록
         for (let i = 0; i < data.length; i += 4) {
           const pr = data[i];
           const pg = data[i + 1];
@@ -103,15 +103,14 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
           const pa = data[i + 3];
           if (pa < 200) continue;
           const lum = (pr * 0.299 + pg * 0.587 + pb * 0.114) / 255;
-          // 너무 어둡거나 너무 밝으면 스킵
-          if (lum < 0.08 || lum > 0.95) continue;
+          if (lum < 0.05 || lum > 0.97) continue;
           r += pr;
           g += pg;
           b += pb;
           count += 1;
         }
+        // 2차 fallback: 1차에서 하나도 안 잡히면 모든 픽셀 단순 평균
         if (count === 0) {
-          // 전부 너무 어둡거나 밝다면 그냥 단순 평균으로 fallback
           for (let i = 0; i < data.length; i += 4) {
             r += data[i];
             g += data[i + 1];
@@ -124,8 +123,31 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         g = Math.round(g / count);
         b = Math.round(b / count);
 
+        // 결과가 너무 어두우면 밝기를 끌어올려준다 (밤/어두운 영상도 ambient가 보이도록).
+        // luminance 기준 0.18 이하라면 비율을 유지한 채 전체적으로 톤업.
+        let lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+        if (lum < 0.18) {
+          // 무채색에 가까운(R,G,B 차이 < 20) 진한 검정이면 그냥 fallback indigo 사용.
+          const maxC = Math.max(r, g, b);
+          const minC = Math.min(r, g, b);
+          if (maxC - minC < 20) {
+            setColor(FALLBACK_COLOR);
+            return;
+          }
+          // 비율 유지 톤업 — 가장 큰 채널을 ~140 정도로 끌어올리고 나머지를 비례 조정
+          const target = 140;
+          const scale = maxC > 0 ? target / maxC : 1;
+          r = Math.min(255, Math.round(r * scale));
+          g = Math.min(255, Math.round(g * scale));
+          b = Math.min(255, Math.round(b * scale));
+        }
+
         // 너무 칙칙하지 않도록 살짝 채도를 올려준다 (간단한 saturation boost)
         const boosted = boostSaturation({ r, g, b }, 1.35);
+
+        // [DEBUG] 색 추출 결과를 보고 싶을 때
+        console.log("[FlicksAmbientFlow] extracted color:", { r, g, b, lum, boosted });
+
         setColor(boosted);
       } catch {
         // CORS 오류 등은 무시하고 fallback 유지
@@ -178,9 +200,6 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
       className="fixed left-0 right-0 bottom-0 overflow-hidden cursor-default select-none"
       style={{
         ...ambientStyle,
-        // [DEBUG] 컴포넌트가 진짜 그려지고 있는지 시각적으로 확인하기 위한 임시 빨간 테두리 + 강한 배경
-        backgroundColor: "magenta",
-        outline: "4px solid red",
         zIndex: 19998,
         pointerEvents: "auto",
         touchAction: "none",
