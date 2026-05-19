@@ -704,7 +704,9 @@ const PostItemInner = ({ post, onLikeToggle, onLocationClick, onDelete, onUpdate
     <div
       ref={containerRef}
       className={cn(
-        "w-full max-w-full overflow-x-hidden transition-none",
+        // feed-card-cv: 화면 밖 카드의 페인트/레이아웃을 브라우저가 자동으로 건너뛴다.
+        // (DOM/이벤트/IntersectionObserver는 그대로 유지되므로 동작에 영향 없음)
+        "feed-card-cv w-full max-w-full overflow-x-hidden transition-none",
         !disablePulse && isNewRealtime && "animate-pulse ring-2 ring-indigo-500 ring-offset-2 rounded-2xl"
       )}
     >

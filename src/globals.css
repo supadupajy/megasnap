@@ -1055,6 +1055,43 @@ video.post-item-video::-webkit-media-text-track-container {
 }
 
 /* =============================================
+   화면 밖 카드 렌더링 스킵 (content-visibility 최적화)
+   ---------------------------------------------
+   목적:
+     - 피드/그리드에 카드가 수십~수백 개 누적될 때, 화면 밖에 있는 카드의
+       페인트/레이아웃 비용을 브라우저가 자동으로 건너뛰게 만든다.
+     - DOM은 그대로 유지되므로 스크롤 위치, IntersectionObserver, 키보드
+       포커스, 검색(Ctrl+F) 등 기능에 영향 없음.
+
+   왜 contain-intrinsic-size가 필수인가:
+     - content-visibility: auto만 적용하면 화면 밖 요소의 "추정 크기"가
+       0px가 되어 스크롤바가 갑자기 길어졌다 짧아지는 점프가 발생.
+     - contain-intrinsic-size로 평균적인 카드 높이를 미리 알려주면 점프 없음.
+
+   ─ 적용 대상 ─
+     1) feed-card-cv → PostItem 카드 (피드용, 약 720px 추정)
+        실제 카드는 3:4 미디어 + 헤더/액션/본문 = 보통 모바일에서 700~760px
+     2) grid-cell-cv → 프로필 그리드의 정사각형 셀 (1:1 비율)
+        화면 폭의 1/3, 모바일에서 보통 ~130px
+
+   ─ 안전한 동작 ─
+     - 자식이 자동 측정 영역(보통 viewport 위아래 700px) 안으로 들어오면
+       즉시 정상 렌더링됨. 사용자 입장에서는 그냥 항상 보이는 카드처럼 동작.
+     - prefers-reduced-motion / 구형 브라우저(Safari < 15.4)에서는
+       content-visibility를 무시하므로 fallback 없이 그대로 정상 동작.
+   ============================================= */
+.feed-card-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 720px;
+}
+
+.grid-cell-cv {
+  content-visibility: auto;
+  /* 정사각형 셀은 폭에 비례하므로 평균적인 모바일 셀 크기로 추정 */
+  contain-intrinsic-size: 1px 130px;
+}
+
+/* =============================================
    영상 화질 보존 (High-Quality Video Rendering)
    - 영상은 원본 그대로 업로드되지만, 화면에 그려질 때 브라우저가
      컨테이너 크기에 맞게 다운스케일하면서 흐릿해 보이는 현상을 줄인다.

@@ -324,7 +324,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     return (
       <div
         ref={containerRef}
-        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+        className="grid-cell-cv aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
       >
         <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
       </div>
@@ -343,7 +343,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     return (
       <div
         ref={containerRef}
-        className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+        className="grid-cell-cv aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
       >
         {(!safeToReveal || !isImageLoaded) && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
         {posterSrc && (
@@ -384,7 +384,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   return (
     <div
       ref={containerRef}
-      className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
+      className="grid-cell-cv aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
     >
       {!isImageLoaded && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
       {imageSrc && (

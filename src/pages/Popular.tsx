@@ -28,6 +28,17 @@ const getTierFromFollowers = (followers: number) => {
 const PAGE_SIZE = 15;
 const AD_INSERT_INTERVAL = 3;
 
+// 무한 스크롤 누적 상한.
+// 한 세션에 너무 많은 카드(영상/이미지 포함)가 DOM에 쌓이면 모바일에서 메모리/페인트 부담이
+// 누적되어 결국 버벅거림으로 이어진다. 인스타그램/유튜브 등도 사실상의 상한이 있으며,
+// 사용자가 이 만큼 보고도 더 보려면 자연스럽게 탭 재진입(=새 셔플)로 유도된다.
+//
+// 상한은 "표시 가능한 인기 컨텐츠 카드 수"이며, 새 친구 컨텐츠(newFriendPosts)는
+// 이 상한과 무관하게 항상 상단에 유지된다.
+//
+// 화면에 보이는 카드(트림 후보가 아님)는 절대 줄어들지 않으므로 스크롤 점프가 발생하지 않는다.
+const MAX_DISPLAYED_POPULAR_CARDS = 90;
+
 const PostSkeleton = () => (
   <div className="border-b border-gray-100 p-4 space-y-3">
     <div className="flex items-center gap-3">
@@ -344,7 +355,27 @@ const Popular = () => {
       displayedCountRef.current += next.length;
       setPosts(prev => {
         const existingIds = new Set(prev.map(p => p.id));
-        return [...prev, ...next.filter(p => !existingIds.has(p.id))];
+        const merged = [...prev, ...next.filter(p => !existingIds.has(p.id))];
+
+        // ─ 누적 카드 상한 적용 ─
+        // 표시 중인 인기/열람 친구 컨텐츠 카드가 너무 많이 쌓이면 모바일에서
+        // 페인트/메모리 부담이 누적된다. 새 친구 컨텐츠는 상단에 분리되어 있고,
+        // 트림은 항상 \"리스트의 더 위쪽(=화면에서 멀리 지나간 카드)\" 에서만
+        // 일어나므로 사용자가 현재 보고 있는 위치보다 위 영역만 정리된다.
+        //
+        // 트림이 일어나는 시점은 무한 스크롤로 새 카드가 들어올 때뿐이고, 그 시점에는
+        // 사용자가 더 \"아래쪽\"을 보고 있는 게 확실하므로 시각적으로 영향 없음.
+        const newFriendCount = newFriendPostsRef.current.length;
+        const popularCount = merged.length - newFriendCount;
+        if (popularCount > MAX_DISPLAYED_POPULAR_CARDS) {
+          const excess = popularCount - MAX_DISPLAYED_POPULAR_CARDS;
+          // 새 친구 컨텐츠는 보존하고, 그 다음(=상단 가장 오래된 인기/열람 친구 카드)부터 잘라낸다.
+          return [
+            ...merged.slice(0, newFriendCount),
+            ...merged.slice(newFriendCount + excess),
+          ];
+        }
+        return merged;
       });
       setHasMore(displayedCountRef.current < mergedPoolRef.current.length);
     } else {
