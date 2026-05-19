@@ -2192,19 +2192,6 @@ const ReelsVideoSkeleton = ({ posterUrl }: { posterUrl?: string }) => (
   </div>
 );
 
-const emitFlicksDebugLog = (label: string, data: Record<string, unknown> = {}) => {
-  console.log(label, data);
-  if (typeof window === "undefined") return;
-  if (!window.location.pathname.startsWith("/flicks")) return;
-  window.dispatchEvent(new CustomEvent("flicks-debug-log", {
-    detail: {
-      time: new Date().toLocaleTimeString(),
-      label,
-      data,
-    },
-  }));
-};
-
 interface ReelsVideoProps {
 
   src: string;
@@ -2215,7 +2202,6 @@ interface ReelsVideoProps {
   shouldWarmUp?: boolean;
   /** 영상이 첫 프레임을 디코드하기 전 보여줄 썸네일. */
   posterUrl?: string;
-  debugIndex?: number;
 }
 
 const ReelsVideo: React.FC<ReelsVideoProps> = ({
@@ -2226,52 +2212,11 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
   isCurrent,
   shouldWarmUp = false,
   posterUrl,
-  debugIndex,
 }) => {
 
   const localRef = useRef<HTMLVideoElement>(null);
 
   const [isReady, setIsReady] = useState(false);
-  const isCurrentRef = useRef(isCurrent);
-  const isReadyRef = useRef(isReady);
-
-  useEffect(() => {
-    isCurrentRef.current = isCurrent;
-  }, [isCurrent]);
-
-  useEffect(() => {
-    isReadyRef.current = isReady;
-  }, [isReady]);
-
-  const debugSrc = useMemo(() => {
-    try {
-      return new URL(src).pathname.split('/').pop() || src.slice(-60);
-    } catch {
-      return src.slice(-60);
-    }
-  }, [src]);
-
-  const logVideoState = useCallback((label: string, extra: Record<string, unknown> = {}) => {
-    const el = localRef.current;
-    emitFlicksDebugLog("[ReelsVideo] " + label, {
-      i: debugIndex,
-      cur: isCurrentRef.current,
-      ready: isReadyRef.current,
-      preload,
-      warm: shouldWarmUp,
-      muted,
-      src: debugSrc,
-      rs: el?.readyState,
-      ns: el?.networkState,
-      paused: el?.paused,
-      t: el?.currentTime,
-      dur: el?.duration,
-      vw: el?.videoWidth,
-      vh: el?.videoHeight,
-      err: el?.error ? { code: el.error.code, message: el.error.message } : null,
-      ...extra,
-    });
-  }, [debugIndex, debugSrc, muted, preload, shouldWarmUp]);
 
   const setRefs = useCallback(
 
@@ -2286,94 +2231,54 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
 
   useEffect(() => {
     setIsReady(false);
-    logVideoState("src changed: reset ready");
   }, [src]);
 
   useEffect(() => {
     if (!isCurrent) return;
 
     const el = localRef.current;
-    if (!el) {
-      logVideoState("became current but video element is null");
-      return;
-    }
+    if (!el) return;
 
-    logVideoState("became current: before load/play");
     el.muted = muted;
     if (el.readyState < 2) el.load();
 
     el.play()
-      .then(() => {
-        setIsReady(true);
-        logVideoState("play success");
-      })
-      .catch((err) => {
-        logVideoState("play failed, retry muted", { errorName: err?.name, errorMessage: err?.message });
+      .then(() => setIsReady(true))
+      .catch(() => {
         el.muted = true;
-        el.play()
-          .then(() => {
-            setIsReady(true);
-            logVideoState("muted retry play success");
-          })
-          .catch((retryErr) => {
-            logVideoState("muted retry play failed", { errorName: retryErr?.name, errorMessage: retryErr?.message });
-          });
+        el.play().then(() => setIsReady(true)).catch(() => {});
       });
 
-    if (el.readyState >= 2) {
-      setIsReady(true);
-      logVideoState("became current: already readyState >= 2");
-    }
-  }, [isCurrent, logVideoState, muted, src]);
+    if (el.readyState >= 2) setIsReady(true);
+  }, [isCurrent, muted, src]);
 
   useEffect(() => {
     const el = localRef.current;
     if (!el) return;
     const markReady = () => setIsReady(true);
-    const handleLoadedMetadata = () => logVideoState("event: loadedmetadata");
     const handleLoadedData = () => {
       markReady();
-      logVideoState("event: loadeddata");
     };
-    const handlePlaying = () => {
-      markReady();
-      logVideoState("event: playing");
-    };
-    const handleWaiting = () => logVideoState("event: waiting");
-    const handleStalled = () => logVideoState("event: stalled");
-    const handleError = () => logVideoState("event: error");
     const handleCanPlay = () => {
-      logVideoState("event: canplay");
       // 자동 재생 보강: 부모 effect가 일찍 시도해서 실패한 경우라도 ready되면 다시 시도
       if (isCurrent && el.paused) {
-        el.play().catch((err) => {
-          logVideoState("canplay play failed, retry muted", { errorName: err?.name, errorMessage: err?.message });
+        el.play().catch(() => {
           // 사운드 정책 등으로 실패하면 muted로 재시도
           el.muted = true;
-          el.play().catch((retryErr) => {
-            logVideoState("canplay muted retry failed", { errorName: retryErr?.name, errorMessage: retryErr?.message });
-          });
+          el.play().catch(() => {});
         });
       }
     };
-    el.addEventListener("loadedmetadata", handleLoadedMetadata);
     el.addEventListener("loadeddata", handleLoadedData);
-    el.addEventListener("playing", handlePlaying);
+    el.addEventListener("playing", markReady);
     el.addEventListener("canplay", handleCanPlay);
-    el.addEventListener("waiting", handleWaiting);
-    el.addEventListener("stalled", handleStalled);
-    el.addEventListener("error", handleError);
     if (el.readyState >= 2) markReady();
     return () => {
-      el.removeEventListener("loadedmetadata", handleLoadedMetadata);
       el.removeEventListener("loadeddata", handleLoadedData);
-      el.removeEventListener("playing", handlePlaying);
+      el.removeEventListener("playing", markReady);
       el.removeEventListener("canplay", handleCanPlay);
-      el.removeEventListener("waiting", handleWaiting);
-      el.removeEventListener("stalled", handleStalled);
-      el.removeEventListener("error", handleError);
     };
-  }, [src, isCurrent, logVideoState]);
+  }, [src, isCurrent]);
 
   // isCurrent가 false로 바뀌면 즉시 일시정지 + 음소거 처리.
 
@@ -2491,33 +2396,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
   useEffect(() => {
     mediaCountRef.current = mediaList.length;
   }, [mediaList.length]);
-
-  const [debugLines, setDebugLines] = useState<string[]>([]);
-  const showDebugOverlay = typeof window !== "undefined" && window.location.pathname.startsWith("/flicks") && mediaList.length > 1;
-
-  useEffect(() => {
-    emitFlicksDebugLog("[MediaCarousel] current media changed", {
-      idx: currentIndex,
-      count: mediaList.length,
-      active: isSlideActive,
-      currentVideo: isVideoUrl(mediaList[currentIndex]),
-      types: mediaList.map((url) => (isVideoUrl(url) ? "v" : "i")).join(""),
-    });
-  }, [currentIndex, isSlideActive, mediaList]);
-
-  useEffect(() => {
-    if (!showDebugOverlay) return;
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      const data = detail?.data ? JSON.stringify(detail.data) : "";
-      setDebugLines((prev) => [
-        ...prev,
-        `${detail?.time || ""} ${detail?.label || ""} ${data}`,
-      ].slice(-8));
-    };
-    window.addEventListener("flicks-debug-log", handler as EventListener);
-    return () => window.removeEventListener("flicks-debug-log", handler as EventListener);
-  }, [showDebugOverlay]);
 
   // 제스처 상태
 
@@ -2762,7 +2640,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
                   isCurrent={isPlayable}
                   shouldWarmUp={shouldWarmUp}
                   posterUrl={videoPosterUrl}
-                  debugIndex={i}
                 />
               ) : (
                 <img
@@ -2778,31 +2655,6 @@ const MediaCarousel: React.FC<MediaCarouselProps> = ({
           );
         })}
       </div>
-      {showDebugOverlay && debugLines.length > 0 && (
-        <div className="absolute left-2 right-2 top-16 z-[90] rounded-xl border border-lime-300/60 bg-black/85 p-2 font-mono text-[9px] leading-tight text-lime-200 shadow-lg">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="font-bold text-lime-100">Flicks debug log</span>
-            <button
-              type="button"
-              className="pointer-events-auto rounded-md border border-lime-300/50 px-2 py-0.5 text-[10px] font-bold text-lime-100 active:scale-95"
-              onClick={(e) => {
-                e.stopPropagation();
-                navigator.clipboard?.writeText(debugLines.join("\n")).catch(() => {});
-              }}
-            >
-              복사
-            </button>
-          </div>
-          <textarea
-            readOnly
-            value={debugLines.join("\n")}
-            className="pointer-events-auto h-32 w-full resize-none rounded-lg border border-lime-300/30 bg-black/60 p-1 text-[9px] leading-tight text-lime-200 outline-none"
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
     </div>
   );
 };
