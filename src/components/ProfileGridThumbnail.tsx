@@ -17,7 +17,6 @@ interface ProfileGridThumbnailProps {
   onError: () => void;
 }
 
-const FALLBACK_IMAGE = '/placeholder.svg';
 const IMAGE_EXTENSION_REGEX = /\.(jpe?g|png|webp|gif|bmp|avif|heic|heif)(\?|#|$)/i;
 
 const getUrlPathname = (url: string): string => {
@@ -35,7 +34,7 @@ const isUsableImageThumbnail = (url: unknown): url is string => {
   return IMAGE_EXTENSION_REGEX.test(pathname);
 };
 
-const pickSafePosterCandidate = (post: Post, primaryPoster?: string): string => {
+const pickSafePosterCandidate = (post: Post, primaryPoster?: string): string | null => {
   const candidates: Array<string | undefined> = [
     primaryPoster,
     ...(Array.isArray(post.images) ? post.images : []),
@@ -47,7 +46,7 @@ const pickSafePosterCandidate = (post: Post, primaryPoster?: string): string => 
     if (isUsableImageThumbnail(candidate)) return candidate;
   }
 
-  return FALLBACK_IMAGE;
+  return null;
 };
 
 const hasAnyVideoUrl = (post: Post): boolean => {
@@ -239,14 +238,14 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
   //  - 단, paint 전에 onLoad에서 픽셀 검사(isImageMostlyBlack)를 통과해야만 화면에
   //    노출되며, 검정으로 판정되면 그 즉시 숨긴 채 클라이언트 프레임 추출로 교체.
   const basePoster = useMemo(() => {
-    if (!isVideoCard) return FALLBACK_IMAGE;
+    if (!isVideoCard) return null;
     return pickSafePosterCandidate(post, firstMedia?.posterUrl);
   }, [isVideoCard, post, firstMedia]);
 
   const [extractedFrameUrl, setExtractedFrameUrl] = useState<string | null>(null);
   const [needsExtraction, setNeedsExtraction] = useState(false);
-  const [didFallback, setDidFallback] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
+
   // basePoster가 검정인지 검사가 끝나서 "보여줘도 안전"한지.
 
   //  - 검사 전: <img>는 opacity 0으로 숨김 → 검정 픽셀이 paint될 기회 자체가 없음
@@ -263,7 +262,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
       return;
     }
 
-    if (extractedFrameUrl || didFallback) {
+    if (extractedFrameUrl) {
       setIsImageLoaded(true);
       return;
     }
@@ -290,7 +289,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     if (!videoUrl) return;
     if (extractedRef.current) return;
 
-    const shouldExtractEagerly = basePoster === FALLBACK_IMAGE;
+    const shouldExtractEagerly = !basePoster;
     if (!shouldExtractEagerly && !needsExtraction) return;
 
     const target = containerRef.current;
@@ -302,10 +301,9 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
       extractBrightVideoFrame(videoUrl).then((dataUrl) => {
         if (dataUrl) {
           setExtractedFrameUrl(dataUrl);
-        } else {
-          setDidFallback(true);
         }
       });
+
     };
 
     const observer = new IntersectionObserver((entries) => {
@@ -328,34 +326,19 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
         ref={containerRef}
         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
       >
-        <img
-          src={FALLBACK_IMAGE}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-        />
+        <Skeleton className="absolute inset-0 h-full w-full rounded-none" />
       </div>
     );
   }
 
   if (isVideoCard) {
-    // 어떤 소스를 보여줄지 결정.
-    // - 추출된 프레임이 있으면 그게 항상 최우선 (검정 걱정 없음)
-    // - 추출 실패(didFallback) → placeholder
-    // - 그 외에는 basePoster를 시도하되, "검정 검사"가 끝날 때까지는 화면에 노출하지 않는다.
-    let posterSrc: string;
-    if (extractedFrameUrl) posterSrc = extractedFrameUrl;
-    else if (didFallback) posterSrc = FALLBACK_IMAGE;
-    else posterSrc = basePoster;
+    const posterSrc = extractedFrameUrl || basePoster;
 
     // 영상 카드에서 "안전하게 보여줘도 좋은" 시점 판정.
     //  - 추출된 프레임이 들어왔을 때 → 즉시 표시
     //  - basePoster가 사용자 업로드 이미지로 채택돼 검정 검사를 통과했을 때 → 표시
-    //  - 그 외(아직 검사 전이거나, placeholder/추출 대기 상태) → 숨겨서 부모의 옅은 회색
-    //    배경(bg-gray-100)만 보이게 한다. placeholder.svg의 "이미지 없음" 그래픽이
-    //    잠깐이라도 노출되는 어색함을 피하기 위함.
-    const safeToReveal = didFallback || !!extractedFrameUrl || (posterSrc !== FALLBACK_IMAGE && posterRevealed);
+    //  - 그 외에는 스켈레톤만 유지하고 placeholder는 노출하지 않는다.
+    const safeToReveal = !!extractedFrameUrl || (!!posterSrc && posterRevealed);
 
     return (
       <div
@@ -363,32 +346,32 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
         className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
       >
         {(!safeToReveal || !isImageLoaded) && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
-        <img
-          src={posterSrc}
-          alt=""
-          // 영상 카드 썸네일은 fetch 시작 시점을 viewport 진입까지 미루지 않는다.
-          // 그리드 항목들이 차례대로 깜빡거리며 채워지는 어색함을 줄이고,
-          // 모든 항목을 가능한 동시에 표시하기 위함 (브라우저가 우선순위 자동 조절).
-          loading="eager"
-          decoding="async"
-          crossOrigin="anonymous"
-          className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
-          style={{
-            opacity: safeToReveal && isImageLoaded ? 1 : 0,
-            // 검사 통과 후 부드럽게 나타나도록 짧은 페이드
-            transition: 'opacity 120ms ease-out',
-          }}
-          onLoad={handleLoadedImage}
-          onError={() => {
-            setIsImageLoaded(false);
-            if (!videoUrl) {
-              setDidFallback(true);
-              return;
-            }
-            // 포스터 로드 실패 → 클라이언트 프레임 추출 강제 트리거
-            setNeedsExtraction(true);
-          }}
-        />
+        {posterSrc && (
+          <img
+            src={posterSrc}
+            alt=""
+            // 영상 카드 썸네일은 fetch 시작 시점을 viewport 진입까지 미루지 않는다.
+            // 그리드 항목들이 차례대로 깜빡거리며 채워지는 어색함을 줄이고,
+            // 모든 항목을 가능한 동시에 표시하기 위함 (브라우저가 우선순위 자동 조절).
+            loading="eager"
+            decoding="async"
+            crossOrigin="anonymous"
+            className="absolute inset-0 w-full h-full object-cover hover:opacity-80 transition-opacity"
+            style={{
+              opacity: safeToReveal && isImageLoaded ? 1 : 0,
+              transition: 'opacity 120ms ease-out',
+            }}
+            onLoad={handleLoadedImage}
+            onError={() => {
+              setIsImageLoaded(false);
+              if (!videoUrl) {
+                return;
+              }
+              // 포스터 로드 실패 → 클라이언트 프레임 추출 강제 트리거
+              setNeedsExtraction(true);
+            }}
+          />
+        )}
         <div className="absolute top-2 right-2 z-10">
           <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
         </div>
@@ -396,7 +379,7 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
     );
   }
 
-  const imageSrc = !isUsableImageThumbnail(firstMedia.url) ? FALLBACK_IMAGE : firstMedia.url;
+  const imageSrc = isUsableImageThumbnail(firstMedia.url) ? firstMedia.url : null;
 
   return (
     <div
@@ -404,19 +387,21 @@ const ProfileGridThumbnail = ({ post, onError }: ProfileGridThumbnailProps) => {
       className="aspect-square bg-gray-100 overflow-hidden rounded-sm relative group cursor-pointer"
     >
       {!isImageLoaded && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
-      <img
-        src={imageSrc}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        className="w-full h-full object-cover hover:opacity-80 transition-opacity duration-200"
-        style={{ opacity: isImageLoaded ? 1 : 0 }}
-        onLoad={() => setIsImageLoaded(true)}
-        onError={() => {
-          setIsImageLoaded(false);
-          onError();
-        }}
-      />
+      {imageSrc && (
+        <img
+          src={imageSrc}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover hover:opacity-80 transition-opacity duration-200"
+          style={{ opacity: isImageLoaded ? 1 : 0 }}
+          onLoad={() => setIsImageLoaded(true)}
+          onError={() => {
+            setIsImageLoaded(false);
+            onError();
+          }}
+        />
+      )}
       {hasVideo && (
         <div className="absolute top-2 right-2 z-10">
           <Play className="w-4 h-4 text-white fill-white drop-shadow-md" />
