@@ -108,8 +108,17 @@ const getRingSparkPoint = (geo: RingGeometry, remainingRatio: number): { x: numb
 //    동일한 두께가 되도록 한다.
 //   md: 2 × (4/60) × 48 = 6.4
 //   sm: 2 × (4/60) × 24 = 3.2
-const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 24, 6.4);
-const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 12, 3.2);
+//
+// 🛠 추가 보정 (가시성 개선):
+//   위 계산은 \"클리핑 후 보이는 두께\"를 지도 마커와 같게 맞추는 것이 목적이지만,
+//   실제 24px/48px 의 작은 박스에서는 stroke 의 외곽 부분이 부모 .rounded-full
+//   overflow-hidden 으로 잘려나가는 비율이 단순 절반(50%)보다 더 크게 체감된다.
+//   (둥근 외곽 + drop-shadow 가 함께 묻혀 더 얇아 보임)
+//   사용자 피드백에 따라 시각적으로 명확히 보이도록 stroke 폭을 약 1.4× 키운다.
+//   md: 6.4 → 9      (보이는 두께 ≈ 3.2 → 4.5)
+//   sm: 3.2 → 4.5    (보이는 두께 ≈ 1.6 → 2.25)
+const RING_GEOMETRY_MD = createRingGeometry(48, 2.5, 24, 9);
+const RING_GEOMETRY_SM = createRingGeometry(24, 1.5, 12, 4.5);
 
 const getPostCreatedAtMs = (post: Post): number | null => {
   const raw = post.createdAt;
