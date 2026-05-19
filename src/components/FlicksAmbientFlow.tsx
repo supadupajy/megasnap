@@ -49,7 +49,7 @@ const FALLBACK_COLOR: RGB = { r: 79, g: 70, b: 229 }; // indigo-600
 const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
   height,
   posterUrl,
-  topFadeStrength = 0.85,
+  topFadeStrength = 0.35,
 }) => {
   // 현재 그려지고 있는 ambient color (cross-fade 결과)
   const [color, setColor] = useState<RGB>(FALLBACK_COLOR);
@@ -250,66 +250,14 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
     <div
       aria-hidden="true"
       data-flicks-ambient-flow="true"
-      ref={(el) => {
-        if (!el) return;
-        // 마운트/리렌더 시 실제 그려지는 위치/크기 + 화면을 가리는 다른 요소가 있는지 확인
-        requestAnimationFrame(() => {
-          const rect = el.getBoundingClientRect();
-          const vw = window.innerWidth;
-          const vh = window.innerHeight;
-          const cs = getComputedStyle(el);
-          console.log("[FlicksAmbientFlow] mounted/updated", {
-            rect: { x: rect.x, y: rect.y, w: rect.width, h: rect.height, bottom: rect.bottom },
-            viewport: { vw, vh },
-            heightProp: height,
-            computed: {
-              position: cs.position,
-              zIndex: cs.zIndex,
-              backgroundColor: cs.backgroundColor,
-              visibility: cs.visibility,
-              opacity: cs.opacity,
-              display: cs.display,
-              transform: cs.transform,
-            },
-            safeAreaInsetBottom: getComputedStyle(document.documentElement).getPropertyValue("--sat-bottom") || "(not set)",
-          });
-
-          // 화면 하단 중앙 / 왼쪽 / 오른쪽에서 ambient 위에 무엇이 깔려 있는지 확인
-          const samples = [
-            { label: "bottom-center", x: vw / 2, y: vh - 10 },
-            { label: "bottom-left", x: 20, y: vh - 10 },
-            { label: "bottom-right", x: vw - 20, y: vh - 10 },
-            { label: "ambient-top-edge", x: vw / 2, y: Math.max(0, rect.top + 2) },
-            { label: "above-pill", x: vw / 2, y: vh - 60 },
-          ];
-          samples.forEach((s) => {
-            const stack = document.elementsFromPoint(s.x, s.y).slice(0, 6).map((e) => {
-              const tag = e.tagName.toLowerCase();
-              const id = (e as HTMLElement).id ? `#${(e as HTMLElement).id}` : "";
-              const cls = (e as HTMLElement).className
-                ? `.${String((e as HTMLElement).className).split(" ").filter(Boolean).slice(0, 2).join(".")}`
-                : "";
-              const z = getComputedStyle(e).zIndex;
-              return `${tag}${id}${cls}[z=${z}]`;
-            });
-            console.log(`[FlicksAmbientFlow] elementsFromPoint(${s.label} ${s.x.toFixed(0)},${s.y.toFixed(0)}):`, stack);
-          });
-        });
-      }}
       className="fixed left-0 right-0 bottom-0 overflow-hidden cursor-default select-none"
       style={{
         ...ambientStyle,
-        // BottomNav의 흰색 safe-area 배경(z=19999)보다 위에 떠야 스마트폰의
-        // 노치/홈 인디케이터 영역에서도 그라데이션이 보이고, BottomNav 알약(z=20000)
-        // 아래에는 있어서 알약 자체는 정상적으로 위에 표시된다.
+        // BottomNav 알약(z=20000) 바로 아래, 일반 페이지 safe-area 배경보다 위.
+        // Flicks에서는 BottomNav의 흰 safe-area 배경을 숨기므로 이 레이어가 하단 전체를 채운다.
         zIndex: 19999,
-        pointerEvents: "auto",
+        pointerEvents: "none",
         touchAction: "none",
-        // 디버그: 그라데이션 자체가 안 보이는 건지, 위에 무언가 깔려 있는 건지 구분하기 위해
-        // 빨간색 outline + 강한 자홍색 base color로 임시 표시. 보이면 그라데이션 표현 문제,
-        // 안 보이면 위에 다른 레이어가 덮고 있다는 의미.
-        outline: "3px dashed magenta",
-        outlineOffset: "-3px",
       }}
     >
       {/* 스와이프 진행도에 맞춰 살아 움직이는 그라데이션 wrapper.
@@ -328,8 +276,9 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
           className="absolute inset-0 pointer-events-none"
           style={{
             background: `
-              radial-gradient(120% 180% at 20% 120%, rgba(${colorStr}, 0.55) 0%, rgba(${colorStr}, 0.18) 35%, transparent 65%),
-              radial-gradient(120% 180% at 80% 130%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.12) 35%, transparent 65%)
+              radial-gradient(115% 125% at 50% 72%, rgba(${colorStr}, 0.72) 0%, rgba(${colorStr}, 0.36) 38%, transparent 76%),
+              radial-gradient(90% 120% at 16% 88%, rgba(${colorStr}, 0.46) 0%, rgba(${colorStr}, 0.20) 42%, transparent 72%),
+              radial-gradient(90% 120% at 84% 88%, rgba(${colorStr}, 0.42) 0%, rgba(${colorStr}, 0.16) 42%, transparent 72%)
             `,
             transition: "background 600ms ease",
           }}
@@ -339,17 +288,17 @@ const FlicksAmbientFlow: React.FC<FlicksAmbientFlowProps> = ({
         <div
           className="absolute inset-0 pointer-events-none flicks-ambient-breathe"
           style={{
-            background: `radial-gradient(100% 160% at 50% 130%, rgba(${colorStr}, 0.35) 0%, transparent 60%)`,
+            background: `radial-gradient(95% 120% at 50% 82%, rgba(${colorStr}, 0.42) 0%, transparent 68%)`,
           }}
         />
 
-        {/* 3) 상단 fade — 영상 컨테이너 하단의 검은 그라데이션과 자연스럽게 이어지도록
-                위쪽일수록 진한 검정. 이게 없으면 영상과 ambient 영역의 경계가 띠처럼 보일 수 있음. */}
+        {/* 3) 상단 fade — 영상과 ambient 영역의 경계만 살짝 눌러주고,
+                BottomNav 뒤쪽 인디고 빛은 가리지 않도록 약하게 처리. */}
         <div
           className="absolute inset-x-0 top-0 pointer-events-none"
           style={{
-            height: "55%",
-            background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)`,
+            height: "34%",
+            background: `linear-gradient(to bottom, rgba(0,0,0,${topFadeStrength}) 0%, rgba(0,0,0,0.16) 52%, rgba(0,0,0,0) 100%)`,
           }}
         />
       </div>

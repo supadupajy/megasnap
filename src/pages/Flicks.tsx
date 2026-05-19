@@ -205,47 +205,10 @@ const Flicks = () => {
   // 떠오르는 빛 입자(particle) 효과를 보여줘 단조로운 검은 여백을 한 단계 더 시네마틱하게 만든다.
   const bottomFill = (
     <FlicksAmbientFlow
-      height="calc(env(safe-area-inset-bottom, 0px) + 64px)"
+      height="calc(env(safe-area-inset-bottom, 0px) + 132px)"
       posterUrl={activePosterUrl}
     />
   );
-
-  // 디버그: safe area inset 값 + ReelsViewer 컨테이너 위치/크기 확인
-  useEffect(() => {
-    const log = () => {
-      const probe = document.createElement("div");
-      probe.style.cssText =
-        "position:fixed;bottom:0;left:0;height:env(safe-area-inset-bottom,0px);width:1px;visibility:hidden;pointer-events:none";
-      document.body.appendChild(probe);
-      const safeBottom = probe.getBoundingClientRect().height;
-      document.body.removeChild(probe);
-
-      const container = document.querySelector("[data-flicks-container]") as HTMLElement | null;
-      const ambient = document.querySelector('[data-flicks-ambient-flow="true"]') as HTMLElement | null;
-
-      console.log("[Flicks] layout debug", {
-        viewport: { w: window.innerWidth, h: window.innerHeight },
-        safeAreaInsetBottom: safeBottom,
-        activePosterUrl,
-        reelsContainer: container
-          ? {
-              rect: container.getBoundingClientRect(),
-              computedBottom: getComputedStyle(container).bottom,
-            }
-          : "(not found)",
-        ambientFlow: ambient
-          ? {
-              rect: ambient.getBoundingClientRect(),
-              computedHeight: getComputedStyle(ambient).height,
-              computedZIndex: getComputedStyle(ambient).zIndex,
-            }
-          : "(not found)",
-      });
-    };
-    log();
-    const t = window.setTimeout(log, 500);
-    return () => window.clearTimeout(t);
-  }, [activePosterUrl, isLoading]);
 
   const handleClose = useCallback(() => {
     navigate(-1);
