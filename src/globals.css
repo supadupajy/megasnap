@@ -992,9 +992,10 @@ video.post-item-video::-webkit-media-text-track-container {
   height: 40px;
   border-radius: 50%;
   background: radial-gradient(circle at 28% 18%, rgba(255,255,255,0.10) 0 10%, transparent 27%), linear-gradient(155deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.02) 34%, rgba(148,163,184,0.04) 100%);
-  border: 1.5px solid rgba(241, 245, 249, 0.42);
+  border: 1.5px solid rgba(241, 245, 249, 0.52);
   box-shadow:
     0 5px 10px rgba(71, 85, 105, 0.11),
+    0 0 0 1px rgba(255, 255, 255, 0.10),
     inset 0 1px 3px rgba(255, 255, 255, 0.10),
     inset 0 -4px 7px rgba(51, 65, 85, 0.04);
   overflow: hidden;
