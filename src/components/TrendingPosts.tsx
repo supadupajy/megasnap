@@ -624,13 +624,35 @@ const PostThumbnail: React.FC<{
 
     return () => {
       // eslint-disable-next-line no-console
+      console.log('[TrendingDebug][collapsed-thumb-effect-cleanup]', {
+        postId: post.id,
+        rank: (post as any).rank,
+        mediaType: primaryMedia?.type || 'fallback',
+        resolvedThumbUrl,
+      });
+    };
+  }, [isCollapsedThumb, post, primaryMedia?.type, resolvedThumbUrl]);
+
+  useEffect(() => {
+    if (!isCollapsedThumb) return;
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][collapsed-thumb-mount]', {
+      postId: post.id,
+      rank: (post as any).rank,
+      mediaType: primaryMedia?.type || 'fallback',
+    });
+
+    return () => {
+      // eslint-disable-next-line no-console
       console.log('[TrendingDebug][collapsed-thumb-unmount]', {
         postId: post.id,
         rank: (post as any).rank,
         mediaType: primaryMedia?.type || 'fallback',
       });
     };
-  }, [isCollapsedThumb, post, primaryMedia?.type, resolvedThumbUrl]);
+    // collapsed header thumbnail mount/unmount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCollapsedThumb]);
 
   const renderImage = (url: string, showPlay = false) => (
     <div className={cn("relative w-full h-full", className)}>
@@ -1104,6 +1126,23 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     rank: null,
     collapsedPostId: null,
   });
+  const previousCollapsedRenderRef = useRef<{
+    postId: string | null;
+    rank: number | null;
+    thumbUrl: string | null;
+    postRef: Post | null;
+    refreshTick: number | null;
+  }>({
+    postId: null,
+    rank: null,
+    thumbUrl: null,
+    postRef: null,
+    refreshTick: null,
+  });
+  const previousTextAnimationRef = useRef<{ postId: string | null; count: number }>({
+    postId: null,
+    count: 0,
+  });
 
   // isExpanded 변경 시 ref 동기화 (클로저 캡처 문제 방지)
 
@@ -1306,9 +1345,47 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
   }, [isExpanded, posts]);
 
   const currentPost = (posts[currentIndex] || posts[0]) as (Post & { rank: number }) | undefined;
+  const currentCollapsedThumbUrl = currentPost ? getTrendingThumbnailImageUrl(currentPost) : null;
   const visibleExpandedPosts = isExpanded ? posts.slice(0, visibleItemLimit) : [];
 
+  useEffect(() => {
+    const previousRender = previousCollapsedRenderRef.current;
+    const nextPostId = currentPost?.id ? String(currentPost.id) : null;
+    const nextRank = (currentPost as any)?.rank ?? null;
+
+    // eslint-disable-next-line no-console
+    console.log('[TrendingDebug][collapsed-render-reason]', {
+      refreshTick,
+      collapsedPostId,
+      next: {
+        postId: nextPostId,
+        rank: nextRank,
+        thumbUrl: currentCollapsedThumbUrl,
+      },
+      previous: {
+        postId: previousRender.postId,
+        rank: previousRender.rank,
+        thumbUrl: previousRender.thumbUrl,
+        refreshTick: previousRender.refreshTick,
+      },
+      samePostId: previousRender.postId === nextPostId,
+      sameRank: previousRender.rank === nextRank,
+      sameThumbUrl: previousRender.thumbUrl === currentCollapsedThumbUrl,
+      sameObjectRef: previousRender.postRef === (currentPost || null),
+      refreshTickChanged: previousRender.refreshTick !== refreshTick,
+    });
+
+    previousCollapsedRenderRef.current = {
+      postId: nextPostId,
+      rank: nextRank,
+      thumbUrl: currentCollapsedThumbUrl,
+      postRef: currentPost || null,
+      refreshTick,
+    };
+  }, [collapsedPostId, currentCollapsedThumbUrl, currentPost, refreshTick]);
+
   const handleScroll = useCallback(() => {
+
     if (!listRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = listRef.current;
 
@@ -1484,9 +1561,18 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         exit={{ y: -15, opacity: 0 }}
                         transition={{ duration: 0.3, opacity: { duration: 0.2 } }}
                         onAnimationStart={() => {
+                          const nextPostId = currentPost?.id ? String(currentPost.id) : null;
+                          const previousAnimation = previousTextAnimationRef.current;
+                          const nextCount = previousAnimation.postId === nextPostId ? previousAnimation.count + 1 : 1;
+                          previousTextAnimationRef.current = {
+                            postId: nextPostId,
+                            count: nextCount,
+                          };
                           // eslint-disable-next-line no-console
                           console.log('[TrendingDebug][collapsed-text-animation-start]', {
                             collapsedPostId,
+                            animationCountForPost: nextCount,
+                            samePostAsPreviousAnimation: previousAnimation.postId === nextPostId,
                             currentPost: getCollapsedPostDebugInfo(currentPost),
                           });
                         }}
@@ -1494,9 +1580,11 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                           // eslint-disable-next-line no-console
                           console.log('[TrendingDebug][collapsed-text-animation-complete]', {
                             collapsedPostId,
+                            animationCountForPost: previousTextAnimationRef.current.count,
                             currentPost: getCollapsedPostDebugInfo(currentPost),
                           });
                         }}
+
                         className="text-xs font-bold text-gray-800 truncate absolute inset-0 leading-5"
                       >
 
