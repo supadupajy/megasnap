@@ -4,18 +4,22 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Main bubble: smaller radius (22) so it fits comfortably inside the
+         adaptive icon safe zone after launcher masking/cropping. -->
     <path
         android:fillColor="#F8FDFF"
         android:fillAlpha="0.76"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2"
-        android:pathData="M54,20a34,34 0,1 0,0.1 0z" />
+        android:strokeWidth="1.5"
+        android:pathData="M54,32a22,22 0,1 0,0.1 0z" />
+    <!-- Top-left highlight, scaled down to match the smaller bubble. -->
     <path
         android:fillColor="#FFFFFF"
         android:fillAlpha="0.9"
-        android:pathData="M38,29C44,24 52,23.5 57,28C62,32.5 60,39.5 54,44C48,49 40,49.5 35,45C30,40.5 32,33.5 38,29Z" />
+        android:pathData="M44,38C48,35 53,34.5 56,37C59,39.5 58,44 54,47C50,50 45,50.5 42,48C39,45.5 40,41 44,38Z" />
+    <!-- Soft right-side reflection, scaled down. -->
     <path
         android:fillColor="#DFF5FF"
         android:fillAlpha="0.42"
-        android:pathData="M74,52C74,67.5 66,78 54,82C69,82 84,69.5 84,54C84,42 78,32 70,26C73,33 74,43 74,52Z" />
+        android:pathData="M67,55C67,65 62,71.5 54,74C63,74 73,66 73,56C73,49 69,43 64,39C66,43 67,49 67,55Z" />
 </vector>
