@@ -1226,17 +1226,35 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 8 }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
-                  className="shrink-0 flex items-center justify-center mr-1"
+                  className="shrink-0 flex items-center justify-center mr-1 relative"
+                  style={{ width: '20px', height: '20px' }}
                 >
-                  {currentPost?.rank === 1 ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', fontSize: '14px', fontWeight: 900, lineHeight: 1, color: '#D97706' }}>1</span>
-                  ) : currentPost?.rank === 2 ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', fontSize: '14px', fontWeight: 900, lineHeight: 1, color: '#9CA3AF' }}>2</span>
-                  ) : currentPost?.rank === 3 ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', fontSize: '14px', fontWeight: 900, lineHeight: 1, color: '#CD7F32' }}>3</span>
-                  ) : (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', fontSize: '12px', fontWeight: 900, lineHeight: 1, color: '#111827' }}>{currentPost?.rank}</span>
-                  )}
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={currentPost?.id || 'empty-trending-rank'}
+                      initial={shouldAnimateCollapsedText ? { y: 15, opacity: 0 } : false}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={shouldAnimateCollapsedText ? { y: -15, opacity: 0 } : undefined}
+                      transition={shouldAnimateCollapsedText ? { duration: 0.3, opacity: { duration: 0.2 } } : { duration: 0 }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: currentPost?.rank && currentPost.rank <= 3 ? '14px' : '12px',
+                        fontWeight: 900,
+                        lineHeight: 1,
+                        color:
+                          currentPost?.rank === 1 ? '#D97706'
+                          : currentPost?.rank === 2 ? '#9CA3AF'
+                          : currentPost?.rank === 3 ? '#CD7F32'
+                          : '#111827',
+                      }}
+                    >
+                      {currentPost?.rank}
+                    </motion.span>
+                  </AnimatePresence>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1258,12 +1276,20 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                       ? getThumbnailFrameStyle(currentPost, collapsedIsMine)
                       : { borderWidth: 0, border: 'none', boxShadow: undefined as string | undefined };
                     return (
-                      <div
-                        className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 box-border"
-                        style={{ border: collapsedFrame.border, boxShadow: collapsedFrame.boxShadow }}
-                      >
-                        <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" imgLoading="eager" now={thumbnailTimerNow} borderWidth={collapsedFrame.borderWidth} />
-
+                      <div className="relative w-6 h-6 flex-shrink-0">
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={currentPost?.id || 'empty-trending-thumb'}
+                            initial={shouldAnimateCollapsedText ? { y: 15, opacity: 0 } : false}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={shouldAnimateCollapsedText ? { y: -15, opacity: 0 } : undefined}
+                            transition={shouldAnimateCollapsedText ? { duration: 0.3, opacity: { duration: 0.2 } } : { duration: 0 }}
+                            className="absolute inset-0 rounded-full overflow-hidden bg-gray-100 box-border"
+                            style={{ border: collapsedFrame.border, boxShadow: collapsedFrame.boxShadow }}
+                          >
+                            <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" imgLoading="eager" now={thumbnailTimerNow} borderWidth={collapsedFrame.borderWidth} />
+                          </motion.div>
+                        </AnimatePresence>
                       </div>
                     );
                   })()}
