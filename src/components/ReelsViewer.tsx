@@ -1710,13 +1710,15 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         </div>
       )}
 
-      {/* 메인 미디어 — 인기 컨텐츠(PostItem)와 동일하게 가로 폭 기준 9:16 비율로 확장.
-          좌우에 약간의 마진(mx-4)을 두고 폭에 맞춰 높이를 9:16으로 자동 계산.
+      {/* 메인 미디어 — 사용 가능한 세로 공간을 가능한 한 꽉 채우는 9:16 영상.
+          가로폭(화면 - 좌우 mx-4)을 maxWidth로 두고, 세로는 100%까지 확장.
+          → 화면이 충분히 길면 세로가 길게(=가로폭이 mx-4로 결정) 차고,
+            세로가 짧은 환경에서는 가로폭 한도에 묶여 박스가 작아짐.
           닉네임/위치/본문/액션 알약 등 모든 UI는 별도의 absolute 오버레이로
           영상 위에 띄우므로 여기서는 bottom 여백을 두지 않는다(infoHeight 사용 X).
           상단 여백(top)은 순위 뱃지/닫기 버튼과의 자연스러운 갭을 위한 최소값만 유지. */}
       <div
-        className="absolute left-0 right-0 flex items-center justify-center"
+        className="absolute left-0 right-0 flex items-start justify-center"
         style={{
           top: "1rem",
           bottom: 0,
@@ -1726,11 +1728,12 @@ const ReelSlide: React.FC<ReelSlideProps> = ({
         onPointerUp={handlePointerUp}
       >
         <div
-          className="relative overflow-hidden bg-black rounded-2xl mx-4"
+          className="relative overflow-hidden bg-black rounded-2xl"
           style={{
             aspectRatio: "9 / 16",
-            width: "calc(100% - 2rem)",
-            maxHeight: "100%",
+            height: "100%",
+            width: "auto",
+            maxWidth: "calc(100% - 2rem)",
           }}
         >
           {/* 영상 내부 좌상단 음소거 토글 (embedded 모드 전용)
