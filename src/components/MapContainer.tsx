@@ -1817,18 +1817,14 @@ const MapContainer = ({
       // (::after가 z-index:1, ::before가 z-index:2 → img는 z-index:3, play 아이콘은 z-index:5).
       // 그레이스케일은 약하게만 적용해 사진이 너무 어둡지 않도록 함.
       const ghostImgHtml = rawThumbUrl
-        ? `<img src="${rawThumbUrl}" alt="" referrerpolicy="no-referrer" data-ghost-img="${id}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;" onerror="console.warn('[GhostImg:error]', this.dataset.ghostImg, this.src); this.style.display='none';" onload="console.log('[GhostImg:loaded]', this.dataset.ghostImg, this.naturalWidth+'x'+this.naturalHeight);" />`
+        ? `<img src="${rawThumbUrl}" alt="" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;" onerror="this.style.display='none'" />`
         : '';
 
-      // [DEBUG] 어떤 URL을 사용하려고 시도하는지 확인
-      console.log('[GhostMarker:thumb]', {
-        id,
-        rawThumbUrl: rawThumbUrl || '(none)',
-        rawImageUrl: (post as any).image_url,
-        hasVideo: ghostHasVideo,
-      });
+      // 썸네일이 있는 경우 `has-thumb` 클래스를 추가 → CSS의 ::before(흰색 하이라이트 그라데이션) /
+      // ::after(rgba(100,116,139,0.24) 회색 막) 을 약화시켜 이미지가 명확히 보이도록 한다.
+      const dotClass = rawThumbUrl ? 'ghost-marker-dot has-thumb' : 'ghost-marker-dot';
 
-      content.innerHTML = `<div class="ghost-marker-dot">${ghostImgHtml}${ghostPlayIconHtml}</div>`;
+      content.innerHTML = `<div class="${dotClass}">${ghostImgHtml}${ghostPlayIconHtml}</div>`;
 
       // 롱프레스 숨김 모드면 즉시 숨김
       if (markersHiddenRef.current) {
@@ -2178,10 +2174,10 @@ const MapContainer = ({
           const imgEl = document.createElement('img');
           imgEl.src = dataUrl;
           imgEl.alt = '';
-          // 동기 생성과 동일한 스타일 — z-index:3으로 ::after/::before 위에 노출
           imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;';
-          // ▶ 아이콘 앞에 삽입 (img가 먼저, play 아이콘이 위에 겹쳐서 z-index로 노출)
           dot.insertBefore(imgEl, dot.firstChild);
+          // 썸네일이 들어왔으니 has-thumb 클래스 부여 → CSS 오버레이 약화
+          dot.classList.add('has-thumb');
         }
       }
     };
