@@ -1112,23 +1112,6 @@ const MapContainer = ({
       const contentStateKey = `${post.borderType}-${post.isAd}-${isNew}-${isMineKey}-${isAdPendingKey}-${post.likes}-${hasThumbKey}-${markerFloatKey}`;
       const positionStateKey = `${post.lat},${post.lng}`;
 
-      // [DEBUG2] 일반(활성) 마커 진단 - 영상이 아닌 케이스 포함
-      console.log('[ActiveMarker:render]', {
-        id: post.id,
-        isAd: post.isAd,
-        isAdPending: post.isAdPending,
-        firstVideoUrl,
-        videoUrl: post.videoUrl,
-        videoUrls: post.videoUrls,
-        image_url: post.image_url,
-        image: post.image,
-        imagesLen: Array.isArray(post.images) ? post.images.length : '(not array)',
-        borderType: post.borderType,
-        createdAt: post.createdAt,
-        likes: post.likes,
-        hasExistingOverlay: !!existingOverlay,
-      });
-
       // 영상 포스트라도 마커는 즉시 생성한다.
       // 썸네일이 없으면 어두운 배경 + 플레이 아이콘만 먼저 보이고,
       // 비동기로 추출/저장된 썸네일이 들어오면 img.src를 갱신한다.
@@ -1762,16 +1745,6 @@ const MapContainer = ({
       const id = String(post.id);
       if (ghostOverlaysRef.current.has(id)) return;
 
-      // [DEBUG2] 고스트 마커 진단 - 영상 정보가 있어도 회색 점으로 표시되는지 확인
-      console.log('[GhostMarker:create]', {
-        id: post.id,
-        videoUrl: post.videoUrl,
-        videoUrls: post.videoUrls,
-        image_url: post.image_url,
-        image: post.image,
-        created_at: post.created_at,
-      });
-
       const inViewport =
         post.lat >= minLat && post.lat <= maxLat &&
         post.lng >= minLng && post.lng <= maxLng;
@@ -1794,16 +1767,39 @@ const MapContainer = ({
       let img = (post as any).image_url || (post as any).image || '';
       const isBroken = !img || img === 'null' || img === 'undefined' || (typeof img === 'string' && img.startsWith('blob:'));
       const lower = typeof img === 'string' ? img.toLowerCase().split('?')[0] : '';
-      const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
-      if (isBroken || isVideo) {
+      const isImgVideoUrl = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
+      if (isBroken || isImgVideoUrl) {
         const cached = videoThumbCacheRef.current.get(id);
         img = cached || '';
       }
       const optimized = img ? getOptimizedMarkerImage(img, id) : '';
 
+      // 영상 포스트인지 판단 (만료 포스트도 활성 마커와 동일하게 ▶ 아이콘 표시)
+      const ghostFirstVideoUrl = (() => {
+        const single = typeof (post as any).videoUrl === 'string' && (post as any).videoUrl.trim()
+          ? (post as any).videoUrl
+          : (typeof (post as any).video_url === 'string' && (post as any).video_url.trim() ? (post as any).video_url : '');
+        if (single) return single;
+        const arr = Array.isArray((post as any).videoUrls)
+          ? (post as any).videoUrls
+          : (Array.isArray((post as any).video_urls) ? (post as any).video_urls : []);
+        return arr.find((u: unknown) => typeof u === 'string' && (u as string).trim()) || '';
+      })();
+      const ghostHasVideo = !!ghostFirstVideoUrl;
+
+      // 영상 ▶ 아이콘 (활성 마커와 동일 스타일을 고스트 마커 크기(42px)에 맞춰 축소)
+      const ghostPlayIconHtml = ghostHasVideo
+        ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,0.25);pointer-events:none;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
+        : '';
+
+      // 영상인데 썸네일이 없으면 캐시에서 비동기로 추출 트리거 (활성 마커와 동일 흐름)
+      if (ghostHasVideo && !optimized) {
+        extractVideoThumbRef.current(id, ghostFirstVideoUrl);
+      }
+
       content.innerHTML = `<div class="ghost-marker-dot">${
         optimized ? `<img src="${optimized}" alt="" />` : ''
-      }</div>`;
+      }${ghostPlayIconHtml}</div>`;
 
       // 롱프레스 숨김 모드면 즉시 숨김
       if (markersHiddenRef.current) {
@@ -2126,23 +2122,37 @@ const MapContainer = ({
     };
 
     const refreshMarkerWithCachedThumb = () => {
-      const overlay = overlaysRef.current.get(postId);
-      if (!overlay) return;
-
-      const content = overlay.getContent() as HTMLElement;
-      if (!content) return;
-
       const dataUrl = videoThumbCacheRef.current.get(postId);
       if (!dataUrl) return;
 
-      const img = content.querySelector('[data-video-marker-img="true"]') as HTMLImageElement | null;
-      if (img) {
-        img.src = dataUrl;
-        img.style.opacity = '1';
+      // 활성 마커 갱신
+      const overlay = overlaysRef.current.get(postId);
+      if (overlay) {
+        const content = overlay.getContent() as HTMLElement;
+        if (content) {
+          const img = content.querySelector('[data-video-marker-img="true"]') as HTMLImageElement | null;
+          if (img) {
+            img.src = dataUrl;
+            img.style.opacity = '1';
+          }
+          const state = content.getAttribute('data-content-state');
+          if (state) content.setAttribute('data-content-state', state.replace(/-[01]$/, '-1'));
+        }
       }
 
-      const state = content.getAttribute('data-content-state');
-      if (state) content.setAttribute('data-content-state', state.replace(/-[01]$/, '-1'));
+      // 고스트 마커 갱신 - 비디오 캐시가 채워지면 회색 점 안에 썸네일 이미지를 주입한다.
+      const ghostOverlay = ghostOverlaysRef.current.get(postId);
+      if (ghostOverlay) {
+        const ghostContent = ghostOverlay.getContent() as HTMLElement | null;
+        const dot = ghostContent?.querySelector('.ghost-marker-dot') as HTMLElement | null;
+        if (dot && !dot.querySelector('img')) {
+          const imgEl = document.createElement('img');
+          imgEl.src = dataUrl;
+          imgEl.alt = '';
+          // ▶ 아이콘 앞에 삽입 (img가 먼저, play 아이콘이 위에 겹쳐서 z-index로 노출)
+          dot.insertBefore(imgEl, dot.firstChild);
+        }
+      }
     };
 
     const seekNextCandidate = () => {
