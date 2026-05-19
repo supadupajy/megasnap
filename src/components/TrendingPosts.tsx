@@ -1311,29 +1311,42 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                     </AnimatePresence>
                   </div>
                   {/* 순위 변동 */}
-                  {(() => {
-                    const rc = currentPost ? getRankChange(currentPost) : undefined;
-                    if (rc === null) return (
-                      <span
-                        aria-label="새 컨텐츠"
-                        className="inline-flex items-center justify-center rounded-full border-2 border-white bg-yellow-400 px-1.5 text-[9px] font-black leading-none tracking-[0.08em] text-amber-950 shrink-0"
-                        style={{ height: '18px' }}
-                      >NEW</span>
-                    );
-                    if (rc !== undefined && rc > 0) return (
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M5 0L10 8H0L5 0Z" fill="#10b981"/></svg>
-                        <span className="text-[10px] font-black text-emerald-500 leading-none">{rc}</span>
-                      </div>
-                    );
-                    if (rc !== undefined && rc < 0) return (
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M5 8L0 0H10L5 8Z" fill="#f43f5e"/></svg>
-                        <span className="text-[10px] font-black text-rose-500 leading-none">{Math.abs(rc)}</span>
-                      </div>
-                    );
-                    return <Minus className="w-3 h-3 text-gray-300 shrink-0" />;
-                  })()}
+                  <div className="shrink-0 relative flex items-center justify-end" style={{ minWidth: '28px', height: '18px' }}>
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={currentPost?.id || 'empty-trending-rankchange'}
+                        initial={shouldAnimateCollapsedText ? { y: 15, opacity: 0 } : false}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={shouldAnimateCollapsedText ? { y: -15, opacity: 0 } : undefined}
+                        transition={shouldAnimateCollapsedText ? { duration: 0.3, opacity: { duration: 0.2 } } : { duration: 0 }}
+                        className="absolute inset-0 flex items-center justify-end"
+                      >
+                        {(() => {
+                          const rc = currentPost ? getRankChange(currentPost) : undefined;
+                          if (rc === null) return (
+                            <span
+                              aria-label="새 컨텐츠"
+                              className="inline-flex items-center justify-center rounded-full border-2 border-white bg-yellow-400 px-1.5 text-[9px] font-black leading-none tracking-[0.08em] text-amber-950"
+                              style={{ height: '18px' }}
+                            >NEW</span>
+                          );
+                          if (rc !== undefined && rc > 0) return (
+                            <div className="flex items-center gap-0.5">
+                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M5 0L10 8H0L5 0Z" fill="#10b981"/></svg>
+                              <span className="text-[10px] font-black text-emerald-500 leading-none">{rc}</span>
+                            </div>
+                          );
+                          if (rc !== undefined && rc < 0) return (
+                            <div className="flex items-center gap-0.5">
+                              <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M5 8L0 0H10L5 8Z" fill="#f43f5e"/></svg>
+                              <span className="text-[10px] font-black text-rose-500 leading-none">{Math.abs(rc)}</span>
+                            </div>
+                          );
+                          return <Minus className="w-3 h-3 text-gray-300" />;
+                        })()}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
                 </motion.div>
               ) : (
                 <motion.div
