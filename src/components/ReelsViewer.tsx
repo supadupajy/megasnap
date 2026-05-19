@@ -2176,7 +2176,7 @@ const ReelsVideoSkeleton = ({ posterUrl }: { posterUrl?: string }) => (
         src={posterUrl}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-contain"
+        className="absolute inset-0 h-full w-full object-cover"
         draggable={false}
       />
     )}
@@ -2184,6 +2184,7 @@ const ReelsVideoSkeleton = ({ posterUrl }: { posterUrl?: string }) => (
     <div className="absolute left-4 right-4 bottom-4 space-y-2">
       <div className="h-1 rounded-full bg-white/20 animate-pulse" />
       <div className="flex items-center justify-between pt-2">
+
         <div className="h-3 w-24 rounded-full bg-white/20 animate-pulse" />
         <div className="h-3 w-12 rounded-full bg-white/15 animate-pulse" />
       </div>
@@ -2290,7 +2291,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
       <video
         ref={setRefs}
         src={src}
-        className="absolute inset-0 w-full h-full object-contain video-hq bg-black"
+        className="absolute inset-0 w-full h-full object-cover video-hq bg-black"
         // 1x1 투명 poster로 native 회색 placeholder 깜빡임 방지
         poster={posterUrl || TRANSPARENT_POSTER}
         playsInline
@@ -2311,7 +2312,7 @@ const ReelsVideo: React.FC<ReelsVideoProps> = ({
           src={posterUrl}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none"
           style={{
             opacity: isReady ? 0 : 1,
             transition: "opacity 200ms ease-out",
