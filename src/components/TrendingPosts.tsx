@@ -140,6 +140,31 @@ type VideoThumbResult = string | 'failed';
 
 const videoThumbCache = new Map<string, VideoThumbResult>();
 const videoThumbPending = new Map<string, Set<(result: VideoThumbResult) => void>>();
+const imagePreloadCache = new Set<string>();
+const imagePreloadPending = new Map<string, Promise<void>>();
+
+const preloadImage = (url: string | null | undefined) => {
+  if (!url) return Promise.resolve();
+  if (imagePreloadCache.has(url)) return Promise.resolve();
+  const pending = imagePreloadPending.get(url);
+  if (pending) return pending;
+
+  const promise = new Promise<void>((resolve) => {
+    const img = new Image();
+    const finish = () => {
+      imagePreloadPending.delete(url);
+      if (img.naturalWidth > 0) imagePreloadCache.add(url);
+      resolve();
+    };
+    img.onload = finish;
+    img.onerror = finish;
+    img.src = url;
+    if (img.complete) finish();
+  });
+
+  imagePreloadPending.set(url, promise);
+  return promise;
+};
 
 const requestVideoThumbnail = (videoUrl: string, onComplete: (result: VideoThumbResult) => void) => {
   const cached = videoThumbCache.get(videoUrl);
@@ -361,7 +386,52 @@ const PlayOverlay: React.FC<{ size?: PlayBadgeSize }> = ({ size = 'md' }) => (
   </div>
 );
 
+const getTrendingThumbnailImageUrl = (post: Post): string | null => {
+  const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
+  const primaryMedia = mediaItems[0];
+
+  if (primaryMedia?.type === 'image') {
+    return primaryMedia.url.startsWith('http') ? getOptimizedFeedImage(primaryMedia.url, post.id) : primaryMedia.url;
+  }
+
+  if (primaryMedia?.type === 'video') {
+    if (primaryMedia.posterUrl) {
+      return primaryMedia.posterUrl.startsWith('http') ? getOptimizedFeedImage(primaryMedia.posterUrl, post.id) : primaryMedia.posterUrl;
+    }
+    const cached = videoThumbCache.get(primaryMedia.url);
+    return cached && cached !== 'failed' ? cached : null;
+  }
+
+  const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
+  return fallbackImageUrl.startsWith('http') ? getOptimizedFeedImage(fallbackImageUrl, post.id) : fallbackImageUrl;
+};
+
+const warmTrendingThumbnail = (post: Post) => {
+  const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
+  const primaryMedia = mediaItems[0];
+
+  if (primaryMedia?.type === 'image') {
+    const imageUrl = primaryMedia.url.startsWith('http') ? getOptimizedFeedImage(primaryMedia.url, post.id) : primaryMedia.url;
+    void preloadImage(imageUrl);
+    return;
+  }
+
+  if (primaryMedia?.type === 'video') {
+    if (primaryMedia.posterUrl) {
+      const posterUrl = primaryMedia.posterUrl.startsWith('http') ? getOptimizedFeedImage(primaryMedia.posterUrl, post.id) : primaryMedia.posterUrl;
+      void preloadImage(posterUrl);
+      return;
+    }
+    void requestVideoThumbnail(primaryMedia.url, () => {});
+    return;
+  }
+
+  const fallbackImageUrl = post.image_url || post.image || FALLBACK_IMAGE;
+  void preloadImage(fallbackImageUrl.startsWith('http') ? getOptimizedFeedImage(fallbackImageUrl, post.id) : fallbackImageUrl);
+};
+
 // 지도 마커와 1:1 동일한 24시간 카운트다운 링.
+
 // - 12시 방향에서 시계 반대방향으로 한 바퀴 도는 둥근 사각형 path
 // - dashoffset을 음수로 늘려 시작점부터 깎아내며 끝점이 반시계로 후퇴
 // - 끝점에는 펄스 spark (남은 시간이 1~99% 사이일 때만 표시)
@@ -449,9 +519,11 @@ const PostThumbnail: React.FC<{
   imgClassName?: string;
   onImgError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
   size?: PlayBadgeSize;
+  imgLoading?: 'eager' | 'lazy';
   now: number;
   borderWidth: number;
-}> = ({ post, className, imgClassName, onImgError, size = 'md', now, borderWidth }) => {
+}> = ({ post, className, imgClassName, onImgError, size = 'md', imgLoading = 'lazy', now, borderWidth }) => {
+
   const ringGeometry = size === 'sm' ? RING_GEOMETRY_SM : RING_GEOMETRY_MD;
   const mediaItems = getPostMediaItems(post, { trustGeneratedVideoThumbnails: true });
   const primaryMedia = mediaItems[0];
@@ -460,10 +532,9 @@ const PostThumbnail: React.FC<{
   const renderImage = (url: string, showPlay = false) => (
     <div className={cn("relative w-full h-full", className)}>
       <img
-
         src={url.startsWith('http') ? getOptimizedFeedImage(url, post.id) : url}
         alt=""
-        loading="lazy"
+        loading={imgLoading}
         decoding="async"
         className={cn("w-full h-full object-cover", imgClassName)}
         onError={onImgError}
@@ -900,6 +971,18 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    posts.forEach((post) => warmTrendingThumbnail(post));
+  }, [posts]);
+
+  useEffect(() => {
+    if (posts.length === 0) return;
+    const nextPosts = [0, 1, 2]
+      .map((offset) => posts[(currentIndex + offset) % posts.length])
+      .filter(Boolean);
+    nextPosts.forEach((post) => warmTrendingThumbnail(post));
+  }, [currentIndex, posts]);
+
   // 5분 간격 fetch가 한 번씩 완료될 때마다(=refreshTick 증가) 비교 기준을 갱신한다.
   // - 첫 번째 fetch(refreshTick === 1): 비교 기준이 없으므로 prevRanks를 그대로 두고
   //   현재 posts의 ranks만 ref에 저장 → 다음 갱신부터 정상 비교 가능.
@@ -1141,7 +1224,8 @@ const TrendingPosts: React.FC<TrendingPostsProps> = ({
                         className="relative w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 box-border"
                         style={{ border: collapsedFrame.border, boxShadow: collapsedFrame.boxShadow }}
                       >
-                        <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" now={thumbnailTimerNow} borderWidth={collapsedFrame.borderWidth} />
+                        <PostThumbnail post={currentPost!} onImgError={handleImageError} size="sm" imgLoading="eager" now={thumbnailTimerNow} borderWidth={collapsedFrame.borderWidth} />
+
                       </div>
                     );
                   })()}
