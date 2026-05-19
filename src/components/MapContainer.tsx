@@ -1763,17 +1763,6 @@ const MapContainer = ({
         onMarkerClickRef.current(post);
       };
 
-      // 썸네일 결정 - 비디오 캐시 활용. 깨진/목업 URL이면 빈 회색 점.
-      let img = (post as any).image_url || (post as any).image || '';
-      const isBroken = !img || img === 'null' || img === 'undefined' || (typeof img === 'string' && img.startsWith('blob:'));
-      const lower = typeof img === 'string' ? img.toLowerCase().split('?')[0] : '';
-      const isImgVideoUrl = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm') || lower.endsWith('.avi') || lower.endsWith('.m4v');
-      if (isBroken || isImgVideoUrl) {
-        const cached = videoThumbCacheRef.current.get(id);
-        img = cached || '';
-      }
-      const optimized = img ? getOptimizedMarkerImage(img, id) : '';
-
       // 영상 포스트인지 판단 (만료 포스트도 활성 마커와 동일하게 ▶ 아이콘 표시)
       const ghostFirstVideoUrl = (() => {
         const single = typeof (post as any).videoUrl === 'string' && (post as any).videoUrl.trim()
@@ -1787,22 +1776,57 @@ const MapContainer = ({
       })();
       const ghostHasVideo = !!ghostFirstVideoUrl;
 
+      // 썸네일 URL 결정 — Supabase transform을 거치지 않고 RAW URL을 그대로 사용한다.
+      // (transform 옵션이 환경에 따라 404를 내거나 비활성화돼 있을 수 있어, 원본 그대로 쓰는 게 가장 안전)
+      // 우선순위:
+      //   1) 비디오 추출 캐시 (활성 마커와 공유) — 가장 신선
+      //   2) DB의 image_url (영상 포스트는 보통 opening-thumb.jpg)
+      //   3) image (legacy)
+      let rawThumbUrl = videoThumbCacheRef.current.get(id) || '';
+      if (!rawThumbUrl) {
+        const candidate = (post as any).image_url || (post as any).image || '';
+        const candidateStr = typeof candidate === 'string' ? candidate.trim() : '';
+        if (
+          candidateStr &&
+          candidateStr !== 'null' &&
+          candidateStr !== 'undefined' &&
+          !candidateStr.startsWith('blob:')
+        ) {
+          const lower = candidateStr.toLowerCase().split('?')[0];
+          const isImgVideoUrl =
+            lower.endsWith('.mp4') || lower.endsWith('.mov') ||
+            lower.endsWith('.webm') || lower.endsWith('.avi') ||
+            lower.endsWith('.m4v');
+          // image_url 자체가 비디오 URL이면 사용하지 않음 (썸네일 추출을 기다림)
+          if (!isImgVideoUrl) rawThumbUrl = candidateStr;
+        }
+      }
+
       // 영상 ▶ 아이콘 (활성 마커와 동일 스타일을 고스트 마커 크기(42px)에 맞춰 축소)
       const ghostPlayIconHtml = ghostHasVideo
         ? `<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;background:rgba(255,255,255,0.95);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,0.25);pointer-events:none;"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="#4f46e5" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>`
         : '';
 
       // 영상인데 썸네일이 없으면 캐시에서 비동기로 추출 트리거 (활성 마커와 동일 흐름)
-      if (ghostHasVideo && !optimized) {
+      if (ghostHasVideo && !rawThumbUrl) {
         extractVideoThumbRef.current(id, ghostFirstVideoUrl);
       }
 
       // img는 flex 컨테이너 내부의 사이징 이슈를 피하기 위해 position:absolute로 강제.
-      // 또한 .ghost-marker-dot::after(rgba(100,116,139,0.24)) 위로 올라오도록 z-index:2 부여 후
-      // 그레이스케일 필터는 살짝 유지해 만료 느낌은 그대로 둔다.
-      const ghostImgHtml = optimized
-        ? `<img src="${optimized}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:2;filter:grayscale(0.7) brightness(0.92);opacity:0.92;" />`
+      // 또한 .ghost-marker-dot::after(rgba(100,116,139,0.24)) 위로 올라오도록 z-index:3 부여
+      // (::after가 z-index:1, ::before가 z-index:2 → img는 z-index:3, play 아이콘은 z-index:5).
+      // 그레이스케일은 약하게만 적용해 사진이 너무 어둡지 않도록 함.
+      const ghostImgHtml = rawThumbUrl
+        ? `<img src="${rawThumbUrl}" alt="" referrerpolicy="no-referrer" data-ghost-img="${id}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;" onerror="console.warn('[GhostImg:error]', this.dataset.ghostImg, this.src); this.style.display='none';" onload="console.log('[GhostImg:loaded]', this.dataset.ghostImg, this.naturalWidth+'x'+this.naturalHeight);" />`
         : '';
+
+      // [DEBUG] 어떤 URL을 사용하려고 시도하는지 확인
+      console.log('[GhostMarker:thumb]', {
+        id,
+        rawThumbUrl: rawThumbUrl || '(none)',
+        rawImageUrl: (post as any).image_url,
+        hasVideo: ghostHasVideo,
+      });
 
       content.innerHTML = `<div class="ghost-marker-dot">${ghostImgHtml}${ghostPlayIconHtml}</div>`;
 
@@ -2154,9 +2178,8 @@ const MapContainer = ({
           const imgEl = document.createElement('img');
           imgEl.src = dataUrl;
           imgEl.alt = '';
-          // 동기 생성과 동일한 스타일 — flex 컨테이너 내부 사이징 이슈 회피 +
-          // ::after 회색 오버레이(z-index:1) 위로 노출
-          imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:2;filter:grayscale(0.7) brightness(0.92);opacity:0.92;';
+          // 동기 생성과 동일한 스타일 — z-index:3으로 ::after/::before 위에 노출
+          imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:3;filter:grayscale(0.5) brightness(0.95);opacity:0.95;border-radius:50%;';
           // ▶ 아이콘 앞에 삽입 (img가 먼저, play 아이콘이 위에 겹쳐서 z-index로 노출)
           dot.insertBefore(imgEl, dot.firstChild);
         }
