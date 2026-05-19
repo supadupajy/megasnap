@@ -77,12 +77,13 @@ const LogoDownloads = () => {
               >
                 {item.cropped ? (
                   <div
-                    className="h-32 w-32 overflow-hidden rounded-[27%] bg-transparent"
+                    className="h-[6.4rem] w-[6.4rem] overflow-hidden rounded-[27%] bg-transparent"
                     style={{
                       backgroundImage: `url(${item.previewPath})`,
                       backgroundPosition: '50% 47%',
                       backgroundRepeat: 'no-repeat',
                       backgroundSize: '222% 222%',
+                      filter: 'saturate(0.86) hue-rotate(-7deg) brightness(1.04)',
                     }}
                     aria-label={item.title}
                     role="img"
